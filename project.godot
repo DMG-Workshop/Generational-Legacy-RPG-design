@@ -8,6 +8,14 @@ description="A 999-generation JRPG where you play an entire family saga across 2
 
 config/name="Generational Legacy RPG"
 config/version="0.1.0"
+run/main_scene="res://ui/main.tscn"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [rendering]
 

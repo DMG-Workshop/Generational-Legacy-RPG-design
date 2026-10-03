@@ -1,9 +1,8 @@
-## Main bootstrap script for the game
-##
-## Entry point that initializes MainGame
-
+## Entry point: launches the playable game (ui/play/game_app.gd).
 extends Node
 
+const GameApp := preload("res://ui/play/game_app.gd")
+
+
 func _ready() -> void:
-	var main_game = MainGame.new()
-	add_child(main_game)
+	add_child(GameApp.new())

@@ -41,6 +41,20 @@ Play one heir's full life, then continue as their child while your old character
 /tests/                  Unit tests
 ```
 
+## Play the Test Game
+
+A self-contained playable slice (lineage, fate, echoes, heirlooms, turn-based battles, save/load).
+
+1. Open the project in Godot 4.x once (so it registers the script classes), then press **F5**.
+   Or from a terminal: `godot --path .`
+2. Found a dynasty (class + bloodline + optional seed), then each ~2-year action: hunt, train, work, rest, found a family.
+3. When an heir dies, choose which child carries the legacy. Traits pass on, go dormant, mutate and conflict; failures at Fate milestones shape the next heir.
+
+Code: `core/game/` (logic, no rendering), `ui/play/` (screens), data in `data/classes`, `data/creatures`, `data/game`, `data/traits`.
+
+Tests (headless; includes a 999-generation run per class):
+`godot --headless -s tests/test_play_core.gd`. UI smoke test with screenshots (needs a display): `godot --path . -s tests/test_play_ui.gd`.
+
 ## Development Roadmap
 
 **Phase 1: Lineage Core** (In progress)
