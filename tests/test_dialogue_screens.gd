@@ -155,3 +155,38 @@ func test_dialogue_tree_screen_starting_node() -> void:
 	dialogue_screen = DialogueTreeScreen.new(dialogue_system, "merchant_escort", heir)
 	assert_not_null(dialogue_screen.current_node)
 	assert_eq(dialogue_screen.current_node.id, "escort_start")
+
+
+## Test: Consequence notification screen initialization
+func test_consequence_notification_init() -> void:
+	var consequences = {
+		"gold_gained": 100,
+		"reputation_gained": 25,
+		"quest_started": true,
+		"items_gained": []
+	}
+	var notification = ConsequenceNotificationScreen.new(consequences, heir)
+	assert_not_null(notification)
+
+
+## Test: Consequence notification stores consequences
+func test_consequence_notification_stores_data() -> void:
+	var consequences = {
+		"gold_gained": 150,
+		"reputation_gained": 30,
+		"quest_started": false
+	}
+	var notification = ConsequenceNotificationScreen.new(consequences, heir)
+	assert_eq(notification.consequences, consequences)
+
+
+## Test: Consequence notification with items
+func test_consequence_notification_with_items() -> void:
+	var consequences = {
+		"gold_gained": 0,
+		"reputation_gained": 0,
+		"quest_started": false,
+		"items_gained": ["Health Potion", "Ancient Map"]
+	}
+	var notification = ConsequenceNotificationScreen.new(consequences, heir)
+	assert_eq(notification.consequences["items_gained"].size(), 2)

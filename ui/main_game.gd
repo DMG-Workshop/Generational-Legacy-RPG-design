@@ -31,7 +31,8 @@ enum GameMode {
 	YEAR_ACTION,
 	EVENT_POPUP,
 	DIALOGUE,
-	QUEST_DETAIL
+	QUEST_DETAIL,
+	CONSEQUENCE_NOTIFICATION
 }
 
 var current_mode: GameMode = GameMode.MAIN_MENU
@@ -160,6 +161,16 @@ func show_quest_detail(quest_data: Dictionary) -> void:
 
 	current_screen = QuestDetailScreen.new(quest_data, current_generation_manager.current_heir)
 	current_mode = GameMode.QUEST_DETAIL
+	screen_manager.add_child(current_screen)
+
+
+func show_consequence_notification(consequences: Dictionary) -> void:
+	if current_screen:
+		screen_manager.remove_child(current_screen)
+		current_screen.queue_free()
+
+	current_screen = ConsequenceNotificationScreen.new(consequences, current_generation_manager.current_heir)
+	current_mode = GameMode.CONSEQUENCE_NOTIFICATION
 	screen_manager.add_child(current_screen)
 
 

@@ -106,20 +106,38 @@ func _show_node(node: DialogueSystem.DialogueNode) -> void:
 
 func _on_choice_selected(choice: DialogueSystem.DialogueChoice) -> void:
 	# Apply immediate outcomes from this choice
+	var result = {}
 	if choice.outcome.size() > 0:
-		var result = dialogue_system.apply_outcome(choice.outcome, heir)
-		# TODO: Display outcome to player (gold gained, reputation gained, quest started)
+		result = dialogue_system.apply_outcome(choice.outcome, heir)
 
 	# Navigate to next node
 	var next_node = dialogue_system.get_next_node(current_tree_key, choice.next_node)
 	if next_node:
 		_show_node(next_node)
 	else:
-		_on_dialogue_end()
+		# Show consequences before closing
+		if result.size() > 0 and (result.get("gold_gained", 0) > 0 or result.get("reputation_gained", 0) != 0 or result.get("quest_started", false)):
+			_show_consequences(result)
+		else:
+			_on_dialogue_end()
 
 
 func _on_continue() -> void:
 	_on_dialogue_end()
+
+
+func _show_consequences(result: Dictionary) -> void:
+	if not main_game:
+		main_game = get_tree().root.get_child(0)
+
+	var notification_screen = ConsequenceNotificationScreen.new(result, heir)
+
+	# Remove dialogue screen and show notification
+	main_game.screen_manager.remove_child(self)
+	queue_free()
+
+	main_game.current_screen = notification_screen
+	main_game.screen_manager.add_child(notification_screen)
 
 
 func _on_dialogue_end() -> void:
