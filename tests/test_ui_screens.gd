@@ -179,3 +179,32 @@ func test_skill_tree_init() -> void:
 
 	assert_not_null(skill_tree)
 	assert_eq(skill_tree.heir.class_id, "warrior")
+
+
+## Test: Screen transition animator initialization
+func test_transition_animator_init() -> void:
+	var animator = ScreenTransitionAnimator.new()
+	assert_not_null(animator)
+	assert_eq(animator.transition_speed, 0.3)
+
+
+## Test: Fade in sets alpha to 0 before animation
+func test_fade_in_starts_transparent() -> void:
+	var animator = ScreenTransitionAnimator.new()
+	var screen = Control.new()
+	screen.modulate.alpha = 1.0
+
+	animator.fade_in(screen)
+
+	assert_eq(screen.modulate.alpha, 0.0)
+
+
+## Test: Fade out animation starts opaque
+func test_fade_out_starts_opaque() -> void:
+	var animator = ScreenTransitionAnimator.new()
+	var screen = Control.new()
+	screen.modulate.alpha = 1.0
+
+	animator.fade_out(screen)
+
+	assert_eq(screen.modulate.alpha, 1.0)

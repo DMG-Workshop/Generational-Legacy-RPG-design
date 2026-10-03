@@ -18,6 +18,7 @@ var current_save_slot: int = 0
 ## UI layers
 var screen_manager: ScreenManager
 var current_screen: Control
+var transition_animator: ScreenTransitionAnimator
 
 ## Game modes
 enum GameMode {
@@ -46,9 +47,12 @@ func _ready() -> void:
 	current_generation_manager = GenerationManager.new(current_lineage, current_world)
 	dialogue_system = DialogueSystem.new()
 
-	# Setup screen manager
+	# Setup screen manager and animator
 	screen_manager = ScreenManager.new()
 	add_child(screen_manager)
+
+	transition_animator = ScreenTransitionAnimator.new()
+	add_child(transition_animator)
 
 	# Start at main menu
 	show_main_menu()
@@ -111,6 +115,8 @@ func show_screen(screen_type: String) -> void:
 
 	if current_screen:
 		screen_manager.add_child(current_screen)
+		# Fade in the new screen
+		transition_animator.fade_in(current_screen)
 
 
 func show_main_menu() -> void:
