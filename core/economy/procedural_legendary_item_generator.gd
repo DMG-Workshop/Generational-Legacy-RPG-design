@@ -19,7 +19,7 @@ const LEGENDARY_VALUE_MULTIPLIER = 5.0
 const SYNERGY_VALUE_BOOST = 0.2
 
 
-func generate_legendary(
+static func generate_legendary(
 	seed: int,
 	difficulty: int,
 	item_type: String = "Equipment",
@@ -52,10 +52,10 @@ func generate_legendary(
 	item.name = name_result.name
 	item.description = name_result.lore
 
-	if not item.tags:
-		item.tags = []
-	if "Legendary" not in item.tags:
-		item.tags.append("Legendary")
+	var tags = item.get_property("tags", [])
+	if "Legendary" not in tags:
+		tags.append("Legendary")
+	item.set_property("tags", tags)
 
 	item.set_property("is_procedural_legendary", true)
 	item.set_property("legendary_seed", seed)
@@ -68,12 +68,12 @@ func generate_legendary(
 	var base_value = _get_base_value_for_type(item_type)
 	item.value = Currency.new(0, calculate_legendary_value(base_value, enchantment_count, synergy_score), 0, 0)
 
-	item.is_identified = false
+	item.is_identified = true
 
 	return item
 
 
-func upgrade_to_legendary(
+static func upgrade_to_legendary(
 	item: Equipment,
 	seed: int,
 	difficulty: int,
@@ -115,10 +115,10 @@ func upgrade_to_legendary(
 	item.description = name_result.lore
 
 	item.rarity = Item.Rarity.LEGENDARY
-	if not item.tags:
-		item.tags = []
-	if "Legendary" not in item.tags:
-		item.tags.append("Legendary")
+	var tags = item.get_property("tags", [])
+	if "Legendary" not in tags:
+		tags.append("Legendary")
+	item.set_property("tags", tags)
 
 	item.set_property("is_procedural_legendary", true)
 	item.set_property("legendary_seed", seed)
@@ -131,12 +131,12 @@ func upgrade_to_legendary(
 	var base_value = _get_base_value_for_type(item.item_type if item.item_type else "Equipment")
 	item.value = Currency.new(0, calculate_legendary_value(base_value, all_enchantments.size(), synergy_score), 0, 0)
 
-	item.is_identified = false
+	item.is_identified = true
 
 	return item
 
 
-func can_generate_legendary(seed: int, difficulty: int) -> bool:
+static func can_generate_legendary(seed: int, difficulty: int) -> bool:
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed
 
@@ -144,7 +144,7 @@ func can_generate_legendary(seed: int, difficulty: int) -> bool:
 	return rng.randf() < legendary_rate
 
 
-func select_synergistic_enchantments(seed: int, count: int = 5, difficulty: int = 5) -> Array[Enchantment]:
+static func select_synergistic_enchantments(seed: int, count: int = 5, difficulty: int = 5) -> Array[Enchantment]:
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed
 
@@ -176,7 +176,7 @@ func select_synergistic_enchantments(seed: int, count: int = 5, difficulty: int 
 	return selected
 
 
-func apply_perfect_stats(item: Equipment, seed: int, item_type: String) -> void:
+static func apply_perfect_stats(item: Equipment, seed: int, item_type: String) -> void:
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed
 
@@ -195,12 +195,12 @@ func apply_perfect_stats(item: Equipment, seed: int, item_type: String) -> void:
 		item.stat_bonuses[stat] = rng.randi_range(min_val, max_val)
 
 
-func apply_legendary_effect(item: Equipment, seed: int, theme: String = "") -> void:
+static func apply_legendary_effect(item: Equipment, seed: int, theme: String = "") -> void:
 	var effect = LegendaryEffectCatalog.get_random_effect(seed, theme)
 	item.set_property("legendary_effect", effect)
 
 
-func set_soulbound_if_eligible(item: Equipment, hero_generation: int) -> void:
+static func set_soulbound_if_eligible(item: Equipment, hero_generation: int) -> void:
 	var effect = item.get_property("legendary_effect")
 	if effect and effect is Dictionary:
 		var flavor_tags = effect.get("flavor_tags", [])
@@ -223,7 +223,7 @@ static func calculate_legendary_value(base_value: int, num_enchantments: int, sy
 	return int(base_value * value_multiplier)
 
 
-func _score_enchantments(enchantments: Array[Enchantment]) -> float:
+static func _score_enchantments(enchantments: Array[Enchantment]) -> float:
 	if enchantments.is_empty():
 		return 1.0
 
@@ -231,14 +231,14 @@ func _score_enchantments(enchantments: Array[Enchantment]) -> float:
 	return synergy.score_combination(enchantments)
 
 
-func _enchantments_to_ids(enchantments: Array[Enchantment]) -> Array[String]:
+static func _enchantments_to_ids(enchantments: Array[Enchantment]) -> Array[String]:
 	var ids: Array[String] = []
 	for ench in enchantments:
 		ids.append(ench.enchantment_id)
 	return ids
 
 
-func _get_enchantments_from_item(item: Item) -> Array[Enchantment]:
+static func _get_enchantments_from_item(item: Item) -> Array[Enchantment]:
 	var ench_ids = item.get_property("enchantments")
 	if not ench_ids or not (ench_ids is Array):
 		return []
@@ -252,7 +252,7 @@ func _get_enchantments_from_item(item: Item) -> Array[Enchantment]:
 	return enchantments
 
 
-func _select_random_enchantment_seeded(seed: int, difficulty: int) -> Enchantment:
+static func _select_random_enchantment_seeded(seed: int, difficulty: int) -> Enchantment:
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed
 
@@ -277,7 +277,7 @@ func _select_random_enchantment_seeded(seed: int, difficulty: int) -> Enchantmen
 	return EnchantmentCatalog.get_random_enchantment(selected_rarity)
 
 
-func _generate_legendary_name(
+static func _generate_legendary_name(
 	seed: int,
 	item_type: String,
 	enchantments: Array[Enchantment],
@@ -292,7 +292,7 @@ func _generate_legendary_name(
 	}
 
 
-func _get_primary_stat_for_type(item_type: String) -> String:
+static func _get_primary_stat_for_type(item_type: String) -> String:
 	match item_type.to_lower():
 		"weapon", "sword", "axe", "bow", "staff", "mace", "spear":
 			return "strength"
@@ -308,7 +308,7 @@ func _get_primary_stat_for_type(item_type: String) -> String:
 			return "strength"
 
 
-func _get_base_value_for_type(item_type: String) -> int:
+static func _get_base_value_for_type(item_type: String) -> int:
 	match item_type.to_lower():
 		"weapon", "sword", "axe", "bow", "mace", "spear":
 			return 500
