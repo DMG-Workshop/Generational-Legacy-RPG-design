@@ -44,6 +44,7 @@ var faction_reputation: Dictionary = {}
 ## Wealth and possessions
 var wealth: int = 0  # Legacy field for simple wealth tracking
 var wallet: Wallet = Wallet.new()  # Main currency system
+var gem_pouch: GemPouch = GemPouch.new()  # Gems collection
 var equipment: Array[String] = []
 var heirlooms: Array[String] = []
 var inventory: Array = []  # Items carried
