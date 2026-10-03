@@ -26,6 +26,7 @@ enum GameMode {
 	WORLD_EXPLORATION,
 	BATTLE,
 	CHARACTER_MENU,
+	INVENTORY,
 	GENERATION_TRANSITION,
 	PAUSE_MENU,
 	LOAD_SCREEN,
@@ -85,6 +86,10 @@ func show_screen(screen_type: String) -> void:
 				current_generation_manager.npc_system
 			)
 			current_mode = GameMode.CHARACTER_MENU
+
+		"inventory":
+			current_screen = InventoryScreen.new(current_generation_manager.current_heir)
+			current_mode = GameMode.INVENTORY
 
 		"generation_transition":
 			current_screen = GenerationTransitionScreen.new(current_generation_manager)
