@@ -1,0 +1,35 @@
+# Godot
+.godot/
+*.import
+export.json
+.mono/
+mono_crash.*.json
+
+# Build artifacts
+build/
+bin/
+*.exe
+*.pck
+*.zip
+
+# OS-specific
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Python caches (for tools)
+__pycache__/
+*.pyc
+*.pyo
+
+# Godot project cache
+.godot/
+project.godot
+
+# User-specific
+*.user
+*.bak
