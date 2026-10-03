@@ -26,7 +26,9 @@ var current_generation: int = 0
 func _init(seed_value: int = 0) -> void:
 	rng = RandomNumberGenerator.new()
 	rng.seed = seed_value
-	_load_traits()
+	trait_catalog = TraitLoader.load_all_traits()
+	if trait_catalog.is_empty():
+		push_warning("No traits loaded; trait_catalog is empty")
 
 
 ## Create the first ancestor
@@ -93,16 +95,18 @@ func _inherit_traits(heir: Heir, mother: Heir, father: Heir) -> void:
 
 		# Modifier: if both parents have it, higher chance
 		if parents_with_trait >= 2:
-			inherit_chance += trait_def.get("family_bonus", 0.0)
+			inherit_chance += 0.20  # +20% bonus if both parents have it
 
+		# Check for inheritance
 		if rng.randf() < inherit_chance:
-			heir.traits.append(trait_id)
+			var final_trait = trait_id
 
-			# Check for mutation
+			# Check for mutation (15% chance)
 			var mutations = trait_def.get("mutations", [])
-			if mutations.size() > 0 and rng.randf() < 0.15:  # 15% mutation chance
-				var mutated_trait = mutations[rng.randi() % mutations.size()]
-				heir.traits[-1] = mutated_trait
+			if mutations.size() > 0 and rng.randf() < 0.15:
+				final_trait = mutations[rng.randi() % mutations.size()]
+
+			heir.add_trait(final_trait)
 		else:
 			# Trait didn't pass; check for dormancy
 			var dormant_chance = trait_def.get("dormant_chance", 0.0)
@@ -111,11 +115,6 @@ func _inherit_traits(heir: Heir, mother: Heir, father: Heir) -> void:
 				pass
 
 
-## Load trait definitions from JSON files
-func _load_traits() -> void:
-	# TODO: Load from /data/traits/*.json
-	# For now, trait_catalog is empty; data is loaded at runtime
-	pass
 
 
 ## Get an heir by generation

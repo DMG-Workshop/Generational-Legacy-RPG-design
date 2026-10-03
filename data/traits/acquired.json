@@ -1,0 +1,76 @@
+{
+  "traits": [
+    {
+      "id": "scarred",
+      "name": "Scarred",
+      "category": "acquired",
+      "description": "Marked by violence; intimidating presence",
+      "inherit_chance": 0.15,
+      "dormant_chance": 0.0,
+      "expression": "Battle scars crisscross your body.",
+      "effects": [{"stat": "intimidation", "value": 0.15}],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "Your scars tell stories of survival."
+    },
+    {
+      "id": "cursed",
+      "name": "Cursed",
+      "category": "acquired",
+      "description": "-10% to all rolls; supernatural bad luck",
+      "inherit_chance": 0.30,
+      "dormant_chance": 0.0,
+      "expression": "Misfortune dogs your every step.",
+      "effects": [{"stat": "luck", "value": -0.10}],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": 0.10,
+      "story_hook": "You must find the curse's source and break it.",
+      "is_negative": true
+    },
+    {
+      "id": "blessed",
+      "name": "Blessed",
+      "category": "acquired",
+      "description": "+10% to healing and miracles",
+      "inherit_chance": 0.20,
+      "dormant_chance": 0.0,
+      "expression": "Divine light surrounds you.",
+      "effects": [{"stat": "healing_power", "value": 0.10}],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": -0.05,
+      "story_hook": "The gods smile upon you—for now."
+    },
+    {
+      "id": "legendary",
+      "name": "Legendary",
+      "category": "acquired",
+      "description": "+30% to all reputation gains",
+      "inherit_chance": 0.10,
+      "dormant_chance": 0.0,
+      "expression": "Stories are told about you in every tavern.",
+      "effects": [{"stat": "reputation_gain", "value": 0.30}],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "Your legend grows with every action; heirs live in your shadow."
+    },
+    {
+      "id": "indebted",
+      "name": "Indebted",
+      "category": "acquired",
+      "description": "A debt must be repaid or it passes to heirs",
+      "inherit_chance": 1.0,
+      "dormant_chance": 0.0,
+      "expression": "You owe a life debt to an entity or person.",
+      "effects": [],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": 0.05,
+      "story_hook": "Repay your debt or it consumes your bloodline.",
+      "carries_quest": true
+    }
+  ]
+}

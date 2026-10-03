@@ -1,0 +1,82 @@
+{
+  "traits": [
+    {
+      "id": "saints_blood",
+      "name": "Saint's Blood",
+      "category": "blessing",
+      "description": "+30% healing power; can purify curses",
+      "inherit_chance": 0.40,
+      "dormant_chance": 0.0,
+      "expression": "Holy light radiates from your touch.",
+      "effects": [
+        {"stat": "healing_power", "value": 0.30},
+        {"stat": "curse_purification", "value": 1.0}
+      ],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": -0.05,
+      "story_hook": "Enemies of the faith hunt you; you cannot lie well.",
+      "hidden_cost": "Hunted by those who oppose the faith"
+    },
+    {
+      "id": "dragons_favor",
+      "name": "Dragon's Favor",
+      "category": "blessing",
+      "description": "Dragons won't attack; can call them for aid",
+      "inherit_chance": 0.35,
+      "dormant_chance": 0.10,
+      "expression": "Dragons regard you with respect and interest.",
+      "effects": [{"stat": "dragon_affinity", "value": 1.0}],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "Dragons collect their debts; this favor costs.",
+      "hidden_cost": "Dragons will demand repayment"
+    },
+    {
+      "id": "lucky",
+      "name": "Lucky",
+      "category": "blessing",
+      "description": "+15% to all rolls; fate may balance it later",
+      "inherit_chance": 0.45,
+      "dormant_chance": 0.0,
+      "expression": "Fortune smiles upon you—for now.",
+      "effects": [{"stat": "luck", "value": 0.15}],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "Good luck now may mean bad luck later; fate balances.",
+      "hidden_cost": "Potential backlash of bad luck"
+    },
+    {
+      "id": "immortal_youth",
+      "name": "Immortal Youth",
+      "category": "blessing",
+      "description": "+50 years of life; you outlive everyone you love",
+      "inherit_chance": 0.30,
+      "dormant_chance": 0.0,
+      "expression": "You do not age as others; youth clings to you.",
+      "effects": [{"stat": "lifespan_modifier", "value": 1.50}],
+      "mutations": [],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "You watch everyone you love grow old and die.",
+      "hidden_cost": "Eternal loneliness and loss"
+    },
+    {
+      "id": "magical_savant",
+      "name": "Magical Savant",
+      "category": "blessing",
+      "description": "Learn spells 50% faster; risk of addiction and burnout",
+      "inherit_chance": 0.25,
+      "dormant_chance": 0.0,
+      "expression": "Magic flows through you effortlessly.",
+      "effects": [{"stat": "spell_learn_speed", "value": 1.50}],
+      "mutations": ["magically_burned"],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "Magic is addictive; you may burn out and lose it all.",
+      "hidden_cost": "Risk of magical burnout and addiction"
+    }
+  ]
+}
