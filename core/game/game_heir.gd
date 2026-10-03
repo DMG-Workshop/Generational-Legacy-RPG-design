@@ -33,6 +33,8 @@ var parent_names: Array = []
 var children: Array = []     # Array[GameHeir], born to this heir
 var spouse: GameHeir = null
 var heirloom_bonus: float = 0.0
+var equipment: Dictionary = {"weapon": "", "armor": "", "trinket": ""}   # slot -> item id
+var inventory: Array = []    # item ids carried but not worn
 
 
 func full_name() -> String:
@@ -68,13 +70,18 @@ func midlife_age() -> float:
 	return lifespan * float(GameData.bal("midlife_fraction"))
 
 
-## Sum of an effect stat across expressed and racial traits.
+## Sum of an effect stat across expressed traits, racial traits and equipped gear.
 func trait_total(stat: String) -> float:
 	var total := 0.0
 	for id in all_traits():
 		for e in GameData.trait_def(id).get("effects", []):
 			if e["stat"] == stat:
 				total += float(e["value"])
+	for slot in equipment:
+		if equipment[slot] != "":
+			for e in GameItems.item_def(equipment[slot]).get("effects", []):
+				if e["stat"] == stat:
+					total += float(e["value"])
 	return total
 
 
@@ -129,6 +136,7 @@ func max_hp() -> int:
 
 func max_mp() -> int:
 	var v: float = base_of("mp") + growth_of("mp") * float(level - 1) + stat("mag") * 0.5
+	v *= 1.0 + trait_total("max_mp")
 	return maxi(0, int(round(v)))
 
 
@@ -142,7 +150,7 @@ func magic_power() -> float:
 
 
 func defense() -> float:
-	return stat("vit") * 0.8
+	return stat("vit") * 0.8 * maxf(0.0, 1.0 + trait_total("defense"))
 
 
 func dodge_chance() -> float:
@@ -208,6 +216,7 @@ func to_dict() -> Dictionary:
 		"archetype_bonus": archetype_bonus, "training": training, "family_founded": family_founded,
 		"extra_life_used": extra_life_used, "battles_won": battles_won, "kills": kills,
 		"parent_names": parent_names, "heirloom_bonus": heirloom_bonus, "children": kids,
+		"equipment": equipment, "inventory": inventory,
 		"spouse": spouse.to_dict() if spouse != null else null,
 	}
 
@@ -229,6 +238,8 @@ static func from_dict(d: Dictionary) -> GameHeir:
 		h.kills[k] = int(d["kills"][k])
 	h.parent_names = Array(d["parent_names"])
 	h.heirloom_bonus = float(d["heirloom_bonus"])
+	h.equipment = d.get("equipment", {"weapon": "", "armor": "", "trinket": ""})
+	h.inventory = Array(d.get("inventory", []))
 	h.lifespan = h.compute_lifespan()
 	# A save from an older, steeper XP curve can hold more XP than the next level now costs.
 	while h.level < int(GameData.bal("level_cap")) and h.xp >= h.xp_to_next():

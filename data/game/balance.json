@@ -1,7 +1,7 @@
 {
   "min_lifespan": 30,
   "max_lifespan": 100000,
-  "years_per_action": {"hunt": 2, "hunt_hard": 2, "legend": 2, "train": 2, "work": 2, "rest": 1, "family": 2},
+  "years_per_action": {"explore": 1, "hunt": 2, "hunt_hard": 2, "legend": 2, "train": 2, "work": 2, "rest": 1, "family": 2},
   "elder_fraction": 0.85,
   "old_age_steepness": 12,
   "fate_min": 0.01,

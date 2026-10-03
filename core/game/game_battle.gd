@@ -8,6 +8,7 @@ var rng: RandomNumberGenerator
 var damage_bonus: float = 0.0  # from legacy echoes
 var slayer_bonus: Dictionary = {}  # creature id -> extra damage fraction
 var weather: Dictionary = {}       # combat modifiers from the weather: dodge, crit, flee, mp_regen
+var allies: Array = []             # companions fighting beside the heir (see GameParty)
 var result: String = ""        # "", "victory", "defeat", "fled"
 var defending: bool = false
 var turn: int = 0

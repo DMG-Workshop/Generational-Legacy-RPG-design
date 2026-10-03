@@ -4,6 +4,10 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const MapPanel := preload("res://ui/play/map_panel.gd")
+const ShopPanel := preload("res://ui/play/shop_panel.gd")
+const TavernPanel := preload("res://ui/play/tavern_panel.gd")
+const BoardPanel := preload("res://ui/play/board_panel.gd")
+const EventPanel := preload("res://ui/play/event_panel.gd")
 
 var app: Node
 var d: GameDynasty
@@ -53,7 +57,7 @@ func _ready() -> void:
 	journal = Kit.rich()
 	jp.add_child(journal)
 	actions = GridContainer.new()
-	actions.columns = 3
+	actions.columns = 4
 	actions.add_theme_constant_override("h_separation", 8)
 	actions.add_theme_constant_override("v_separation", 8)
 	mid.add_child(actions)
@@ -65,6 +69,8 @@ func _ready() -> void:
 	right.add_theme_constant_override("separation", 5)
 	rp.add_child(right)
 	_refresh()
+	if d.has_pending_event():
+		_open.call_deferred(EventPanel)
 
 
 func _refresh() -> void:
@@ -141,6 +147,8 @@ func _build_right() -> void:
 		single.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		single.custom_minimum_size = Vector2(270, 0)
 		right.add_child(single)
+	_section("Companions", TavernPanel.summary_lines(d))
+	_section("Quests", BoardPanel.summary_lines(d))
 	right.add_child(HSeparator.new())
 	right.add_child(Kit.label("Legacy", 20, Kit.ACCENT))
 	right.add_child(Kit.label("Heirlooms: %d  (+%d%% power)" % [d.heirlooms.size(), int(round(d.heirloom_bonus() * 100.0))], 14))
@@ -154,12 +162,25 @@ func _build_right() -> void:
 		right.add_child(l)
 
 
+func _section(title: String, lines: Array) -> void:
+	if lines.is_empty():
+		return
+	right.add_child(HSeparator.new())
+	right.add_child(Kit.label(title, 20, Kit.ACCENT))
+	for line in lines:
+		var l := Kit.label(str(line), 13, Kit.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(270, 0)
+		right.add_child(l)
+
+
 func _build_actions() -> void:
 	Kit.clear(actions)
 	var h := d.heir
 	var boss := d.available_boss()
-	_act("Hunt (safe)", func(): _hunt("hunt"))
-	_act("Hunt (hard, 2x loot)", func(): _hunt("hunt_hard"))
+	_act("Hunt", func(): _hunt("hunt"))
+	var hard := _act("Hard hunt", func(): _hunt("hunt_hard"))
+	hard.tooltip_text = "Tougher monsters and more Elites, for double XP and gold."
 	var legend := _act("Legend: %s" % boss["name"] if not boss.is_empty() else "No legend here", func(): _legend())
 	legend.disabled = boss.is_empty()
 	if not boss.is_empty():
@@ -168,23 +189,31 @@ func _build_actions() -> void:
 		var rumors: Array = d.stirring_legends().map(func(c): return "%s (level %d) lairs in %s" % [c["name"], int(c.get("min_level", 1)), GameWorld.place(c.get("lair", "")).get("name", "somewhere")])
 		legend.tooltip_text = "Legends are fought in their lairs.\n" + ("\n".join(rumors) if not rumors.is_empty() else "None stir in this generation.")
 	_act("Travel / Map", func(): _map())
+	_act("Explore", func(): _do(func(): return d.explore()))
+	var w := d.world
+	if w.has_service("forge") or w.has_service("store") or w.has_service("temple"):
+		_act("Shops", func(): _open(ShopPanel))
+	if w.has_service("tavern"):
+		_act("Tavern", func(): _open(TavernPanel))
+	if w.has_service("board"):
+		_act("Notice board", func(): _open(BoardPanel))
 	for s in ["str", "mag", "agi", "vit"]:
 		var st: String = s
 		_act("Train %s" % st.to_upper(), func(): _do(func(): return d.train(st)))
-	_act("Work for gold", func(): _do(func(): return d.work()))
-	_act("Rest (heal fully)", func(): _do(func(): return d.rest()))
+	_act("Work", func(): _do(func(): return d.work()))
+	_act("Rest", func(): _do(func(): return d.rest()))
 	var buy := _act("Buy potion (%dg)" % d.potion_price(), _say_buy)
 	buy.disabled = h.gold < d.potion_price()
 	var fam := _act("Found family", func(): _do(func(): return d.found_family()))
 	fam.disabled = not d.can_found_family()
 	fam.tooltip_text = "Requires age %d+ and no family yet. Children inherit traits from both parents." % int(h.family_min_age())
-	var ret := _act("Retire / pass the torch", func(): _do(func(): return d.retire()))
+	var ret := _act("Retire", func(): _do(func(): return d.retire()))
 	ret.disabled = not d.can_retire()
-	_act("Autopilot: this life", func(): _autopilot(1))
-	_act("Autopilot: 10 gens", func(): _autopilot(10))
+	_act("Auto: this life", func(): _autopilot(1))
+	_act("Auto: 10 gens", func(): _autopilot(10))
 	_act("Chronicle", func(): _chronicle())
 	_act("Save", func(): d.save_to_disk(); d._say("Game saved."); _refresh())
-	_act("Main menu", func(): app.show_title())
+	_act("Menu", func(): app.show_title())
 
 
 func _act(text: String, cb: Callable) -> Button:
@@ -204,11 +233,32 @@ func _say_buy() -> void:
 
 func _do(fn: Callable) -> void:
 	fn.call()
+	_changed()
+
+
+## After anything changes the dynasty: save, then show whatever needs the player next.
+func _changed() -> void:
 	app.autosave()
-	if d.state != "life":
+	if d.state != "life" or d.battle != null:
 		app.show_state()
-	else:
-		_refresh()
+		return
+	_refresh()
+	if d.has_pending_event() and not _has_open(EventPanel):
+		_open(EventPanel)
+
+
+func _open(panel_script: Script) -> void:
+	var p: Control = panel_script.new()
+	p.dynasty = d
+	p.on_change = _changed
+	add_child(p)
+
+
+func _has_open(panel_script: Script) -> bool:
+	for c in get_children():
+		if c.get_script() == panel_script:
+			return true
+	return false
 
 
 func _hunt(kind: String) -> void:

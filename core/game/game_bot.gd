@@ -35,6 +35,12 @@ static func step(d: GameDynasty) -> bool:
 	var h := d.heir
 	if d.state != "life":
 		return false
+	if d.has_pending_event():
+		GameEvents.bot_resolve(d)
+		return d.state == "life"
+	GameItems.bot_tick(d)
+	GameQuests.bot_tick(d)
+	GameParty.bot_tick(d)
 	var hp_frac := float(h.hp) / float(h.max_hp())
 	while h.potions < 3 and h.gold >= d.potion_price() * 2:
 		d.buy_potion()
@@ -51,6 +57,10 @@ static func step(d: GameDynasty) -> bool:
 		elif not target.is_empty() and hp_frac > 0.85:
 			var path := d.world.route_to(target["lair"], d.flags)
 			d.travel(path[0])
+		elif GameEvents.bot_wants_explore(d):
+			d.explore()
+			if d.has_pending_event():
+				GameEvents.bot_resolve(d)
 		elif (h.battles_won + h.level) % 5 == 4:
 			d.train(["str", "vit", "agi", "mag"][(h.battles_won + h.level) % 4])
 		else:

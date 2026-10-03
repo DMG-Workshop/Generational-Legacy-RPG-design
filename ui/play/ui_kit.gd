@@ -74,6 +74,35 @@ static func rich(bbcode: bool = true) -> RichTextLabel:
 	return r
 
 
+## A modal overlay on `host`: dimmed backdrop, bordered panel, title row with Close.
+## Returns the content box; the overlay itself is `box.get_meta("overlay")`.
+static func overlay(host: Control, title: String) -> VBoxContainer:
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.6)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	host.add_child(dim)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", style(Color("#1a1828"), 8, ACCENT))
+	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	p.offset_left = 30
+	p.offset_right = -30
+	p.offset_top = 24
+	p.offset_bottom = -24
+	host.add_child(p)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	p.add_child(v)
+	var top := HBoxContainer.new()
+	v.add_child(top)
+	var t := label(title, 22, ACCENT)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(t)
+	top.add_child(button("Close", func(): host.queue_free(), Vector2(100, 34)))
+	v.set_meta("overlay", host)
+	return v
+
+
 static func clear(node: Node) -> void:
 	for c in node.get_children():
 		node.remove_child(c)

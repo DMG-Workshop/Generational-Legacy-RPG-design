@@ -24,7 +24,10 @@ var next_id: int = 1
 var killer_id: String = ""
 var total_hunts: int = 0
 var world: GameWorld
-var flags: Dictionary = {}      # story flags set by quests and events; never cleared
+var flags: Dictionary = {}      # story flags set by quests and events (flag -> generation set); never cleared
+var quests := GameQuests.new()
+var party := GameParty.new()
+var pending_event: Dictionary = {}   # an event waiting for the player's choice (see GameEvents)
 
 
 static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
@@ -235,6 +238,31 @@ func available_boss() -> Dictionary:
 	return {}
 
 
+# ---------------------------------------------------------------- flags, items, events
+
+func set_flag(flag: String) -> void:
+	if not flags.has(flag):
+		flags[flag] = gen
+		quests.on_flag(self, flag)
+
+
+func give_item(id: String) -> String:
+	heir.inventory.append(id)
+	return "%s received %s." % [heir.name, GameItems.item_def(id).get("name", id)]
+
+
+func has_pending_event() -> bool:
+	return not pending_event.is_empty()
+
+
+func explore() -> Array:
+	return GameEvents.explore(self)
+
+
+func resolve_event(choice: int) -> Array:
+	return GameEvents.resolve(self, choice)
+
+
 # ---------------------------------------------------------------- travel & maps
 
 func travel(to: String) -> Array:
@@ -253,7 +281,11 @@ func travel(to: String) -> Array:
 	msgs.append("%s travels to %s: %s%s." % [heir.name, dest["name"], _span_text(years), slow])
 	if first:
 		msgs.append("No one of House %s has walked %s before. %s" % [dynasty_name, dest["name"], dest.get("description", "")])
-	return _pass_years(years, msgs)
+	quests.on_arrive(self, to)
+	msgs = _pass_years(years, msgs)
+	if state == "life":
+		msgs.append_array(GameEvents.on_arrive(self, to))
+	return msgs
 
 
 func map_price(m: Dictionary) -> int:
@@ -429,6 +461,7 @@ func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle = GameBattle.new(heir, foes, rng)
 	battle.slayer_bonus = slayer_map()
 	battle.weather = world.weather().get("combat", {})
+	battle.allies = party.battle_allies(self)
 	battle_kind = kind
 	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
 	return battle
@@ -463,6 +496,7 @@ func finish_battle() -> Array:
 				xp += int(e["xp"])
 				gold += int(e["gold"])
 				heir.kills[e["id"]] = int(heir.kills.get(e["id"], 0)) + 1
+				quests.on_kill(self, e["id"])
 				if e["boss"] and not slain_bosses.has(e["id"]):
 					slain_bosses[e["id"]] = gen
 					if e["heirloom"] != "":
@@ -527,6 +561,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 	var age_before := heir.age
 	heir.age += years
 	world.advance(years, rng)
+	party.on_years(self, years, msgs)
 	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * 0.1)))
 	if heir.age >= heir.midlife_age():
 		_check_milestone("midlife")
@@ -639,9 +674,13 @@ func choose_heir(index: int) -> Array:
 	var bonus_gold: int = int(GameFate.ARCHETYPES.get(c.archetype, {}).get("gold", 0))
 	if bonus_gold > 0:
 		c.gold += int(float(bonus_gold) * GameData.enemy_scale(gen))
+	# Gear and carried items pass down with the house.
+	c.equipment = parent.equipment.duplicate()
+	c.inventory = parent.inventory.duplicate()
 	c.refresh_derived()
 	c.full_heal()
 	heir = c
+	party.on_succession(self, msgs)
 	candidates = []
 	state = "life"
 	_say("Generation %d: %s takes up the family name." % [gen, c.full_name()])
@@ -663,6 +702,7 @@ func to_dict() -> Dictionary:
 		"candidates": candidates.map(func(c): return c.to_dict()), "last_death": last_death,
 		"journal": journal.slice(maxi(0, journal.size() - 60)), "next_id": next_id, "total_hunts": total_hunts,
 		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
+		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
 	}
 
 
@@ -694,6 +734,9 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.killer_id = d.get("killer_id", "")
 	g.world = GameWorld.from_dict(d["world"]) if d.has("world") else GameWorld.create(g.rng)
 	g.flags = d.get("flags", {})
+	g.quests = GameQuests.from_dict(d.get("quests", {}))
+	g.party = GameParty.from_dict(d.get("party", {}))
+	g.pending_event = d.get("pending_event", {})
 	return g
 
 
