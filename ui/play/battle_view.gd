@@ -127,7 +127,7 @@ func _build_actors() -> void:
 			eye.position = Vector2(w * ex, h * 0.22)
 			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(eye)
-		var lbl := Kit.label(e["name"], 14)
+		var lbl := Kit.label("%s  Lv%d" % [e["name"], int(e.get("level", 1))], 14)
 		lbl.position = Vector2(0, h + 6)
 		root.add_child(lbl)
 		var hp := Kit.bar(Kit.BAD, e["max_hp"], e["hp"], Vector2(w, 10))
@@ -164,7 +164,7 @@ func _build_commands() -> void:
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
-		var btn := Kit.button("%s (%d MP)" % [s["name"], s["mp"]], func(): _do(func(): b.use_skill(idx, target)))
+		var btn := Kit.button("%s (%d MP)" % [s["name"], b.skill_cost(i)], func(): _do(func(): b.use_skill(idx, target)))
 		btn.disabled = not b.can_use_skill(i)
 		col2.add_child(btn)
 	var pot := Kit.button("Potion (%d)" % d.heir.potions, func(): _do(func(): b.use_potion()))

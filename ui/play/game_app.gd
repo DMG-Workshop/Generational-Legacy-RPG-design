@@ -37,8 +37,8 @@ func show_title() -> void:
 	_swap(s)
 
 
-func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int) -> void:
-	dynasty = GameDynasty.new_game(p_seed, p_name, class_id, bloodline)
+func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, race_id: String = "human") -> void:
+	dynasty = GameDynasty.new_game(p_seed, p_name, class_id, bloodline, race_id)
 	dynasty.save_to_disk()
 	show_state()
 

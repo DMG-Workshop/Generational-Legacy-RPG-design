@@ -86,6 +86,8 @@ static func trait_color(id: String) -> Color:
 		"blessing": return GOOD
 		"mutation": return Color("#c58fe8")
 		"acquired": return Color("#e8a05a")
+		"divine": return Color("#ffd75e")
+		"racial": return Color("#5ad1c8")
 	return Color("#7fb7ff")
 
 
@@ -99,5 +101,8 @@ static func trait_tooltip(id: String) -> String:
 	var s: String = "%s [%s]\n%s" % [def.get("name", id), def.get("category", ""), def.get("description", "")]
 	if def.has("story_hook"):
 		s += "\n\n" + str(def["story_hook"])
-	s += "\n\nInherit chance: %d%%" % int(round(float(def.get("inherit_chance", 0.0)) * 100.0))
+	if def.get("category", "") == "racial":
+		s += "\n\nInnate to the race; never lost."
+	else:
+		s += "\n\nInherit chance: %d%%" % int(round(float(def.get("inherit_chance", 0.0)) * 100.0))
 	return s

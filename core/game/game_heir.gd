@@ -8,6 +8,7 @@ var id: int = 0
 var name: String = ""
 var surname: String = ""
 var class_id: String = "warrior"
+var race_id: String = "human"
 var gen: int = 1
 var age: float = 16.0
 var lifespan: float = 62.0
@@ -42,10 +43,35 @@ func cls() -> Dictionary:
 	return GameData.classes[class_id]
 
 
-## Sum of an effect stat across expressed traits.
+func race() -> Dictionary:
+	return GameData.races[race_id]
+
+
+func racial_traits() -> Array:
+	return race().get("traits", [])
+
+
+## Expressed traits plus the innate traits of the heir's race.
+func all_traits() -> Array:
+	return traits + racial_traits()
+
+
+func adult_age() -> float:
+	return float(race()["start_age"])
+
+
+func family_min_age() -> float:
+	return adult_age() + float(GameData.bal("family_after_years"))
+
+
+func midlife_age() -> float:
+	return lifespan * float(GameData.bal("midlife_fraction"))
+
+
+## Sum of an effect stat across expressed and racial traits.
 func trait_total(stat: String) -> float:
 	var total := 0.0
-	for id in traits:
+	for id in all_traits():
 		for e in GameData.trait_def(id).get("effects", []):
 			if e["stat"] == stat:
 				total += float(e["value"])
@@ -54,16 +80,16 @@ func trait_total(stat: String) -> float:
 
 func fate_modifier_total() -> float:
 	var total := 0.0
-	for id in traits:
+	for id in all_traits():
 		total += float(GameData.trait_def(id).get("fate_modifier", 0.0))
 	return total
 
 
 func compute_lifespan() -> float:
-	var span: float = float(GameData.bal("base_lifespan"))
+	var span: float = float(race()["lifespan"])
 	var mod := 1.0
 	var aging := 1.0
-	for id in traits:
+	for id in all_traits():
 		for e in GameData.trait_def(id).get("effects", []):
 			if e["stat"] == "lifespan_modifier":
 				mod = max(mod, float(e["value"]))
@@ -74,9 +100,17 @@ func compute_lifespan() -> float:
 	return clampf(span, float(GameData.bal("min_lifespan")), float(GameData.bal("max_lifespan")))
 
 
+## Class base/growth plus the race's additive adjustments.
+func base_of(s: String) -> float:
+	return float(cls()["base"][s]) + float(race().get("base", {}).get(s, 0.0))
+
+
+func growth_of(s: String) -> float:
+	return float(cls()["growth"][s]) + float(race().get("growth", {}).get(s, 0.0))
+
+
 func stat(s: String) -> float:
-	var c := cls()
-	var v: float = float(c["base"][s]) + float(c["growth"][s]) * float(level - 1)
+	var v: float = maxf(1.0, base_of(s) + growth_of(s) * float(level - 1))
 	v = (v + training[s]) * GameData.heir_scale(gen)
 	v *= 1.0 + float(archetype_bonus.get("all_stats", 0.0))
 	v *= 1.0 + float(archetype_bonus.get(s, 0.0))
@@ -84,16 +118,14 @@ func stat(s: String) -> float:
 
 
 func max_hp() -> int:
-	var c := cls()
-	var v: float = float(c["base"]["hp"]) + float(c["growth"]["hp"]) * float(level - 1) + stat("vit") * 2.0
+	var v: float = base_of("hp") + growth_of("hp") * float(level - 1) + stat("vit") * 2.0
 	v *= GameData.heir_scale(gen)
 	v *= 1.0 + trait_total("max_hp") + float(archetype_bonus.get("hp", 0.0)) + heirloom_bonus
 	return maxi(10, int(round(v)))
 
 
 func max_mp() -> int:
-	var c := cls()
-	var v: float = float(c["base"]["mp"]) + float(c["growth"]["mp"]) * float(level - 1) + stat("mag") * 0.5
+	var v: float = base_of("mp") + growth_of("mp") * float(level - 1) + stat("mag") * 0.5
 	return maxi(0, int(round(v)))
 
 
@@ -129,14 +161,21 @@ func full_heal() -> void:
 
 ## Returns the number of levels gained.
 func gain_xp(amount: int) -> int:
-	xp += int(round(float(amount) * (1.0 + float(archetype_bonus.get("xp", 0.0)))))
+	var cap := int(GameData.bal("level_cap"))
+	if level >= cap:
+		xp = 0
+		return 0
+	var mult := maxf(0.1, 1.0 + float(archetype_bonus.get("xp", 0.0)) + trait_total("xp_gain"))
+	xp += int(round(float(amount) * mult))
 	var gained := 0
-	while xp >= xp_to_next():
+	while level < cap and xp >= xp_to_next():
 		xp -= xp_to_next()
 		level += 1
 		gained += 1
 		hp = mini(max_hp(), hp + int(float(max_hp()) * 0.25))
 		mp = mini(max_mp(), mp + int(float(max_mp()) * 0.25))
+	if level >= cap:
+		xp = 0
 	return gained
 
 
@@ -151,7 +190,7 @@ func to_dict() -> Dictionary:
 	for c in children:
 		kids.append(c.to_dict())
 	return {
-		"id": id, "name": name, "surname": surname, "class_id": class_id, "gen": gen,
+		"id": id, "name": name, "surname": surname, "class_id": class_id, "race_id": race_id, "gen": gen,
 		"age": age, "lifespan": lifespan, "level": level, "xp": xp, "hp": hp, "mp": mp,
 		"gold": gold, "potions": potions, "traits": traits, "dormant": dormant,
 		"fate_value": fate_value, "milestones_done": milestones_done, "archetype": archetype,
@@ -165,6 +204,7 @@ func to_dict() -> Dictionary:
 static func from_dict(d: Dictionary) -> GameHeir:
 	var h := GameHeir.new()
 	h.id = int(d["id"]); h.name = d["name"]; h.surname = d["surname"]; h.class_id = d["class_id"]
+	h.race_id = d.get("race_id", "human")
 	h.gen = int(d["gen"]); h.age = float(d["age"]); h.lifespan = float(d["lifespan"])
 	h.level = int(d["level"]); h.xp = int(d["xp"]); h.hp = int(d["hp"]); h.mp = int(d["mp"])
 	h.gold = int(d["gold"]); h.potions = int(d["potions"])

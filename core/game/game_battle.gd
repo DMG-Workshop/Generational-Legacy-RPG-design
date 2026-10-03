@@ -56,7 +56,7 @@ func _calc_damage(power: float, mult: float, e: Dictionary, pierce: float, crit_
 	return {"amount": maxi(1, int(round(dmg))), "crit": crit}
 
 
-func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: float) -> void:
+func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: float) -> int:
 	var e: Dictionary = enemies[idx]
 	var r := _calc_damage(power, mult, e, pierce, crit_bonus)
 	var amount: int = r["amount"]
@@ -66,6 +66,7 @@ func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: 
 	if e["hp"] == 0:
 		events.append({"type": "death", "side": "enemy", "index": idx})
 		_say("%s is defeated." % e["name"])
+	return amount
 
 
 func attack(target: int) -> void:
@@ -84,28 +85,45 @@ func skill_info(i: int) -> Dictionary:
 	return heir.cls()["skills"][i]
 
 
+## Skill costs grow with level, so max MP growth buys stronger casts rather than endless heals.
+func skill_cost(i: int) -> int:
+	var growth := float(GameData.bal("skill_cost_growth_per_level"))
+	return int(round(float(skill_info(i)["mp"]) * (1.0 + growth * float(heir.level - 1))))
+
+
 func can_use_skill(i: int) -> bool:
-	return result == "" and heir.mp >= int(skill_info(i)["mp"])
+	return result == "" and heir.mp >= skill_cost(i)
 
 
 func use_skill(i: int, target: int) -> void:
 	if not _begin_action() or not can_use_skill(i):
 		return
 	var s := skill_info(i)
-	heir.mp -= int(s["mp"])
+	heir.mp -= skill_cost(i)
 	if s["type"] == "heal":
 		var amt := int(round(float(heir.max_hp()) * float(s["pct_max_hp"]) * (1.0 + heir.trait_total("healing_power"))))
 		_heal_player(amt, s["name"])
 	else:
 		target = _valid_target(target)
-		var power: float = heir.magic_power() if s["stat"] == "mag" else heir.attack_power()
+		var power: float
+		match str(s.get("stat", "str")):
+			"mag":
+				power = heir.magic_power()
+			"both":  # hybrid classes draw on body and spell alike
+				power = (heir.attack_power() + heir.magic_power()) * 0.6
+			_:
+				power = heir.attack_power()
 		var hits: int = int(s.get("hits", 1))
+		var dealt := 0
 		for h in hits:
 			if enemies[target]["hp"] <= 0:
 				target = first_target()
 				if target < 0:
 					break
-			_hit_enemy(target, power, float(s["mult"]), float(s.get("pierce", 0.0)), float(s.get("crit_bonus", 0.0)))
+			dealt += _hit_enemy(target, power, float(s["mult"]), float(s.get("pierce", 0.0)), float(s.get("crit_bonus", 0.0)))
+		var drain := float(s.get("drain", 0.0))
+		if drain > 0.0 and dealt > 0:
+			_heal_player(int(round(float(dealt) * drain)), s["name"])
 	_end_player_turn()
 
 

@@ -44,7 +44,7 @@ func _lineage_text() -> String:
 	if dynasty.history.is_empty():
 		lines.append("[color=#8d88a0]No ancestors have died yet.[/color]")
 	for r in dynasty.history:
-		var cname: String = GameData.classes[r["class_id"]]["name"]
+		var cname: String = "%s %s" % [GameData.races[r.get("race_id", "human")]["name"], GameData.classes[r["class_id"]]["name"]]
 		var line := "[b]Gen %d[/b]  %s  (%s, level %d)  died aged %d: %s" % [r["gen"], r["name"], cname, r["level"], r["age"], r["cause"]]
 		if not (r["parents"] as Array).is_empty():
 			line += "\n      child of %s" % " & ".join(r["parents"])

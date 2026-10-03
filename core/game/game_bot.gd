@@ -3,19 +3,28 @@ class_name GameBot
 extends RefCounted
 
 
+static func _skill_of(b: GameBattle, kind: String) -> int:
+	for i in b.skill_count():
+		if b.skill_info(i)["type"] == kind:
+			return i
+	return -1
+
+
 static func fight(d: GameDynasty) -> void:
 	var b := d.battle
 	var h := d.heir
+	var heal := _skill_of(b, "heal")
+	var strike := _skill_of(b, "damage")
 	var guard := 0
 	while not b.is_over() and guard < 200:
 		guard += 1
 		var low := float(h.hp) < float(h.max_hp()) * 0.4
 		if low and h.potions > 0:
 			b.use_potion()
-		elif low and b.can_use_skill(1) and b.skill_info(1)["type"] == "heal":
-			b.use_skill(1, -1)
-		elif b.can_use_skill(0):
-			b.use_skill(0, b.first_target())
+		elif low and heal >= 0 and b.can_use_skill(heal):
+			b.use_skill(heal, -1)
+		elif strike >= 0 and b.can_use_skill(strike):
+			b.use_skill(strike, b.first_target())
 		else:
 			b.attack(b.first_target())
 	d.finish_battle()
@@ -48,7 +57,7 @@ static func step(d: GameDynasty) -> bool:
 
 static func live_life(d: GameDynasty) -> void:
 	var guard := 0
-	while d.state == "life" and guard < 500:
+	while d.state == "life" and guard < 1000 + int(d.heir.lifespan):
 		guard += 1
 		if d.heir.age >= d.heir.lifespan * 0.9 and d.can_retire():
 			d.retire()

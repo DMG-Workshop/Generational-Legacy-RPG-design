@@ -65,7 +65,7 @@ func _ready() -> void:
 
 func _refresh() -> void:
 	var h := d.heir
-	header.text = "House %s  -  Generation %d  -  %s the %s" % [d.dynasty_name, d.gen, h.name, h.cls()["name"]]
+	header.text = "House %s  -  Generation %d  -  %s the %s %s" % [d.dynasty_name, d.gen, h.name, h.race()["name"], h.cls()["name"]]
 	_build_left()
 	_build_right()
 	_build_actions()
@@ -89,7 +89,7 @@ func _build_left() -> void:
 	var arch := ""
 	if h.archetype != "":
 		arch = "  -  %s" % GameFate.ARCHETYPES[h.archetype]["name"]
-	left.add_child(Kit.label("Level %d %s%s" % [h.level, h.cls()["name"], arch], 15, Kit.DIM))
+	left.add_child(Kit.label("Level %d %s %s%s" % [h.level, h.race()["name"], h.cls()["name"], arch], 15, Kit.DIM))
 	left.add_child(Kit.label("Age %d / ~%d" % [int(h.age), int(h.lifespan)], 15))
 	left.add_child(Kit.label("Fate Value: %d%%" % int(round(h.fate_value * 100.0)), 15, Kit.BAD if h.fate_value > 0.2 else Kit.TEXT))
 	left.add_child(Kit.label("HP %d / %d" % [h.hp, h.max_hp()], 14))
@@ -102,12 +102,12 @@ func _build_left() -> void:
 	left.add_child(Kit.label("Gold %d    Potions %d" % [h.gold, h.potions], 16, Kit.ACCENT))
 	left.add_child(HSeparator.new())
 	left.add_child(Kit.label("Traits (hover for details)", 15, Kit.DIM))
-	for id in h.traits:
+	for id in h.all_traits():
 		var l := Kit.label(GameData.trait_name(id), 15, Kit.trait_color(id))
 		l.tooltip_text = Kit.trait_tooltip(id)
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		left.add_child(l)
-	if h.traits.is_empty():
+	if h.all_traits().is_empty():
 		left.add_child(Kit.label("none", 14, Kit.DIM))
 	if not h.dormant.is_empty():
 		left.add_child(Kit.label("Carried dormant (may pass on):", 14, Kit.DIM))
@@ -123,10 +123,10 @@ func _build_right() -> void:
 	var h := d.heir
 	right.add_child(Kit.label("Family", 20, Kit.ACCENT))
 	if h.spouse != null:
-		right.add_child(Kit.label("Spouse: %s" % h.spouse.name, 15))
+		right.add_child(Kit.label("Spouse: %s (%s %s)" % [h.spouse.name, h.spouse.race()["name"], h.spouse.cls()["name"]], 15))
 		for c in h.children:
 			var traits_txt: String = ", ".join(c.traits.map(func(t): return GameData.trait_name(t)))
-			var l := Kit.label("%s (%s)  Fate %d%%\n   %s" % [c.name, c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits"], 14)
+			var l := Kit.label("%s (%s %s)  Fate %d%%\n   %s" % [c.name, c.race()["name"], c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits"], 14)
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			l.custom_minimum_size = Vector2(270, 0)
 			right.add_child(l)
@@ -167,7 +167,7 @@ func _build_actions() -> void:
 	buy.disabled = h.gold < d.potion_price()
 	var fam := _act("Found family", func(): _do(func(): return d.found_family()))
 	fam.disabled = not d.can_found_family()
-	fam.tooltip_text = "Requires age %d+ and no family yet. Children inherit traits from both parents." % int(GameData.bal("family_min_age"))
+	fam.tooltip_text = "Requires age %d+ and no family yet. Children inherit traits from both parents." % int(h.family_min_age())
 	var ret := _act("Retire / pass the torch", func(): _do(func(): return d.retire()))
 	ret.disabled = not d.can_retire()
 	_act("Autopilot: this life", func(): _autopilot(1))

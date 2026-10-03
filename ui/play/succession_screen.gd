@@ -21,12 +21,12 @@ func _ready() -> void:
 
 	var dead := d.last_death
 	root.add_child(Kit.label("%s has passed." % dead["name"], 34, Kit.ACCENT))
-	var cname: String = GameData.classes[dead["class_id"]]["name"]
+	var cname: String = "%s %s" % [GameData.races[dead.get("race_id", "human")]["name"], GameData.classes[dead["class_id"]]["name"]]
 	root.add_child(Kit.label("Generation %d  -  %s, level %d  -  died aged %d (%s)  -  %d victories, %d gold left" % [dead["gen"], cname, dead["level"], dead["age"], dead["cause"], dead["battles_won"], dead["gold"]], 16, Kit.DIM))
 	if d.pending_archetype != "":
 		var a: Dictionary = GameFate.ARCHETYPES[d.pending_archetype]
 		root.add_child(Kit.label("Fate has left its mark. The next heir will be a %s: %s" % [a["name"], a["desc"]], 16, Kit.BAD))
-	root.add_child(Kit.label("Choose who carries the family name into generation %d. Half of the family gold is inherited; legacy echoes fade by 15%%." % (d.gen + 1), 16))
+	root.add_child(Kit.label("Choose who carries the family name into generation %d. They inherit %d%% of the gold left and every potion; legacy echoes fade by 15%%." % [d.gen + 1, int(round(float(GameData.bal("gold_inherit_fraction")) * 100.0))], 16))
 
 	var row := HBoxContainer.new()
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -53,7 +53,7 @@ func _card(i: int, c: GameHeir) -> Control:
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
 	v.add_child(Kit.label(c.full_name(), 24, Kit.ACCENT))
-	v.add_child(Kit.label("%s  -  %s" % [c.cls()["name"], " & ".join(c.parent_names)], 14, Kit.DIM))
+	v.add_child(Kit.label("%s %s  -  %s" % [c.race()["name"], c.cls()["name"], " & ".join(c.parent_names)], 14, Kit.DIM))
 	v.add_child(Kit.label("Fate Value: %d%% (lifetime chance of major failure)" % int(round(c.fate_value * 100.0)), 15, Kit.BAD if c.fate_value > 0.2 else Kit.TEXT))
 	v.add_child(Kit.label("Expected lifespan: ~%d years" % int(c.lifespan), 15))
 	v.add_child(HSeparator.new())
