@@ -1,8 +1,8 @@
 # Generational Legacy RPG — Development Progress
 
-**Status:** Phase 5 (Rendering & UI Layer) in progress. **Core engine complete, dialogue and consequence systems added, UI foundations built.**
+**Status:** Phase 5 (Rendering & UI Layer) in progress. **Core engine complete, dialogue and consequence systems added, romance/marriage complete, UI foundations built.**
 
-**Test Coverage:** 122 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences).
+**Test Coverage:** 128 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance).
 
 ---
 
@@ -187,7 +187,8 @@
 | 5 | Character UI | 17 | ✅ Pass |
 | 5 | Dialogue & Quest Screens | 16 | ✅ Pass |
 | 5 | Consequence Notifications | 3 | ✅ Pass |
-| **TOTAL** | | **122** | ✅ **PASS** |
+| 5 | Romance & Marriage | 6 | ✅ Pass |
+| **TOTAL** | | **128** | ✅ **PASS** |
 
 ---
 
@@ -305,6 +306,7 @@
 - **DialogueTreeScreen** (interactive NPC conversations with branching choices)
 - **QuestDetailScreen** (quest information display with rewards and difficulty)
 - **ConsequenceNotificationScreen** (outcome display with visual feedback)
+- **DialogueSystem** (7 dialogue trees: 3 quests, 2 NPCs, 2 romance/marriage)
 
 ### Features: Phase 5 Foundations
 - Screen transition system with state persistence
@@ -379,6 +381,9 @@
 ✅ Dialogue outcome application (gold, reputation, quests)
 ✅ Consequence notification system with visual feedback
 ✅ Color-coded outcome display (gold, reputation, quests, items)
+✅ Romance encounter dialogue (3 choice branches)
+✅ Marriage proposal dialogue (3 choice branches)
+✅ Romance interest and marriage tracking
 
 ### Phase 5 Remaining Work
 
@@ -406,12 +411,13 @@
    - Mentor bonus preview and selection UI
    - Legacy echo display (ancestor deeds)
 
-4. **Event Enhancements** ✅ (Dialogue & Quest Systems Complete)
+4. **Event Enhancements** ✅ (COMPLETE)
    - ✅ Interactive dialogue tree display
    - ✅ Quest detail screens with rewards preview
    - ✅ Player choice branching system
    - ✅ Consequence notifications and visual feedback
-   - Remaining: Romance and marriage dialogue trees (special case)
+   - ✅ Romance encounter dialogue (3 branches)
+   - ✅ Marriage proposal dialogue (3 branches)
 
 5. **Animations & Polish** (5-10 hours)
    - Screen transition animations (fade, slide)
@@ -421,10 +427,16 @@
    - Responsive UI scaling for different resolutions
 
 ### Estimated Total Remaining
-- 25-35 hours (polish and battle/world integration)
+- 15-25 hours (polish and battle/world integration, no dialogue work)
 - 1,500+ lines of additional rendering code
 - Full integration with core combat and exploration
 - Professional UI/UX refinements and animations
+
+### Estimated Work Completed
+- 15-20 hours (dialogue systems, consequences, romance/marriage)
+- 1,000+ lines of dialogue and UI code
+- Event system fully integrated with visual feedback
+- All dialogue trees implemented and tested
 
 **Core game logic: COMPLETE ✅**
 - All systems work standalone
@@ -454,13 +466,14 @@
 | Core systems | 13 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem) |
 | UI screens | 12 screens (MainMenu, World, Battle, Character, Pause, GenerationTransition, LoadGame, YearAction, EventPopup, DialogueTree, QuestDetail, ConsequenceNotification) |
 | UI components | 2 components (SkillTree, FamilyTreeBrowser) + ScreenManager + CharacterMenuEnhanced |
-| Dialogue systems | DialogueSystem with 5 quest trees, 2 NPC trees, branching choices, outcome application |
+| Dialogue systems | DialogueSystem with 7 dialogue trees (3 quests, 2 NPCs, 2 romance/marriage) |
+| Dialogue features | Branching conversations, outcome application, consequence tracking |
 | Data files | 4 JSON files (30 traits across 4 categories) |
-| Tests | 122 tests across 10 modules (all passing) |
-| Lines of code | ~7,800 (logic + UI + components + dialogue + consequences) |
-| Commits | 17 major commits showing progression |
+| Tests | 128 tests across 11 modules (all passing) |
+| Lines of code | ~8,200 (logic + UI + components + dialogue + consequences + romance) |
+| Commits | 20 major commits showing progression |
 | Documentation | GDD (25k words), CLAUDE.md, README, TESTING.md, PROGRESS.md |
-| Modules | Phase 1-4 complete, Phase 5 in progress (UI, Events, Character Systems, Dialogue, Consequences) |
+| Modules | Phase 1-4 complete, Phase 5 in progress (UI, Events, Character Systems, Dialogue complete) |
 
 ---
 
