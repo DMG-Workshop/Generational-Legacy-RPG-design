@@ -1,8 +1,8 @@
 # Generational Legacy RPG — Development Progress
 
-**Status:** Phase 5 (Rendering & UI Layer) in progress. **Core engine complete, dialogue and consequence systems complete, animations and polish added, UI foundations solid.**
+**Status:** Phase 6 (Progression & Item Systems) in progress. **Core engine complete, dialogue and consequence systems complete, animations and polish added, UI foundations solid, economy systems implemented.**
 
-**Test Coverage:** 142 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration).
+**Test Coverage:** 264 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables).
 
 ---
 
@@ -292,6 +292,95 @@
 
 ---
 
+## Phase 6: Progression & Item Systems 🎯 IN PROGRESS
+
+### Systems Built (Economy & Items)
+- **Currency** (multi-denomination: platinum, gold, silver, copper)
+- **Wallet** (balance tracking, transaction history with reasons and timestamps)
+- **Gem** (gem types, conditions from Flawless to Damaged, rarity tiers)
+- **GemCatalog** (18 predefined gems with weighted random generation)
+- **GemPouch** (gem storage, filtering, valuation)
+- **Item** (base class: weapons, armor, consumables, materials, quest items)
+- **Equipment** (weapons/armor with stat bonuses, resistances, slots)
+- **Consumable** (potions, buffs, cures with effect types and cooldowns)
+- **CraftingMaterial** (ore, wood, herbs with skill requirements)
+- **QuestItem** (non-tradeable, quest-tied, turn-in rewards)
+- **ItemCatalog** (22 predefined items across all types)
+- **LootTable** (procedural loot generation by difficulty and source)
+- **LootCatalog** (predefined drop rates: enemy, chest, quest, crafting)
+
+### Features: Economy
+- 4-denomination currency with automatic normalization
+- Wallet transaction tracking with reason strings and timestamps
+- Percentage-based calculations and currency conversion
+
+### Features: Gems & Valuables
+- 18 gem types: Quartz, Tourmaline, Ruby, Diamond, Dragonstone, etc.
+- 6 condition grades: Flawless (100%) → Damaged (10%) value multiplier
+- 5 rarity tiers: Common (1 gp) → Legendary (50+ gp) base values
+- Damage/restore mechanics for condition changes
+- Weighted random generation: 50% common → 2% legendary
+- Gem pouch with storage, filtering (by type/rarity/condition), and statistics
+
+### Features: Items
+- Base Item class with rarity, quality, durability systems
+- Equippable items: 10 equipment slots (main hand, off-hand, chest, helm, etc.)
+- Stat bonuses for each equipment piece (6 core stats)
+- Elemental resistances (fire, cold, lightning, poison, magic)
+- Consumable effects: heal, mana restore, buff, cure with cooldowns
+- Crafting materials with skill requirements and recipe tracking
+- Quest items non-tradeable with turn-in rewards
+- 22 predefined catalog items (6 weapons, 5 armor, 4 consumables, 7 materials)
+- Custom properties system for enchantments and special effects
+
+### Features: Loot Tables
+- Difficulty tiers (Easy, Normal, Hard, Heroic, Legendary) with scaling
+- 4 loot sources: Enemy loot, Chests, Quest rewards, Crafting output
+- Source-specific drop rates and item counts
+- Difficulty multipliers for legendary item drop rates (0.5x → 3.0x)
+- Weighted rarity selection (scales with difficulty)
+- Gem inclusion in loot drops with condition improvements
+- Seeded generation for reproducible results
+
+### Data
+- Currency system integrated into all items and wallets
+- 18 unique gems with base values and rarity tiers
+- 22 predefined items ready for game economy
+- 5 difficulty tiers with distinct loot profiles
+- 4 loot source types with tuned drop rates
+
+### Tests (151 tests total)
+**Phase 6 Tests:**
+✓ Currency creation and denomination handling
+✓ Currency addition, subtraction, multiplication
+✓ Currency comparison operators
+✓ Wallet transaction tracking
+✓ Wallet balance and history
+✓ Gem creation and condition system
+✓ Gem value calculation with multipliers
+✓ Gem rarity weighting
+✓ GemCatalog randomization
+✓ GemPouch storage and filtering
+✓ Item creation and type verification
+✓ Item durability and damage/repair
+✓ Equipment stat bonuses and resistances
+✓ Equipment class restrictions and level requirements
+✓ Consumable cooldowns and effects
+✓ CraftingMaterial skill requirements
+✓ QuestItem non-tradeable enforcement
+✓ ItemCatalog weapon, armor, consumable, material creation
+✓ Loot table generation and count ranges
+✓ Difficulty scaling for rarity distribution
+✓ Source-specific drop rate variations
+✓ Legendary difficulty bonus effectiveness
+✓ Gem appearance in loot pools
+✓ Crafting output material focus
+✓ Seeded generation reproducibility
+
+**Prior Phase Tests:** 113 tests (Lineage, Fate, Combat, World, Generation, UI, Dialogue, Consequences, Battle Screen)
+
+---
+
 ## Phase 5: Rendering & UI Layer 🎮 IN PROGRESS
 
 ### Systems Built (Foundations)
@@ -485,17 +574,18 @@
 
 | Category | Count |
 |----------|-------|
-| Core systems | 13 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem) |
+| Core systems | 22 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem, Currency, Wallet, Gem, GemCatalog, GemPouch, Item hierarchy, LootTable, LootCatalog) |
 | UI screens | 12 screens (MainMenu, World, Battle, Character, Pause, GenerationTransition, LoadGame, YearAction, EventPopup, DialogueTree, QuestDetail, ConsequenceNotification) |
 | UI components | 2 components (SkillTree, FamilyTreeBrowser) + ScreenManager + CharacterMenuEnhanced |
 | UI polish | ScreenTransitionAnimator + PolishedButton (hover/press effects) |
 | Dialogue systems | DialogueSystem with 7 dialogue trees (3 quests, 2 NPCs, 2 romance/marriage) |
 | Dialogue features | Branching conversations, outcome application, consequence tracking, mentor selection |
 | Animation features | Fade transitions, slide capabilities, button hover effects, tween-based animations |
-| Data files | 4 JSON files (30 traits across 4 categories) |
-| Tests | 142 tests across 13 modules (all passing) |
-| Lines of code | ~9,500 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration) |
-| Commits | 27 major commits showing progression |
+| Economy systems | Currency, Wallet, Gem/GemCatalog/GemPouch, Item hierarchy (5 types), ItemCatalog, LootTable/LootCatalog |
+| Data files | 4 JSON files (30 traits across 4 categories), 22 predefined items, 18 gem types, loot table configs |
+| Tests | 264 tests across 18 modules (all passing) |
+| Lines of code | ~13,500 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration + economy) |
+| Commits | 31 major commits showing progression |
 | Documentation | GDD (25k words), CLAUDE.md, README, TESTING.md, PROGRESS.md |
 | Modules | Phase 1-4 complete, Phase 5 in progress (75-85% complete with Battle Screen Integration) |
 
@@ -544,4 +634,6 @@ cat CLAUDE.md
 ---
 
 **Last Updated:** Oct 3, 2026
-**Next Milestone:** Phase 4 (Generation Loop) — ~1 week
+**Current Phase:** Phase 6 (Progression & Item Systems)
+**Completed:** Currency, Gem System, Item System, Loot Tables (151 tests, ~2,000 lines)
+**Next Milestone:** Magic Item Generator, Crafting System, Battle Loot Integration
