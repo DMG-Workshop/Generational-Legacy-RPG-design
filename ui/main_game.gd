@@ -69,7 +69,11 @@ func show_screen(screen_type: String) -> void:
 			current_mode = GameMode.BATTLE
 
 		"character":
-			current_screen = CharacterMenuScreen.new(current_generation_manager.current_heir)
+			current_screen = CharacterMenuEnhanced.new(
+				current_generation_manager.current_heir,
+				current_lineage,
+				current_generation_manager.npc_system
+			)
 			current_mode = GameMode.CHARACTER_MENU
 
 		"generation_transition":
