@@ -135,3 +135,47 @@ func test_pause_resume_preserves_position() -> void:
 
 	var resumed_screen = main_game.current_screen as WorldScreen
 	assert_eq(resumed_screen.player_pos, Vector3i(5, 5, 0))
+
+
+## Test: Enhanced character menu has tabs
+func test_enhanced_character_menu_tabs() -> void:
+	var heir = Heir.new()
+	heir.name = "Test Hero"
+	heir.class_id = "warrior"
+
+	var char_menu = CharacterMenuEnhanced.new(heir)
+
+	assert_not_null(char_menu)
+	assert_eq(char_menu.current_tab, "character")
+
+
+## Test: Generation transition shows heir stats
+func test_generation_transition_heir_stats() -> void:
+	var gen_manager = GenerationManager.new(lineage, world)
+	var founder = lineage.create_founder("Parent", "warrior", "merchant")
+	gen_manager.begin_generation(founder)
+
+	# Create child with specific stats
+	var child = Heir.new()
+	child.name = "Child Hero"
+	child.generation = 1
+	child.strength = 16
+	child.constitution = 14
+	child.dexterity = 13
+	gen_manager.children.append(child)
+
+	var trans_screen = GenerationTransitionScreen.new(gen_manager)
+
+	assert_not_null(trans_screen)
+	assert_eq(child.strength, 16)
+
+
+## Test: Skill tree initialization
+func test_skill_tree_init() -> void:
+	var heir = Heir.new()
+	heir.class_id = "warrior"
+
+	var skill_tree = SkillTree.new(heir)
+
+	assert_not_null(skill_tree)
+	assert_eq(skill_tree.heir.class_id, "warrior")

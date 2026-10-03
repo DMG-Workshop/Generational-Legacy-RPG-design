@@ -76,6 +76,19 @@ func _ready() -> void:
 	accomplishments.autowrap_mode = TextServer.AUTOWRAP_WORD
 	summary_vbox.add_child(accomplishments)
 
+	# Legacy echo section
+	var legacy_label = Label.new()
+	legacy_label.text = "Legacy & Reputation"
+	legacy_label.add_theme_font_size_override("font_size", 14)
+	summary_vbox.add_child(legacy_label)
+
+	var reputation_text = Label.new()
+	reputation_text.text = "Final Reputation: %d\n\nYour deeds will be remembered:\n- Legendary warrior of the realm\n- Master strategist and leader\n- Protector of the weak" % summary.get("reputation", 0)
+	reputation_text.custom_minimum_size = Vector2(0, 100)
+	reputation_text.autowrap_mode = TextServer.AUTOWRAP_WORD
+	reputation_text.add_theme_color_override("font_color", Color.LIGHT_GRAY)
+	summary_vbox.add_child(reputation_text)
+
 	# Heir selection
 	var selection_title = Label.new()
 	selection_title.text = "Choose Next Heir"
@@ -108,14 +121,45 @@ func _ready() -> void:
 	)
 
 	for ancestor in recent_ancestors:
-		var ancestor_btn = Button.new()
-		ancestor_btn.text = "%s (Gen %d, Wisdom %d)" % [
-			ancestor.heir.name,
-			ancestor.generation,
-			ancestor.wisdom
+		var ancestor_panel = PanelContainer.new()
+		var ancestor_vbox = VBoxContainer.new()
+		ancestor_panel.add_child(ancestor_vbox)
+
+		# Ancestor name and generation
+		var ancestor_name = Label.new()
+		ancestor_name.text = "%s (Gen %d)" % [ancestor.heir.name, ancestor.generation]
+		ancestor_name.add_theme_font_size_override("font_size", 12)
+		ancestor_vbox.add_child(ancestor_name)
+
+		# Wisdom and personality
+		var wisdom_label = Label.new()
+		wisdom_label.text = "Wisdom: %d" % ancestor.wisdom
+		wisdom_label.add_theme_font_size_override("font_size", 11)
+		ancestor_vbox.add_child(wisdom_label)
+
+		var personality_label = Label.new()
+		personality_label.text = "Personality: %s" % ancestor.personality
+		personality_label.add_theme_font_size_override("font_size", 11)
+		ancestor_vbox.add_child(personality_label)
+
+		# Mentor bonuses preview
+		var bonus_label = Label.new()
+		bonus_label.text = "Mentor Bonuses:\n+%d XP/Level, +%d Reputation" % [
+			ancestor.wisdom * 5,
+			ancestor.wisdom * 2
 		]
-		ancestor_btn.pressed.connect(_on_mentor_selected.bind(ancestor))
-		mentor_container.add_child(ancestor_btn)
+		bonus_label.add_theme_font_size_override("font_size", 10)
+		bonus_label.add_theme_color_override("font_color", Color.LIGHT_GREEN)
+		bonus_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		ancestor_vbox.add_child(bonus_label)
+
+		# Select button
+		var select_btn = Button.new()
+		select_btn.text = "Choose as Mentor"
+		select_btn.pressed.connect(_on_mentor_selected.bind(ancestor))
+		ancestor_vbox.add_child(select_btn)
+
+		mentor_container.add_child(ancestor_panel)
 
 	if recent_ancestors.is_empty():
 		var no_ancestors = Label.new()
@@ -125,16 +169,49 @@ func _ready() -> void:
 	main_vbox.add_child(mentor_container)
 
 
-func _create_child_button(child: Heir) -> Button:
-	var btn = Button.new()
-	btn.text = "%s (%s %s) - Traits: %s" % [
-		child.name,
-		child.class_id,
-		child.job_id,
-		", ".join(child.traits)
+func _create_child_button(child: Heir) -> Control:
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 5)
+
+	# Child name and class
+	var name_label = Label.new()
+	name_label.text = "%s (%s %s)" % [child.name, child.class_id, child.job_id]
+	name_label.add_theme_font_size_override("font_size", 14)
+	container.add_child(name_label)
+
+	# Traits
+	var traits_label = Label.new()
+	traits_label.text = "Traits: %s" % ", ".join(child.traits)
+	traits_label.add_theme_font_size_override("font_size", 12)
+	traits_label.add_theme_color_override("font_color", Color.LIGHT_GRAY)
+	container.add_child(traits_label)
+
+	# Stats preview
+	var stats_label = Label.new()
+	stats_label.text = "STR:%d CON:%d DEX:%d INT:%d WIS:%d CHA:%d" % [
+		child.strength,
+		child.constitution,
+		child.dexterity,
+		child.intelligence,
+		child.wisdom,
+		child.charisma
 	]
-	btn.pressed.connect(_on_child_selected.bind(child))
-	return btn
+	stats_label.add_theme_font_size_override("font_size", 11)
+	stats_label.add_theme_color_override("font_color", Color.YELLOW)
+	container.add_child(stats_label)
+
+	# Select button
+	var select_btn = Button.new()
+	select_btn.text = "Select as Heir"
+	select_btn.custom_minimum_size = Vector2(150, 30)
+	select_btn.pressed.connect(_on_child_selected.bind(child))
+	container.add_child(select_btn)
+
+	# Separator
+	var separator = HSeparator.new()
+	container.add_child(separator)
+
+	return container
 
 
 func _on_child_selected(child: Heir) -> void:
