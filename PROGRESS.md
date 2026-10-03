@@ -183,7 +183,8 @@
 | 3 | World | 18 | ✅ Pass |
 | 4 | Generation Loop | 20 | ✅ Pass |
 | 5 | UI Screens | 12 | ✅ Pass |
-| **TOTAL** | | **71** | ✅ **PASS** |
+| 5 | Event System | 15 | ✅ Pass |
+| **TOTAL** | | **86** | ✅ **PASS** |
 
 ---
 
@@ -310,7 +311,17 @@
 - Save game serialization to JSON
 - Load game from save slots
 
-### Tests (12 tests)
+### Features: Year-by-Year Progression
+- EventSystem generates 9 types of events (quest, marriage, romance, betrayal, success, rival, inheritance, discovery)
+- YearActionScreen shows current heir, age, phase, and available actions
+- Life progress bar (0-65 years)
+- Weighted random event generation (quests 30%, romance 20%, success 15%, etc.)
+- Phase-appropriate events (childhood, adolescence, adulthood, elderhood)
+- Event consequences system (wealth, reputation, trait changes)
+- Event acceptance/decline/ignore options
+- EventPopupScreen displays event details with player choices
+
+### Tests (12 + 15 = 27 tests)
 ✓ Main game initialization
 ✓ New game starts world screen
 ✓ Character menu opens from world
@@ -410,13 +421,14 @@
 
 | Category | Count |
 |----------|-------|
-| Core systems | 12 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager) |
+| Core systems | 13 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem) |
+| UI systems | 8 screens (MainMenu, World, Battle, Character, Pause, GenerationTransition, LoadGame, YearAction, EventPopup) + ScreenManager |
 | Data files | 4 JSON files (30 traits across 4 categories) |
-| Tests | 59 tests across 5 modules (all passing) |
-| Lines of code | ~4,200 (logic only, no rendering) |
-| Commits | 10 major commits showing progression |
+| Tests | 86 tests across 7 modules (all passing) |
+| Lines of code | ~5,800 (logic + UI) |
+| Commits | 13 major commits showing progression |
 | Documentation | GDD (25k words), CLAUDE.md, README, TESTING.md, PROGRESS.md |
-| Modules | 5 phases complete (Lineage, Fate, Combat, World, Generation Loop) |
+| Modules | Phase 1-4 complete, Phase 5 in progress (UI, Events, Systems) |
 
 ---
 
