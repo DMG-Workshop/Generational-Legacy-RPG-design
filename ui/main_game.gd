@@ -74,8 +74,9 @@ func show_screen(screen_type: String) -> void:
 			current_mode = GameMode.WORLD_EXPLORATION
 
 		"battle":
-			current_screen = BattleScreen.new()
+			# Battle should be set via enter_battle()
 			current_mode = GameMode.BATTLE
+			return
 
 		"character":
 			current_screen = CharacterMenuEnhanced.new(
@@ -133,8 +134,64 @@ func start_new_game() -> void:
 
 
 func enter_battle(enemies: Array[Heir]) -> void:
-	# TODO: Setup battle state in battle screen
-	show_screen("battle")
+	# Create battle instance with current party vs enemies
+	var battle = Battle.new()
+
+	# Create party combatants from current generation
+	var party_combatants: Array[Battle.Combatant] = []
+	var current_heir = current_generation_manager.current_heir
+	if current_heir:
+		var party_member = Battle.Combatant.new()
+		party_member.name = current_heir.name
+		party_member.class_id = current_heir.class_id
+		party_member.job_id = current_heir.job_id
+		party_member.faction = "party"
+		party_member.hp = current_heir.constitution * 10
+		party_member.max_hp = party_member.hp
+		party_member.mp = current_heir.intelligence * 5
+		party_member.max_mp = party_member.mp
+		party_member.stats["strength"] = current_heir.strength
+		party_member.stats["dexterity"] = current_heir.dexterity
+		party_member.stats["constitution"] = current_heir.constitution
+		party_member.stats["intelligence"] = current_heir.intelligence
+		party_member.stats["wisdom"] = current_heir.wisdom
+		party_member.stats["charisma"] = current_heir.charisma
+		party_member.traits = current_heir.traits
+		party_combatants.append(party_member)
+
+	# Create enemy combatants from provided enemies
+	var enemy_combatants: Array[Battle.Combatant] = []
+	for enemy_heir in enemies:
+		var enemy = Battle.Combatant.new()
+		enemy.name = enemy_heir.name
+		enemy.class_id = enemy_heir.class_id
+		enemy.job_id = enemy_heir.job_id
+		enemy.faction = "enemy"
+		enemy.hp = enemy_heir.constitution * 10
+		enemy.max_hp = enemy.hp
+		enemy.mp = enemy_heir.intelligence * 5
+		enemy.max_mp = enemy.mp
+		enemy.stats["strength"] = enemy_heir.strength
+		enemy.stats["dexterity"] = enemy_heir.dexterity
+		enemy.stats["constitution"] = enemy_heir.constitution
+		enemy.stats["intelligence"] = enemy_heir.intelligence
+		enemy.stats["wisdom"] = enemy_heir.wisdom
+		enemy.stats["charisma"] = enemy_heir.charisma
+		enemy.traits = enemy_heir.traits
+		enemy_combatants.append(enemy)
+
+	# Start battle
+	battle.start_battle(party_combatants, enemy_combatants)
+
+	# Create and show battle screen
+	if current_screen:
+		screen_manager.remove_child(current_screen)
+		current_screen.queue_free()
+
+	current_screen = BattleScreen.new(battle)
+	current_mode = GameMode.BATTLE
+	screen_manager.add_child(current_screen)
+	transition_animator.fade_in(current_screen)
 
 
 func exit_to_world() -> void:
