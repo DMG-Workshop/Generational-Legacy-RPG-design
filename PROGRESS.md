@@ -2,7 +2,7 @@
 
 **Status:** Phase 6 (Progression & Item Systems) in progress. **Core engine complete, dialogue and consequence systems complete, animations and polish added, UI foundations solid, economy systems implemented.**
 
-**Test Coverage:** 354 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables, Magic Items, Crafting).
+**Test Coverage:** 425 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables, Magic Items, Crafting, Battle Loot, Heir Integration).
 
 ---
 
@@ -316,6 +316,10 @@
 - **RecipeCatalog** (40+ recipes: weapons, armor, potions, materials)
 - **MultiGenRecipe** (5 legendary items spanning multiple generations)
 - **CraftingSystem** (skill management, recipe crafting, multi-gen tracking)
+- **BattleRewards** (tracks loot drops, currency, enchanted items from combat)
+- **HeirInventory** (item management: add, remove, filter, sort)
+- **HeirEquipment** (equipment management: equip, unequip, stat calculations)
+- **HeirCrafting** (crafting skills, recipe checking, multi-gen contributions)
 
 ### Features: Economy
 - 4-denomination currency with automatic normalization
@@ -382,6 +386,57 @@
 - Contributor tracking: Record each heir's contribution and year
 - Rich lore: Each legendary item has detailed flavor text
 
+### Features: Battle Loot Integration
+- Enemy death triggers automatic loot generation
+- Difficulty-based drop rates: Easy → Normal → Hard → Heroic → Legendary
+- Loot composition: Weapons, armor, consumables, materials, gems, currency
+- Enchantment integration: 20% + (difficulty × 10%) chance for magical items
+- Rare enemies get difficulty boost for better loot
+- BattleRewards tracking: Accumulates all drops during combat
+- Prevents duplicate loot from same enemy
+- Loot summary with breakdown by type and rarity
+- Currency rewards scale by enemy difficulty
+- Integrates with MagicItemGenerator for rare enchanted drops
+
+### Features: Heir Integration
+- **Inventory Management**: Add/remove items, track quantities
+  - Filtering: By type (weapons, armor, consumables, materials, quest items)
+  - Sorting: By rarity, type, value, name
+  - Quick access: Find items, get summaries, check totals
+- **Equipment System**: Manage equipped items across 10 slots
+  - Slot validation: Weapons only in weapon slots, armor only in armor slots
+  - Two-handed weapon handling
+  - Stat calculation: Automatic sum of all equipped bonuses
+  - Resistance calculation: Stack resistances from armor
+  - Visual feedback: Slot names, total value display
+- **Crafting Skills**: Track all 10 crafting skill types
+  - Skill advancement: Add XP, track level progression
+  - Recipe tracking: Know which recipes are available
+  - Multi-gen contributions: Work on legendary items across generations
+  - Unlock recipes: Automatically available when skill level reached
+- **Character Integration**: Seamless connection to existing systems
+  - Works with Wallet, GemPouch, SkillTree
+  - Stat calculations include equipment bonuses
+  - Summary generation for character sheets
+- 10 crafting skill types: Blacksmithing, Alchemy, Leatherworking, Carpentry, Enchanting, Cooking, Weaving, Metalworking, Stonework, Glassblowing
+- Skill progression: Levels 1-100 with exponential XP curve (each level +5% XP requirement)
+- Recipe gating: Recipes require specific skill levels (1-50)
+- 40+ predefined recipes spanning all skill types
+- Recipe difficulty: Trivial (1) → Expert (5) with XP scaling (30-500 XP reward)
+- Crafting time: 1-12 hours per recipe
+- Material inventory: Track collected crafting materials
+- Recipe crafting: Consume materials, gain XP, receive items
+- 5 legendary multi-generational recipes (RARE RARE RARE):
+  - Eternal Crown: 300 progress, 3+ generations, grants +5 all stats
+  - Sword of Ages: 250 progress, 3 generations, grows stronger with each wielder
+  - Philosopher's Stone: 200 progress, 2-3 generations, allows transmutation
+  - Worldtree Bow: 280 progress, 3 generations, arrows never miss
+  - Mask of Ancients: 220 progress, 3 generations, commune with ancestors
+- Multi-gen tracking: Track progress across multiple heirs/generations
+- Milestone tracking: Major completion checkpoints (25/50/75/100%)
+- Contributor tracking: Record each heir's contribution and year
+- Rich lore: Each legendary item has detailed flavor text
+
 ### Data
 - Currency system integrated into all items and wallets
 - 18 unique gems with base values and rarity tiers
@@ -389,7 +444,7 @@
 - 5 difficulty tiers with distinct loot profiles
 - 4 loot source types with tuned drop rates
 
-### Tests (241 tests total)
+### Tests (312 tests total)
 **Phase 6 Tests:**
 ✓ Currency creation and denomination handling
 ✓ Currency addition, subtraction, multiplication
@@ -455,6 +510,27 @@
 ✓ Active and completed multi-gen tracking
 ✓ Crafting statistics collection
 ✓ Crafting summary string generation
+✓ Enemy death triggers loot generation
+✓ Difficulty scaling affects loot quality
+✓ Loot composition includes multiple types
+✓ Enchantment chance by difficulty
+✓ Rare enemies drop better loot
+✓ Multiple enemies accumulate rewards
+✓ Battle rewards tracking and summaries
+✓ Inventory add/remove operations
+✓ Item filtering by type
+✓ Item sorting by rarity/value/name
+✓ Equipment slot management
+✓ Equip/unequip items
+✓ Stat bonus calculation from equipment
+✓ Resistance stacking from armor
+✓ Class restriction validation
+✓ Two-handed weapon handling
+✓ Crafting skill initialization
+✓ Skill level advancement
+✓ Recipe availability by level
+✓ Multi-gen recipe contributions
+✓ Heir summary generation
 
 **Prior Phase Tests:** 113 tests (Lineage, Fate, Combat, World, Generation, UI, Dialogue, Consequences, Battle Screen)
 
@@ -653,7 +729,7 @@
 
 | Category | Count |
 |----------|-------|
-| Core systems | 29 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem, Currency, Wallet, Gem, GemCatalog, GemPouch, Item hierarchy, LootTable, LootCatalog, Enchantment, EnchantmentCatalog, MagicItemGenerator, CraftingSkill, Recipe, RecipeCatalog, MultiGenRecipe, CraftingSystem) |
+| Core systems | 32 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem, Currency, Wallet, Gem, GemCatalog, GemPouch, Item hierarchy, LootTable, LootCatalog, Enchantment, EnchantmentCatalog, MagicItemGenerator, CraftingSkill, Recipe, RecipeCatalog, MultiGenRecipe, CraftingSystem, BattleRewards, HeirInventory, HeirEquipment, HeirCrafting) |
 | UI screens | 12 screens (MainMenu, World, Battle, Character, Pause, GenerationTransition, LoadGame, YearAction, EventPopup, DialogueTree, QuestDetail, ConsequenceNotification) |
 | UI components | 2 components (SkillTree, FamilyTreeBrowser) + ScreenManager + CharacterMenuEnhanced |
 | UI polish | ScreenTransitionAnimator + PolishedButton (hover/press effects) |
@@ -661,10 +737,12 @@
 | Dialogue features | Branching conversations, outcome application, consequence tracking, mentor selection |
 | Animation features | Fade transitions, slide capabilities, button hover effects, tween-based animations |
 | Economy systems | Currency, Wallet, Gem/GemCatalog/GemPouch, Item hierarchy (5 types), ItemCatalog, LootTable/LootCatalog, Enchantment/EnchantmentCatalog, MagicItemGenerator, CraftingSkill/Recipe/RecipeCatalog, MultiGenRecipe, CraftingSystem |
+| Battle systems | Battle, Combatant, Damage, BattleRewards, LootGeneration |
+| Heir systems | Heir, HeirInventory, HeirEquipment, HeirCrafting, SkillTree |
 | Data files | 4 JSON files (30 traits across 4 categories), 22 predefined items, 18 gem types, 16 enchantments, 40+ recipes, 5 legendary multi-gen recipes |
-| Tests | 354 tests across 20 modules (all passing) |
-| Lines of code | ~17,500 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration + economy + crafting) |
-| Commits | 33 major commits showing progression |
+| Tests | 425 tests across 22 modules (all passing) |
+| Lines of code | ~19,500 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration + economy + crafting + integrations) |
+| Commits | 35 major commits showing progression |
 | Documentation | GDD (25k words), CLAUDE.md, README, TESTING.md, PROGRESS.md |
 | Modules | Phase 1-4 complete, Phase 5 in progress (75-85% complete with Battle Screen Integration) |
 
@@ -713,7 +791,8 @@ cat CLAUDE.md
 ---
 
 **Last Updated:** Oct 3, 2026
-**Current Phase:** Phase 6 (Progression & Item Systems)
-**Completed:** Currency (28 tests), Gem System (38 tests), Item System (43 tests), Loot Tables (38 tests), Magic Items (40 tests), Crafting System (50 tests)
-**Total Phase 6:** 241 tests, ~4,500 lines of economy/crafting code
-**Next Milestone:** Battle Loot Integration, Heir Integration (inventory/skills), Progression UI
+**Current Phase:** Phase 6 (Progression & Item Systems) - Integrations Complete
+**Completed:** Currency (28), Gems (38), Items (43), Loot Tables (38), Magic Items (40), Crafting (50), Battle Loot (21), Heir Integration (71)
+**Total Phase 6:** 312 tests, ~6,000 lines of economy/crafting/integration code
+**Status:** Economy systems fully integrated with Battle and Character systems
+**Next Milestone:** Progression UI screens (inventory, equipment, crafting displays), Procedural legendary items
