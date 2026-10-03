@@ -59,7 +59,7 @@ static func live_life(d: GameDynasty) -> void:
 	var guard := 0
 	while d.state == "life" and guard < 1000 + int(d.heir.lifespan):
 		guard += 1
-		if d.heir.age >= d.heir.lifespan * 0.9 and d.can_retire():
+		if d.heir.age >= minf(d.heir.lifespan, d.heir.compute_lifespan(false)) * 0.9 and d.can_retire():
 			d.retire()
 		else:
 			step(d)

@@ -85,11 +85,14 @@ func fate_modifier_total() -> float:
 	return total
 
 
-func compute_lifespan() -> float:
+## Expected lifespan (the median age of death). Without divine traits it is the "natural" span.
+func compute_lifespan(include_divine: bool = true) -> float:
 	var span: float = float(race()["lifespan"])
 	var mod := 1.0
 	var aging := 1.0
 	for id in all_traits():
+		if not include_divine and GameData.trait_def(id).get("category", "") == "divine":
+			continue
 		for e in GameData.trait_def(id).get("effects", []):
 			if e["stat"] == "lifespan_modifier":
 				mod = max(mod, float(e["value"]))
@@ -179,6 +182,14 @@ func gain_xp(amount: int) -> int:
 	return gained
 
 
+## Chance of dying of old age while ageing from `from_age` to `to_age`. The lifespan is the
+## median age of death, not a limit: the risk is slight in middle age and climbs steeply past it.
+func old_age_death_chance(from_age: float, to_age: float) -> float:
+	var k := float(GameData.bal("old_age_steepness"))
+	var hazard := log(2.0) * (exp(k * (to_age / lifespan - 1.0)) - exp(k * (from_age / lifespan - 1.0)))
+	return 1.0 - exp(-hazard)
+
+
 func refresh_derived() -> void:
 	lifespan = compute_lifespan()
 	hp = clampi(hp, 1, max_hp())
@@ -219,6 +230,10 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.parent_names = Array(d["parent_names"])
 	h.heirloom_bonus = float(d["heirloom_bonus"])
 	h.lifespan = h.compute_lifespan()
+	# A save from an older, steeper XP curve can hold more XP than the next level now costs.
+	while h.level < int(GameData.bal("level_cap")) and h.xp >= h.xp_to_next():
+		h.xp -= h.xp_to_next()
+		h.level += 1
 	for c in d["children"]:
 		h.children.append(GameHeir.from_dict(c))
 	if d["spouse"] != null:

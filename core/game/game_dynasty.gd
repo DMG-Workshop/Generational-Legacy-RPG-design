@@ -278,6 +278,7 @@ func found_family() -> Array:
 	sp.class_id = class_ids[rng.randi() % class_ids.size()]
 	var race_ids := GameData.starting_ids(GameData.races)
 	sp.race_id = heir.race_id if rng.randf() < float(GameData.bal("spouse_same_race_chance")) else race_ids[rng.randi() % race_ids.size()]
+	sp.lifespan = sp.compute_lifespan()
 	var pool := GameData.traits_in(["bloodline", "blessing"]).filter(func(t): return t not in heir.traits)
 	if rng.randf() < float(GameData.bal("spouse_trait_chance")) and not pool.is_empty():
 		sp.traits.append(pool[rng.randi() % pool.size()])
@@ -458,13 +459,14 @@ func _finish_time(action: String, msgs: Array) -> Array:
 		_say(m)
 	if state != "life":
 		return msgs
+	var age_before := heir.age
 	heir.age += float(years_for(action))
 	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * 0.1)))
 	if heir.age >= heir.midlife_age():
 		_check_milestone("midlife")
 	if heir.age >= heir.lifespan * float(GameData.bal("elder_fraction")):
 		_check_milestone("elder_years")
-	if state == "life" and heir.age >= heir.lifespan:
+	if state == "life" and rng.randf() < heir.old_age_death_chance(age_before, heir.age):
 		var dm := _die("old age")
 		for m in dm:
 			msgs.append(m)
