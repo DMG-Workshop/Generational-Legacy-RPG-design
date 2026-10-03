@@ -1,8 +1,8 @@
 # Generational Legacy RPG — Development Progress
 
-**Status:** Phase 6 (Progression & Item Systems) in progress. **Core engine complete, dialogue and consequence systems complete, animations and polish added, UI foundations solid, economy systems implemented.**
+**Status:** Phase 6 (Progression & Item Systems) in progress. **Core engine complete, dialogue and consequence systems complete, animations and polish added, UI foundations solid, economy systems implemented, procedural legendary item generator complete.**
 
-**Test Coverage:** 425 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables, Magic Items, Crafting, Battle Loot, Heir Integration).
+**Test Coverage:** 488 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables, Magic Items, Crafting, Battle Loot, Heir Integration, Enchantment Synergy, Procedural Legendary Items).
 
 ---
 
@@ -307,10 +307,14 @@
 - **QuestItem** (non-tradeable, quest-tied, turn-in rewards)
 - **ItemCatalog** (22 predefined items across all types)
 - **LootTable** (procedural loot generation by difficulty and source)
-- **LootCatalog** (predefined drop rates: enemy, chest, quest, crafting)
+- **LootCatalog** (predefined drop rates: enemy, chest, quest, crafting; legendary routing)
 - **Enchantment** (magical effects with rarity, type, stat modifiers)
 - **EnchantmentCatalog** (16 predefined enchantments: offensive, defensive, utility, special)
-- **MagicItemGenerator** (enchant items based on rarity, apply stat bonuses, value scaling)
+- **EnchantmentSynergy** (validates and scores enchantment combinations, prevents conflicts)
+- **MagicItemGenerator** (enchant items based on rarity, apply stat bonuses, value scaling, legendary upgrade detection)
+- **ProceduralLegendaryItemGenerator** (creates ultra-rare legendary items with perfect stats, synergistic enchantments, unique effects)
+- **LegendaryEffectCatalog** (20 unique procedural effects: combat, passive, progression)
+- **LegendaryNameGenerator** (procedural legendary names and lore generation)
 - **CraftingSkill** (10 skill types with XP progression, levels 1-100)
 - **Recipe** (crafting recipes with ingredients, time, difficulty, XP rewards)
 - **RecipeCatalog** (40+ recipes: weapons, armor, potions, materials)
@@ -365,6 +369,45 @@
 - Magical prefixes based on enchantment strength (Enchanted → Legendary)
 - Unidentified items until revealed (hidden enchantments)
 - Seeded generation for reproducible magical items
+- Legendary upgrade detection: 5% of LEGENDARY rarity items become procedural legendaries
+
+### Features: Enchantment Synergy System
+- Validates and scores enchantment combinations (prevents mechanical conflicts)
+- 45+ predefined synergy pairs with scoring:
+  - Perfect synergies: 1.25x multiplier (Sharpness+Lifesteal, Flaming+Lifesteal)
+  - Good synergies: 1.15-1.2x multiplier (complementary mechanics)
+  - Neutral synergies: 0.95-1.05x multiplier (non-interfering)
+  - Bad synergies: 0.5x multiplier (conflicting themes like Flaming+Fireward)
+- Multi-enchantment scoring with diminishing returns (0.9^(n-1) formula)
+- Threshold enforcement: Minimum 0.7 synergy score required
+- Compatibility checking to prevent mechanical conflicts
+- Subset selection: Finds best N-enchantment combinations from larger pool
+
+### Features: Procedural Legendary Item Generator
+- Ultra-rare legendary items (0.1%-1% drop rate depending on source)
+- **Perfect stat rolls guaranteed**: All attributes 95-100 range
+- **4-5 synergistic enchantments**: Always exactly 4-5, never fewer
+- **Synergy validation**: Minimum 0.7 score, automatic retry on failure (max 3 retries)
+- **Unique procedural effects** (20 total):
+  - Combat effects: Temporal Echo, Soulrend, Bloodthirst Aura, Cascade, Vortex Strike, etc.
+  - Passive effects: Generational Bond, Ancestor's Favor, Radiant Defiance, Eternal Vigil, etc.
+  - Progression effects: Heirloom Blessing, Legendary Chain, Generational Mastery
+- **Procedural names and lore**:
+  - 3 naming patterns: [Adj+Noun], [Adj+Noun+Location], [Noun of Adj+Location]
+  - 15 adjectives + 15 nouns + 12 locations = thousands of unique combinations
+  - Lore tied to defeated enemies, enchantment themes, heir generation, and year
+- **Bloodline binding**: Soulbound items track generational ownership and stat bonuses
+- **Value calculation**: base × 5 × (1 + synergy_score × 0.2)
+- **Seeded generation**: Same seed always produces identical legendary item
+- **Integration path**: Upgrade route from MagicItemGenerator (5% of LEGENDARY rarity items)
+
+### Features: Legendary Drop Rates
+- Enemy drops: 0.1% base (heroic), 0.5% (legendary difficulty)
+- Chest drops: 0.1% base
+- Quest rewards: 0% (never legendary)
+- Crafting: 0% (never legendary)
+- Boss drops: Higher rates (0.5%-1% by difficulty)
+- Seeded legendary generation ensures reproducible rare drops
 
 ### Features: Crafting System
 - 10 crafting skill types: Blacksmithing, Alchemy, Leatherworking, Carpentry, Enchanting, Cooking, Weaving, Metalworking, Stonework, Glassblowing
@@ -531,6 +574,35 @@
 ✓ Recipe availability by level
 ✓ Multi-gen recipe contributions
 ✓ Heir summary generation
+✓ Enchantment synergy scoring (perfect/good/bad/terrible combinations)
+✓ Enchantment compatibility checking
+✓ Multi-enchantment synergy with diminishing returns
+✓ Synergy threshold enforcement (>=0.7)
+✓ Procedural legendary generation (perfect stats 95-100)
+✓ Legendary enchantment count enforcement (4-5)
+✓ Legendary enchantment synergy validation
+✓ Legendary unique effect application
+✓ Legendary procedural name generation
+✓ Legendary procedural lore generation
+✓ Legendary item marking and metadata
+✓ Equipment upgrade to legendary
+✓ Legendary value calculation
+✓ Legendary bloodline binding
+✓ Legendary effect catalog selection
+✓ Legendary effect type filtering
+✓ Legendary effect difficulty scaling
+✓ Legendary name pattern variety
+✓ Legendary lore enemy/enchantment theming
+✓ MagicItemGenerator legendary upgrade routing
+✓ Legendary upgrade rate (5% for LEGENDARY rarity)
+✓ Legendary drop rates by source
+✓ Legendary drop rate by difficulty
+✓ Legendary not from quest rewards
+✓ Legendary not from crafting
+✓ Legendary seeded generation consistency
+✓ Legendary deterministic reproducibility (1000+ items)
+✓ Legendary rate distribution accuracy
+✓ Legendary generation performance
 
 **Prior Phase Tests:** 113 tests (Lineage, Fate, Combat, World, Generation, UI, Dialogue, Consequences, Battle Screen)
 
@@ -791,8 +863,8 @@ cat CLAUDE.md
 ---
 
 **Last Updated:** Oct 3, 2026
-**Current Phase:** Phase 6 (Progression & Item Systems) - Integrations Complete
-**Completed:** Currency (28), Gems (38), Items (43), Loot Tables (38), Magic Items (40), Crafting (50), Battle Loot (21), Heir Integration (71)
-**Total Phase 6:** 312 tests, ~6,000 lines of economy/crafting/integration code
-**Status:** Economy systems fully integrated with Battle and Character systems
-**Next Milestone:** Progression UI screens (inventory, equipment, crafting displays), Procedural legendary items
+**Current Phase:** Phase 6 (Progression & Item Systems) - Legendary Items Complete
+**Completed:** Currency (28), Gems (38), Items (43), Loot Tables (38), Magic Items (40), Crafting (50), Battle Loot (21), Heir Integration (71), Enchantment Synergy (12), Procedural Legendaries (63)
+**Total Phase 6:** 375 tests, ~8,500 lines of economy/crafting/legendary/integration code
+**Status:** Economy systems fully integrated with Battle and Character systems; Procedural legendary item generator complete with ultra-rare drops (0.1%-1%), perfect stats (95-100), synergistic enchantments, unique effects, and procedural lore
+**Next Milestone:** Progression UI screens (inventory, equipment, crafting displays, legendary showcase)
