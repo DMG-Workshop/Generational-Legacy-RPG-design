@@ -1,212 +1,187 @@
-## Settlement System: Manages settlements and building progression
+## Settlement System: Manages settlements with buildings, prosperity, and population
 ##
-## Each settlement has buildings with levels and resource production
-## Buildings provide stat bonuses and special effects to heirs
+## Tracks all settlements, building distribution, resource flow, and settlement prosperity
+
+extends Node
 
 class_name SettlementSystem
 
 
-signal settlement_created(settlement_name: String, position: Vector2i)
-signal building_upgraded(settlement_name: String, building_type: String, level: int)
-signal resources_produced(settlement_name: String, resources: Dictionary)
+signal settlement_created(settlement_id: String, name: String)
+signal settlement_prosperity_changed(settlement_id: String, prosperity: float)
+signal settlement_population_changed(settlement_id: String, population: int)
+signal settlement_updated(settlement_id: String)
 
 
-enum BuildingType { SHRINE, SMITHY, TAVERN, BARRACKS, MARKET }
-
-# Settlement data structure
-var settlements: Dictionary = {}  # name -> settlement data
-var building_effects: Dictionary = {
-	BuildingType.SHRINE: {"healing_bonus": 0.1, "bless_chance": 0.05},
-	BuildingType.SMITHY: {"damage_bonus": 0.05, "durability": 0.1},
-	BuildingType.TAVERN: {"recruit_chance": 0.2, "quest_variety": 1.0},
-	BuildingType.BARRACKS: {"training_speed": 0.15, "stat_gain": 0.05},
-	BuildingType.MARKET: {"item_variety": 0.3, "gold_bonus": 0.1},
-}
-
-# Building progression
-var building_costs: Dictionary = {
-	1: {"gold": 100, "materials": 10},
-	2: {"gold": 250, "materials": 25},
-	3: {"gold": 500, "materials": 50},
-	4: {"gold": 1000, "materials": 100},
-	5: {"gold": 2000, "materials": 200},
-}
-
-var building_production: Dictionary = {
-	BuildingType.SHRINE: {"blessing_per_day": 1},
-	BuildingType.SMITHY: {"equipment_per_day": 2},
-	BuildingType.TAVERN: {"quest_per_day": 3},
-	BuildingType.BARRACKS: {"trained_per_day": 2},
-	BuildingType.MARKET: {"gold_per_day": 50},
-}
+var building_system: BuildingSystem
+var settlements: Dictionary = {}
 
 
-## Create settlement at position
-func create_settlement(name: String, position: Vector2i, faction: String = "neutral") -> Dictionary:
-	if name in settlements:
-		return settlements[name]
+class Settlement:
+	var id: String
+	var name: String
+	var location: Vector2i
+	var buildings: Array = []
+	var prosperity: float = 50.0
+	var population: int = 0
+	var created_at_tick: int = 0
+	var total_gold_generated: int = 0
+	
+	func _init(p_id: String, p_name: String, p_location: Vector2i) -> void:
+		id = p_id
+		name = p_name
+		location = p_location
+		created_at_tick = 0
 
-	var settlement = {
-		"name": name,
-		"position": position,
-		"faction": faction,
-		"level": 1,
-		"population": 10,
-		"morale": 1.0,
-		"resources": {"gold": 500, "materials": 50},
-		"buildings": {
-			BuildingType.SHRINE: 1,
-			BuildingType.SMITHY: 1,
-			BuildingType.TAVERN: 1,
-			BuildingType.BARRACKS: 1,
-			BuildingType.MARKET: 1,
-		},
-		"quests_available": 0,
-		"npcs": [],
-		"created_at": Time.get_ticks_msec(),
+
+func _init() -> void:
+	building_system = BuildingSystem.new()
+	settlements = {}
+
+
+func create_settlement(name: String, location: Vector2i) -> String:
+	var settlement_id = "%s_%d_%d_%d" % [name.to_lower().replace(" ", "_"), location.x, location.y, randi()]
+	var settlement = Settlement.new(settlement_id, name, location)
+	settlements[settlement_id] = settlement
+	settlement_created.emit(settlement_id, name)
+	return settlement_id
+
+
+func get_settlement(settlement_id: String) -> Settlement:
+	return settlements.get(settlement_id)
+
+
+func add_building_to_settlement(settlement_id: String, building_type: int, owner: String = "settlement") -> String:
+	var settlement = settlements.get(settlement_id)
+	if not settlement:
+		return ""
+	
+	var building_id = building_system.create_building(building_type, settlement.location, owner)
+	settlement.buildings.append(building_id)
+	settlement_updated.emit(settlement_id)
+	return building_id
+
+
+func get_settlement_buildings(settlement_id: String) -> Array:
+	var settlement = settlements.get(settlement_id)
+	if not settlement:
+		return []
+	
+	var result = []
+	for building_id in settlement.buildings:
+		var building = building_system.get_building(building_id)
+		if building:
+			result.append(building)
+	return result
+
+
+func process_settlement_production(settlement_id: String, realm_multiplier: float = 1.0) -> Dictionary:
+	var settlement = settlements.get(settlement_id)
+	if not settlement:
+		return {}
+	
+	var total_production = {}
+	var settlement_gold = 0
+	
+	for building_id in settlement.buildings:
+		var produced = building_system.produce_resources(building_id, settlement.prosperity, realm_multiplier)
+		
+		for resource_type in produced.keys():
+			if resource_type == "gold":
+				settlement_gold += produced[resource_type]
+			else:
+				total_production[resource_type] = total_production.get(resource_type, 0) + produced[resource_type]
+	
+	settlement.total_gold_generated += settlement_gold
+	total_production["gold"] = settlement_gold
+	
+	return total_production
+
+
+func update_settlement_prosperity(settlement_id: String, delta: float) -> void:
+	var settlement = settlements.get(settlement_id)
+	if settlement:
+		settlement.prosperity = clamp(settlement.prosperity + delta, 0.0, 100.0)
+		settlement_prosperity_changed.emit(settlement_id, settlement.prosperity)
+
+
+func update_settlement_population(settlement_id: String, delta: int) -> void:
+	var settlement = settlements.get(settlement_id)
+	if settlement:
+		settlement.population = max(0, settlement.population + delta)
+		settlement_population_changed.emit(settlement_id, settlement.population)
+
+
+func get_settlement_info(settlement_id: String) -> Dictionary:
+	var settlement = settlements.get(settlement_id)
+	if not settlement:
+		return {}
+	
+	var buildings_info = []
+	for building_id in settlement.buildings:
+		buildings_info.append(building_system.get_building_info(building_id))
+	
+	return {
+		"id": settlement.id,
+		"name": settlement.name,
+		"location": settlement.location,
+		"prosperity": settlement.prosperity,
+		"population": settlement.population,
+		"buildings": buildings_info,
+		"total_gold_generated": settlement.total_gold_generated
 	}
 
-	settlements[name] = settlement
-	settlement_created.emit(name, position)
-	return settlement
+
+func get_all_settlements() -> Array:
+	return settlements.values()
 
 
-## Get settlement
-func get_settlement(name: String) -> Dictionary:
-	return settlements.get(name, {})
+func settlement_exists(settlement_id: String) -> bool:
+	return settlements.has(settlement_id)
 
 
-## Get all settlements
-func get_all_settlements() -> Array[String]:
-	return settlements.keys()
+func get_nearby_settlements(location: Vector2i, radius: int = 50) -> Array:
+	var result = []
+	for settlement in settlements.values():
+		var distance = settlement.location.distance_to(location)
+		if distance <= radius:
+			result.append(settlement)
+	return result
 
 
-## Get nearest settlement to position
-func get_nearest_settlement(from_pos: Vector2i) -> String:
-	var nearest = ""
-	var min_distance = INT_MAX
-
-	for settlement_name in settlements.keys():
-		var settlement = settlements[settlement_name]
-		var distance = from_pos.distance_to(settlement["position"])
-		if distance < min_distance:
-			min_distance = distance
-			nearest = settlement_name
-
-	return nearest
-
-
-## Upgrade building in settlement
-func upgrade_building(settlement_name: String, building_type: int) -> bool:
-	if settlement_name not in settlements:
-		return false
-
-	var settlement = settlements[settlement_name]
-	var current_level = settlement["buildings"].get(building_type, 1)
-
-	if current_level >= 5:
-		return false
-
-	var next_level = current_level + 1
-	var cost = building_costs.get(next_level, {})
-
-	if settlement["resources"]["gold"] >= cost.get("gold", 0):
-		if settlement["resources"]["materials"] >= cost.get("materials", 0):
-			settlement["resources"]["gold"] -= cost.get("gold", 0)
-			settlement["resources"]["materials"] -= cost.get("materials", 0)
-			settlement["buildings"][building_type] = next_level
-			building_upgraded.emit(settlement_name, BuildingType.keys()[building_type], next_level)
-			return true
-
-	return false
+func calculate_settlement_wealth(settlement_id: String) -> int:
+	var settlement = settlements.get(settlement_id)
+	if not settlement:
+		return 0
+	
+	var total_stock_value = 0
+	for building_id in settlement.buildings:
+		var building = building_system.get_building(building_id)
+		if building:
+			for resource_type in building.resource_stockpile.keys():
+				var amount = building.resource_stockpile[resource_type]
+				total_stock_value += amount * 10
+	
+	return settlement.total_gold_generated + total_stock_value
 
 
-## Get building effects for heir stats
-func get_building_effects(settlement_name: String) -> Dictionary:
-	if settlement_name not in settlements:
+func get_settlement_summary(settlement_id: String) -> Dictionary:
+	var settlement = settlements.get(settlement_id)
+	if not settlement:
 		return {}
-
-	var settlement = settlements[settlement_name]
-	var effects = {}
-
-	for building_type in settlement["buildings"].keys():
-		var level = settlement["buildings"][building_type]
-		var building_effect = building_effects.get(building_type, {})
-
-		for effect_key in building_effect.keys():
-			var base_effect = building_effect[effect_key]
-			var level_multiplier = 1.0 + (level - 1) * 0.2  # 20% per level
-			effects[effect_key] = effects.get(effect_key, 0.0) + (base_effect * level_multiplier)
-
-	return effects
-
-
-## Add resources to settlement
-func add_resources(settlement_name: String, resources: Dictionary) -> void:
-	if settlement_name not in settlements:
-		return
-
-	var settlement = settlements[settlement_name]
-	for resource_type in resources.keys():
-		settlement["resources"][resource_type] = settlement["resources"].get(resource_type, 0) + resources[resource_type]
-
-
-## Remove resources from settlement
-func remove_resources(settlement_name: String, resources: Dictionary) -> bool:
-	if settlement_name not in settlements:
-		return false
-
-	var settlement = settlements[settlement_name]
-	for resource_type in resources.keys():
-		if settlement["resources"].get(resource_type, 0) < resources[resource_type]:
-			return false
-
-	for resource_type in resources.keys():
-		settlement["resources"][resource_type] -= resources[resource_type]
-
-	return true
-
-
-## Simulate settlement production
-func simulate_production(settlement_name: String, days_passed: int = 1) -> Dictionary:
-	if settlement_name not in settlements:
-		return {}
-
-	var settlement = settlements[settlement_name]
-	var produced = {}
-
-	for building_type in settlement["buildings"].keys():
-		var level = settlement["buildings"][building_type]
-		var production = building_production.get(building_type, {})
-
-		for production_type in production.keys():
-			var base_amount = production[production_type]
-			var total = base_amount * level * days_passed
-			produced[production_type] = produced.get(production_type, 0) + total
-
-	resources_produced.emit(settlement_name, produced)
-	return produced
-
-
-## Get settlement summary
-func get_settlement_summary(settlement_name: String) -> Dictionary:
-	if settlement_name not in settlements:
-		return {}
-
-	var settlement = settlements[settlement_name]
-	var buildings_summary = {}
-
-	for building_type in settlement["buildings"].keys():
-		buildings_summary[BuildingType.keys()[building_type]] = settlement["buildings"][building_type]
-
+	
+	var building_types = {}
+	for building_id in settlement.buildings:
+		var building = building_system.get_building(building_id)
+		if building:
+			var type_name = BuildingSystem.BuildingType.keys()[building.type]
+			building_types[type_name] = building_types.get(type_name, 0) + 1
+	
 	return {
-		"name": settlement_name,
-		"position": settlement["position"],
-		"faction": settlement["faction"],
-		"level": settlement["level"],
-		"population": settlement["population"],
-		"morale": settlement["morale"],
-		"resources": settlement["resources"].duplicate(),
-		"buildings": buildings_summary,
-		"npcs_count": settlement["npcs"].size(),
+		"name": settlement.name,
+		"prosperity": settlement.prosperity,
+		"population": settlement.population,
+		"building_count": settlement.buildings.size(),
+		"building_types": building_types,
+		"wealth": calculate_settlement_wealth(settlement_id)
 	}
