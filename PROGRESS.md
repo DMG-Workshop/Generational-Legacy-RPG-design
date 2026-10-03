@@ -1,8 +1,8 @@
 # Generational Legacy RPG — Development Progress
 
-**Status:** Phase 4 (Generation Loop) complete. **All core systems ready for gameplay.**
+**Status:** Phase 5 (Rendering & UI Layer) in progress. **Core engine complete, UI foundations built.**
 
-**Test Coverage:** 59 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop).
+**Test Coverage:** 71 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens).
 
 ---
 
@@ -182,7 +182,8 @@
 | 2 | Battle | 13 | ✅ Pass |
 | 3 | World | 18 | ✅ Pass |
 | 4 | Generation Loop | 20 | ✅ Pass |
-| **TOTAL** | | **59** | ✅ **PASS** |
+| 5 | UI Screens | 12 | ✅ Pass |
+| **TOTAL** | | **71** | ✅ **PASS** |
 
 ---
 
@@ -260,55 +261,129 @@
 ✓ Life summary generation
 ✓ Ancestry tracking and summary
 
+### Tests (20 tests)
+✓ Life phase progression
+✓ Marriage and children
+✓ Natural death at 65
+✓ Generation transition
+✓ Ancestor NPC creation
+✓ Visit ancestral tomb
+✓ Learn from ancestor
+✓ Faction reputation changes
+✓ Legacy echo creation
+✓ Memory decay
+✓ Reputation inheritance
+✓ Quest execution
+✓ Estate property creation
+✓ Property decay
+✓ Property upgrades
+✓ Annual property income
+✓ Condition descriptions
+✓ Life summary generation
+✓ Ancestry tracking and summary
+✓ Comprehensive generation lifecycle
+
 ---
 
-## Next: Rendering & UI Layer
+## Phase 5: Rendering & UI Layer 🎮 IN PROGRESS
 
-The **core game engine is 100% complete**. Now implement the rendering layer to make it playable.
+### Systems Built (Foundations)
+- **MainGame** (game state orchestrator and screen manager)
+- **ScreenManager** (CanvasLayer for UI layering)
+- **MainMenuScreen** (new game, load, quit)
+- **WorldScreen** (tile-based exploration, movement, digging)
+- **BattleScreen** (combat UI with turn order, HP bars, actions)
+- **CharacterMenuScreen** (character sheet, inventory, equipment, traits)
+- **PauseMenuScreen** (pause/resume, save/load, return to menu)
+- **GenerationTransitionScreen** (life summary, heir selection, mentor choice)
+- **LoadGameScreen** (save slot browser)
 
-### What's Left to Build
+### Features: Phase 5 Foundations
+- Screen transition system with state persistence
+- Main menu with new game/load/quit
+- World exploration with keyboard movement (WASD)
+- Digging system (D key to go down levels)
+- Character sheet with stats, traits, inventory display
+- Pause menu with save/load options
+- Generation transition with heir selection from children
+- Ancestor mentor selection
+- Save game serialization to JSON
+- Load game from save slots
 
-1. **Battle Screen UI**
-   - Turn order display (visual timeline or ATB gauge)
-   - HP/MP bars with animations
-   - Damage numbers (floating text, colors for crit)
-   - Ability/spell buttons with cooldowns
-   - Status effect icons
+### Tests (12 tests)
+✓ Main game initialization
+✓ New game starts world screen
+✓ Character menu opens from world
+✓ Pause menu toggles
+✓ Battle screen initialization
+✓ World screen player position tracking
+✓ Character menu displays heir stats
+✓ Generation transition shows children
+✓ Save game file creation
+✓ Screen transitions preserve state
+✓ Pause/resume preserves player position
+✓ All screens properly instantiate
+
+### Estimated Scope Completed
+- 10-15 hours of UI foundation
+- 6 core screens with basic layouts
+- 1,000+ lines of UI code
+- Screen manager infrastructure
+
+### Phase 5 Remaining Work
+
+1. **Battle Screen Polish** (5-8 hours)
+   - Integrate with actual Battle system
+   - Implement turn order visual (ATB gauge or timeline)
+   - Add HP/MP bar animations
+   - Floating damage numbers (with crit colors)
+   - Ability buttons with proper action binding
+   - Status effect icon display
    - Row positioning visualization
 
-2. **World Rendering**
-   - Tilemap display (16×16 chunks, procedural or pre-rendered)
-   - Player sprite and movement animation
-   - Building/structure sprites
-   - Creature and NPC sprites
-   - Weather and environmental effects
-   - Portal visualization
+2. **World Rendering** (8-12 hours)
+   - Real tilemap display with tile graphics
+   - Player sprite and movement animations
+   - Building/structure tile sets
+   - Creature and NPC sprite rendering
+   - Weather particle effects
+   - Portal/teleport point visualization
+   - Chunk loading/unloading UI
 
-3. **Character & Menu UI**
-   - Character sheet (stats, traits, equipment)
-   - Inventory system with item sorting
-   - Skill tree visualization (nodes with connections)
-   - Family tree browser (navigate ancestors)
-   - Equipment and loadout management
+3. **Character UI Completion** (4-6 hours)
+   - Full character sheet with all stats
+   - Inventory system with item details and sorting
+   - Equipment management and loadout swapping
+   - Skill tree visualization (nodes with progression)
+   - Family tree browser (scroll through ancestors)
+   - Trait detail tooltips
 
-4. **Generation Transition Scene**
-   - Life summary screen (age, deeds, children, wealth)
-   - Heir selection UI (choose which child to play)
-   - New heir stats preview
-   - Mentor selection (optional guidance from parent)
+4. **Generation Transition Enhancement** (2-3 hours)
+   - Full life summary statistics
+   - Heir stat preview before selection
+   - Mentor bonus preview
+   - Legacy echo display (ancestor deeds)
 
-5. **Main Game Loop**
-   - Main menu with New Game/Load/Options
-   - Save/load system with slot selection
-   - Year advancement (choose action, advance 1 year)
-   - Event popups (quest, romance, betrayal, success)
-   - Pause menu
+5. **Year Advancement & Events** (5-8 hours)
+   - Year-by-year action selection
+   - Quest event popups and acceptance
+   - Romance and marriage events
+   - Betrayal and tragedy events
+   - Success and achievement notifications
+   - NPC interaction dialogs
 
-### Estimated Scope
-- 50+ hours (UI is the bulk of remaining work)
-- 15-20 UI systems and screens
-- 2,000+ lines of rendering code
-- Uses Godot's 2D/Control nodes
+6. **Animations & Polish** (5-10 hours)
+   - Screen transition animations
+   - Button hover effects
+   - Smooth scrolling and transitions
+   - Audio/SFX integration points
+   - Responsive UI scaling
+
+### Estimated Total Remaining
+- 30-45 hours (polish and feature completion)
+- 2,500+ lines of additional rendering code
+- Full integration with core systems
+- Professional UI/UX refinements
 
 **Core game logic: COMPLETE ✅**
 - All systems work standalone
