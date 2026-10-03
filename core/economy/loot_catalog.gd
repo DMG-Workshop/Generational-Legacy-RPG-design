@@ -248,3 +248,77 @@ static func get_source_name(source: int) -> String:
 			return "Crafting Output"
 		_:
 			return "Unknown"
+
+
+## Calculate legendary drop rate based on source and difficulty
+## Note: Boss drops would need a separate source type for higher rates (0.5% heroic, 1% legendary)
+static func calculate_legendary_drop_rate(source: int, difficulty: int) -> float:
+	match source:
+		# Enemy drops: 0.1% base (heroic) + 0.5% (legendary difficulty)
+		LootTable.LootSource.ENEMY_LOOT:
+			if difficulty == LootTable.Difficulty.LEGENDARY:
+				return 0.005  # 0.5%
+			elif difficulty == LootTable.Difficulty.HEROIC:
+				return 0.001  # 0.1%
+			return 0.0
+
+		# Chest drops: 0.1% base
+		LootTable.LootSource.CHEST:
+			return 0.001  # 0.1%
+
+		# Quest rewards: 0% (never legendary)
+		LootTable.LootSource.QUEST_REWARD:
+			return 0.0
+
+		# Crafting: 0% (never legendary)
+		LootTable.LootSource.CRAFTING_OUTPUT:
+			return 0.0
+
+		_:
+			return 0.0
+
+
+## Try to generate legendary item based on drop rate
+static func try_legendary_generation(source: int, difficulty: int, seed: int) -> bool:
+	var legendary_rate = calculate_legendary_drop_rate(source, difficulty)
+
+	# No chance of legendary from this source
+	if legendary_rate <= 0.0:
+		return false
+
+	if seed > 0:
+		seed(seed)
+
+	return randf() < legendary_rate
+
+
+## Generate loot for source and difficulty with legendary support
+static func generate_loot(
+	source: int,
+	difficulty: int,
+	seed_value: int = 0,
+	hero_generation: int = 1,
+	defeated_enemy: String = ""
+) -> Array[Item]:
+	# Try legendary generation first
+	if try_legendary_generation(source, difficulty, seed_value):
+		# Generate legendary item
+		var legendary_item = MagicItemGenerator.create_random_magical_item(
+			Item.Rarity.LEGENDARY,
+			seed_value
+		)
+
+		if legendary_item and legendary_item is Equipment:
+			# Apply legendary upgrade
+			legendary_item = MagicItemGenerator.upgrade_to_procedural_legendary(
+				legendary_item,
+				seed_value,
+				difficulty,
+				hero_generation,
+				defeated_enemy
+			)
+			return [legendary_item]
+
+	# Fall back to normal loot generation
+	var table = create_loot_table(source, difficulty)
+	return table.generate_loot(difficulty, source, seed_value)

@@ -240,3 +240,81 @@ static func get_enchantment_display(item: Item) -> String:
 		display += "• %s: %s +%.1f\n" % [ench.name, ench.effect_name, ench.effect_value]
 
 	return display
+
+
+## Base legendary upgrade chance (5% of legendary rarity items become procedural legendaries)
+static var LEGENDARY_UPGRADE_CHANCE: float = 0.05
+
+
+## Apply enchantments to item with optional legendary upgrade path
+static func apply(
+	item: Item,
+	rarity: int,
+	seed_value: int = 0,
+	difficulty: int = 5,
+	hero_generation: int = 1,
+	defeated_enemy: String = ""
+) -> Item:
+	if seed_value > 0:
+		seed(seed_value)
+
+	# Apply normal enchantment logic
+	item.rarity = rarity
+	var enchanted_item = create_enchanted_item(item, -1, seed_value)
+
+	# Check if should upgrade to procedural legendary
+	if should_upgrade_to_legendary(enchanted_item, rarity, seed_value):
+		return upgrade_to_procedural_legendary(
+			enchanted_item,
+			seed_value,
+			difficulty,
+			hero_generation,
+			defeated_enemy
+		)
+
+	return enchanted_item
+
+
+## Check if item should become a procedural legendary
+static func should_upgrade_to_legendary(item: Equipment, rarity: int, seed: int) -> bool:
+	# Only LEGENDARY rarity items can upgrade
+	if rarity != Item.Rarity.LEGENDARY:
+		return false
+
+	# Item must be Equipment to become legendary
+	if not (item is Equipment):
+		return false
+
+	# 5% chance for legendary rarity items to become procedural legendaries
+	return legendary_roll_succeeds(seed)
+
+
+## Roll chance for legendary upgrade (5%)
+static func legendary_roll_succeeds(seed: int) -> bool:
+	if seed > 0:
+		seed(seed)
+	return randf() < LEGENDARY_UPGRADE_CHANCE
+
+
+## Upgrade a magical item to procedural legendary
+static func upgrade_to_procedural_legendary(
+	item: Equipment,
+	seed: int,
+	difficulty: int = 5,
+	hero_generation: int = 1,
+	defeated_enemy: String = ""
+) -> Equipment:
+	# Use ProceduralLegendaryItemGenerator if available
+	if ClassDB.can_instantiate("ProceduralLegendaryItemGenerator"):
+		item = ProceduralLegendaryItemGenerator.upgrade_to_legendary(
+			item,
+			seed,
+			difficulty,
+			hero_generation,
+			defeated_enemy
+		)
+
+	# Mark item as upgraded from magical for tracking
+	item.set_property("upgraded_from_magical", true)
+
+	return item
