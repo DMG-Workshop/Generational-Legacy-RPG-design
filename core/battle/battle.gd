@@ -24,6 +24,8 @@ class CombatState:
 	var battle_over: bool = false
 	var player_won: bool = false
 	var elapsed_time: float = 0.0
+	var battle_rewards: BattleRewards = null  # Tracks loot and currency
+	var enemy_loot_drops: Dictionary = {}  # Maps enemy name to their loot tables
 
 
 class Combatant:
@@ -64,12 +66,17 @@ class Combatant:
 	var debuffs: Dictionary = {}
 	var active_surfaces: Array[String] = []  # Elemental surfaces
 
+	# Loot properties
+	var difficulty: int = LootTable.Difficulty.NORMAL  # Enemy difficulty for loot drops
+	var is_rare_enemy: bool = false  # Rare enemies drop better loot
+
 
 var state: CombatState
 
 
 func _init() -> void:
 	state = CombatState.new()
+	state.battle_rewards = BattleRewards.new()
 
 
 ## Start a battle between party and enemies
@@ -79,6 +86,14 @@ func start_battle(party_members: Array[Combatant], enemies: Array[Combatant]) ->
 	state.battle_over = false
 	state.player_won = false
 	state.round = 1
+
+	# Clear and reset rewards tracking
+	state.battle_rewards.clear()
+	state.enemy_loot_drops.clear()
+
+	# Pre-assign loot tables for each enemy based on their difficulty
+	for enemy in enemies:
+		_assign_enemy_loot_table(enemy)
 
 	_calculate_turn_order()
 
@@ -183,6 +198,10 @@ func _apply_damage(defender: Combatant, damage: int, is_critical: bool) -> void:
 	if defender.hp <= 0:
 		defender.hp = 0
 		defender.is_alive = false
+
+		# Generate loot when enemy dies
+		if defender.faction == "enemy":
+			_generate_enemy_loot(defender)
 
 
 ## Get MP cost for a spell
@@ -302,3 +321,65 @@ func get_summary() -> Dictionary:
 		"party_alive": state.party.filter(func(c): return c.is_alive).size(),
 		"enemies_alive": state.enemies.filter(func(c): return c.is_alive).size(),
 	}
+
+
+## Assign loot table to enemy based on difficulty
+func _assign_enemy_loot_table(enemy: Combatant) -> void:
+	if enemy.faction != "enemy":
+		return
+
+	var difficulty = enemy.difficulty
+	state.enemy_loot_drops[enemy.name] = {
+		"difficulty": difficulty,
+		"is_rare": enemy.is_rare_enemy
+	}
+
+
+## Generate loot when enemy dies
+func _generate_enemy_loot(enemy: Combatant) -> void:
+	if enemy.faction != "enemy" or state.battle_rewards.is_enemy_looted(enemy.name):
+		return
+
+	# Mark as looted to prevent duplication
+	state.battle_rewards.mark_enemy_looted(enemy.name)
+
+	# Get enemy difficulty
+	var difficulty = enemy.difficulty
+	if enemy.is_rare_enemy:
+		# Rare enemies get better loot
+		difficulty = min(difficulty + 1, LootTable.Difficulty.LEGENDARY)
+
+	# Generate loot from ENEMY_LOOT source
+	var loot = LootCatalog.generate_loot(LootTable.LootSource.ENEMY_LOOT, difficulty)
+
+	# Apply enchantment chance based on difficulty
+	for item in loot:
+		if difficulty >= LootTable.Difficulty.HARD:
+			# 20% base chance, scales with difficulty
+			var enchant_chance = 0.2 + (difficulty * 0.1)
+			if randf() < enchant_chance and item is Equipment:
+				item = MagicItemGenerator.create_enchanted_item(item)
+
+		state.battle_rewards.add_reward(item, enemy.name)
+
+	# Generate currency reward based on difficulty
+	var currency_value = _generate_enemy_currency(difficulty)
+	state.battle_rewards.add_currency(currency_value)
+
+
+## Generate currency reward for defeated enemy
+func _generate_enemy_currency(difficulty: int) -> Currency:
+	var base_gold = 10 + (difficulty * 5)
+	var variance = randi_range(-base_gold / 4, base_gold / 4)
+	var gold = max(1, base_gold + variance)
+	return Currency.new(0, gold, 0, 0)
+
+
+## Get battle rewards
+func get_battle_rewards() -> BattleRewards:
+	return state.battle_rewards
+
+
+## Get battle rewards summary
+func get_rewards_summary() -> Dictionary:
+	return state.battle_rewards.get_reward_summary()
