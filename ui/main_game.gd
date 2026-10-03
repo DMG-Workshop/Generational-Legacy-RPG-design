@@ -26,7 +26,9 @@ enum GameMode {
 	CHARACTER_MENU,
 	GENERATION_TRANSITION,
 	PAUSE_MENU,
-	LOAD_SCREEN
+	LOAD_SCREEN,
+	YEAR_ACTION,
+	EVENT_POPUP
 }
 
 var current_mode: GameMode = GameMode.MAIN_MENU
@@ -81,6 +83,14 @@ func show_screen(screen_type: String) -> void:
 		"load":
 			current_screen = LoadGameScreen.new()
 			current_mode = GameMode.LOAD_SCREEN
+
+		"year_action":
+			current_screen = YearActionScreen.new(current_generation_manager)
+			current_mode = GameMode.YEAR_ACTION
+
+		"event_popup":
+			current_screen = EventPopupScreen.new()
+			current_mode = GameMode.EVENT_POPUP
 
 	screen_manager.add_child(current_screen)
 

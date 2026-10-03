@@ -40,6 +40,9 @@ var reputation_system: ReputationSystem = null
 ## Estate manager (family properties)
 var estate_manager: EstateManager = null
 
+## Event system (generates life events)
+var event_system: EventSystem = null
+
 ## Current age (in years)
 var current_age: int = 0
 
@@ -64,6 +67,7 @@ func _init(p_lineage: Lineage, p_world: WorldManager) -> void:
 	npc_system = NPCSystem.new()
 	reputation_system = ReputationSystem.new()
 	estate_manager = EstateManager.new()
+	event_system = EventSystem.new()
 
 
 ## Start a new generation with an heir
@@ -93,6 +97,17 @@ func advance_year() -> Dictionary:
 
 	# Update life phase based on age
 	_update_life_phase()
+
+	# Generate a random event using the event system
+	var generated_event = event_system.generate_event(
+		current_heir,
+		current_age,
+		current_phase,
+		reputation_system.factions
+	)
+
+	if generated_event.get("type") != "none":
+		event.merge(generated_event)
 
 	# Check for random life events
 	_check_random_events()
