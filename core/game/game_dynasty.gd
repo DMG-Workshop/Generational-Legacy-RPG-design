@@ -28,6 +28,7 @@ var flags: Dictionary = {}      # story flags set by quests and events (flag -> 
 var quests := GameQuests.new()
 var party := GameParty.new()
 var pending_event: Dictionary = {}   # an event waiting for the player's choice (see GameEvents)
+var shop_state: Dictionary = {}      # owned by GameItems: temple services used by the living heir
 
 
 static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
@@ -703,6 +704,7 @@ func to_dict() -> Dictionary:
 		"journal": journal.slice(maxi(0, journal.size() - 60)), "next_id": next_id, "total_hunts": total_hunts,
 		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
+		"shop_state": shop_state,
 	}
 
 
@@ -737,6 +739,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
 	g.party = GameParty.from_dict(d.get("party", {}))
 	g.pending_event = d.get("pending_event", {})
+	g.shop_state = d.get("shop_state", {})
 	return g
 
 
