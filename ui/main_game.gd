@@ -12,6 +12,7 @@ class_name MainGame
 var current_lineage: Lineage
 var current_world: WorldManager
 var current_generation_manager: GenerationManager
+var dialogue_system: DialogueSystem
 var current_save_slot: int = 0
 
 ## UI layers
@@ -28,7 +29,9 @@ enum GameMode {
 	PAUSE_MENU,
 	LOAD_SCREEN,
 	YEAR_ACTION,
-	EVENT_POPUP
+	EVENT_POPUP,
+	DIALOGUE,
+	QUEST_DETAIL
 }
 
 var current_mode: GameMode = GameMode.MAIN_MENU
@@ -40,6 +43,7 @@ func _ready() -> void:
 	current_lineage = Lineage.new(42)  # seeded RNG for reproducibility
 	current_world = WorldManager.new()
 	current_generation_manager = GenerationManager.new(current_lineage, current_world)
+	dialogue_system = DialogueSystem.new()
 
 	# Setup screen manager
 	screen_manager = ScreenManager.new()
@@ -96,7 +100,16 @@ func show_screen(screen_type: String) -> void:
 			current_screen = EventPopupScreen.new()
 			current_mode = GameMode.EVENT_POPUP
 
-	screen_manager.add_child(current_screen)
+		"dialogue":
+			# Dialogue screen needs tree_key set via show_dialogue()
+			current_mode = GameMode.DIALOGUE
+
+		"quest_detail":
+			# Quest detail screen needs quest_data set via show_quest_detail()
+			current_mode = GameMode.QUEST_DETAIL
+
+	if current_screen:
+		screen_manager.add_child(current_screen)
 
 
 func show_main_menu() -> void:
@@ -128,6 +141,26 @@ func toggle_pause() -> void:
 		show_screen("pause")
 
 	paused = !paused
+
+
+func show_dialogue(tree_key: String) -> void:
+	if current_screen:
+		screen_manager.remove_child(current_screen)
+		current_screen.queue_free()
+
+	current_screen = DialogueTreeScreen.new(dialogue_system, tree_key, current_generation_manager.current_heir)
+	current_mode = GameMode.DIALOGUE
+	screen_manager.add_child(current_screen)
+
+
+func show_quest_detail(quest_data: Dictionary) -> void:
+	if current_screen:
+		screen_manager.remove_child(current_screen)
+		current_screen.queue_free()
+
+	current_screen = QuestDetailScreen.new(quest_data, current_generation_manager.current_heir)
+	current_mode = GameMode.QUEST_DETAIL
+	screen_manager.add_child(current_screen)
 
 
 ## Save game to slot

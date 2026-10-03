@@ -1,8 +1,8 @@
 # Generational Legacy RPG — Development Progress
 
-**Status:** Phase 5 (Rendering & UI Layer) in progress. **Core engine complete, UI foundations built.**
+**Status:** Phase 5 (Rendering & UI Layer) in progress. **Core engine complete, dialogue systems added, UI foundations built.**
 
-**Test Coverage:** 71 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens).
+**Test Coverage:** 119 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue).
 
 ---
 
@@ -185,7 +185,8 @@
 | 5 | UI Screens | 12 | ✅ Pass |
 | 5 | Event System | 15 | ✅ Pass |
 | 5 | Character UI | 17 | ✅ Pass |
-| **TOTAL** | | **103** | ✅ **PASS** |
+| 5 | Dialogue & Quest Screens | 16 | ✅ Pass |
+| **TOTAL** | | **119** | ✅ **PASS** |
 
 ---
 
@@ -296,9 +297,12 @@
 - **WorldScreen** (tile-based exploration, movement, digging)
 - **BattleScreen** (combat UI with turn order, HP bars, actions)
 - **CharacterMenuScreen** (character sheet, inventory, equipment, traits)
+- **CharacterMenuEnhanced** (tabbed interface with skills, family, inventory)
 - **PauseMenuScreen** (pause/resume, save/load, return to menu)
 - **GenerationTransitionScreen** (life summary, heir selection, mentor choice)
 - **LoadGameScreen** (save slot browser)
+- **DialogueTreeScreen** (interactive NPC conversations with branching choices)
+- **QuestDetailScreen** (quest information display with rewards and difficulty)
 
 ### Features: Phase 5 Foundations
 - Screen transition system with state persistence
@@ -367,6 +371,10 @@
 ✅ Skill trees (class-specific)
 ✅ Family tree browser
 ✅ Enhanced character menu with tabs
+✅ Dialogue tree system with branching conversations
+✅ Interactive dialogue screen with player choices
+✅ Quest detail screen with rewards preview
+✅ Dialogue outcome application (gold, reputation, quests)
 
 ### Phase 5 Remaining Work
 
@@ -394,11 +402,12 @@
    - Mentor bonus preview and selection UI
    - Legacy echo display (ancestor deeds)
 
-4. **Event Enhancements** (3-5 hours)
-   - Full event descriptions and flavor text
-   - Romance and marriage dialogue trees
-   - Quest detail screens with rewards preview
-   - Consequence notifications and feedback
+4. **Event Enhancements** ✅ (Dialogue & Quest Systems Complete)
+   - ✅ Interactive dialogue tree display
+   - ✅ Quest detail screens with rewards preview
+   - ✅ Player choice branching system
+   - Remaining: Romance and marriage dialogue trees (special case)
+   - Remaining: Consequence notifications and visual feedback
 
 5. **Animations & Polish** (5-10 hours)
    - Screen transition animations (fade, slide)
@@ -439,14 +448,15 @@
 | Category | Count |
 |----------|-------|
 | Core systems | 13 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem) |
-| UI screens | 9 screens (MainMenu, World, Battle, Character, Pause, GenerationTransition, LoadGame, YearAction, EventPopup) |
+| UI screens | 11 screens (MainMenu, World, Battle, Character, Pause, GenerationTransition, LoadGame, YearAction, EventPopup, DialogueTree, QuestDetail) |
 | UI components | 2 components (SkillTree, FamilyTreeBrowser) + ScreenManager + CharacterMenuEnhanced |
+| Dialogue systems | DialogueSystem with 5 quest trees, 2 NPC trees, branching choices |
 | Data files | 4 JSON files (30 traits across 4 categories) |
-| Tests | 103 tests across 8 modules (all passing) |
-| Lines of code | ~7,200 (logic + UI + components) |
+| Tests | 119 tests across 9 modules (all passing) |
+| Lines of code | ~7,550 (logic + UI + components + dialogue) |
 | Commits | 15 major commits showing progression |
 | Documentation | GDD (25k words), CLAUDE.md, README, TESTING.md, PROGRESS.md |
-| Modules | Phase 1-4 complete, Phase 5 in progress (UI, Events, Character Systems) |
+| Modules | Phase 1-4 complete, Phase 5 in progress (UI, Events, Character Systems, Dialogue) |
 
 ---
 
