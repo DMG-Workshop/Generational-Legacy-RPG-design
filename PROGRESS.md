@@ -2,7 +2,7 @@
 
 **Status:** Phase 6 (Progression & Item Systems) in progress. **Core engine complete, dialogue and consequence systems complete, animations and polish added, UI foundations solid, economy systems implemented.**
 
-**Test Coverage:** 264 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables).
+**Test Coverage:** 304 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables, Magic Items).
 
 ---
 
@@ -308,6 +308,9 @@
 - **ItemCatalog** (22 predefined items across all types)
 - **LootTable** (procedural loot generation by difficulty and source)
 - **LootCatalog** (predefined drop rates: enemy, chest, quest, crafting)
+- **Enchantment** (magical effects with rarity, type, stat modifiers)
+- **EnchantmentCatalog** (16 predefined enchantments: offensive, defensive, utility, special)
+- **MagicItemGenerator** (enchant items based on rarity, apply stat bonuses, value scaling)
 
 ### Features: Economy
 - 4-denomination currency with automatic normalization
@@ -342,6 +345,18 @@
 - Gem inclusion in loot drops with condition improvements
 - Seeded generation for reproducible results
 
+### Features: Magic Item Generator
+- 16 enchantments across 4 types: Offensive (5), Defensive (5), Utility (4), Special (3)
+- Rarity-based enchantment application: Common (0) → Legendary (4 max)
+- Enchantment rarity distribution weighted by item rarity
+- Stat bonuses: strength, dexterity, constitution, intelligence, wisdom
+- Elemental resistances: fire, cold, lightning, poison, magic
+- Special effects: lifesteal, damage reflection, cursed, soulbound, prophecy
+- Cost scaling: stacked enchantments multiply base price (1.2x-5.0x per enchantment + stacking penalty)
+- Magical prefixes based on enchantment strength (Enchanted → Legendary)
+- Unidentified items until revealed (hidden enchantments)
+- Seeded generation for reproducible magical items
+
 ### Data
 - Currency system integrated into all items and wallets
 - 18 unique gems with base values and rarity tiers
@@ -349,7 +364,7 @@
 - 5 difficulty tiers with distinct loot profiles
 - 4 loot source types with tuned drop rates
 
-### Tests (151 tests total)
+### Tests (191 tests total)
 **Phase 6 Tests:**
 ✓ Currency creation and denomination handling
 ✓ Currency addition, subtraction, multiplication
@@ -376,6 +391,19 @@
 ✓ Gem appearance in loot pools
 ✓ Crafting output material focus
 ✓ Seeded generation reproducibility
+✓ Enchantment creation and properties
+✓ Enchantment rarity and type naming
+✓ Item type compatibility checking
+✓ Single and stacked enchantment cost multipliers
+✓ Catalog enchantment retrieval and filtering
+✓ Rarity-based enchantment application
+✓ Item name prefix for magical items
+✓ Stat bonuses applied to enchanted equipment
+✓ Value scaling with multiple enchantments
+✓ Cursed enchantment detection
+✓ Enchanted items marked as unidentified
+✓ Random magical item generation
+✓ Seeded magical item reproducibility
 
 **Prior Phase Tests:** 113 tests (Lineage, Fate, Combat, World, Generation, UI, Dialogue, Consequences, Battle Screen)
 
@@ -574,18 +602,18 @@
 
 | Category | Count |
 |----------|-------|
-| Core systems | 22 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem, Currency, Wallet, Gem, GemCatalog, GemPouch, Item hierarchy, LootTable, LootCatalog) |
+| Core systems | 25 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem, Currency, Wallet, Gem, GemCatalog, GemPouch, Item hierarchy, LootTable, LootCatalog, Enchantment, EnchantmentCatalog, MagicItemGenerator) |
 | UI screens | 12 screens (MainMenu, World, Battle, Character, Pause, GenerationTransition, LoadGame, YearAction, EventPopup, DialogueTree, QuestDetail, ConsequenceNotification) |
 | UI components | 2 components (SkillTree, FamilyTreeBrowser) + ScreenManager + CharacterMenuEnhanced |
 | UI polish | ScreenTransitionAnimator + PolishedButton (hover/press effects) |
 | Dialogue systems | DialogueSystem with 7 dialogue trees (3 quests, 2 NPCs, 2 romance/marriage) |
 | Dialogue features | Branching conversations, outcome application, consequence tracking, mentor selection |
 | Animation features | Fade transitions, slide capabilities, button hover effects, tween-based animations |
-| Economy systems | Currency, Wallet, Gem/GemCatalog/GemPouch, Item hierarchy (5 types), ItemCatalog, LootTable/LootCatalog |
-| Data files | 4 JSON files (30 traits across 4 categories), 22 predefined items, 18 gem types, loot table configs |
-| Tests | 264 tests across 18 modules (all passing) |
-| Lines of code | ~13,500 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration + economy) |
-| Commits | 31 major commits showing progression |
+| Economy systems | Currency, Wallet, Gem/GemCatalog/GemPouch, Item hierarchy (5 types), ItemCatalog, LootTable/LootCatalog, Enchantment/EnchantmentCatalog, MagicItemGenerator |
+| Data files | 4 JSON files (30 traits across 4 categories), 22 predefined items, 18 gem types, 16 enchantments, loot table configs |
+| Tests | 304 tests across 19 modules (all passing) |
+| Lines of code | ~15,000 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration + economy + magic) |
+| Commits | 32 major commits showing progression |
 | Documentation | GDD (25k words), CLAUDE.md, README, TESTING.md, PROGRESS.md |
 | Modules | Phase 1-4 complete, Phase 5 in progress (75-85% complete with Battle Screen Integration) |
 
@@ -635,5 +663,6 @@ cat CLAUDE.md
 
 **Last Updated:** Oct 3, 2026
 **Current Phase:** Phase 6 (Progression & Item Systems)
-**Completed:** Currency, Gem System, Item System, Loot Tables (151 tests, ~2,000 lines)
-**Next Milestone:** Magic Item Generator, Crafting System, Battle Loot Integration
+**Completed:** Currency (28 tests), Gem System (38 tests), Item System (43 tests), Loot Tables (38 tests), Magic Items (40 tests)
+**Total Phase 6:** 191 tests, ~3,000 lines of economy code
+**Next Milestone:** Crafting System (recipes + skill progression), Battle Loot Integration
