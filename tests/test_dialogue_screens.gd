@@ -190,3 +190,47 @@ func test_consequence_notification_with_items() -> void:
 	}
 	var notification = ConsequenceNotificationScreen.new(consequences, heir)
 	assert_eq(notification.consequences["items_gained"].size(), 2)
+
+
+## Test: Romance encounter dialogue
+func test_romance_encounter_dialogue() -> void:
+	var greeting = dialogue_system.get_dialogue("romance_encounter")
+	assert_not_null(greeting)
+	assert_eq(greeting.id, "romance_greeting")
+	assert_eq(greeting.speaker, "Stranger")
+
+
+## Test: Romance encounter has three choices
+func test_romance_encounter_choices() -> void:
+	var greeting = dialogue_system.get_dialogue("romance_encounter")
+	var choices = dialogue_system.get_choices(greeting)
+	assert_eq(choices.size(), 3)
+
+
+## Test: Marriage proposal dialogue
+func test_marriage_proposal_dialogue() -> void:
+	var greeting = dialogue_system.get_dialogue("marriage_proposal")
+	assert_not_null(greeting)
+	assert_eq(greeting.id, "marriage_greeting")
+
+
+## Test: Marriage proposal has three choices
+func test_marriage_proposal_choices() -> void:
+	var greeting = dialogue_system.get_dialogue("marriage_proposal")
+	var choices = dialogue_system.get_choices(greeting)
+	assert_eq(choices.size(), 3)
+
+
+## Test: Marriage acceptance outcome
+func test_marriage_acceptance_outcome() -> void:
+	var accept_node = dialogue_system.get_next_node("marriage_proposal", "marriage_accept")
+	assert_not_null(accept_node)
+	assert_true(accept_node.outcome.has("marriage_bonus_wealth"))
+
+
+## Test: Romance interest tracking
+func test_romance_interest_outcome() -> void:
+	var greeting = dialogue_system.get_dialogue("romance_encounter")
+	var choices = dialogue_system.get_choices(greeting)
+	var flirt_choice = choices[0]
+	assert_true(flirt_choice.outcome.has("romance_interest"))

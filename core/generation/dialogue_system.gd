@@ -42,6 +42,10 @@ func _initialize_dialogues() -> void:
 	_add_merchant_dialogue()
 	_add_innkeeper_dialogue()
 
+	# Romance and marriage dialogue trees
+	_add_romance_encounter()
+	_add_marriage_proposal()
+
 
 ## Quest: Slay the Beast
 func _add_beast_slayer_quest() -> void:
@@ -231,6 +235,105 @@ func _add_merchant_dialogue() -> void:
 	greeting.choices.append(quest)
 
 	dialogues["merchant"] = {"greeting": greeting}
+
+
+## Romance: First Meeting
+func _add_romance_encounter() -> void:
+	var greeting = DialogueNode.new()
+	greeting.id = "romance_greeting"
+	greeting.speaker = "Stranger"
+	greeting.text = "I've heard tales of your deeds. They say you're quite the adventurer. Perhaps we should get to know each other better?"
+
+	var flirt = DialogueChoice.new()
+	flirt.text = "I'd like that very much."
+	flirt.next_node = "romance_accept"
+	flirt.outcome = {"romance_interest": 50}
+	greeting.choices.append(flirt)
+
+	var polite = DialogueChoice.new()
+	polite.text = "That's kind of you to say."
+	polite.next_node = "romance_cautious"
+	polite.outcome = {"romance_interest": 25}
+	greeting.choices.append(polite)
+
+	var refuse = DialogueChoice.new()
+	refuse.text = "I'm not interested in romance."
+	refuse.next_node = "romance_refuse"
+	refuse.outcome = {}
+	greeting.choices.append(refuse)
+
+	var accept_node = DialogueNode.new()
+	accept_node.id = "romance_accept"
+	accept_node.speaker = "Stranger"
+	accept_node.text = "Wonderful! I have a feeling we'll have amazing adventures together."
+	accept_node.outcome = {"romance_level": 2}
+
+	var cautious_node = DialogueNode.new()
+	cautious_node.id = "romance_cautious"
+	cautious_node.speaker = "Stranger"
+	cautious_node.text = "Perhaps with time, you'll see we're well matched."
+	cautious_node.outcome = {"romance_level": 1}
+
+	var refuse_node = DialogueNode.new()
+	refuse_node.id = "romance_refuse"
+	refuse_node.speaker = "Stranger"
+	refuse_node.text = "I understand. Perhaps our paths will cross again someday."
+
+	dialogues["romance_encounter"] = {
+		"start": greeting,
+		"accept": accept_node,
+		"cautious": cautious_node,
+		"refuse": refuse_node
+	}
+
+
+## Marriage: Proposal
+func _add_marriage_proposal() -> void:
+	var greeting = DialogueNode.new()
+	greeting.id = "marriage_greeting"
+	greeting.speaker = "Beloved"
+	greeting.text = "I need to ask you something important. Will you marry me? I want to spend my life with you, building a legacy together."
+
+	var accept = DialogueChoice.new()
+	accept.text = "Yes! I will marry you!"
+	accept.next_node = "marriage_accept"
+	accept.outcome = {"married": true, "reward_reputation": 50}
+	greeting.choices.append(accept)
+
+	var hesitate = DialogueChoice.new()
+	hesitate.text = "I need time to think about this."
+	hesitate.next_node = "marriage_hesitate"
+	hesitate.outcome = {}
+	greeting.choices.append(hesitate)
+
+	var refuse = DialogueChoice.new()
+	refuse.text = "I'm not ready for marriage."
+	refuse.next_node = "marriage_refuse"
+	refuse.outcome = {"reputation_loss": 20}
+	greeting.choices.append(refuse)
+
+	var accept_node = DialogueNode.new()
+	accept_node.id = "marriage_accept"
+	accept_node.speaker = "Beloved"
+	accept_node.text = "I'm the happiest person alive! Let's build our life together and create a legacy that will be remembered for generations."
+	accept_node.outcome = {"marriage_bonus_wealth": 200}
+
+	var hesitate_node = DialogueNode.new()
+	hesitate_node.id = "marriage_hesitate"
+	hesitate_node.speaker = "Beloved"
+	hesitate_node.text = "I understand. I'll wait for you, but please don't make me wait too long."
+
+	var refuse_node = DialogueNode.new()
+	refuse_node.id = "marriage_refuse"
+	refuse_node.speaker = "Beloved"
+	refuse_node.text = "I see. Perhaps this wasn't meant to be. I wish you well on your journey."
+
+	dialogues["marriage_proposal"] = {
+		"start": greeting,
+		"accept": accept_node,
+		"hesitate": hesitate_node,
+		"refuse": refuse_node
+	}
 
 
 ## Get a dialogue tree by key
