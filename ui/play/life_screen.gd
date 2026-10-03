@@ -3,6 +3,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
+const MapPanel := preload("res://ui/play/map_panel.gd")
 
 var app: Node
 var d: GameDynasty
@@ -11,6 +12,7 @@ var right: VBoxContainer
 var journal: RichTextLabel
 var actions: GridContainer
 var header: Label
+var where: Label
 
 
 func _ready() -> void:
@@ -26,6 +28,8 @@ func _ready() -> void:
 
 	header = Kit.label("", 22, Kit.ACCENT)
 	root.add_child(header)
+	where = Kit.label("", 15, Kit.DIM)
+	root.add_child(where)
 
 	var cols := HBoxContainer.new()
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -66,6 +70,8 @@ func _ready() -> void:
 func _refresh() -> void:
 	var h := d.heir
 	header.text = "House %s  -  Generation %d  -  %s the %s %s" % [d.dynasty_name, d.gen, h.name, h.race()["name"], h.cls()["name"]]
+	var place := d.world.here()
+	where.text = "%s (%s)  -  %s  -  %s: %s" % [place["name"], place["type"], d.world.date_text(), d.world.weather()["name"], d.world.weather().get("text", "")]
 	_build_left()
 	_build_right()
 	_build_actions()
@@ -154,10 +160,14 @@ func _build_actions() -> void:
 	var boss := d.available_boss()
 	_act("Hunt (safe)", func(): _hunt("hunt"))
 	_act("Hunt (hard, 2x loot)", func(): _hunt("hunt_hard"))
-	var legend := _act("Legend: %s" % boss["name"] if not boss.is_empty() else "No legend stirs", func(): _legend())
+	var legend := _act("Legend: %s" % boss["name"] if not boss.is_empty() else "No legend here", func(): _legend())
 	legend.disabled = boss.is_empty()
 	if not boss.is_empty():
-		legend.tooltip_text = "Recommended level %d. Slaying a legend grants a permanent heirloom and a legacy echo." % int(boss["min_level"])
+		legend.tooltip_text = "Level %d. Slaying a legend grants a permanent heirloom and a legacy echo." % int(boss["min_level"])
+	else:
+		var rumors: Array = d.stirring_legends().map(func(c): return "%s (level %d) lairs in %s" % [c["name"], int(c.get("min_level", 1)), GameWorld.place(c.get("lair", "")).get("name", "somewhere")])
+		legend.tooltip_text = "Legends are fought in their lairs.\n" + ("\n".join(rumors) if not rumors.is_empty() else "None stir in this generation.")
+	_act("Travel / Map", func(): _map())
 	for s in ["str", "mag", "agi", "vit"]:
 		var st: String = s
 		_act("Train %s" % st.to_upper(), func(): _do(func(): return d.train(st)))
@@ -218,6 +228,13 @@ func _autopilot(generations: int) -> void:
 			GameBot.choose_best(d)
 	app.autosave()
 	app.show_state()
+
+
+func _map() -> void:
+	var m := MapPanel.new()
+	m.dynasty = d
+	m.on_travel = func(to: String): _do(func(): return d.travel(to))
+	add_child(m)
 
 
 func _chronicle() -> void:

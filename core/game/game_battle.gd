@@ -7,6 +7,7 @@ var enemies: Array = []        # [{id,name,hp,max_hp,atk,def,agi,color,element,x
 var rng: RandomNumberGenerator
 var damage_bonus: float = 0.0  # from legacy echoes
 var slayer_bonus: Dictionary = {}  # creature id -> extra damage fraction
+var weather: Dictionary = {}       # combat modifiers from the weather: dodge, crit, flee, mp_regen
 var result: String = ""        # "", "victory", "defeat", "fled"
 var defending: bool = false
 var turn: int = 0
@@ -50,7 +51,7 @@ func _calc_damage(power: float, mult: float, e: Dictionary, pierce: float, crit_
 	var dmg: float = maxf(1.0, power * mult - float(e["def"]) * (1.0 - pierce) * 0.5)
 	dmg *= rng.randf_range(0.9, 1.1)
 	dmg *= 1.0 + damage_bonus + float(slayer_bonus.get(e["id"], 0.0))
-	var crit := rng.randf() < heir.crit_chance() + crit_bonus
+	var crit := rng.randf() < heir.crit_chance() + crit_bonus + float(weather.get("crit", 0.0))
 	if crit:
 		dmg *= 1.75
 	return {"amount": maxi(1, int(round(dmg))), "crit": crit}
@@ -149,7 +150,7 @@ func use_potion() -> void:
 func flee() -> void:
 	if not _begin_action():
 		return
-	var chance := clampf(0.45 + heir.trait_total("stealth") + heir.trait_total("intimidation") * 0.5 + heir.dodge_chance() * 0.3, 0.1, 0.9)
+	var chance := clampf(0.45 + heir.trait_total("stealth") + heir.trait_total("intimidation") * 0.5 + heir.dodge_chance() * 0.3 + float(weather.get("flee", 0.0)), 0.1, 0.9)
 	var boss := false
 	for e in enemies:
 		boss = boss or e.get("boss", false)
@@ -190,12 +191,13 @@ func _end_player_turn() -> void:
 			return
 	defending = false
 	turn += 1
-	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * float(GameData.bal("mp_regen_per_turn_pct")))))
+	var regen := maxf(0.0, float(GameData.bal("mp_regen_per_turn_pct")) + float(weather.get("mp_regen", 0.0)))
+	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * regen)))
 
 
 func _enemy_act(i: int) -> void:
 	var e: Dictionary = enemies[i]
-	if rng.randf() < heir.dodge_chance():
+	if rng.randf() < clampf(heir.dodge_chance() + float(weather.get("dodge", 0.0)), 0.0, 0.6):
 		events.append({"type": "miss", "side": "player", "index": i})
 		_say("%s attacks, but %s dodges." % [e["name"], heir.name])
 		return

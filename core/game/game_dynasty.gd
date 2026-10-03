@@ -23,6 +23,8 @@ var battle: GameBattle = null
 var next_id: int = 1
 var killer_id: String = ""
 var total_hunts: int = 0
+var world: GameWorld
+var flags: Dictionary = {}      # story flags set by quests and events; never cleared
 
 
 static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
@@ -40,6 +42,7 @@ static func new_game(p_seed: int, founder_name: String, class_id: String, bloodl
 	h.traits = [bloodline_id]
 	var others := GameData.traits_in(["bloodline"]).filter(func(t): return t != bloodline_id)
 	h.dormant = [others[d.rng.randi() % others.size()]]
+	d.world = GameWorld.create(d.rng)
 	d._setup_new_heir(h)
 	d.heir = h
 	d._say("The %s dynasty begins with %s, %s %s." % [d.dynasty_name, h.name, h.race()["name"], h.cls()["name"]])
@@ -219,11 +222,61 @@ func potion_price() -> int:
 	return maxi(1, int(round(p)))
 
 
+## Legends stirring in this generation (not yet slain), wherever their lair is.
+func stirring_legends() -> Array:
+	return GameData.creatures.filter(func(c): return c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"] and not slain_bosses.has(c["id"]))
+
+
+## The legend that can be challenged here: it must be stirring and this must be its lair.
 func available_boss() -> Dictionary:
-	for c in GameData.creatures:
-		if c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"] and not slain_bosses.has(c["id"]):
+	for c in stirring_legends():
+		if c.get("lair", world.location) == world.location:
 			return c
 	return {}
+
+
+# ---------------------------------------------------------------- travel & maps
+
+func travel(to: String) -> Array:
+	var link: Dictionary = {}
+	for r in world.roads(world.location, flags):
+		if r["to"] == to:
+			link = r
+	if link.is_empty():
+		return ["There is no open road from %s to %s." % [world.here()["name"], GameWorld.place(to).get("name", to)]]
+	var years := world.travel_years(link)
+	var dest: Dictionary = GameWorld.place(to)
+	var msgs: Array = []
+	var slow := "" if float(world.weather().get("travel", 1.0)) <= 1.0 else " (slowed by %s)" % world.weather()["name"].to_lower()
+	var first := to not in world.visited
+	world.visit(to)
+	msgs.append("%s travels to %s: %s%s." % [heir.name, dest["name"], _span_text(years), slow])
+	if first:
+		msgs.append("No one of House %s has walked %s before. %s" % [dynasty_name, dest["name"], dest.get("description", "")])
+	return _pass_years(years, msgs)
+
+
+func map_price(m: Dictionary) -> int:
+	return maxi(1, int(round(float(m["price"]) * GameData.enemy_scale(gen))))
+
+
+func buy_map(map_id: String) -> String:
+	for m in world.maps_for_sale():
+		if m["id"] == map_id:
+			var price := map_price(m)
+			if heir.gold < price:
+				return "Not enough gold (%d needed)." % price
+			heir.gold -= price
+			var n := world.chart(m["reveals"])
+			return "Bought the %s for %d gold: %d new place%s charted." % [m["name"], price, n, "" if n == 1 else "s"]
+	return "That map is not sold here."
+
+
+static func _span_text(years: float) -> String:
+	var seasons := int(round(years * 4.0))
+	if seasons < 4:
+		return "%d season%s" % [seasons, "" if seasons == 1 else "s"]
+	return "%.1f years" % years
 
 
 func can_found_family() -> bool:
@@ -338,14 +391,20 @@ func _child_race(a: String, b: String) -> String:
 ## Starts a hunt battle. kind: "hunt" or "hunt_hard".
 func start_hunt(kind: String) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")[kind]
-	var pool := GameData.creatures.filter(func(c): return not c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"])
+	var in_era := GameData.creatures.filter(func(c): return not c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"])
+	if in_era.is_empty():
+		in_era = GameData.creatures.filter(func(c): return not c.get("boss", false))
+	# Each place breeds its own monsters; if none of them roam in this era, anything in the era will do.
+	var biomes: Array = world.here().get("biomes", [])
+	var pool := in_era.filter(func(c): return (c.get("biomes", []) as Array).any(func(b): return b in biomes))
 	if pool.is_empty():
-		pool = GameData.creatures.filter(func(c): return not c.get("boss", false))
+		pool = in_era
+	var danger := float(world.here().get("danger", 1.0))
 	var n := rng.randi_range(int(cfg["min"]), int(cfg["max"]))
 	var foes: Array = []
 	for i in n:
 		# Monsters come in around the heir's level: usually a fair fight, sometimes a dangerous one.
-		var lv_mult := rng.randf_range(float(cfg["level_min"]), float(cfg["level_max"]))
+		var lv_mult := rng.randf_range(float(cfg["level_min"]), float(cfg["level_max"])) * danger
 		var elite := rng.randf() < float(cfg["elite_chance"])
 		if elite:
 			lv_mult *= float(GameData.bal("elite_level_mult"))
@@ -369,6 +428,7 @@ var battle_kind: String = ""
 func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle = GameBattle.new(heir, foes, rng)
 	battle.slayer_bonus = slayer_map()
+	battle.weather = world.weather().get("combat", {})
 	battle_kind = kind
 	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
 	return battle
@@ -455,12 +515,18 @@ func finish_battle() -> Array:
 
 
 func _finish_time(action: String, msgs: Array) -> Array:
+	return _pass_years(float(years_for(action)), msgs)
+
+
+## Time passes for the heir and the world: ageing, milestones, weather, death of old age.
+func _pass_years(years: float, msgs: Array) -> Array:
 	for m in msgs:
 		_say(m)
 	if state != "life":
 		return msgs
 	var age_before := heir.age
-	heir.age += float(years_for(action))
+	heir.age += years
+	world.advance(years, rng)
 	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * 0.1)))
 	if heir.age >= heir.midlife_age():
 		_check_milestone("midlife")
@@ -565,6 +631,7 @@ func choose_heir(index: int) -> Array:
 					msgs.append("%s shed the burden of %s (now dormant)." % [c.name, GameData.trait_name(t)])
 					break
 	pending_archetype = ""
+	world.visit(GameData.world["start"])
 	_setup_new_heir(c)
 	# The heir inherits what the family has left: its gold and the items bought.
 	c.gold = int(float(parent.gold) * float(GameData.bal("gold_inherit_fraction")))
@@ -595,7 +662,7 @@ func to_dict() -> Dictionary:
 		"heirlooms": heirlooms, "slain_bosses": slain_bosses, "pending_archetype": pending_archetype,
 		"candidates": candidates.map(func(c): return c.to_dict()), "last_death": last_death,
 		"journal": journal.slice(maxi(0, journal.size() - 60)), "next_id": next_id, "total_hunts": total_hunts,
-		"killer_id": killer_id,
+		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
 	}
 
 
@@ -625,6 +692,8 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.next_id = int(d["next_id"])
 	g.total_hunts = int(d["total_hunts"])
 	g.killer_id = d.get("killer_id", "")
+	g.world = GameWorld.from_dict(d["world"]) if d.has("world") else GameWorld.create(g.rng)
+	g.flags = d.get("flags", {})
 	return g
 
 

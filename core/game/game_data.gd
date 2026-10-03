@@ -16,6 +16,7 @@ static var _loaded := false
 static var traits: Dictionary = {}
 static var classes: Dictionary = {}
 static var races: Dictionary = {}
+static var world: Dictionary = {}
 static var creatures: Array = []
 static var balance: Dictionary = {}
 static var names: Dictionary = {}
@@ -53,6 +54,7 @@ static func load_all() -> void:
 	for r in load_json("res://data/races/races.json")["races"]:
 		races[r["id"]] = r
 	creatures = load_json("res://data/creatures/creatures.json")["creatures"]
+	world = load_json("res://data/world/world.json")
 	balance = load_json("res://data/game/balance.json")
 	names = load_json("res://data/game/names.json")
 	_loaded = true

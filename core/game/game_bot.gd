@@ -44,15 +44,28 @@ static func step(d: GameDynasty) -> bool:
 		d.found_family()
 	else:
 		var boss := d.available_boss()
+		var target := _legend_to_hunt(d)
 		if not boss.is_empty() and h.level >= int(boss.get("min_level", 99)) and hp_frac > 0.85:
 			d.start_legend()
 			fight(d)
+		elif not target.is_empty() and hp_frac > 0.85:
+			var path := d.world.route_to(target["lair"], d.flags)
+			d.travel(path[0])
 		elif (h.battles_won + h.level) % 5 == 4:
 			d.train(["str", "vit", "agi", "mag"][(h.battles_won + h.level) % 4])
 		else:
 			d.start_hunt("hunt")
 			fight(d)
 	return d.state == "life"
+
+
+## A stirring legend the heir is strong enough for, with a reachable lair elsewhere.
+static func _legend_to_hunt(d: GameDynasty) -> Dictionary:
+	for c in d.stirring_legends():
+		var lair: String = c.get("lair", "")
+		if lair != "" and lair != d.world.location and d.heir.level >= int(c.get("min_level", 99)) and not d.world.route_to(lair, d.flags).is_empty():
+			return c
+	return {}
 
 
 static func live_life(d: GameDynasty) -> void:
