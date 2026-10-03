@@ -208,3 +208,25 @@ func test_fade_out_starts_opaque() -> void:
 	animator.fade_out(screen)
 
 	assert_eq(screen.modulate.alpha, 1.0)
+
+
+## Test: Main game has transition animator
+func test_main_game_has_animator() -> void:
+	assert_not_null(main_game.transition_animator)
+	assert_true(main_game.transition_animator is ScreenTransitionAnimator)
+
+
+## Test: Polished button initializes with normal scale
+func test_polished_button_init() -> void:
+	var btn = PolishedButton.new()
+	btn.scale = Vector2(1.0, 1.0)
+
+	assert_eq(btn.normal_scale, Vector2(1.0, 1.0))
+
+
+## Test: Polished button has hover effects configured
+func test_polished_button_hover_effects() -> void:
+	var btn = PolishedButton.new()
+
+	assert_true(btn.hover_scale.x > btn.normal_scale.x)
+	assert_true(btn.hover_scale.y > btn.normal_scale.y)
