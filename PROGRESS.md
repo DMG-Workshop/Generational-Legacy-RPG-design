@@ -2,7 +2,7 @@
 
 **Status:** Phase 5 (Rendering & UI Layer) in progress. **Core engine complete, dialogue and consequence systems complete, animations and polish added, UI foundations solid.**
 
-**Test Coverage:** 138 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations).
+**Test Coverage:** 142 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration).
 
 ---
 
@@ -393,16 +393,25 @@
 ✅ Polished button component (hover, press effects)
 ✅ Smooth transitions with quad easing
 ✅ Button hover scaling and color effects
+✅ Battle Screen Integration with Battle system
+✅ Real-time HP/MP bar updates from Battle state
+✅ Action selection with target selection UI
+✅ Turn order display with current actor highlight
+✅ Battle log with action history
+✅ AI turn execution for enemies
+✅ MainGame.enter_battle() with party/enemy setup
+✅ Battle screen combatant displays with faction colors
 
 ### Phase 5 Remaining Work
 
-1. **Battle Screen Integration** (5-8 hours)
-   - Connect to actual Battle system
-   - Implement turn order visual (ATB gauge or timeline)
-   - Add HP/MP bar animations
+1. **Battle Screen Polish** (2-4 hours)
+   - ✅ Connect to actual Battle system
+   - ✅ Implement turn order visual
+   - Add HP/MP bar animations (floating numbers)
    - Floating damage numbers (with crit colors)
-   - Ability buttons with proper action binding
-   - Status effect icon display
+   - ✅ Ability buttons with proper action binding
+   - ✅ Action selection and target selection UI
+   - Status effect icon display (visual improvements)
    - Row positioning visualization
 
 2. **World Rendering Enhancement** (8-12 hours)
@@ -484,11 +493,11 @@
 | Dialogue features | Branching conversations, outcome application, consequence tracking, mentor selection |
 | Animation features | Fade transitions, slide capabilities, button hover effects, tween-based animations |
 | Data files | 4 JSON files (30 traits across 4 categories) |
-| Tests | 138 tests across 13 modules (all passing) |
-| Lines of code | ~9,000 (logic + UI + components + dialogue + consequences + transitions + animations) |
-| Commits | 26 major commits showing progression |
+| Tests | 142 tests across 13 modules (all passing) |
+| Lines of code | ~9,500 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration) |
+| Commits | 27 major commits showing progression |
 | Documentation | GDD (25k words), CLAUDE.md, README, TESTING.md, PROGRESS.md |
-| Modules | Phase 1-4 complete, Phase 5 in progress (70-80% complete) |
+| Modules | Phase 1-4 complete, Phase 5 in progress (75-85% complete with Battle Screen Integration) |
 
 ---
 
