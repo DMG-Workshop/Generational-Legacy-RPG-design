@@ -1,0 +1,266 @@
+{
+  "traits": [
+    {
+      "id": "mageblood",
+      "name": "Mageblood",
+      "category": "bloodline",
+      "description": "+20% power in its element; unlocks mage guild",
+      "inherit_chance": 0.60,
+      "dormant_chance": 0.0,
+      "expression": "Your blood sings with arcane power.",
+      "effects": [
+        {
+          "stat": "element_power",
+          "value": 0.20
+        }
+      ],
+      "mutations": [
+        "ice_mage",
+        "wild_mage",
+        "burnt_out"
+      ],
+      "conflicts": [
+        "magically_burned"
+      ],
+      "fate_modifier": 0.0,
+      "story_hook": "The Mage's Circle seeks to recruit you or study your bloodline."
+    },
+    {
+      "id": "dragonblood",
+      "name": "Dragonblood",
+      "category": "bloodline",
+      "description": "Slow aging, dragon-fire resistance, draws dragon attention",
+      "inherit_chance": 0.70,
+      "dormant_chance": 0.20,
+      "dormant_skip_generations_chance": 0.20,
+      "expression": "Scales hint at draconic heritage in your features.",
+      "effects": [
+        {
+          "stat": "aging_rate",
+          "value": 0.5
+        },
+        {
+          "stat": "fire_resistance",
+          "value": 0.40
+        }
+      ],
+      "mutations": [
+        "draconic_form",
+        "dragon_slayer"
+      ],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "Dragons sense your bloodline and seek you out—for alliance or death."
+    },
+    {
+      "id": "faetouched",
+      "name": "Faetouched",
+      "category": "bloodline",
+      "description": "Sees through glamours, 50% longer life, fae magic",
+      "inherit_chance": 0.80,
+      "dormant_chance": 0.0,
+      "expression": "An otherworldly shimmer surrounds you; fae recognize you as kin.",
+      "effects": [
+        {
+          "stat": "lifespan_modifier",
+          "value": 1.50
+        },
+        {
+          "stat": "glamour_sight",
+          "value": 1.0
+        }
+      ],
+      "mutations": [
+        "fully_fae",
+        "iron_bound"
+      ],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "You inherit a contract with a fae entity; every generation must negotiate its terms.",
+      "contract_required": true
+    },
+    {
+      "id": "noble_blood",
+      "name": "Noble Blood",
+      "category": "bloodline",
+      "description": "+25% persuasion, titles and land claims",
+      "inherit_chance": 1.0,
+      "dormant_chance": 0.0,
+      "expression": "Your bearing and speech mark you as nobility.",
+      "effects": [
+        {
+          "stat": "persuasion",
+          "value": 0.25
+        }
+      ],
+      "mutations": [
+        "bastard",
+        "usurper",
+        "outlaw"
+      ],
+      "conflicts": [
+        "outlaw_cunning"
+      ],
+      "fate_modifier": 0.0,
+      "story_hook": "Your titles are inherited with debts and expectations; heirs may claim lands or repudiate claims.",
+      "carries_debts": true
+    },
+    {
+      "id": "craftmaster_hands",
+      "name": "Craftmaster's Hands",
+      "category": "bloodline",
+      "description": "Craft 25% faster, 15% better quality",
+      "inherit_chance": 0.75,
+      "dormant_chance": 0.0,
+      "expression": "Your hands move with practiced precision; you craft instinctively.",
+      "effects": [
+        {
+          "stat": "craft_speed",
+          "value": 1.25
+        },
+        {
+          "stat": "craft_quality",
+          "value": 0.15
+        }
+      ],
+      "mutations": [
+        "artificer",
+        "saboteur",
+        "artisan_curse"
+      ],
+      "conflicts": [],
+      "fate_modifier": 0.0,
+      "story_hook": "Legendary weapons forged by your ancestors resurface; rivals covet your family's secrets."
+    },
+    {
+      "id": "the_sight",
+      "name": "The Sight",
+      "category": "bloodline",
+      "description": "Prophetic visions, foresee some outcomes",
+      "inherit_chance": 0.50,
+      "dormant_chance": 0.0,
+      "expression": "You see flickers of possible futures; some fade, others grow vivid.",
+      "effects": [
+        {
+          "stat": "prophecy_strength",
+          "value": 1.0
+        }
+      ],
+      "mutations": [
+        "oracle",
+        "blind_spot",
+        "silenced"
+      ],
+      "conflicts": [],
+      "fate_modifier": 0.05,
+      "story_hook": "Prophecies tie you to events across generations; fulfill them or break them."
+    },
+    {
+      "id": "warriors_steel",
+      "name": "Warrior's Steel",
+      "category": "bloodline",
+      "description": "+30% melee damage, faster reflexes; atrophies without battle",
+      "inherit_chance": 0.65,
+      "dormant_chance": 0.0,
+      "expression": "Combat comes naturally to you; your reflexes are preternatural.",
+      "effects": [
+        {
+          "stat": "melee_damage",
+          "value": 0.30
+        },
+        {
+          "stat": "reflexes",
+          "value": 0.20
+        }
+      ],
+      "mutations": [
+        "berserker",
+        "pacifist",
+        "scarred"
+      ],
+      "conflicts": [
+        "pacifist"
+      ],
+      "fate_modifier": 0.0,
+      "story_hook": "Peace weakens you; you must find battles or your talents fade."
+    },
+    {
+      "id": "marked_by_death",
+      "name": "Marked by Death",
+      "category": "bloodline",
+      "description": "One extra life; undead and reapers seek you",
+      "inherit_chance": 0.40,
+      "dormant_chance": 0.10,
+      "expression": "Death passes you by once, but spirits pursue you relentlessly.",
+      "effects": [
+        {
+          "stat": "extra_life",
+          "value": 1.0
+        }
+      ],
+      "mutations": [
+        "undead",
+        "death_knight",
+        "life_thief"
+      ],
+      "conflicts": [],
+      "fate_modifier": 0.05,
+      "story_hook": "Undead and reapers treat you as an anomaly; some seek to 'correct' you, others to befriend you."
+    },
+    {
+      "id": "outlaws_cunning",
+      "name": "Outlaw's Cunning",
+      "category": "bloodline",
+      "description": "+20% stealth and theft, criminal contacts",
+      "inherit_chance": 0.70,
+      "dormant_chance": 0.0,
+      "expression": "Shadows seem to favor you; you move unseen and unheard.",
+      "effects": [
+        {
+          "stat": "stealth",
+          "value": 0.20
+        },
+        {
+          "stat": "theft",
+          "value": 0.20
+        }
+      ],
+      "mutations": [
+        "legendary_thief",
+        "law_bringer",
+        "caged"
+      ],
+      "conflicts": [
+        "noble_blood"
+      ],
+      "fate_modifier": 0.0,
+      "story_hook": "The Thieves' Guild recognizes you; you inherit their protection or their debts."
+    },
+    {
+      "id": "divine_favor",
+      "name": "Divine Favor",
+      "category": "bloodline",
+      "description": "Miracles and deity favor; 50% chance it is a curse instead",
+      "inherit_chance": 0.55,
+      "dormant_chance": 0.0,
+      "expression": "The divine touches you; bless or curse, none can tell.",
+      "effects": [
+        {
+          "stat": "divine_magic_power",
+          "value": 0.30
+        }
+      ],
+      "mutations": [
+        "chosen_one",
+        "fallen",
+        "neutral"
+      ],
+      "conflicts": [
+        "faetouched"
+      ],
+      "fate_modifier": 0.05,
+      "story_hook": "Gods and demons compete for your soul; you must choose which to serve.",
+      "is_blessing_or_curse": true
+    }
+  ]
+}

@@ -28,7 +28,6 @@ __pycache__/
 
 # Godot project cache
 .godot/
-project.godot
 
 # User-specific
 *.user

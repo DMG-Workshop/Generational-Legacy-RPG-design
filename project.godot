@@ -1,0 +1,20 @@
+[gd_project]
+
+config_version=5
+name="Generational Legacy RPG"
+description="A 999-generation JRPG where you play an entire family saga across 25,000 years"
+
+[application]
+
+config/name="Generational Legacy RPG"
+config/version="0.1.0"
+run/main_scene="res://ui/main.tscn"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+
+[physics]
+
+2d/default_gravity=980
