@@ -42,9 +42,11 @@ var stats: Dictionary = {
 var faction_reputation: Dictionary = {}
 
 ## Wealth and possessions
-var wealth: int = 0
+var wealth: int = 0  # Legacy field for simple wealth tracking
+var wallet: Wallet = Wallet.new()  # Main currency system
 var equipment: Array[String] = []
 var heirlooms: Array[String] = []
+var inventory: Array = []  # Items carried
 
 ## Status
 var is_alive: bool = true
