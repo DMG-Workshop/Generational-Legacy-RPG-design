@@ -2,7 +2,7 @@
 
 **Status:** Phase 6 (Progression & Item Systems) in progress. **Core engine complete, dialogue and consequence systems complete, animations and polish added, UI foundations solid, economy systems implemented.**
 
-**Test Coverage:** 304 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables, Magic Items).
+**Test Coverage:** 354 tests covering all systems (Lineage, Fate, Combat, World, Generation Loop, UI Screens, Dialogue, Consequences, Romance, Transitions, Animations, Battle Integration, Currency, Gems, Items, Loot Tables, Magic Items, Crafting).
 
 ---
 
@@ -311,6 +311,11 @@
 - **Enchantment** (magical effects with rarity, type, stat modifiers)
 - **EnchantmentCatalog** (16 predefined enchantments: offensive, defensive, utility, special)
 - **MagicItemGenerator** (enchant items based on rarity, apply stat bonuses, value scaling)
+- **CraftingSkill** (10 skill types with XP progression, levels 1-100)
+- **Recipe** (crafting recipes with ingredients, time, difficulty, XP rewards)
+- **RecipeCatalog** (40+ recipes: weapons, armor, potions, materials)
+- **MultiGenRecipe** (5 legendary items spanning multiple generations)
+- **CraftingSystem** (skill management, recipe crafting, multi-gen tracking)
 
 ### Features: Economy
 - 4-denomination currency with automatic normalization
@@ -357,6 +362,26 @@
 - Unidentified items until revealed (hidden enchantments)
 - Seeded generation for reproducible magical items
 
+### Features: Crafting System
+- 10 crafting skill types: Blacksmithing, Alchemy, Leatherworking, Carpentry, Enchanting, Cooking, Weaving, Metalworking, Stonework, Glassblowing
+- Skill progression: Levels 1-100 with exponential XP curve (each level +5% XP requirement)
+- Recipe gating: Recipes require specific skill levels (1-50)
+- 40+ predefined recipes spanning all skill types
+- Recipe difficulty: Trivial (1) → Expert (5) with XP scaling (30-500 XP reward)
+- Crafting time: 1-12 hours per recipe
+- Material inventory: Track collected crafting materials
+- Recipe crafting: Consume materials, gain XP, receive items
+- 5 legendary multi-generational recipes (RARE RARE RARE):
+  - Eternal Crown: 300 progress, 3+ generations, grants +5 all stats
+  - Sword of Ages: 250 progress, 3 generations, grows stronger with each wielder
+  - Philosopher's Stone: 200 progress, 2-3 generations, allows transmutation
+  - Worldtree Bow: 280 progress, 3 generations, arrows never miss
+  - Mask of Ancients: 220 progress, 3 generations, commune with ancestors
+- Multi-gen tracking: Track progress across multiple heirs/generations
+- Milestone tracking: Major completion checkpoints (25/50/75/100%)
+- Contributor tracking: Record each heir's contribution and year
+- Rich lore: Each legendary item has detailed flavor text
+
 ### Data
 - Currency system integrated into all items and wallets
 - 18 unique gems with base values and rarity tiers
@@ -364,7 +389,7 @@
 - 5 difficulty tiers with distinct loot profiles
 - 4 loot source types with tuned drop rates
 
-### Tests (191 tests total)
+### Tests (241 tests total)
 **Phase 6 Tests:**
 ✓ Currency creation and denomination handling
 ✓ Currency addition, subtraction, multiplication
@@ -403,7 +428,33 @@
 ✓ Cursed enchantment detection
 ✓ Enchanted items marked as unidentified
 ✓ Random magical item generation
+✓ Unidentified items marked as unidentified
+✓ Random magical item generation
 ✓ Seeded magical item reproducibility
+✓ Crafting skill creation and progression
+✓ Skill level up from XP with exponential curve
+✓ Skill level cap at 100
+✓ Recipe creation with ingredients
+✓ Recipe difficulty naming
+✓ Recipe crafting time formatting
+✓ Material inventory management (add/remove)
+✓ Recipe availability filtering by skill and level
+✓ Multi-generational recipe creation
+✓ Progress addition to multi-gen recipes
+✓ Milestone detection and tracking
+✓ Multi-gen recipe completion detection
+✓ Multiple contributor tracking
+✓ Contributor list and years tracked
+✓ Progress bar visualization
+✓ Catalog recipe retrieval and creation
+✓ Catalog multi-gen recipe retrieval
+✓ Recipe counts (40+ recipes, 5+ legendary)
+✓ Crafting system skill management
+✓ Starting multi-gen recipes
+✓ Contributing to multi-gen recipes
+✓ Active and completed multi-gen tracking
+✓ Crafting statistics collection
+✓ Crafting summary string generation
 
 **Prior Phase Tests:** 113 tests (Lineage, Fate, Combat, World, Generation, UI, Dialogue, Consequences, Battle Screen)
 
@@ -602,18 +653,18 @@
 
 | Category | Count |
 |----------|-------|
-| Core systems | 25 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem, Currency, Wallet, Gem, GemCatalog, GemPouch, Item hierarchy, LootTable, LootCatalog, Enchantment, EnchantmentCatalog, MagicItemGenerator) |
+| Core systems | 29 classes (Lineage, Heir, TraitLoader, FateSystem, Battle, Realm, Chunk, WorldManager, GenerationManager, NPCSystem, ReputationSystem, EstateManager, EventSystem, Currency, Wallet, Gem, GemCatalog, GemPouch, Item hierarchy, LootTable, LootCatalog, Enchantment, EnchantmentCatalog, MagicItemGenerator, CraftingSkill, Recipe, RecipeCatalog, MultiGenRecipe, CraftingSystem) |
 | UI screens | 12 screens (MainMenu, World, Battle, Character, Pause, GenerationTransition, LoadGame, YearAction, EventPopup, DialogueTree, QuestDetail, ConsequenceNotification) |
 | UI components | 2 components (SkillTree, FamilyTreeBrowser) + ScreenManager + CharacterMenuEnhanced |
 | UI polish | ScreenTransitionAnimator + PolishedButton (hover/press effects) |
 | Dialogue systems | DialogueSystem with 7 dialogue trees (3 quests, 2 NPCs, 2 romance/marriage) |
 | Dialogue features | Branching conversations, outcome application, consequence tracking, mentor selection |
 | Animation features | Fade transitions, slide capabilities, button hover effects, tween-based animations |
-| Economy systems | Currency, Wallet, Gem/GemCatalog/GemPouch, Item hierarchy (5 types), ItemCatalog, LootTable/LootCatalog, Enchantment/EnchantmentCatalog, MagicItemGenerator |
-| Data files | 4 JSON files (30 traits across 4 categories), 22 predefined items, 18 gem types, 16 enchantments, loot table configs |
-| Tests | 304 tests across 19 modules (all passing) |
-| Lines of code | ~15,000 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration + economy + magic) |
-| Commits | 32 major commits showing progression |
+| Economy systems | Currency, Wallet, Gem/GemCatalog/GemPouch, Item hierarchy (5 types), ItemCatalog, LootTable/LootCatalog, Enchantment/EnchantmentCatalog, MagicItemGenerator, CraftingSkill/Recipe/RecipeCatalog, MultiGenRecipe, CraftingSystem |
+| Data files | 4 JSON files (30 traits across 4 categories), 22 predefined items, 18 gem types, 16 enchantments, 40+ recipes, 5 legendary multi-gen recipes |
+| Tests | 354 tests across 20 modules (all passing) |
+| Lines of code | ~17,500 (logic + UI + components + dialogue + consequences + transitions + animations + battle integration + economy + crafting) |
+| Commits | 33 major commits showing progression |
 | Documentation | GDD (25k words), CLAUDE.md, README, TESTING.md, PROGRESS.md |
 | Modules | Phase 1-4 complete, Phase 5 in progress (75-85% complete with Battle Screen Integration) |
 
@@ -663,6 +714,6 @@ cat CLAUDE.md
 
 **Last Updated:** Oct 3, 2026
 **Current Phase:** Phase 6 (Progression & Item Systems)
-**Completed:** Currency (28 tests), Gem System (38 tests), Item System (43 tests), Loot Tables (38 tests), Magic Items (40 tests)
-**Total Phase 6:** 191 tests, ~3,000 lines of economy code
-**Next Milestone:** Crafting System (recipes + skill progression), Battle Loot Integration
+**Completed:** Currency (28 tests), Gem System (38 tests), Item System (43 tests), Loot Tables (38 tests), Magic Items (40 tests), Crafting System (50 tests)
+**Total Phase 6:** 241 tests, ~4,500 lines of economy/crafting code
+**Next Milestone:** Battle Loot Integration, Heir Integration (inventory/skills), Progression UI
