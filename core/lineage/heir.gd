@@ -49,6 +49,10 @@ var inventory: Array[Item] = []  # Items carried
 var equipment_slots: Dictionary = {}  # Currently equipped items: slot -> Item
 var heirlooms: Array[String] = []  # Heirloom item IDs
 
+## Skills and progression
+var crafting_skills: Dictionary = {}  # Maps skill type to CraftingSkill
+var skill_tree: SkillTree = null  # Combat skills tree
+
 ## Status
 var is_alive: bool = true
 var death_year: int = -1
@@ -98,6 +102,67 @@ func has_trait(trait_id: String) -> bool:
 ## Remove a trait from this heir
 func remove_trait(trait_id: String) -> void:
 	traits.erase(trait_id)
+
+
+## Initialize crafting skills (called at heir creation)
+func initialize_crafting_skills() -> void:
+	crafting_skills.clear()
+	# Start with basic crafting skills at level 1
+	for skill_type in range(CraftingSkill.SkillType.size()):
+		var skill = CraftingSkill.new(skill_type)
+		crafting_skills[skill_type] = skill
+
+
+## Initialize skill tree (called at heir creation)
+func initialize_skill_tree() -> void:
+	skill_tree = SkillTree.new(self)
+
+
+## Get all equipped items
+func get_equipped_items() -> Array[Item]:
+	var equipped: Array[Item] = []
+	for slot in equipment_slots:
+		equipped.append(equipment_slots[slot])
+	return equipped
+
+
+## Get total stat bonuses from all equipped equipment
+func get_equipment_stat_bonuses() -> Dictionary:
+	var bonuses = {
+		"strength": 0,
+		"dexterity": 0,
+		"constitution": 0,
+		"intelligence": 0,
+		"wisdom": 0,
+		"charisma": 0
+	}
+
+	for item in get_equipped_items():
+		if item is Equipment:
+			for stat in bonuses:
+				if stat in item.stat_bonuses:
+					bonuses[stat] += item.stat_bonuses[stat]
+
+	return bonuses
+
+
+## Get total resistances from all equipped equipment
+func get_equipment_resistances() -> Dictionary:
+	var resistances = {
+		"fire": 0,
+		"cold": 0,
+		"lightning": 0,
+		"poison": 0,
+		"magic": 0
+	}
+
+	for item in get_equipped_items():
+		if item is Equipment:
+			for res_type in resistances:
+				if res_type in item.resistances:
+					resistances[res_type] = mini(resistances[res_type] + item.resistances[res_type], 100)
+
+	return resistances
 
 
 ## Get a display string for this heir
