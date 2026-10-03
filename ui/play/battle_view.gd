@@ -127,8 +127,15 @@ func _build_actors() -> void:
 			eye.position = Vector2(w * ex, h * 0.22)
 			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(eye)
-		var lbl := Kit.label("%s  Lv%d" % [e["name"], int(e.get("level", 1))], 14)
+		var lv := Kit.label("Lv %d" % int(e.get("level", 1)), 13, Kit.ACCENT if str(e["name"]).begins_with("Elite") else Kit.TEXT)
+		lv.add_theme_constant_override("outline_size", 4)
+		lv.add_theme_color_override("font_outline_color", Color.BLACK)
+		lv.position = Vector2(4, h - 22)
+		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		body.add_child(lv)
+		var lbl := Kit.label(e["name"], 14)
 		lbl.position = Vector2(0, h + 6)
+		lbl.z_index = 1
 		root.add_child(lbl)
 		var hp := Kit.bar(Kit.BAD, e["max_hp"], e["hp"], Vector2(w, 10))
 		hp.position = Vector2(0, h + 28)

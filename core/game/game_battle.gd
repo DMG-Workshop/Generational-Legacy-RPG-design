@@ -62,13 +62,14 @@ func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: 
 	var e: Dictionary = enemies[idx]
 	var r := _calc_damage(power, mult, e, pierce, crit_bonus)
 	var amount: int = r["amount"]
+	var hp_before: int = e["hp"]
 	e["hp"] = maxi(0, e["hp"] - amount)
 	events.append({"type": "damage", "side": "enemy", "index": idx, "amount": amount, "crit": r["crit"]})
 	_say("%s hits %s for %d%s." % [heir.name, e["name"], amount, " (CRIT!)" if r["crit"] else ""])
 	if e["hp"] == 0:
 		events.append({"type": "death", "side": "enemy", "index": idx})
 		_say("%s is defeated." % e["name"])
-	return amount
+	return hp_before - int(e["hp"])
 
 
 func attack(target: int) -> void:

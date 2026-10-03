@@ -67,6 +67,7 @@ func _say(text: String) -> void:
 func _setup_new_heir(h: GameHeir) -> void:
 	h.gen = gen
 	h.age = h.adult_age()
+	h.hazard_age = h.age
 	h.level = 1
 	h.xp = 0
 	h.training = {"str": 0.0, "mag": 0.0, "agi": 0.0, "vit": 0.0}
@@ -220,7 +221,7 @@ func years_for(action: String) -> int:
 
 
 func potion_price() -> int:
-	var persuasion := clampf(heir.trait_total("persuasion"), 0.0, 0.5)
+	var persuasion := clampf(heir.trait_total("persuasion"), -0.5, 0.5)
 	var p := float(GameData.bal("potion_cost")) * GameData.enemy_scale(gen) * (1.0 + echo_total("infamy")) * (1.0 - persuasion)
 	return maxi(1, int(round(p)))
 
@@ -558,7 +559,6 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		_say(m)
 	if state != "life":
 		return msgs
-	var age_before := heir.age
 	heir.age += years
 	world.advance(years, rng)
 	party.on_years(self, years, msgs)
@@ -567,7 +567,10 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		_check_milestone("midlife")
 	if heir.age >= heir.lifespan * float(GameData.bal("elder_fraction")):
 		_check_milestone("elder_years")
-	if state == "life" and rng.randf() < heir.old_age_death_chance(age_before, heir.age):
+	# Covers every year since the last roll, including years lost to defeats and disasters.
+	var dies := rng.randf() < heir.old_age_death_chance(heir.hazard_age, heir.age)
+	heir.hazard_age = heir.age
+	if state == "life" and dies:
 		var dm := _die("old age")
 		for m in dm:
 			msgs.append(m)

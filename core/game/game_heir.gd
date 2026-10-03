@@ -11,6 +11,7 @@ var class_id: String = "warrior"
 var race_id: String = "human"
 var gen: int = 1
 var age: float = 16.0
+var hazard_age: float = 16.0   # age up to which old-age death has already been rolled
 var lifespan: float = 62.0
 var level: int = 1
 var xp: int = 0
@@ -210,7 +211,7 @@ func to_dict() -> Dictionary:
 		kids.append(c.to_dict())
 	return {
 		"id": id, "name": name, "surname": surname, "class_id": class_id, "race_id": race_id, "gen": gen,
-		"age": age, "lifespan": lifespan, "level": level, "xp": xp, "hp": hp, "mp": mp,
+		"age": age, "hazard_age": hazard_age, "lifespan": lifespan, "level": level, "xp": xp, "hp": hp, "mp": mp,
 		"gold": gold, "potions": potions, "traits": traits, "dormant": dormant,
 		"fate_value": fate_value, "milestones_done": milestones_done, "archetype": archetype,
 		"archetype_bonus": archetype_bonus, "training": training, "family_founded": family_founded,
@@ -226,6 +227,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.id = int(d["id"]); h.name = d["name"]; h.surname = d["surname"]; h.class_id = d["class_id"]
 	h.race_id = d.get("race_id", "human")
 	h.gen = int(d["gen"]); h.age = float(d["age"]); h.lifespan = float(d["lifespan"])
+	h.hazard_age = float(d.get("hazard_age", h.age))
 	h.level = int(d["level"]); h.xp = int(d["xp"]); h.hp = int(d["hp"]); h.mp = int(d["mp"])
 	h.gold = int(d["gold"]); h.potions = int(d["potions"])
 	h.traits = Array(d["traits"]); h.dormant = Array(d["dormant"])
