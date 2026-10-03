@@ -47,5 +47,8 @@
   "elite_level_mult": 1.6,
   "skill_cost_growth_per_level": 0.1,
   "glory_min_level": 45,
-  "glory_reference_lifespan": 100
+  "glory_reference_lifespan": 100,
+  "quest_max_active": 4,
+  "quest_gold_mult": 1.0,
+  "quest_xp_mult": 1.0
 }
