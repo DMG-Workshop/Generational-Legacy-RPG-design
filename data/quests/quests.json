@@ -210,7 +210,7 @@
       "poster": "The Wardens of Kingshold",
       "text": "What comes out of the Rift does not stay in it. The wardens pay for every four of them that never reach Highcrag.",
       "requires": {"min_level": 45, "min_gen": 350, "max_gen": 1095, "flags": ["rift_open"], "not_flags": []},
-      "objective": {"type": "kill", "target": ["void_stalker", "abyssal_knight", "star_eater", "time_wraith"], "count": 4, "label": "Slay {count} rift-spawn"},
+      "objective": {"type": "kill", "target": ["rift_shade", "shard_crawler", "void_stalker", "abyssal_knight", "star_eater", "time_wraith"], "count": 4, "label": "Slay {count} rift-spawn"},
       "reward": {"gold": 260, "xp": 70, "items": [], "flags": []},
       "outcome": "The wardens tally the kills on the wall of the gatehouse. The wall is nearly full.",
       "repeatable": true,
