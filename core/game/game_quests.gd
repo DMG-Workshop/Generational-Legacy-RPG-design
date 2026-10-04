@@ -310,8 +310,9 @@ static func bot_tick(d: GameDynasty) -> void:
 		if not _bot_can_do(d, q, trip):
 			continue
 		if qs.active.size() >= int(GameData.bal("quest_max_active")):
-			# The bot rarely goes back to another town's board; make room for this one.
-			var stale: Array = qs.active.filter(func(e): return def(e["id"])["giver"] != town)
+			# The bot rarely goes back to another town's board; make room for this one,
+			# but never throw away a finished quest whose reward is still owed.
+			var stale: Array = qs.active.filter(func(e): return def(e["id"])["giver"] != town and not qs.is_complete(e))
 			if stale.is_empty():
 				return
 			qs.abandon(d, stale[0]["id"])
