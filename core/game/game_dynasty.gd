@@ -243,10 +243,10 @@ func available_boss() -> Dictionary:
 
 # ---------------------------------------------------------------- flags, items, events
 
-func set_flag(flag: String) -> void:
+func set_flag(flag: String, out: Variant = null) -> void:
 	if not flags.has(flag):
 		flags[flag] = gen
-		quests.on_flag(self, flag)
+		quests.on_flag(self, flag, out)
 
 
 func give_item(id: String) -> String:
@@ -284,7 +284,7 @@ func travel(to: String) -> Array:
 	msgs.append("%s travels to %s: %s%s." % [heir.name, dest["name"], _span_text(years), slow])
 	if first:
 		msgs.append("No one of House %s has walked %s before. %s" % [dynasty_name, dest["name"], dest.get("description", "")])
-	quests.on_arrive(self, to)
+	quests.on_arrive(self, to, msgs)
 	msgs = _pass_years(years, msgs)
 	if state == "life":
 		msgs.append_array(GameEvents.on_arrive(self, to))
@@ -497,11 +497,12 @@ func finish_battle() -> Array:
 		"victory":
 			var xp := 0
 			var gold := 0
+			var quest_msgs: Array = []
 			for e in b.enemies:
 				xp += int(e["xp"])
 				gold += int(e["gold"])
 				heir.kills[e["id"]] = int(heir.kills.get(e["id"], 0)) + 1
-				quests.on_kill(self, e["id"])
+				quests.on_kill(self, e["id"], quest_msgs)
 				if e["boss"] and not slain_bosses.has(e["id"]):
 					slain_bosses[e["id"]] = gen
 					if e["heirloom"] != "":
@@ -517,6 +518,7 @@ func finish_battle() -> Array:
 			msgs.append("Victory! +%d XP, +%d gold." % [xp, gold])
 			if heir.gain_xp(xp) > 0:
 				msgs.append("Level up! %s is now level %d." % [heir.name, heir.level])
+			msgs.append_array(quest_msgs)
 			msgs.append_array(party_msgs)
 			for m in msgs:
 				_say(m)
