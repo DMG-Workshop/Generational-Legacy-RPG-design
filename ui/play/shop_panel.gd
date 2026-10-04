@@ -227,6 +227,7 @@ func _build_gear() -> void:
 	for id in h.inventory:
 		var iid: String = id
 		var eb := Kit.button("Equip", func(): _act(GameItems.equip(dynasty, iid)), Vector2(80, 34))
+		eb.disabled = GameItems.slot_of(iid) not in GameItems.SLOTS
 		var sb := Kit.button("Sell", func(): _sell(iid), Vector2(80, 34))
 		sb.disabled = not can_sell
 		if confirm_sell == iid:
@@ -248,8 +249,10 @@ func _build_side() -> void:
 	side.add_child(HSeparator.new())
 	side.add_child(Kit.label("%s, %s fighter" % [h.name, "a spell" if GameItems.fighting_style(h) == "magic" else "a weapon"], 15, Kit.ACCENT))
 	side.add_child(Kit.label("Attack %d    Magic %d" % [int(h.attack_power()), int(h.magic_power())], 14))
-	side.add_child(Kit.label("Defense %d    Dodge %d%%    Crit %d%%" % [int(h.defense()), int(round(h.dodge_chance() * 100.0)), int(round(h.crit_chance() * 100.0))], 14))
-	side.add_child(Kit.label("HP %d / %d    MP %d / %d" % [h.hp, h.max_hp(), h.mp, h.max_mp()], 14))
+	side.add_child(Kit.label("Defense %d" % int(h.defense()), 14))
+	side.add_child(Kit.label("Dodge %d%%    Crit %d%%" % [int(round(h.dodge_chance() * 100.0)), int(round(h.crit_chance() * 100.0))], 14))
+	side.add_child(Kit.label("HP %d / %d" % [h.hp, h.max_hp()], 14))
+	side.add_child(Kit.label("MP %d / %d" % [h.mp, h.max_mp()], 14))
 	side.add_child(Kit.label("Potions %d    Pack %d item%s" % [h.potions, h.inventory.size(), "" if h.inventory.size() == 1 else "s"], 14))
 	side.add_child(HSeparator.new())
 	side.add_child(_wrap(Kit.label("Bought gear goes on at once if that slot is empty; otherwise it waits in the pack. Merchants buy back at a fraction of the price.", 12, Kit.DIM)))
