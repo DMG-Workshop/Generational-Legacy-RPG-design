@@ -310,9 +310,11 @@ static func bot_tick(d: GameDynasty) -> void:
 		if not _bot_can_do(d, q, trip):
 			continue
 		if qs.active.size() >= int(GameData.bal("quest_max_active")):
-			# The bot rarely goes back to another town's board; make room for this one,
-			# but never throw away a finished quest whose reward is still owed.
+			# The bot rarely goes back to another town's board; make room for this one.
+			# Unfinished notices go first; a finished one only if the bot can never claim it.
 			var stale: Array = qs.active.filter(func(e): return def(e["id"])["giver"] != town and not qs.is_complete(e))
+			if stale.is_empty():
+				stale = qs.active.filter(func(e): return not (def(e["id"])["giver"] in [town, GameData.world["start"]]))
 			if stale.is_empty():
 				return
 			qs.abandon(d, stale[0]["id"])
@@ -321,8 +323,11 @@ static func bot_tick(d: GameDynasty) -> void:
 
 
 ## The bot hunts where it stands, travels only to legends' lairs, and never chases flags.
+## It never walks back to claim a reward, so errands that take it out of town must come
+## from the town every new heir starts in.
 static func _bot_can_do(d: GameDynasty, q: Dictionary, trip: Dictionary) -> bool:
 	var o: Dictionary = q["objective"]
+	var home: bool = q["giver"] == GameData.world["start"]
 	match kind(q):
 		"kill":
 			if o.get("place", d.world.location) != d.world.location:
@@ -334,12 +339,12 @@ static func _bot_can_do(d: GameDynasty, q: Dictionary, trip: Dictionary) -> bool
 				var c := _creature(t)
 				if c.get("boss", false):
 					var lair: String = c.get("lair", "")
-					if d.heir.level >= int(c.get("min_level", 1)) and (lair == d.world.location or not d.world.route_to(lair, d.flags).is_empty()):
+					if home and d.heir.level >= int(c.get("min_level", 1)) and (lair == d.world.location or not d.world.route_to(lair, d.flags).is_empty()):
 						return true
 				elif trip.is_empty() and (c.get("biomes", []) as Array).any(func(b): return b in biomes):
 					return true
 		"visit":
-			return not trip.is_empty() and o.get("target", "") in d.world.route_to(trip["lair"], d.flags)
+			return home and not trip.is_empty() and o.get("target", "") in d.world.route_to(trip["lair"], d.flags)
 		"flag":
 			return d.flags.has(o.get("flag", ""))
 	return false
