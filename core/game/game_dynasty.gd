@@ -224,8 +224,7 @@ func years_for(action: String) -> int:
 
 
 func potion_price() -> int:
-	var persuasion := clampf(heir.trait_total("persuasion"), -0.5, 0.5)
-	var p := float(GameData.bal("potion_cost")) * GameData.enemy_scale(gen) * (1.0 + echo_total("infamy")) * (1.0 - persuasion)
+	var p := float(GameData.bal("potion_cost")) * GameData.enemy_scale(gen) * (1.0 + echo_total("infamy")) * (1.0 - GameItems.persuasion(self))
 	return maxi(1, int(round(p)))
 
 
@@ -368,12 +367,12 @@ func found_family() -> Array:
 	sp.class_id = class_ids[rng.randi() % class_ids.size()]
 	var race_ids := GameData.starting_ids(GameData.races)
 	sp.race_id = heir.race_id if rng.randf() < float(GameData.bal("spouse_same_race_chance")) else race_ids[rng.randi() % race_ids.size()]
-	sp.lifespan = sp.compute_lifespan()
 	var pool := GameData.traits_in(["bloodline", "blessing"]).filter(func(t): return t not in heir.traits)
 	if rng.randf() < float(GameData.bal("spouse_trait_chance")) and not pool.is_empty():
 		sp.traits.append(pool[rng.randi() % pool.size()])
 	if rng.randf() < float(GameData.bal("spouse_trait_chance")) * 0.4 and not pool.is_empty():
 		sp.dormant.append(pool[rng.randi() % pool.size()])
+	sp.lifespan = sp.compute_lifespan()
 	heir.spouse = sp
 	var counts: Array = heir.race().get("children", [GameData.bal("child_count_min"), GameData.bal("child_count_max")])
 	var n := rng.randi_range(int(counts[0]), int(counts[1]))
@@ -756,11 +755,11 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.total_hunts = int(d["total_hunts"])
 	g.killer_id = d.get("killer_id", "")
 	g.world = GameWorld.from_dict(d["world"]) if d.has("world") else GameWorld.create(g.rng)
-	g.flags = d.get("flags", {})
+	g.flags = _ints(d.get("flags", {}))
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
 	g.party = GameParty.from_dict(d.get("party", {}))
-	g.pending_event = d.get("pending_event", {})
-	g.shop_state = d.get("shop_state", {})
+	g.pending_event = _ints(d.get("pending_event", {}))
+	g.shop_state = _ints(d.get("shop_state", {}))
 	return g
 
 

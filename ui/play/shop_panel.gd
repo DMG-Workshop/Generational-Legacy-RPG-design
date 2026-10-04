@@ -122,9 +122,11 @@ func _restore_scroll(v: int) -> void:
 
 func _price_text() -> String:
 	var parts: Array = ["shop tier %d" % GameItems.shop_tier(dynasty)]
-	var persuasion := clampf(dynasty.heir.trait_total("persuasion"), 0.0, float(GameData.bal("shop_persuasion_cap")))
+	var persuasion := GameItems.persuasion(dynasty)
 	if persuasion > 0.0:
 		parts.append("persuasion -%d%%" % int(round(persuasion * 100.0)))
+	elif persuasion < 0.0:
+		parts.append("wary merchants +%d%%" % int(round(-persuasion * 100.0)))
 	var infamy := dynasty.echo_total("infamy")
 	if infamy > 0.0:
 		parts.append("infamy +%d%%" % int(round(infamy * 100.0)))
