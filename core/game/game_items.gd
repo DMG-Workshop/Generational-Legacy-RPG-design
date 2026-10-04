@@ -138,7 +138,7 @@ static func buy(d: GameDynasty, id: String) -> String:
 	if not sold_here(d, id):
 		return "No one in %s sells the %s." % [d.world.here()["name"], iname]
 	if owns(h, id):
-		return "%s already owns a %s." % [h.name, iname]
+		return "%s already has the %s." % [h.name, iname]
 	var cost := price(d, id)
 	if h.gold < cost:
 		return "Not enough gold for the %s (%d needed)." % [iname, cost]
