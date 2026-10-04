@@ -132,22 +132,22 @@ static func owns(h: GameHeir, id: String) -> bool:
 
 static func buy(d: GameDynasty, id: String) -> String:
 	var h := d.heir
-	var def := item_def(id)
-	if def.is_empty():
+	if item_def(id).is_empty():
 		return "No such item."
+	var iname := item_name(id)
 	if not sold_here(d, id):
-		return "No one in %s sells the %s." % [d.world.here()["name"], def["name"]]
+		return "No one in %s sells the %s." % [d.world.here()["name"], iname]
 	if owns(h, id):
-		return "%s already owns a %s." % [h.name, def["name"]]
+		return "%s already owns a %s." % [h.name, iname]
 	var cost := price(d, id)
 	if h.gold < cost:
-		return "Not enough gold for the %s (%d needed)." % [def["name"], cost]
+		return "Not enough gold for the %s (%d needed)." % [iname, cost]
 	h.gold -= cost
 	h.inventory.append(id)
-	if equipped(h, def["slot"]) == "":
+	if slot_of(id) in SLOTS and equipped(h, slot_of(id)) == "":
 		_wear(h, id)
-		return "%s buys the %s for %d gold and puts it on." % [h.name, def["name"], cost]
-	return "%s buys the %s for %d gold. It goes in the pack." % [h.name, def["name"], cost]
+		return "%s buys the %s for %d gold and puts it on." % [h.name, iname, cost]
+	return "%s buys the %s for %d gold. It goes in the pack." % [h.name, iname, cost]
 
 
 ## Wear an item from the pack; whatever was in that slot goes back in the pack.

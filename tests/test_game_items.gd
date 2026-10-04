@@ -161,6 +161,17 @@ func _test_buy_equip_sell() -> void:
 	h.hp = int(h.max_hp() / 2)
 	GameItems.unequip(d, "trinket")
 	_check(h.hp >= 1 and h.hp <= h.max_hp(), "HP stays within bounds after unequip")
+	# Shop wares that are not gear go in the pack and are never worn.
+	d.world.visit("hearthmere")
+	GameData.items["__trail_map"] = {"id": "__trail_map", "name": "Trail Map", "slot": "", "tier": 1, "shop": "store", "price": 30, "effects": [{"stat": "luck", "value": 0.5}]}
+	var luck := h.trait_total("luck")
+	msg = GameItems.buy(d, "__trail_map")
+	_check("__trail_map" in h.inventory and not h.equipment.has(""), "a non-gear ware stays in the pack (%s)" % msg)
+	_check(_near(h.trait_total("luck"), luck), "a non-gear ware in the pack has no effect")
+	GameItems.equip(d, "__trail_map")
+	_check("__trail_map" in h.inventory and not h.equipment.has(""), "a non-gear ware cannot be worn")
+	GameData.items.erase("__trail_map")
+	h.inventory.erase("__trail_map")
 
 
 func _test_effects() -> void:
