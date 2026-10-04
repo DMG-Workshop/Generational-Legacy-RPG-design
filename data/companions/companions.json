@@ -52,7 +52,7 @@
       "where": ["ironford"], "fee": 110, "upkeep": 3,
       "requires": {"min_level": 12, "min_gen": 1, "flags": [], "visited": ["deepstone_halls"]},
       "bonus": {"all_stats": 0.05, "agi": 0.1},
-      "hint": "A grey-bearded scout asks every stranger whether they have been down to Deepstone Halls."
+      "hint": "A grey-bearded scout sits with his back to the wall and his eyes on the door."
     },
     {
       "id": "ser_aldric_vane", "name": "Ser Aldric Vane", "successor": "Ser {given} Vane",
@@ -96,7 +96,7 @@
       "requires": {"min_level": 2, "min_gen": 1, "flags": []}
     },
     {
-      "id": "pale_warden", "name": "The Pale Warden", "successor": "The Pale Warden",
+      "id": "pale_warden", "name": "The Pale Warden", "successor": "{given} of the White Scale",
       "race": "half_dragon", "class": "templar",
       "personality": "Kept watch over the Rift seal longer than anyone remembers. Now it is open, she means to see what comes out.",
       "where": ["kingshold"], "fee": 360, "upkeep": 8,

@@ -37,16 +37,15 @@ func first_target() -> int:
 	return l[0] if l.size() > 0 else -1
 
 
-## Companions join before the first blow. Foes facing a party are hardier, so allies make a
-## fight safer more than shorter.
+## Companions join before the first blow. Foes facing a band take more bringing down, so allies
+## make a fight safer more than shorter. Their blows are not scaled: a party must never turn a
+## fair fight into one where the heir falls before they can act.
 func add_allies(units: Array) -> void:
 	allies = units
 	var hp_mult := 1.0 + float(GameData.bal("companion_foe_hp")) * float(units.size())
-	var atk_mult := 1.0 + float(GameData.bal("companion_foe_atk")) * float(units.size())
 	for e in enemies:
 		e["max_hp"] = maxi(1, int(round(float(e["max_hp"]) * hp_mult)))
 		e["hp"] = maxi(1, int(round(float(e["hp"]) * hp_mult)))
-		e["atk"] = float(e["atk"]) * atk_mult
 
 
 ## Indices of allies still standing; an ally at 0 HP is out for the rest of the battle.

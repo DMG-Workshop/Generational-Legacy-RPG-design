@@ -60,7 +60,7 @@ func _build() -> void:
 
 	right.add_child(Kit.label("Your party (%d / %d)" % [p.members.size(), GameParty.max_size()], 19, Kit.ACCENT))
 	if p.members.is_empty():
-		right.add_child(_dim("No one rides with %s. Hirelings fight beside the heir, take some of the blows and mend wounds, though foes come on harder against a crowd." % d.heir.name))
+		right.add_child(_dim("No one rides with %s. Hirelings fight at the heir's side, draw some of the blows and bind wounds, though foes take longer to bring down when they face a band." % d.heir.name))
 	for m in p.members:
 		right.add_child(_member_card(m))
 	var past := _records()
@@ -79,7 +79,7 @@ func _rumour(id: String) -> String:
 		if d.gen < back:
 			return "The barkeep keeps a cup turned down for %s. %s may take up the work from generation %d." % [(r["fallen"] as Array).back(), r["name"], back]
 	var hint: String = GameParty.def(id).get("hint", "Someone at the back keeps their own counsel.")
-	return "%s  %s" % [hint, p.locked_reason(d, id)]
+	return "%s %s" % [hint, p.locked_reason(d, id)]
 
 
 func _column(parent: Control, ratio: float) -> VBoxContainer:
@@ -267,5 +267,6 @@ static func summary_lines(d: GameDynasty) -> Array:
 	var out: Array = []
 	for m in d.party.members:
 		var u := d.party.unit(d, m)
-		out.append("%s, %s %s Lv%d  HP %d/%d" % [u.name, u.race()["name"], u.cls()["name"], u.level, u.hp, u.max_hp()])
+		# A no-break space keeps "HP" with its numbers when the line wraps.
+		out.append("%s, %s %s Lv%d  HP\u00a0%d/%d" % [u.name, u.race()["name"], u.cls()["name"], u.level, u.hp, u.max_hp()])
 	return out

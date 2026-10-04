@@ -36,23 +36,35 @@ static func max_size() -> int:
 
 
 ## A companion's fighting body at a given level and generation (no hp/mp state applied).
+## Hirelings have `companion_power` of an untrained heir's stats and health at the same level,
+## generation, race and class; the companion's own data bonus comes on top.
 static func build_unit(id: String, level: int, gen: int, name: String = "") -> GameHeir:
 	var c := def(id)
-	var u := GameHeir.new()
+	var u := _plain_body(c, level, gen)
 	u.name = name if name != "" else str(c.get("name", id))
+	var power := float(GameData.bal("companion_power"))
+	var bonus: Dictionary = (c.get("bonus", {}) as Dictionary).duplicate()
+	var hp_share := power * (1.0 + float(bonus.get("hp", 0.0)))
+	bonus["all_stats"] = (1.0 + float(bonus.get("all_stats", 0.0))) * power - 1.0
+	bonus["hp"] = 0.0
+	u.archetype_bonus = bonus
+	# VIT feeds health too, so weaker stats alone would shrink health by power squared at high
+	# levels; set the health bonus so the share holds at level 1 and level 5000 alike.
+	var plain_hp := float(_plain_body(c, level, gen).max_hp())
+	var mult := 1.0 + u.trait_total("max_hp")
+	bonus["hp"] = mult * (hp_share * plain_hp / float(u.max_hp()) - 1.0)
+	u.lifespan = u.compute_lifespan()
+	u.full_heal()
+	u.set_meta("companion", id)
+	return u
+
+
+static func _plain_body(c: Dictionary, level: int, gen: int) -> GameHeir:
+	var u := GameHeir.new()
 	u.class_id = c.get("class", "warrior")
 	u.race_id = c.get("race", "human")
 	u.gen = gen
 	u.level = maxi(1, level)
-	# Hirelings fight at a share of an heir's strength; the companion's own bonus comes on top.
-	var bonus: Dictionary = (c.get("bonus", {}) as Dictionary).duplicate()
-	var power := float(GameData.bal("companion_power"))
-	bonus["all_stats"] = (1.0 + float(bonus.get("all_stats", 0.0))) * power - 1.0
-	bonus["hp"] = float(bonus.get("hp", 0.0)) + power - 1.0
-	u.archetype_bonus = bonus
-	u.lifespan = u.compute_lifespan()
-	u.full_heal()
-	u.set_meta("companion", id)
 	return u
 
 
@@ -289,7 +301,8 @@ func battle_allies(d: GameDynasty) -> Array:
 	return out
 
 
-## After a battle: write wounds back; the knocked-out die or are carried off. Says and returns messages.
+## After a battle: write wounds back; the knocked-out die or are carried off. Returns the
+## messages for the caller to journal after the battle's own result.
 func after_battle(d: GameDynasty, b: GameBattle) -> Array:
 	var msgs: Array = []
 	for u in b.allies:
@@ -306,8 +319,6 @@ func after_battle(d: GameDynasty, b: GameBattle) -> Array:
 		else:
 			m["hp"] = maxi(1, int(round(float(u.max_hp()) * float(GameData.bal("companion_ko_recover_hp")))))
 			msgs.append("%s is carried from the field, battered but breathing." % m["name"])
-	for t in msgs:
-		d._say(t)
 	return msgs
 
 

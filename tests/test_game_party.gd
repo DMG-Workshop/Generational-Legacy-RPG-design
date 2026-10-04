@@ -1,5 +1,6 @@
 ## Companions: data, hire/dismiss/rehire, upkeep and walking out, level sync, rest, succession,
-## battles with allies (acting, being targeted, KO, death or recovery), save/load and autopilot.
+## battles with allies (acting, being targeted, KO, death or recovery), message order, save/load
+## (old saves, mid-run continuity), autopilot and scaling from level 1 to 5000, gen 1 to 300.
 ## Run: godot --headless --path . -s res://tests/test_game_party.gd
 extends SceneTree
 
@@ -34,11 +35,13 @@ func _init() -> void:
 	test_ko_outcomes()
 	test_ally_heals_and_drain()
 	test_battle_rules()
+	test_message_order()
 	test_succession()
 	test_save_load()
 	test_bot()
 	test_scaling()
 	test_determinism()
+	test_save_load_continuity()
 	print("party tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -432,7 +435,7 @@ func test_battle_rules() -> void:
 	var mult := 1.0 + float(GameData.bal("companion_foe_hp")) * 2.0
 	var e0: Dictionary = d.battle.enemies[0]
 	ok(e0["max_hp"] == int(round(base_hp * mult)) and e0["hp"] == e0["max_hp"], "foe HP grows with the party (%d -> %d)" % [base_hp, e0["max_hp"]])
-	ok(absf(float(e0["atk"]) - base_atk * (1.0 + float(GameData.bal("companion_foe_atk")) * 2.0)) < 0.001, "foes hit harder against a party")
+	ok(float(e0["atk"]) == base_atk, "a party never makes a foe's blows heavier")
 	ok(e0["xp"] == base_xp, "the spoils do not change")
 	# The battle is lost only when the heir falls.
 	var b := d.battle
@@ -495,6 +498,53 @@ func test_battle_rules() -> void:
 	ok(d3.party.members.size() == 1, "fleeing keeps the party")
 
 
+## A companion's fate is told after the battle's own result, in the returned lines and the journal.
+func test_message_order() -> void:
+	var saved := float(GameData.bal("companion_death_chance"))
+	for chance in [1.0, 0.0]:
+		GameData.balance["companion_death_chance"] = chance
+		var d := _new(98)
+		d.heir.gold = 1000
+		d.party.hire(d, "bren_cask")
+		d.start_hunt("hunt")
+		var b := d.battle
+		b.allies[0].hp = 0
+		for e in b.enemies:
+			e["hp"] = 1
+		while not b.is_over():
+			d.heir.hp = d.heir.max_hp()
+			b.attack(b.first_target())
+		var j0 := d.journal.size()
+		var msgs := d.finish_battle()
+		var key := "does not rise" if chance > 0.5 else "carried from the field"
+		var at_win := -1
+		var at_fate := -1
+		for i in msgs.size():
+			if str(msgs[i]).begins_with("Victory!"):
+				at_win = i
+			if str(msgs[i]).find(key) >= 0:
+				at_fate = i
+		var expect := at_win + 1
+		if at_win >= 0 and expect < msgs.size() and str(msgs[expect]).begins_with("Level up"):
+			expect += 1
+		ok(at_win >= 0 and at_fate == expect, "companion fate follows the victory line: %s" % str(msgs))
+		var journal := d.journal.slice(j0)
+		var jw := journal.find(msgs[at_win])
+		var jf := journal.find(msgs[at_fate])
+		ok(jw >= 0 and jf > jw, "journal tells the victory first, then the companion (%d, %d)" % [jw, jf])
+		ok(journal.count(msgs[at_fate]) == 1, "companion fate journaled once")
+	GameData.balance["companion_death_chance"] = saved
+	# A battle ended without a result still reports the companion's fate.
+	var d2 := _new(99)
+	d2.heir.gold = 1000
+	d2.party.hire(d2, "maddy_thorn")
+	d2.start_hunt("hunt")
+	d2.battle.allies[0].hp = 0
+	var msgs2 := d2.finish_battle()
+	ok(msgs2.size() == 1 and d2.journal.back() == msgs2[0], "unfinished battle still reports the companion: %s" % str(msgs2))
+	ok(d2.party.members.size() + int(d2.party.history["maddy_thorn"]["status"] == "fallen") == 1, "the companion was either carried off or fell")
+
+
 func test_succession() -> void:
 	var d := _new(91)
 	var p := d.party
@@ -516,7 +566,9 @@ func test_succession() -> void:
 		ok(u.hp == u.max_hp(), "fresh at succession")
 	ok(msgs.any(func(x): return str(x).find("stay with the family and swear to serve") >= 0), "succession message: %s" % str(msgs))
 	var lines: Array = Tavern.summary_lines(d)
-	ok(lines.size() == 2 and str(lines[0]).begins_with("Bren Cask, Human Warrior Lv1  HP "), "summary line: %s" % str(lines))
+	ok(lines.size() == 2 and str(lines[0]).begins_with("Bren Cask, Human Warrior Lv1  HP\u00a0"), "summary line: %s" % str(lines))
+	var u0 := p.unit(d, p.members[0])
+	ok(str(lines[0]).ends_with("%d/%d" % [u0.hp, u0.max_hp()]), "summary line ends with HP now/max")
 
 
 func test_save_load() -> void:
@@ -561,6 +613,15 @@ func test_save_load() -> void:
 	var u := thin.party.unit(thin, thin.party.members[0])
 	ok(u.level == thin.heir.level and u.hp >= 1, "a sparse member record still fights")
 	ok(thin.party.members[0]["name"] == "Bren Cask", "name filled from data")
+	raw["party"] = {"members": [], "history": {"maddy_thorn": {"status": "dismissed"}, "old_netta": {}}}
+	var sparse := GameDynasty.from_dict(raw)
+	ok(sparse.party.display_name("maddy_thorn") == "Maddy Thorn" and sparse.party.fee(sparse, "maddy_thorn") == 0, "sparse history: name from data, rehire still free")
+	ok(int(sparse.party.history["old_netta"]["battles"]) == 0 and (sparse.party.history["old_netta"]["fallen"] as Array).is_empty(), "sparse history filled with defaults")
+	# The house's records render from such a save.
+	var tavern = Tavern.new()
+	tavern.dynasty = sparse
+	ok(tavern._records().size() == 2, "records list both past hires")
+	tavern.free()
 
 
 func test_bot() -> void:
@@ -601,7 +662,16 @@ func test_scaling() -> void:
 		var u := d.party.unit(d, d.party.members[0])
 		ok(u.level == level and u.gen == gen, "companion at level %d gen %d" % [level, gen])
 		var hp_ratio := float(u.max_hp()) / float(d.heir.max_hp())
-		ok(hp_ratio > 0.5 and hp_ratio < 1.2, "companion HP keeps pace with the heir at L%d g%d (%.2f)" % [level, gen, hp_ratio])
+		ok(hp_ratio > 0.4 and hp_ratio < 1.0, "companion HP keeps pace with the heir at L%d g%d (%.2f)" % [level, gen, hp_ratio])
+		# Against an untrained heir of the same build the share is exact at every level and age.
+		var plain := GameHeir.new()
+		plain.class_id = "warrior"
+		plain.race_id = "human"
+		plain.gen = gen
+		plain.level = level
+		var power := float(GameData.bal("companion_power"))
+		ok(absf(float(u.max_hp()) / float(plain.max_hp()) - power) < 0.02, "health share is companion_power at L%d g%d (%.3f)" % [level, gen, float(u.max_hp()) / float(plain.max_hp())])
+		ok(absf(u.attack_power() / plain.attack_power() - power) < 0.01, "attack share is companion_power at L%d g%d" % [level, gen])
 		var cost := GameBattle.unit_skill_cost(u, 0)
 		ok(cost > 0 and cost <= u.max_mp(), "skills affordable at L%d (%d of %d MP)" % [level, cost, u.max_mp()])
 		ok(d.party.fee(d, "sister_oriel") == int(round(70.0 * GameData.enemy_scale(gen))), "fee scales with the generation")
@@ -626,3 +696,26 @@ func _run_seed(s: int) -> String:
 			break
 		GameBot.step(d)
 	return JSON.stringify(d.to_dict())
+
+
+func _steps(d: GameDynasty, n: int) -> void:
+	for i in n:
+		if d.state == "succession":
+			d.choose_heir(0)
+		elif d.state == "life":
+			GameBot.step(d)
+
+
+## Saving and loading mid-dynasty, party and all, changes nothing that follows.
+func test_save_load_continuity() -> void:
+	for s in [501, 503]:
+		var a := _new(s)
+		a.heir.gold = 3000
+		var b := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(a.to_dict())))
+		_steps(a, 300)
+		_steps(b, 120)
+		ok(not b.party.members.is_empty() or not b.party.history.is_empty(), "seed %d has party state to save" % s)
+		b = GameDynasty.from_dict(JSON.parse_string(JSON.stringify(b.to_dict())))
+		_steps(b, 180)
+		ok(a.gen > 1, "seed %d crossed a succession (gen %d)" % [s, a.gen])
+		ok(JSON.stringify(a.to_dict()) == JSON.stringify(b.to_dict()), "seed %d: a save and load mid-run changes nothing" % s)

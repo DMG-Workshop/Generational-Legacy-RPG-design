@@ -264,6 +264,8 @@ func _play_events(events: Array) -> void:
 		var by := int(ev.get("by", -1))
 		if by >= 0 and by < ally_nodes.size() and ev["type"] in ["damage", "heal"]:
 			_lunge(ally_nodes[by]["root"], 22.0)
+		elif by < 0 and ev["type"] == "damage" and ev["side"] == "enemy":
+			_lunge(hero_node, 22.0)
 		match ev["type"]:
 			"damage":
 				if ev["side"] == "enemy":
@@ -382,6 +384,7 @@ func _show_result() -> void:
 	var msgs: Array = d.finish_battle()
 	app.autosave()
 	var overlay := ColorRect.new()
+	overlay.z_index = 10   # above the enemy name labels, which sit at z 1
 	overlay.color = Color(0, 0, 0, 0.7)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)

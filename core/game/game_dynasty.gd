@@ -514,13 +514,16 @@ func finish_battle() -> Array:
 			msgs.append("Victory! +%d XP, +%d gold." % [xp, gold])
 			if heir.gain_xp(xp) > 0:
 				msgs.append("Level up! %s is now level %d." % [heir.name, heir.level])
+			msgs.append_array(party_msgs)
 			for m in msgs:
 				_say(m)
 			_check_milestone("first_quest")
 			msgs.append_array(_finish_time(battle_kind, []))
 		"fled":
 			msgs.append("%s flees from the battle." % heir.name)
-			_say(msgs[0])
+			msgs.append_array(party_msgs)
+			for m in msgs:
+				_say(m)
 			msgs.append_array(_finish_time("rest", []))
 		"defeat":
 			killer_id = ""
@@ -532,11 +535,15 @@ func finish_battle() -> Array:
 				heir.extra_life_used = true
 				heir.hp = heir.max_hp()
 				msgs.append("Death refuses %s! Marked by Death, they rise again at full health." % heir.name)
-				_say(msgs[0])
+				msgs.append_array(party_msgs)
+				for m in msgs:
+					_say(m)
 				msgs.append_array(_finish_time(battle_kind, []))
 			elif rng.randf() < float(GameData.bal("death_chance_on_defeat")):
 				msgs.append("%s was slain in battle." % heir.name)
-				_say(msgs[0])
+				msgs.append_array(party_msgs)
+				for m in msgs:
+					_say(m)
 				msgs.append_array(_die("slain in battle"))
 			else:
 				var loss := int(float(heir.gold) * float(GameData.bal("defeat_gold_loss")))
@@ -545,9 +552,14 @@ func finish_battle() -> Array:
 				heir.mp = 0
 				heir.age += float(GameData.bal("defeat_years"))
 				msgs.append("%s is dragged from the field, barely alive. Lost %d gold." % [heir.name, loss])
-				_say(msgs[0])
+				msgs.append_array(party_msgs)
+				for m in msgs:
+					_say(m)
 				msgs.append_array(_finish_time(battle_kind, []))
-	msgs.append_array(party_msgs)
+		_:
+			msgs.append_array(party_msgs)
+			for m in msgs:
+				_say(m)
 	return msgs
 
 
