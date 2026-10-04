@@ -16,6 +16,7 @@ const LEFT_W := 370
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
+var gear_only := false    # just the Gear tab: opened from the life screen anywhere, shop or not
 
 var tab: String = ""
 var gold_label: Label
@@ -30,7 +31,7 @@ var confirm_sell: String = ""   # a unique item waiting for a second click befor
 
 
 func _ready() -> void:
-	var v := Kit.overlay(self, "Shops of %s" % dynasty.world.here()["name"])
+	var v := Kit.overlay(self, "Gear of %s" % dynasty.heir.name if gear_only else "Shops of %s" % dynasty.world.here()["name"])
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 18)
 	v.add_child(top)
@@ -77,7 +78,7 @@ func _ready() -> void:
 	sp.add_child(side)
 
 	var shops := GameItems.shops_here(dynasty)
-	tab = shops[0] if not shops.is_empty() else "gear"
+	tab = shops[0] if not shops.is_empty() and not gear_only else "gear"
 	_rebuild()
 
 
@@ -93,7 +94,8 @@ func _rebuild() -> void:
 	gold_label.text = "Gold %d" % h.gold
 	price_label.text = _price_text()
 	Kit.clear(tabs)
-	for t in GameItems.shops_here(dynasty) + ["gear"]:
+	tabs.visible = not gear_only
+	for t in ([] if gear_only else GameItems.shops_here(dynasty)) + ["gear"]:
 		var tt: String = t
 		var b := Kit.button(TAB_NAMES[tt], func(): _show(tt), Vector2(110, 34))
 		b.toggle_mode = true
@@ -121,6 +123,8 @@ func _restore_scroll(v: int) -> void:
 
 
 func _price_text() -> String:
+	if GameItems.shops_here(dynasty).is_empty():
+		return "no merchants in %s" % dynasty.world.here()["name"]
 	var parts: Array = ["shop tier %d" % GameItems.shop_tier(dynasty)]
 	var persuasion := GameItems.persuasion(dynasty)
 	if persuasion > 0.0:
@@ -236,6 +240,8 @@ func _build_gear() -> void:
 		eb.disabled = GameItems.slot_of(iid) not in GameItems.SLOTS
 		var sb := Kit.button("Sell", func(): _sell(iid), Vector2(80, 34))
 		sb.disabled = not can_sell
+		if not can_sell:
+			sb.tooltip_text = "No one in %s buys gear." % dynasty.world.here()["name"]
 		if confirm_sell == iid:
 			sb.text = "Sure?"
 			sb.tooltip_text = "Click again to sell the %s. It cannot be bought back." % GameItems.item_name(iid)
@@ -262,6 +268,21 @@ func _build_side() -> void:
 	side.add_child(Kit.label("Potions %d    Pack %d item%s" % [h.potions, h.inventory.size(), "" if h.inventory.size() == 1 else "s"], 14))
 	side.add_child(HSeparator.new())
 	side.add_child(_wrap(Kit.label("Bought gear goes on at once if that slot is empty; otherwise it waits in the pack. Merchants buy back at a fraction of the price.", 12, Kit.DIM)))
+
+
+## Lines for the life screen's right-hand panel: what is worn, and how full the pack is.
+static func summary_lines(d: GameDynasty) -> Array:
+	var h := d.heir
+	var worn: Array = []
+	for slot in GameItems.SLOTS:
+		if GameItems.equipped(h, slot) != "":
+			worn.append(GameItems.item_name(GameItems.equipped(h, slot)))
+	if worn.is_empty() and h.inventory.is_empty():
+		return []
+	var out: Array = [", ".join(worn) if not worn.is_empty() else "Nothing worn."]
+	if not h.inventory.is_empty():
+		out.append("Pack: %d item%s" % [h.inventory.size(), "" if h.inventory.size() == 1 else "s"])
+	return out
 
 
 # ---------------------------------------------------------------- rows

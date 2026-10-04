@@ -3,19 +3,28 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 
-const CELL := Vector2(92, 66)
-const ORIGIN := Vector2(46, 40)
+const BOX := Vector2(88, 28)
+const SIDE_W := 300
 
 var dynasty: GameDynasty
 var on_travel: Callable   # called with the destination id; the life screen does the travelling
 
 
+## Places are laid out on the world grid, stretched to whatever room the panel leaves.
 class MapCanvas extends Control:
 	var world: GameWorld
+	var grid := Vector2(1, 1)
+
+	func _ready() -> void:
+		for l in GameData.world["locations"]:
+			grid = Vector2(maxf(grid.x, float(l["x"])), maxf(grid.y, float(l["y"])))
+		resized.connect(queue_redraw)
 
 	func _pos(id: String) -> Vector2:
 		var p := GameWorld.place(id)
-		return ORIGIN + Vector2(float(p["x"]) * CELL.x, float(p["y"]) * CELL.y)
+		var half := BOX * 0.5 + Vector2(2, 2)
+		var span := Vector2(maxf(0.0, size.x - half.x * 2.0), maxf(0.0, size.y - half.y * 2.0))
+		return half + Vector2(float(p["x"]) / grid.x * span.x, float(p["y"]) / grid.y * span.y)
 
 	func _draw() -> void:
 		var font := get_theme_default_font()
@@ -36,7 +45,7 @@ class MapCanvas extends Control:
 			var fill := Color("#2e2a42")
 			if k == "visited":
 				fill = Color("#4a4466") if l["type"] != "town" else Color("#6a5a2a")
-			var r := Rect2(p - Vector2(44, 14), Vector2(88, 28))
+			var r := Rect2(p - BOX * 0.5, BOX)
 			draw_rect(r, fill)
 			draw_rect(r, Kit.ACCENT if here else Color("#8d88a0"), false, 2.0 if here else 1.0)
 			var label: String = "?" if k == "seen" else str(l["name"])
@@ -77,13 +86,18 @@ func _ready() -> void:
 	v.add_child(row)
 	var canvas := MapCanvas.new()
 	canvas.world = w
-	canvas.custom_minimum_size = Vector2(ORIGIN.x * 2.0 + CELL.x * 9.0, ORIGIN.y * 2.0 + CELL.y * 7.0)
+	canvas.custom_minimum_size = Vector2(600, 420)
+	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(canvas)
 
+	var side_scroll := ScrollContainer.new()
+	side_scroll.custom_minimum_size = Vector2(SIDE_W, 0)
+	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	row.add_child(side_scroll)
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 6)
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(side)
+	side_scroll.add_child(side)
 	var here := w.here()
 	var where := Kit.label("%s (%s)\n%s" % [here["name"], here["type"], here.get("description", "")], 14)
 	where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -96,13 +110,17 @@ func _ready() -> void:
 	for link in w.roads(w.location, dynasty.flags):
 		var dest: Dictionary = GameWorld.place(link["to"])
 		var known := w.knowledge(link["to"])
-		var dest_name: String = dest["name"] if known != "seen" else "the unknown (%s)" % dest["type"]
+		var dest_name: String = dest["name"] if known != "seen" else "Unknown %s" % dest["type"]
 		var to: String = link["to"]
-		var b := Kit.button("To %s - %s" % [dest_name, GameDynasty._span_text(w.travel_years(link))], func(): _go(to), Vector2(0, 34))
+		var b := Kit.button("%s  (%s)" % [dest_name, GameDynasty._span_text(w.travel_years(link))], func(): _go(to), Vector2(0, 34))
+		b.clip_text = true
+		b.tooltip_text = "Travel to %s." % (dest["name"] if known != "seen" else "the unknown %s" % dest["type"])
 		side.add_child(b)
 	for link in GameWorld.place(w.location).get("links", []):
 		if link.has("requires_flag") and not dynasty.flags.has(link["requires_flag"]):
-			side.add_child(Kit.label("A road to %s is sealed." % ("somewhere" if w.knowledge(link["to"]) == "seen" else GameWorld.place(link["to"])["name"]), 13, Kit.DIM))
+			var sealed := Kit.label("A road to %s is sealed." % ("somewhere" if w.knowledge(link["to"]) == "seen" else GameWorld.place(link["to"])["name"]), 13, Kit.DIM)
+			sealed.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			side.add_child(sealed)
 	var maps := w.maps_for_sale()
 	if not maps.is_empty():
 		side.add_child(HSeparator.new())
@@ -110,6 +128,8 @@ func _ready() -> void:
 		for m in maps:
 			var mid: String = m["id"]
 			var b2 := Kit.button("%s (%dg)" % [m["name"], dynasty.map_price(m)], func(): _buy(mid), Vector2(0, 34))
+			b2.clip_text = true
+			b2.tooltip_text = b2.text
 			b2.disabled = dynasty.heir.gold < dynasty.map_price(m) or (m["reveals"] as Array).all(func(id): return w.knowledge(id) in ["visited", "charted"])
 			side.add_child(b2)
 	side.add_child(HSeparator.new())

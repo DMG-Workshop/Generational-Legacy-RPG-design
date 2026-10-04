@@ -333,6 +333,7 @@
   {
    "id": "grimfang",
    "name": "Grimfang, Alpha of the Wolves",
+   "short": "Grimfang",
    "lair": "whisperwood",
    "min_gen": 1,
    "max_gen": 100,
@@ -352,6 +353,7 @@
   {
    "id": "hollow_king",
    "name": "The Hollow King",
+   "short": "Hollow King",
    "lair": "hollow_barrow",
    "min_gen": 40,
    "max_gen": 250,
@@ -371,6 +373,7 @@
   {
    "id": "vaerthax",
    "name": "Vaerthax the Ember Drake",
+   "short": "Vaerthax",
    "lair": "emberpeak",
    "min_gen": 120,
    "max_gen": 450,
@@ -390,6 +393,7 @@
   {
    "id": "stonefather",
    "name": "The Stonefather",
+   "short": "Stonefather",
    "lair": "deepstone_halls",
    "min_gen": 300,
    "max_gen": 700,
@@ -409,6 +413,7 @@
   {
    "id": "the_unmade",
    "name": "The Unmade",
+   "short": "The Unmade",
    "lair": "the_rift",
    "min_gen": 600,
    "max_gen": 1100,

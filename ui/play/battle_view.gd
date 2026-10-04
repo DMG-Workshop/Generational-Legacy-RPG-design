@@ -382,6 +382,7 @@ func _show_result() -> void:
 		return
 	result_shown = true
 	var msgs: Array = d.finish_battle()
+	hero_label.text = "%s  Lv%d" % [d.heir.name, d.heir.level]
 	app.autosave()
 	var overlay := ColorRect.new()
 	overlay.z_index = 10   # above the enemy name labels, which sit at z 1
