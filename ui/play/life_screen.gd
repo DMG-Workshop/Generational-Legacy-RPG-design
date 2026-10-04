@@ -3,6 +3,11 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
+const MapPanel := preload("res://ui/play/map_panel.gd")
+const ShopPanel := preload("res://ui/play/shop_panel.gd")
+const TavernPanel := preload("res://ui/play/tavern_panel.gd")
+const BoardPanel := preload("res://ui/play/board_panel.gd")
+const EventPanel := preload("res://ui/play/event_panel.gd")
 
 var app: Node
 var d: GameDynasty
@@ -11,6 +16,7 @@ var right: VBoxContainer
 var journal: RichTextLabel
 var actions: GridContainer
 var header: Label
+var where: Label
 
 
 func _ready() -> void:
@@ -26,6 +32,8 @@ func _ready() -> void:
 
 	header = Kit.label("", 22, Kit.ACCENT)
 	root.add_child(header)
+	where = Kit.label("", 15, Kit.DIM)
+	root.add_child(where)
 
 	var cols := HBoxContainer.new()
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -49,7 +57,7 @@ func _ready() -> void:
 	journal = Kit.rich()
 	jp.add_child(journal)
 	actions = GridContainer.new()
-	actions.columns = 3
+	actions.columns = 4
 	actions.add_theme_constant_override("h_separation", 8)
 	actions.add_theme_constant_override("v_separation", 8)
 	mid.add_child(actions)
@@ -61,11 +69,15 @@ func _ready() -> void:
 	right.add_theme_constant_override("separation", 5)
 	rp.add_child(right)
 	_refresh()
+	if d.has_pending_event():
+		_open.call_deferred(EventPanel)
 
 
 func _refresh() -> void:
 	var h := d.heir
-	header.text = "House %s  -  Generation %d  -  %s the %s" % [d.dynasty_name, d.gen, h.name, h.cls()["name"]]
+	header.text = "House %s  -  Generation %d  -  %s the %s %s" % [d.dynasty_name, d.gen, h.name, h.race()["name"], h.cls()["name"]]
+	var place := d.world.here()
+	where.text = "%s (%s)  -  %s  -  %s: %s" % [place["name"], place["type"], d.world.date_text(), d.world.weather()["name"], d.world.weather().get("text", "")]
 	_build_left()
 	_build_right()
 	_build_actions()
@@ -89,8 +101,8 @@ func _build_left() -> void:
 	var arch := ""
 	if h.archetype != "":
 		arch = "  -  %s" % GameFate.ARCHETYPES[h.archetype]["name"]
-	left.add_child(Kit.label("Level %d %s%s" % [h.level, h.cls()["name"], arch], 15, Kit.DIM))
-	left.add_child(Kit.label("Age %d / ~%d" % [int(h.age), int(h.lifespan)], 15))
+	left.add_child(Kit.label("Level %d %s %s%s" % [h.level, h.race()["name"], h.cls()["name"], arch], 15, Kit.DIM))
+	left.add_child(Kit.label("Age %d / ~%d%s" % [int(h.age), int(h.lifespan), "  (living on borrowed time)" if h.age > h.lifespan else ""], 15))
 	left.add_child(Kit.label("Fate Value: %d%%" % int(round(h.fate_value * 100.0)), 15, Kit.BAD if h.fate_value > 0.2 else Kit.TEXT))
 	left.add_child(Kit.label("HP %d / %d" % [h.hp, h.max_hp()], 14))
 	left.add_child(Kit.bar(Kit.GOOD, h.max_hp(), h.hp))
@@ -102,12 +114,12 @@ func _build_left() -> void:
 	left.add_child(Kit.label("Gold %d    Potions %d" % [h.gold, h.potions], 16, Kit.ACCENT))
 	left.add_child(HSeparator.new())
 	left.add_child(Kit.label("Traits (hover for details)", 15, Kit.DIM))
-	for id in h.traits:
+	for id in h.all_traits():
 		var l := Kit.label(GameData.trait_name(id), 15, Kit.trait_color(id))
 		l.tooltip_text = Kit.trait_tooltip(id)
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		left.add_child(l)
-	if h.traits.is_empty():
+	if h.all_traits().is_empty():
 		left.add_child(Kit.label("none", 14, Kit.DIM))
 	if not h.dormant.is_empty():
 		left.add_child(Kit.label("Carried dormant (may pass on):", 14, Kit.DIM))
@@ -123,10 +135,10 @@ func _build_right() -> void:
 	var h := d.heir
 	right.add_child(Kit.label("Family", 20, Kit.ACCENT))
 	if h.spouse != null:
-		right.add_child(Kit.label("Spouse: %s" % h.spouse.name, 15))
+		right.add_child(Kit.label("Spouse: %s (%s %s)" % [h.spouse.name, h.spouse.race()["name"], h.spouse.cls()["name"]], 15))
 		for c in h.children:
 			var traits_txt: String = ", ".join(c.traits.map(func(t): return GameData.trait_name(t)))
-			var l := Kit.label("%s (%s)  Fate %d%%\n   %s" % [c.name, c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits"], 14)
+			var l := Kit.label("%s (%s %s)  Fate %d%%\n   %s" % [c.name, c.race()["name"], c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits"], 14)
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			l.custom_minimum_size = Vector2(270, 0)
 			right.add_child(l)
@@ -135,6 +147,8 @@ func _build_right() -> void:
 		single.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		single.custom_minimum_size = Vector2(270, 0)
 		right.add_child(single)
+	_section("Companions", TavernPanel.summary_lines(d))
+	_section("Quests", BoardPanel.summary_lines(d))
 	right.add_child(HSeparator.new())
 	right.add_child(Kit.label("Legacy", 20, Kit.ACCENT))
 	right.add_child(Kit.label("Heirlooms: %d  (+%d%% power)" % [d.heirlooms.size(), int(round(d.heirloom_bonus() * 100.0))], 14))
@@ -148,33 +162,58 @@ func _build_right() -> void:
 		right.add_child(l)
 
 
+func _section(title: String, lines: Array) -> void:
+	if lines.is_empty():
+		return
+	right.add_child(HSeparator.new())
+	right.add_child(Kit.label(title, 20, Kit.ACCENT))
+	for line in lines:
+		var l := Kit.label(str(line), 13, Kit.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(270, 0)
+		right.add_child(l)
+
+
 func _build_actions() -> void:
 	Kit.clear(actions)
 	var h := d.heir
 	var boss := d.available_boss()
-	_act("Hunt (safe)", func(): _hunt("hunt"))
-	_act("Hunt (hard, 2x loot)", func(): _hunt("hunt_hard"))
-	var legend := _act("Legend: %s" % boss["name"] if not boss.is_empty() else "No legend stirs", func(): _legend())
+	_act("Hunt", func(): _hunt("hunt"))
+	var hard := _act("Hard hunt", func(): _hunt("hunt_hard"))
+	hard.tooltip_text = "Tougher monsters and more Elites, for double XP and gold."
+	var legend := _act("Legend: %s" % boss["name"] if not boss.is_empty() else "No legend here", func(): _legend())
 	legend.disabled = boss.is_empty()
 	if not boss.is_empty():
-		legend.tooltip_text = "Recommended level %d. Slaying a legend grants a permanent heirloom and a legacy echo." % int(boss["min_level"])
+		legend.tooltip_text = "Level %d. Slaying a legend grants a permanent heirloom and a legacy echo." % int(boss["min_level"])
+	else:
+		var rumors: Array = d.stirring_legends().map(func(c): return "%s (level %d) lairs in %s" % [c["name"], int(c.get("min_level", 1)), GameWorld.place(c.get("lair", "")).get("name", "somewhere")])
+		legend.tooltip_text = "Legends are fought in their lairs.\n" + ("\n".join(rumors) if not rumors.is_empty() else "None stir in this generation.")
+	_act("Travel / Map", func(): _map())
+	_act("Explore", func(): _do(func(): return d.explore()))
+	var w := d.world
+	if w.has_service("forge") or w.has_service("store") or w.has_service("temple"):
+		_act("Shops", func(): _open(ShopPanel))
+	if w.has_service("tavern"):
+		_act("Tavern", func(): _open(TavernPanel))
+	if w.has_service("board"):
+		_act("Notice board", func(): _open(BoardPanel))
 	for s in ["str", "mag", "agi", "vit"]:
 		var st: String = s
 		_act("Train %s" % st.to_upper(), func(): _do(func(): return d.train(st)))
-	_act("Work for gold", func(): _do(func(): return d.work()))
-	_act("Rest (heal fully)", func(): _do(func(): return d.rest()))
+	_act("Work", func(): _do(func(): return d.work()))
+	_act("Rest", func(): _do(func(): return d.rest()))
 	var buy := _act("Buy potion (%dg)" % d.potion_price(), _say_buy)
 	buy.disabled = h.gold < d.potion_price()
 	var fam := _act("Found family", func(): _do(func(): return d.found_family()))
 	fam.disabled = not d.can_found_family()
-	fam.tooltip_text = "Requires age %d+ and no family yet. Children inherit traits from both parents." % int(GameData.bal("family_min_age"))
-	var ret := _act("Retire / pass the torch", func(): _do(func(): return d.retire()))
+	fam.tooltip_text = "Requires age %d+ and no family yet. Children inherit traits from both parents." % int(h.family_min_age())
+	var ret := _act("Retire", func(): _do(func(): return d.retire()))
 	ret.disabled = not d.can_retire()
-	_act("Autopilot: this life", func(): _autopilot(1))
-	_act("Autopilot: 10 gens", func(): _autopilot(10))
+	_act("Auto: this life", func(): _autopilot(1))
+	_act("Auto: 10 gens", func(): _autopilot(10))
 	_act("Chronicle", func(): _chronicle())
 	_act("Save", func(): d.save_to_disk(); d._say("Game saved."); _refresh())
-	_act("Main menu", func(): app.show_title())
+	_act("Menu", func(): app.show_title())
 
 
 func _act(text: String, cb: Callable) -> Button:
@@ -194,11 +233,32 @@ func _say_buy() -> void:
 
 func _do(fn: Callable) -> void:
 	fn.call()
+	_changed()
+
+
+## After anything changes the dynasty: save, then show whatever needs the player next.
+func _changed() -> void:
 	app.autosave()
-	if d.state != "life":
+	if d.state != "life" or d.battle != null:
 		app.show_state()
-	else:
-		_refresh()
+		return
+	_refresh()
+	if d.has_pending_event() and not _has_open(EventPanel):
+		_open(EventPanel)
+
+
+func _open(panel_script: Script) -> void:
+	var p: Control = panel_script.new()
+	p.dynasty = d
+	p.on_change = _changed
+	add_child(p)
+
+
+func _has_open(panel_script: Script) -> bool:
+	for c in get_children():
+		if c.get_script() == panel_script:
+			return true
+	return false
 
 
 func _hunt(kind: String) -> void:
@@ -218,6 +278,13 @@ func _autopilot(generations: int) -> void:
 			GameBot.choose_best(d)
 	app.autosave()
 	app.show_state()
+
+
+func _map() -> void:
+	var m := MapPanel.new()
+	m.dynasty = d
+	m.on_travel = func(to: String): _do(func(): return d.travel(to))
+	add_child(m)
 
 
 func _chronicle() -> void:

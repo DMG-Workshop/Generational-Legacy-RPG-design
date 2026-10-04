@@ -74,6 +74,35 @@ static func rich(bbcode: bool = true) -> RichTextLabel:
 	return r
 
 
+## A modal overlay on `host`: dimmed backdrop, bordered panel, title row with Close.
+## Returns the content box; the overlay itself is `box.get_meta("overlay")`.
+static func overlay(host: Control, title: String) -> VBoxContainer:
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.6)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	host.add_child(dim)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", style(Color("#1a1828"), 8, ACCENT))
+	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	p.offset_left = 30
+	p.offset_right = -30
+	p.offset_top = 24
+	p.offset_bottom = -24
+	host.add_child(p)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	p.add_child(v)
+	var top := HBoxContainer.new()
+	v.add_child(top)
+	var t := label(title, 22, ACCENT)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(t)
+	top.add_child(button("Close", func(): host.queue_free(), Vector2(100, 34)))
+	v.set_meta("overlay", host)
+	return v
+
+
 static func clear(node: Node) -> void:
 	for c in node.get_children():
 		node.remove_child(c)
@@ -86,6 +115,8 @@ static func trait_color(id: String) -> Color:
 		"blessing": return GOOD
 		"mutation": return Color("#c58fe8")
 		"acquired": return Color("#e8a05a")
+		"divine": return Color("#ffd75e")
+		"racial": return Color("#5ad1c8")
 	return Color("#7fb7ff")
 
 
@@ -99,5 +130,8 @@ static func trait_tooltip(id: String) -> String:
 	var s: String = "%s [%s]\n%s" % [def.get("name", id), def.get("category", ""), def.get("description", "")]
 	if def.has("story_hook"):
 		s += "\n\n" + str(def["story_hook"])
-	s += "\n\nInherit chance: %d%%" % int(round(float(def.get("inherit_chance", 0.0)) * 100.0))
+	if def.get("category", "") == "racial":
+		s += "\n\nInnate to the race; never lost."
+	else:
+		s += "\n\nInherit chance: %d%%" % int(round(float(def.get("inherit_chance", 0.0)) * 100.0))
 	return s

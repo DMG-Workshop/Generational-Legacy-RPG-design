@@ -8,11 +8,19 @@ const TRAIT_FILES := [
 	"res://data/traits/curses.json",
 	"res://data/traits/acquired.json",
 	"res://data/traits/mutations.json",
+	"res://data/traits/divine.json",
+	"res://data/traits/racial.json",
 ]
 
 static var _loaded := false
 static var traits: Dictionary = {}
 static var classes: Dictionary = {}
+static var races: Dictionary = {}
+static var world: Dictionary = {}
+static var items: Dictionary = {}
+static var quests: Array = []
+static var events: Array = []
+static var companions: Array = []
 static var creatures: Array = []
 static var balance: Dictionary = {}
 static var names: Dictionary = {}
@@ -46,7 +54,17 @@ static func load_all() -> void:
 	classes.clear()
 	for c in load_json("res://data/classes/classes.json")["classes"]:
 		classes[c["id"]] = c
+	races.clear()
+	for r in load_json("res://data/races/races.json")["races"]:
+		races[r["id"]] = r
 	creatures = load_json("res://data/creatures/creatures.json")["creatures"]
+	world = load_json("res://data/world/world.json")
+	items.clear()
+	for it in load_json("res://data/items/items.json")["items"]:
+		items[it["id"]] = it
+	quests = load_json("res://data/quests/quests.json")["quests"]
+	events = load_json("res://data/events/events.json")["events"]
+	companions = load_json("res://data/companions/companions.json")["companions"]
 	balance = load_json("res://data/game/balance.json")
 	names = load_json("res://data/game/names.json")
 	_loaded = true
@@ -75,6 +93,37 @@ static func traits_in(categories: Array) -> Array:
 			out.append(id)
 	out.sort()
 	return out
+
+
+## Classes / races a founder can pick (hybrids only arise from mixed parents).
+static func starting_ids(table: Dictionary) -> Array:
+	load_all()
+	var out: Array = []
+	for id in table:
+		if table[id].get("starting", true):
+			out.append(id)
+	out.sort()
+	return out
+
+
+## The hybrid born from two parents of different kinds, or "" if none is defined.
+static func hybrid_of(table: Dictionary, a: String, b: String) -> String:
+	if a == b:
+		return ""
+	for id in table:
+		var parents: Array = table[id].get("parents", [])
+		if parents.size() == 2 and a in parents and b in parents:
+			return id
+	return ""
+
+
+## Monsters spawn at the hunter's level: their stats and XP grow with it.
+static func enemy_level_scale(level: int) -> float:
+	return 1.0 + float(bal("enemy_growth_per_level")) * float(level - 1)
+
+
+static func xp_level_scale(level: int) -> float:
+	return 1.0 + float(bal("xp_growth_per_level")) * float(level - 1)
 
 
 static func enemy_scale(gen: int) -> float:

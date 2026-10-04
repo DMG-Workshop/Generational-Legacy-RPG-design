@@ -5,6 +5,9 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 var app: Node
 var name_edit: LineEdit
 var class_pick: OptionButton
+var race_pick: OptionButton
+var race_desc: Label
+var race_ids: Array = []
 var bloodline_pick: OptionButton
 var seed_edit: LineEdit
 var class_desc: Label
@@ -18,7 +21,7 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(620, 0)
+	box.custom_minimum_size = Vector2(1080, 0)
 	box.add_theme_constant_override("separation", 10)
 	center.add_child(box)
 
@@ -32,9 +35,11 @@ func _ready() -> void:
 
 	var p := Kit.panel()
 	box.add_child(p)
-	var form := VBoxContainer.new()
-	form.add_theme_constant_override("separation", 8)
-	p.add_child(form)
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 24)
+	p.add_child(cols)
+	var form := _column(cols)
+	var form2 := _column(cols)
 
 	form.add_child(Kit.label("Founder name (blank = random)"))
 	name_edit = LineEdit.new()
@@ -43,8 +48,7 @@ func _ready() -> void:
 
 	form.add_child(Kit.label("Class"))
 	class_pick = OptionButton.new()
-	class_ids = GameData.classes.keys()
-	class_ids.sort()
+	class_ids = GameData.starting_ids(GameData.classes)
 	for id in class_ids:
 		class_pick.add_item(GameData.classes[id]["name"])
 	class_pick.item_selected.connect(func(_i): _refresh())
@@ -53,37 +57,74 @@ func _ready() -> void:
 	class_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	form.add_child(class_desc)
 
-	form.add_child(Kit.label("Founding bloodline"))
+	form2.add_child(Kit.label("Race"))
+	race_pick = OptionButton.new()
+	race_ids = GameData.starting_ids(GameData.races)
+	for id in race_ids:
+		race_pick.add_item(GameData.races[id]["name"])
+	race_pick.selected = maxi(0, race_ids.find("human"))
+	race_pick.item_selected.connect(func(_i): _refresh())
+	form2.add_child(race_pick)
+	race_desc = Kit.label("", 14, Kit.DIM)
+	race_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	form2.add_child(race_desc)
+
+	form2.add_child(Kit.label("Founding bloodline"))
 	bloodline_pick = OptionButton.new()
 	bloodline_ids = GameData.traits_in(["bloodline"])
 	for id in bloodline_ids:
 		bloodline_pick.add_item(GameData.trait_name(id))
 	bloodline_pick.item_selected.connect(func(_i): _refresh())
-	form.add_child(bloodline_pick)
+	form2.add_child(bloodline_pick)
 	bloodline_desc = Kit.label("", 14, Kit.DIM)
 	bloodline_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	form.add_child(bloodline_desc)
+	form2.add_child(bloodline_desc)
 
-	form.add_child(Kit.label("Seed (blank = random; same seed + same choices = same dynasty)"))
+	form2.add_child(Kit.label("Seed (blank = random; same seed + same choices = same dynasty)"))
 	seed_edit = LineEdit.new()
 	seed_edit.placeholder_text = "e.g. 42"
-	form.add_child(seed_edit)
+	form2.add_child(seed_edit)
 
-	box.add_child(Kit.button("Begin Dynasty", _start, Vector2(0, 48)))
-	var cont := Kit.button("Continue Saved Dynasty", func(): app.continue_game(), Vector2(0, 42))
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	box.add_child(buttons)
+	var begin := Kit.button("Begin Dynasty", _start, Vector2(0, 48))
+	begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buttons.add_child(begin)
+	var cont := Kit.button("Continue Saved Dynasty", func(): app.continue_game(), Vector2(300, 48))
 	cont.disabled = not GameDynasty.has_save()
-	box.add_child(cont)
-	box.add_child(Kit.button("Quit", func(): get_tree().quit(), Vector2(0, 36)))
+	buttons.add_child(cont)
+	buttons.add_child(Kit.button("Quit", func(): get_tree().quit(), Vector2(120, 48)))
 	_refresh()
+
+
+func _column(parent: Control) -> VBoxContainer:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	col.custom_minimum_size = Vector2(500, 0)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(col)
+	return col
 
 
 func _refresh() -> void:
 	var c: Dictionary = GameData.classes[class_ids[class_pick.selected]]
+	var cid: String = class_ids[class_pick.selected]
+	var hybrids: Array = []
+	for id in GameData.classes:
+		var parents: Array = GameData.classes[id].get("parents", [])
+		if cid in parents:
+			var other: String = parents[1] if parents[0] == cid else parents[0]
+			hybrids.append("%s (with a %s)" % [GameData.classes[id]["name"], GameData.classes[other]["name"]])
 	class_desc.text = "%s  Skills: %s" % [c["description"], ", ".join(c["skills"].map(func(s): return s["name"]))]
+	if not hybrids.is_empty():
+		class_desc.text += "\nChildren with another class may become: %s." % ", ".join(hybrids)
+	var r: Dictionary = GameData.races[race_ids[race_pick.selected]]
+	race_desc.text = "%s  Lives ~%d years, adult at %d.  %s" % [r["description"], int(r["lifespan"]), int(r["start_age"]), "  ".join(r.get("traits", []).map(func(t): return "%s: %s" % [GameData.trait_name(t), GameData.trait_def(t).get("description", "")]))]
 	bloodline_desc.text = GameData.trait_def(bloodline_ids[bloodline_pick.selected]).get("description", "")
 
 
 func _start() -> void:
 	var s := seed_edit.text.strip_edges()
 	var seed_value: int = int(s) if s.is_valid_int() else int(Time.get_unix_time_from_system()) % 1000000
-	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value)
+	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected])

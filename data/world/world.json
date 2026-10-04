@@ -1,0 +1,43 @@
+{
+  "start": "hearthmere",
+  "seasons": [
+    {"id": "spring", "name": "Spring"},
+    {"id": "summer", "name": "Summer"},
+    {"id": "autumn", "name": "Autumn"},
+    {"id": "winter", "name": "Winter"}
+  ],
+  "weather": [
+    {"id": "clear", "name": "Clear skies", "weights": {"spring": 4, "summer": 5, "autumn": 3, "winter": 2}, "travel": 1.0, "combat": {}, "text": "The sky is clear from one edge to the other."},
+    {"id": "overcast", "name": "Overcast", "weights": {"spring": 3, "summer": 2, "autumn": 4, "winter": 3}, "travel": 1.0, "combat": {}, "text": "Low grey cloud sits over everything like a lid."},
+    {"id": "rain", "name": "Rain", "weights": {"spring": 3, "summer": 1, "autumn": 3, "winter": 1}, "travel": 1.5, "combat": {"dodge": -0.03}, "text": "Rain turns the roads to mud; footing is poor."},
+    {"id": "storm", "name": "Storm", "weights": {"spring": 1, "summer": 1, "autumn": 2, "winter": 1}, "travel": 2.0, "combat": {"dodge": -0.05, "crit": -0.03}, "text": "Thunder rolls; nobody travels who does not have to."},
+    {"id": "fog", "name": "Fog", "weights": {"spring": 1, "summer": 0, "autumn": 2, "winter": 1}, "travel": 1.25, "combat": {"crit": -0.05, "flee": 0.15}, "text": "Fog lies in every hollow; anything a spear's length away is a guess."},
+    {"id": "heat", "name": "Heat wave", "weights": {"spring": 0, "summer": 3, "autumn": 0, "winter": 0}, "travel": 1.25, "combat": {"mp_regen": -0.02}, "text": "The air is heavy and still, and the road throws the heat back up."},
+    {"id": "snow", "name": "Snow", "weights": {"spring": 0, "summer": 0, "autumn": 1, "winter": 5}, "travel": 2.0, "combat": {"dodge": -0.05}, "text": "Snow lies deep; every mile is earned."}
+  ],
+  "locations": [
+    {"id": "hearthmere", "name": "Hearthmere", "type": "town", "x": 2, "y": 4, "biomes": ["plains"], "danger": 0.9, "description": "A walled market town and the family's home. Smoke, bells and gossip.", "links": [{"to": "greenvale", "years": 0.25}, {"to": "whisperwood", "years": 0.5}, {"to": "mirefen", "years": 0.5}, {"to": "elderglade", "years": 0.75}], "services": ["forge", "temple", "store", "tavern", "board"], "shop_tier": 1},
+    {"id": "greenvale", "name": "Greenvale", "type": "wilds", "x": 3, "y": 5, "biomes": ["plains", "road"], "danger": 0.95, "description": "Farmland and hedgerows; bandits work the lanes at dusk.", "links": [{"to": "hearthmere", "years": 0.25}, {"to": "ironford", "years": 0.5}, {"to": "hollow_barrow", "years": 0.5}]},
+    {"id": "whisperwood", "name": "Whisperwood", "type": "wilds", "x": 2, "y": 2, "biomes": ["forest"], "danger": 1.0, "description": "Old trees that talk in the wind. The wolves here answer to something larger.", "links": [{"to": "hearthmere", "years": 0.5}, {"to": "hollow_barrow", "years": 0.5}, {"to": "elderglade", "years": 0.5}, {"to": "kingshold", "years": 0.75}], "lair": "grimfang"},
+    {"id": "mirefen", "name": "Mirefen", "type": "wilds", "x": 1, "y": 6, "biomes": ["swamp"], "danger": 1.05, "description": "Black water and sucking mud. Things live in it that should not.", "links": [{"to": "hearthmere", "years": 0.5}]},
+    {"id": "elderglade", "name": "Elderglade", "type": "wilds", "x": 0, "y": 3, "biomes": ["forest", "fae"], "danger": 1.0, "description": "A ring of standing stones where the fae are said to dance.", "links": [{"to": "hearthmere", "years": 0.75}, {"to": "whisperwood", "years": 0.5}]},
+    {"id": "ironford", "name": "Ironford", "type": "town", "x": 5, "y": 4, "biomes": ["hills"], "danger": 1.0, "description": "A dwarven trade town at the river crossing, loud with hammers.", "links": [{"to": "greenvale", "years": 0.5}, {"to": "goblin_warrens", "years": 0.5}, {"to": "kingshold", "years": 0.75}, {"to": "brinehaven", "years": 0.75}, {"to": "deepstone_halls", "years": 1.0}], "services": ["forge", "store", "tavern", "board"], "shop_tier": 2},
+    {"id": "goblin_warrens", "name": "Goblin Warrens", "type": "dungeon", "x": 5, "y": 6, "biomes": ["cave", "hills"], "danger": 1.1, "description": "Tunnels gnawed into the hills; goblins breed here faster than they die.", "links": [{"to": "ironford", "years": 0.5}, {"to": "deepstone_halls", "years": 0.5}]},
+    {"id": "hollow_barrow", "name": "Hollow Barrow", "type": "dungeon", "x": 4, "y": 2, "biomes": ["crypt", "ruins"], "danger": 1.15, "description": "A barrow-king's tomb. The dead inside have not finished their work.", "links": [{"to": "greenvale", "years": 0.5}, {"to": "whisperwood", "years": 0.5}, {"to": "kingshold", "years": 0.5}], "lair": "hollow_king"},
+    {"id": "kingshold", "name": "Kingshold", "type": "town", "x": 5, "y": 1, "biomes": ["plains", "road"], "danger": 0.95, "description": "The crown city. Fine gear, finer prices, and eyes everywhere.", "links": [{"to": "hollow_barrow", "years": 0.5}, {"to": "whisperwood", "years": 0.75}, {"to": "ironford", "years": 0.75}, {"to": "frostreach", "years": 0.75}, {"to": "highcrag", "years": 0.75}], "services": ["forge", "temple", "store", "tavern", "board"], "shop_tier": 3},
+    {"id": "frostreach", "name": "Frostreach", "type": "wilds", "x": 3, "y": 0, "biomes": ["tundra"], "danger": 1.15, "description": "Endless white. The wolves here are bigger, and hungrier.", "links": [{"to": "kingshold", "years": 0.75}]},
+    {"id": "highcrag", "name": "Highcrag", "type": "wilds", "x": 7, "y": 1, "biomes": ["mountains"], "danger": 1.2, "description": "Knife-edged peaks where harpies nest and golems sleep in the scree.", "links": [{"to": "kingshold", "years": 0.75}, {"to": "emberpeak", "years": 0.5}, {"to": "the_rift", "years": 1.0, "requires_flag": "rift_open"}]},
+    {"id": "emberpeak", "name": "Emberpeak", "type": "dungeon", "x": 8, "y": 2, "biomes": ["volcanic", "mountains"], "danger": 1.25, "description": "A smoking mountain. Vaerthax sleeps in its throat.", "links": [{"to": "highcrag", "years": 0.5}, {"to": "brinehaven", "years": 0.75}], "lair": "vaerthax"},
+    {"id": "brinehaven", "name": "Brinehaven", "type": "town", "x": 8, "y": 4, "biomes": ["coast"], "danger": 1.0, "description": "A salt-stained port where anything can be bought and anyone can be hired.", "links": [{"to": "ironford", "years": 0.75}, {"to": "emberpeak", "years": 0.75}, {"to": "stormcoast", "years": 0.25}, {"to": "sunken_temple", "years": 0.75}], "services": ["forge", "temple", "store", "tavern", "board"], "shop_tier": 2},
+    {"id": "stormcoast", "name": "Stormcoast", "type": "wilds", "x": 9, "y": 5, "biomes": ["coast", "mountains"], "danger": 1.1, "description": "Cliffs battered by the sea; harpies wheel above the wrecks.", "links": [{"to": "brinehaven", "years": 0.25}]},
+    {"id": "sunken_temple", "name": "Sunken Temple", "type": "dungeon", "x": 8, "y": 6, "biomes": ["ruins", "crypt"], "danger": 1.25, "description": "A drowned shrine to a forgotten god. Time runs strangely inside.", "links": [{"to": "brinehaven", "years": 0.75}, {"to": "deepstone_halls", "years": 0.75}]},
+    {"id": "deepstone_halls", "name": "Deepstone Halls", "type": "dungeon", "x": 6, "y": 7, "biomes": ["cave", "mountains"], "danger": 1.3, "description": "Abandoned dwarf-halls. Something of stone walks them still.", "links": [{"to": "goblin_warrens", "years": 0.5}, {"to": "ironford", "years": 1.0}, {"to": "sunken_temple", "years": 0.75}], "lair": "stonefather"},
+    {"id": "the_rift", "name": "The Rift", "type": "dungeon", "x": 9, "y": 0, "biomes": ["rift"], "danger": 1.4, "description": "A wound in the world. The Unmade waits on the other side.", "links": [{"to": "highcrag", "years": 1.0}], "lair": "the_unmade"}
+  ],
+  "maps": [
+    {"id": "valley_survey", "name": "Valley Survey", "price": 30, "sold_at": ["hearthmere"], "reveals": ["hearthmere", "greenvale", "whisperwood", "mirefen", "elderglade", "hollow_barrow", "ironford"]},
+    {"id": "dwarven_roads", "name": "Dwarven Road Map", "price": 60, "sold_at": ["ironford"], "reveals": ["ironford", "goblin_warrens", "deepstone_halls", "greenvale", "kingshold", "brinehaven"]},
+    {"id": "sea_charts", "name": "Sea Charts", "price": 60, "sold_at": ["brinehaven"], "reveals": ["brinehaven", "stormcoast", "sunken_temple", "emberpeak", "ironford"]},
+    {"id": "royal_atlas", "name": "Royal Atlas", "price": 150, "sold_at": ["kingshold"], "reveals": ["kingshold", "frostreach", "highcrag", "emberpeak", "hollow_barrow", "whisperwood", "ironford", "brinehaven"]}
+  ]
+}

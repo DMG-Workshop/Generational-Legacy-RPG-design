@@ -1,7 +1,7 @@
 {
   "classes": [
     {
-      "id": "warrior", "name": "Warrior", "color": "#c0504d",
+      "id": "warrior", "name": "Warrior", "color": "#c0504d", "starting": true,
       "description": "Sturdy front-liner. Hits hard, takes a beating.",
       "base": {"hp": 70, "mp": 10, "str": 9, "mag": 2, "agi": 4, "vit": 7},
       "growth": {"hp": 11, "mp": 1, "str": 2.2, "mag": 0.3, "agi": 0.8, "vit": 1.6},
@@ -11,7 +11,7 @@
       ]
     },
     {
-      "id": "mage", "name": "Mage", "color": "#4f81bd",
+      "id": "mage", "name": "Mage", "color": "#4f81bd", "starting": true,
       "description": "Glass cannon. Spells ignore half of enemy defense.",
       "base": {"hp": 46, "mp": 34, "str": 3, "mag": 10, "agi": 4, "vit": 3},
       "growth": {"hp": 7, "mp": 4, "str": 0.4, "mag": 2.4, "agi": 0.8, "vit": 0.9},
@@ -21,7 +21,7 @@
       ]
     },
     {
-      "id": "rogue", "name": "Rogue", "color": "#9bbb59",
+      "id": "rogue", "name": "Rogue", "color": "#9bbb59", "starting": true,
       "description": "Fast and lucky. Strikes twice, often critically.",
       "base": {"hp": 56, "mp": 16, "str": 7, "mag": 2, "agi": 10, "vit": 4},
       "growth": {"hp": 8.5, "mp": 1.5, "str": 1.6, "mag": 0.3, "agi": 2.0, "vit": 1.1},
@@ -31,13 +31,164 @@
       ]
     },
     {
-      "id": "cleric", "name": "Cleric", "color": "#f2c744",
+      "id": "cleric", "name": "Cleric", "color": "#f2c744", "starting": true,
       "description": "Holy fighter with strong healing.",
       "base": {"hp": 60, "mp": 26, "str": 5, "mag": 8, "agi": 4, "vit": 6},
       "growth": {"hp": 9, "mp": 3, "str": 1.1, "mag": 2.0, "agi": 0.8, "vit": 1.3},
       "skills": [
         {"id": "smite", "name": "Smite", "type": "damage", "stat": "mag", "mult": 1.9, "mp": 5},
         {"id": "heal", "name": "Heal", "type": "heal", "pct_max_hp": 0.5, "mp": 7}
+      ]
+    },
+    {
+      "id": "ranger", "name": "Ranger", "color": "#4e9a6b", "starting": true,
+      "description": "Agile archer. Volleys hit several times.",
+      "base": {"hp": 58, "mp": 14, "str": 7, "mag": 2, "agi": 9, "vit": 5},
+      "growth": {"hp": 9, "mp": 1.5, "str": 1.7, "mag": 0.3, "agi": 1.8, "vit": 1.1},
+      "skills": [
+        {"id": "volley", "name": "Volley", "type": "damage", "stat": "str", "mult": 0.8, "hits": 3, "mp": 5},
+        {"id": "field_dressing", "name": "Field Dressing", "type": "heal", "pct_max_hp": 0.3, "mp": 5}
+      ]
+    },
+    {
+      "id": "monk", "name": "Monk", "color": "#d98c3f", "starting": true,
+      "description": "Disciplined fighter. Palm strikes ignore most armor.",
+      "base": {"hp": 64, "mp": 18, "str": 7, "mag": 4, "agi": 8, "vit": 6},
+      "growth": {"hp": 10, "mp": 2, "str": 1.7, "mag": 0.6, "agi": 1.6, "vit": 1.4},
+      "skills": [
+        {"id": "palm_strike", "name": "Palm Strike", "type": "damage", "stat": "str", "mult": 1.6, "pierce": 0.6, "mp": 4},
+        {"id": "inner_peace", "name": "Inner Peace", "type": "heal", "pct_max_hp": 0.4, "mp": 6}
+      ]
+    },
+    {
+      "id": "necromancer", "name": "Necromancer", "color": "#7a5aa6", "starting": true,
+      "description": "Death mage. Soul Drain heals you for half the damage.",
+      "base": {"hp": 48, "mp": 30, "str": 3, "mag": 10, "agi": 4, "vit": 4},
+      "growth": {"hp": 7.5, "mp": 3.5, "str": 0.4, "mag": 2.3, "agi": 0.7, "vit": 1.0},
+      "skills": [
+        {"id": "soul_drain", "name": "Soul Drain", "type": "damage", "stat": "mag", "mult": 1.7, "drain": 0.5, "mp": 6},
+        {"id": "bone_ward", "name": "Bone Ward", "type": "heal", "pct_max_hp": 0.3, "mp": 6}
+      ]
+    },
+    {
+      "id": "druid", "name": "Druid", "color": "#5f8f3a", "starting": true,
+      "description": "Nature caster. Thorns strike twice; strong regrowth.",
+      "base": {"hp": 58, "mp": 26, "str": 5, "mag": 8, "agi": 5, "vit": 6},
+      "growth": {"hp": 9, "mp": 3, "str": 1.0, "mag": 2.0, "agi": 0.9, "vit": 1.3},
+      "skills": [
+        {"id": "thornlash", "name": "Thornlash", "type": "damage", "stat": "mag", "mult": 1.2, "hits": 2, "mp": 5},
+        {"id": "regrowth", "name": "Regrowth", "type": "heal", "pct_max_hp": 0.45, "mp": 7}
+      ]
+    },
+    {
+      "id": "spellblade", "name": "Spellblade", "color": "#8a6fd1", "starting": false, "parents": ["warrior", "mage"],
+      "description": "Steel wrapped in arcane fire. (Hybrid: born to a Warrior and a Mage.)",
+      "base": {"hp": 61, "mp": 23, "str": 6, "mag": 6, "agi": 4, "vit": 5},
+      "growth": {"hp": 9.45, "mp": 2.62, "str": 1.37, "mag": 1.42, "agi": 0.84, "vit": 1.31},
+      "skills": [
+        {"id": "arcane_edge", "name": "Arcane Edge", "type": "damage", "stat": "both", "mult": 2.0, "mp": 5, "pierce": 0.35},
+        {"id": "mana_shield", "name": "Mana Shield", "type": "heal", "pct_max_hp": 0.3, "mp": 6}
+      ]
+    },
+    {
+      "id": "paladin", "name": "Paladin", "color": "#e8d27a", "starting": false, "parents": ["warrior", "cleric"],
+      "description": "Holy knight: heavy blows and the strongest heals. (Hybrid: born to a Warrior and a Cleric.)",
+      "base": {"hp": 68, "mp": 19, "str": 7, "mag": 5, "agi": 4, "vit": 7},
+      "growth": {"hp": 10.5, "mp": 2.1, "str": 1.73, "mag": 1.21, "agi": 0.84, "vit": 1.52},
+      "skills": [
+        {"id": "holy_strike", "name": "Holy Strike", "type": "damage", "stat": "both", "mult": 1.9, "mp": 5},
+        {"id": "lay_on_hands", "name": "Lay on Hands", "type": "heal", "pct_max_hp": 0.55, "mp": 8}
+      ]
+    },
+    {
+      "id": "duelist", "name": "Duelist", "color": "#c96d5a", "starting": false, "parents": ["warrior", "rogue"],
+      "description": "Fast blade, double strikes that often crit. (Hybrid: born to a Warrior and a Rogue.)",
+      "base": {"hp": 66, "mp": 14, "str": 8, "mag": 2, "agi": 7, "vit": 6},
+      "growth": {"hp": 10.24, "mp": 1.31, "str": 2.0, "mag": 0.32, "agi": 1.47, "vit": 1.42},
+      "skills": [
+        {"id": "riposte", "name": "Riposte Flurry", "type": "damage", "stat": "str", "mult": 1.1, "mp": 4, "hits": 2, "crit_bonus": 0.2},
+        {"id": "second_wind", "name": "Second Wind", "type": "heal", "pct_max_hp": 0.3, "mp": 6}
+      ]
+    },
+    {
+      "id": "arcane_trickster", "name": "Arcane Trickster", "color": "#6fb0c9", "starting": false, "parents": ["mage", "rogue"],
+      "description": "Illusions and phantom blades. (Hybrid: born to a Mage and a Rogue.)",
+      "base": {"hp": 54, "mp": 26, "str": 5, "mag": 6, "agi": 7, "vit": 4},
+      "growth": {"hp": 8.14, "mp": 2.89, "str": 1.05, "mag": 1.42, "agi": 1.47, "vit": 1.05},
+      "skills": [
+        {"id": "phantom_blades", "name": "Phantom Blades", "type": "damage", "stat": "both", "mult": 0.8, "mp": 6, "hits": 3, "crit_bonus": 0.15, "pierce": 0.3},
+        {"id": "blink", "name": "Blink", "type": "heal", "pct_max_hp": 0.25, "mp": 5}
+      ]
+    },
+    {
+      "id": "dread_knight", "name": "Dread Knight", "color": "#5b4a6e", "starting": false, "parents": ["warrior", "necromancer"],
+      "description": "Armored in death; every cleave feeds on its victim. (Hybrid: born to a Warrior and a Necromancer.)",
+      "base": {"hp": 62, "mp": 21, "str": 6, "mag": 6, "agi": 4, "vit": 6},
+      "growth": {"hp": 9.71, "mp": 2.36, "str": 1.37, "mag": 1.36, "agi": 0.79, "vit": 1.37},
+      "skills": [
+        {"id": "grave_cleave", "name": "Grave Cleave", "type": "damage", "stat": "both", "mult": 1.8, "mp": 6, "drain": 0.35},
+        {"id": "unholy_vigor", "name": "Unholy Vigor", "type": "heal", "pct_max_hp": 0.3, "mp": 6}
+      ]
+    },
+    {
+      "id": "warlock", "name": "Warlock", "color": "#9b4fb0", "starting": false, "parents": ["mage", "necromancer"],
+      "description": "Pacts with dark powers: devastating hexes. (Hybrid: born to a Mage and a Necromancer.)",
+      "base": {"hp": 49, "mp": 34, "str": 3, "mag": 10, "agi": 4, "vit": 4},
+      "growth": {"hp": 7.61, "mp": 3.94, "str": 0.42, "mag": 2.47, "agi": 0.79, "vit": 1.0},
+      "skills": [
+        {"id": "hex_bolt", "name": "Hex Bolt", "type": "damage", "stat": "mag", "mult": 2.4, "mp": 7, "pierce": 0.5},
+        {"id": "siphon_life", "name": "Siphon Life", "type": "damage", "stat": "mag", "mult": 1.2, "mp": 6, "drain": 0.8},
+        {"id": "dark_pact", "name": "Dark Pact", "type": "heal", "pct_max_hp": 0.3, "mp": 6}
+      ]
+    },
+    {
+      "id": "shaman", "name": "Shaman", "color": "#4fa3a0", "starting": false, "parents": ["cleric", "druid"],
+      "description": "Spirits of storm and healing answer the call. (Hybrid: born to a Cleric and a Druid.)",
+      "base": {"hp": 62, "mp": 27, "str": 5, "mag": 8, "agi": 5, "vit": 6},
+      "growth": {"hp": 9.45, "mp": 3.15, "str": 1.1, "mag": 2.1, "agi": 0.89, "vit": 1.37},
+      "skills": [
+        {"id": "storm_call", "name": "Storm Call", "type": "damage", "stat": "mag", "mult": 1.3, "mp": 6, "hits": 2, "pierce": 0.3},
+        {"id": "spirit_mend", "name": "Spirit Mend", "type": "heal", "pct_max_hp": 0.5, "mp": 7}
+      ]
+    },
+    {
+      "id": "beastmaster", "name": "Beastmaster", "color": "#7d9a3c", "starting": false, "parents": ["ranger", "druid"],
+      "description": "Fights alongside a pack of wild beasts. (Hybrid: born to a Ranger and a Druid.)",
+      "base": {"hp": 61, "mp": 21, "str": 6, "mag": 5, "agi": 7, "vit": 6},
+      "growth": {"hp": 9.45, "mp": 2.36, "str": 1.42, "mag": 1.21, "agi": 1.42, "vit": 1.26},
+      "skills": [
+        {"id": "pack_hunt", "name": "Pack Hunt", "type": "damage", "stat": "both", "mult": 0.9, "mp": 6, "hits": 3},
+        {"id": "wild_remedy", "name": "Wild Remedy", "type": "heal", "pct_max_hp": 0.4, "mp": 6}
+      ]
+    },
+    {
+      "id": "ninja", "name": "Ninja", "color": "#3f4a5c", "starting": false, "parents": ["monk", "rogue"],
+      "description": "Four-hit flurries from the shadows. (Hybrid: born to a Monk and a Rogue.)",
+      "base": {"hp": 63, "mp": 18, "str": 7, "mag": 3, "agi": 9, "vit": 5},
+      "growth": {"hp": 9.71, "mp": 1.84, "str": 1.73, "mag": 0.47, "agi": 1.89, "vit": 1.31},
+      "skills": [
+        {"id": "shadow_flurry", "name": "Shadow Flurry", "type": "damage", "stat": "str", "mult": 0.7, "mp": 6, "hits": 4, "crit_bonus": 0.2},
+        {"id": "smoke_veil", "name": "Smoke Veil", "type": "heal", "pct_max_hp": 0.25, "mp": 5}
+      ]
+    },
+    {
+      "id": "templar", "name": "Templar", "color": "#e0c090", "starting": false, "parents": ["cleric", "monk"],
+      "description": "Warrior-monk of the faith: blows that pierce armor. (Hybrid: born to a Cleric and a Monk.)",
+      "base": {"hp": 65, "mp": 23, "str": 6, "mag": 6, "agi": 6, "vit": 6},
+      "growth": {"hp": 9.97, "mp": 2.62, "str": 1.47, "mag": 1.37, "agi": 1.26, "vit": 1.42},
+      "skills": [
+        {"id": "judgement_palm", "name": "Judgement Palm", "type": "damage", "stat": "both", "mult": 1.7, "mp": 6, "pierce": 0.5},
+        {"id": "sanctuary", "name": "Sanctuary", "type": "heal", "pct_max_hp": 0.5, "mp": 7}
+      ]
+    },
+    {
+      "id": "warden", "name": "Warden", "color": "#6b8e5a", "starting": false, "parents": ["warrior", "ranger"],
+      "description": "Guardian of the wilds: cleaving double strikes. (Hybrid: born to a Warrior and a Ranger.)",
+      "base": {"hp": 67, "mp": 13, "str": 8, "mag": 2, "agi": 7, "vit": 6},
+      "growth": {"hp": 10.5, "mp": 1.31, "str": 2.05, "mag": 0.32, "agi": 1.37, "vit": 1.42},
+      "skills": [
+        {"id": "hunters_cleave", "name": "Hunter's Cleave", "type": "damage", "stat": "str", "mult": 1.1, "mp": 4, "hits": 2},
+        {"id": "bulwark_breath", "name": "Bulwark Breath", "type": "heal", "pct_max_hp": 0.35, "mp": 6}
       ]
     }
   ]

@@ -23,9 +23,14 @@ var battle: GameBattle = null
 var next_id: int = 1
 var killer_id: String = ""
 var total_hunts: int = 0
+var world: GameWorld
+var flags: Dictionary = {}      # story flags set by quests and events (flag -> generation set); never cleared
+var quests := GameQuests.new()
+var party := GameParty.new()
+var pending_event: Dictionary = {}   # an event waiting for the player's choice (see GameEvents)
 
 
-static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String) -> GameDynasty:
+static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
 	GameData.load_all()
 	var d := GameDynasty.new()
 	d.seed_value = p_seed
@@ -36,12 +41,14 @@ static func new_game(p_seed: int, founder_name: String, class_id: String, bloodl
 	h.surname = GameData.names["surnames"][d.rng.randi() % GameData.names["surnames"].size()]
 	d.dynasty_name = h.surname
 	h.class_id = class_id
+	h.race_id = race_id
 	h.traits = [bloodline_id]
 	var others := GameData.traits_in(["bloodline"]).filter(func(t): return t != bloodline_id)
 	h.dormant = [others[d.rng.randi() % others.size()]]
+	d.world = GameWorld.create(d.rng)
 	d._setup_new_heir(h)
 	d.heir = h
-	d._say("The %s dynasty begins with %s, a %s." % [d.dynasty_name, h.name, h.cls()["name"]])
+	d._say("The %s dynasty begins with %s, %s %s." % [d.dynasty_name, h.name, h.race()["name"], h.cls()["name"]])
 	d._coming_of_age()
 	return d
 
@@ -59,7 +66,8 @@ func _say(text: String) -> void:
 
 func _setup_new_heir(h: GameHeir) -> void:
 	h.gen = gen
-	h.age = float(GameData.bal("start_age"))
+	h.age = h.adult_age()
+	h.hazard_age = h.age
 	h.level = 1
 	h.xp = 0
 	h.training = {"str": 0.0, "mag": 0.0, "agi": 0.0, "vit": 0.0}
@@ -163,12 +171,17 @@ func _check_milestone(milestone: String) -> void:
 		"moderate":
 			var loss := int(float(heir.gold) * 0.4)
 			heir.gold -= loss
-			_add_trait(heir, "cursed")
-			msgs.append("A bad omen at %s: you lose %d gold and are Cursed." % [label, loss])
+			if rng.randf() < float(GameData.bal("moderate_curse_chance")):
+				_add_trait(heir, "cursed")
+				msgs.append("A bad omen at %s: you lose %d gold and are Cursed." % [label, loss])
+			else:
+				msgs.append("A bad omen at %s: you lose %d gold." % [label, loss])
 		"major":
 			var loss := int(float(heir.gold) * 0.7)
 			heir.gold -= loss
-			var curse := _random_new_curse(heir)
+			var curse := ""
+			if rng.randf() < float(GameData.bal("major_curse_chance")):
+				curse = _random_new_curse(heir)
 			msgs.append("A major failure at %s: you lose %d gold%s." % [label, loss, " and gain %s" % GameData.trait_name(curse) if curse != "" else ""])
 			_add_echo("infamy", "major", "%s's failure is whispered about" % heir.name, 0.3)
 		"critical":
@@ -208,24 +221,103 @@ func years_for(action: String) -> int:
 
 
 func potion_price() -> int:
-	var persuasion := clampf(heir.trait_total("persuasion"), 0.0, 0.5)
+	var persuasion := clampf(heir.trait_total("persuasion"), -0.5, 0.5)
 	var p := float(GameData.bal("potion_cost")) * GameData.enemy_scale(gen) * (1.0 + echo_total("infamy")) * (1.0 - persuasion)
 	return maxi(1, int(round(p)))
 
 
+## Legends stirring in this generation (not yet slain), wherever their lair is.
+func stirring_legends() -> Array:
+	return GameData.creatures.filter(func(c): return c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"] and not slain_bosses.has(c["id"]))
+
+
+## The legend that can be challenged here: it must be stirring and this must be its lair.
 func available_boss() -> Dictionary:
-	for c in GameData.creatures:
-		if c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"] and not slain_bosses.has(c["id"]):
+	for c in stirring_legends():
+		if c.get("lair", world.location) == world.location:
 			return c
 	return {}
 
 
+# ---------------------------------------------------------------- flags, items, events
+
+func set_flag(flag: String) -> void:
+	if not flags.has(flag):
+		flags[flag] = gen
+		quests.on_flag(self, flag)
+
+
+func give_item(id: String) -> String:
+	heir.inventory.append(id)
+	return "%s received %s." % [heir.name, GameItems.item_def(id).get("name", id)]
+
+
+func has_pending_event() -> bool:
+	return not pending_event.is_empty()
+
+
+func explore() -> Array:
+	return GameEvents.explore(self)
+
+
+func resolve_event(choice: int) -> Array:
+	return GameEvents.resolve(self, choice)
+
+
+# ---------------------------------------------------------------- travel & maps
+
+func travel(to: String) -> Array:
+	var link: Dictionary = {}
+	for r in world.roads(world.location, flags):
+		if r["to"] == to:
+			link = r
+	if link.is_empty():
+		return ["There is no open road from %s to %s." % [world.here()["name"], GameWorld.place(to).get("name", to)]]
+	var years := world.travel_years(link)
+	var dest: Dictionary = GameWorld.place(to)
+	var msgs: Array = []
+	var slow := "" if float(world.weather().get("travel", 1.0)) <= 1.0 else " (slowed by %s)" % world.weather()["name"].to_lower()
+	var first := to not in world.visited
+	world.visit(to)
+	msgs.append("%s travels to %s: %s%s." % [heir.name, dest["name"], _span_text(years), slow])
+	if first:
+		msgs.append("No one of House %s has walked %s before. %s" % [dynasty_name, dest["name"], dest.get("description", "")])
+	quests.on_arrive(self, to)
+	msgs = _pass_years(years, msgs)
+	if state == "life":
+		msgs.append_array(GameEvents.on_arrive(self, to))
+	return msgs
+
+
+func map_price(m: Dictionary) -> int:
+	return maxi(1, int(round(float(m["price"]) * GameData.enemy_scale(gen))))
+
+
+func buy_map(map_id: String) -> String:
+	for m in world.maps_for_sale():
+		if m["id"] == map_id:
+			var price := map_price(m)
+			if heir.gold < price:
+				return "Not enough gold (%d needed)." % price
+			heir.gold -= price
+			var n := world.chart(m["reveals"])
+			return "Bought the %s for %d gold: %d new place%s charted." % [m["name"], price, n, "" if n == 1 else "s"]
+	return "That map is not sold here."
+
+
+static func _span_text(years: float) -> String:
+	var seasons := int(round(years * 4.0))
+	if seasons < 4:
+		return "%d season%s" % [seasons, "" if seasons == 1 else "s"]
+	return "%.1f years" % years
+
+
 func can_found_family() -> bool:
-	return not heir.family_founded and heir.age >= float(GameData.bal("family_min_age"))
+	return not heir.family_founded and heir.age >= heir.family_min_age()
 
 
 func can_retire() -> bool:
-	return heir.family_founded or heir.age >= float(GameData.bal("midlife_age"))
+	return heir.family_founded or heir.age >= heir.midlife_age()
 
 
 func buy_potion() -> String:
@@ -254,7 +346,7 @@ func work() -> Array:
 func train(stat: String) -> Array:
 	heir.training[stat] += 1.5
 	var msgs: Array = ["%s trains %s (+1.5 base)." % [heir.name, stat.to_upper()]]
-	var lv := heir.gain_xp(int(GameData.bal("train_xp")))
+	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level))))
 	if lv > 0:
 		msgs.append("Level up! Now level %d." % heir.level)
 	return _finish_time("train", msgs)
@@ -268,23 +360,27 @@ func found_family() -> Array:
 	sp.id = _take_id()
 	sp.name = GameInheritance.random_name(rng)
 	sp.surname = GameData.names["surnames"][rng.randi() % GameData.names["surnames"].size()]
-	var class_ids: Array = GameData.classes.keys()
-	class_ids.sort()
+	var class_ids := GameData.starting_ids(GameData.classes)
 	sp.class_id = class_ids[rng.randi() % class_ids.size()]
+	var race_ids := GameData.starting_ids(GameData.races)
+	sp.race_id = heir.race_id if rng.randf() < float(GameData.bal("spouse_same_race_chance")) else race_ids[rng.randi() % race_ids.size()]
+	sp.lifespan = sp.compute_lifespan()
 	var pool := GameData.traits_in(["bloodline", "blessing"]).filter(func(t): return t not in heir.traits)
 	if rng.randf() < float(GameData.bal("spouse_trait_chance")) and not pool.is_empty():
 		sp.traits.append(pool[rng.randi() % pool.size()])
 	if rng.randf() < float(GameData.bal("spouse_trait_chance")) * 0.4 and not pool.is_empty():
 		sp.dormant.append(pool[rng.randi() % pool.size()])
 	heir.spouse = sp
-	var n := rng.randi_range(int(GameData.bal("child_count_min")), int(GameData.bal("child_count_max")))
+	var counts: Array = heir.race().get("children", [GameData.bal("child_count_min"), GameData.bal("child_count_max")])
+	var n := rng.randi_range(int(counts[0]), int(counts[1]))
 	for i in n:
 		var res := GameInheritance.inherit([heir, sp], rng)
 		var c := GameHeir.new()
 		c.id = _take_id()
 		c.name = GameInheritance.random_name(rng)
 		c.surname = dynasty_name
-		c.class_id = _child_class(heir.class_id)
+		c.race_id = _child_race(heir.race_id, sp.race_id)
+		c.class_id = _child_class(heir.class_id, sp.class_id)
 		c.traits = res["traits"]
 		c.dormant = res["dormant"]
 		c.parent_names = [heir.name, sp.name]
@@ -294,7 +390,7 @@ func found_family() -> Array:
 		for ev in res["events"]:
 			msgs.append("%s: %s" % [c.name, ev])
 	heir.family_founded = true
-	msgs.push_front("%s marries %s. %d child%s born." % [heir.name, sp.name, n, "" if n == 1 else "ren"])
+	msgs.push_front("%s marries %s, %s %s. %d child%s born." % [heir.name, sp.name, sp.race()["name"], sp.cls()["name"], n, "" if n == 1 else "ren"])
 	_say(msgs[0])
 	for i in range(1, msgs.size()):
 		_say(msgs[i])
@@ -302,24 +398,53 @@ func found_family() -> Array:
 	return _finish_time("family", [])
 
 
-func _child_class(parent_class: String) -> String:
-	var ids: Array = GameData.classes.keys()
-	ids.sort()
-	if rng.randf() < 0.6:
+## Parents of two different classes may raise a hybrid; otherwise a child usually follows a parent.
+func _child_class(parent_class: String, other_class: String) -> String:
+	var hybrid := GameData.hybrid_of(GameData.classes, parent_class, other_class)
+	if hybrid != "" and rng.randf() < float(GameData.bal("hybrid_class_chance")):
+		return hybrid
+	var r := rng.randf()
+	if r < 0.55:
 		return parent_class
+	if other_class != "" and r < 0.8:
+		return other_class
+	var ids := GameData.starting_ids(GameData.classes)
 	return ids[rng.randi() % ids.size()]
+
+
+func _child_race(a: String, b: String) -> String:
+	if a == b:
+		return a
+	var hybrid := GameData.hybrid_of(GameData.races, a, b)
+	if hybrid != "" and rng.randf() < float(GameData.bal("hybrid_race_chance")):
+		return hybrid
+	return a if rng.randf() < 0.5 else b
 
 
 ## Starts a hunt battle. kind: "hunt" or "hunt_hard".
 func start_hunt(kind: String) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")[kind]
-	var pool := GameData.creatures.filter(func(c): return not c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"])
+	var in_era := GameData.creatures.filter(func(c): return not c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"])
+	if in_era.is_empty():
+		in_era = GameData.creatures.filter(func(c): return not c.get("boss", false))
+	# Each place breeds its own monsters; if none of them roam in this era, anything in the era will do.
+	var biomes: Array = world.here().get("biomes", [])
+	var pool := in_era.filter(func(c): return (c.get("biomes", []) as Array).any(func(b): return b in biomes))
 	if pool.is_empty():
-		pool = GameData.creatures.filter(func(c): return not c.get("boss", false))
+		pool = in_era
+	var danger := float(world.here().get("danger", 1.0))
 	var n := rng.randi_range(int(cfg["min"]), int(cfg["max"]))
 	var foes: Array = []
 	for i in n:
-		foes.append(_make_enemy(pool[rng.randi() % pool.size()], float(cfg["scale"]), float(cfg["reward"])))
+		# Monsters come in around the heir's level: usually a fair fight, sometimes a dangerous one.
+		var lv_mult := rng.randf_range(float(cfg["level_min"]), float(cfg["level_max"])) * danger
+		var elite := rng.randf() < float(cfg["elite_chance"])
+		if elite:
+			lv_mult *= float(GameData.bal("elite_level_mult"))
+		var foe := _make_enemy(pool[rng.randi() % pool.size()], float(cfg["scale"]), float(cfg["reward"]), maxi(1, int(round(float(heir.level) * lv_mult))))
+		if elite:
+			foe["name"] = "Elite " + foe["name"]
+		foes.append(foe)
 	return _begin_battle(foes, kind)
 
 
@@ -327,7 +452,7 @@ func start_legend() -> GameBattle:
 	var boss := available_boss()
 	if boss.is_empty():
 		return null
-	return _begin_battle([_make_enemy(boss, 1.0, 1.0)], "legend")
+	return _begin_battle([_make_enemy(boss, 1.0, 1.0, int(boss.get("min_level", 1)))], "legend")
 
 
 var battle_kind: String = ""
@@ -336,19 +461,22 @@ var battle_kind: String = ""
 func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle = GameBattle.new(heir, foes, rng)
 	battle.slayer_bonus = slayer_map()
+	battle.weather = world.weather().get("combat", {})
+	battle.allies = party.battle_allies(self)
 	battle_kind = kind
 	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
 	return battle
 
 
-func _make_enemy(c: Dictionary, power: float, reward: float) -> Dictionary:
-	var s := GameData.enemy_scale(gen) * power
+## Enemies are built at `level`: hunts match the heir's level, legends have a fixed one.
+func _make_enemy(c: Dictionary, power: float, reward: float, level: int) -> Dictionary:
+	var s := GameData.enemy_scale(gen) * power * GameData.enemy_level_scale(level)
 	var hp := maxi(1, int(round(float(c["hp"]) * s)))
 	return {
-		"id": c["id"], "name": c["name"], "hp": hp, "max_hp": hp,
+		"id": c["id"], "name": c["name"], "level": level, "hp": hp, "max_hp": hp,
 		"atk": float(c["atk"]) * s, "def": float(c["defense"]) * s, "agi": c["agi"],
 		"color": c["color"], "element": c.get("element", ""), "boss": c.get("boss", false),
-		"xp": int(round(float(c["xp"]) * reward)),
+		"xp": int(round(float(c["xp"]) * reward * GameData.xp_level_scale(level))),
 		"gold": int(round(float(c["gold"]) * GameData.enemy_scale(gen) * reward)),
 		"heirloom": c.get("heirloom", ""), "bonus": c.get("bonus", 0.0),
 	}
@@ -369,6 +497,7 @@ func finish_battle() -> Array:
 				xp += int(e["xp"])
 				gold += int(e["gold"])
 				heir.kills[e["id"]] = int(heir.kills.get(e["id"], 0)) + 1
+				quests.on_kill(self, e["id"])
 				if e["boss"] and not slain_bosses.has(e["id"]):
 					slain_bosses[e["id"]] = gen
 					if e["heirloom"] != "":
@@ -421,17 +550,27 @@ func finish_battle() -> Array:
 
 
 func _finish_time(action: String, msgs: Array) -> Array:
+	return _pass_years(float(years_for(action)), msgs)
+
+
+## Time passes for the heir and the world: ageing, milestones, weather, death of old age.
+func _pass_years(years: float, msgs: Array) -> Array:
 	for m in msgs:
 		_say(m)
 	if state != "life":
 		return msgs
-	heir.age += float(years_for(action))
+	heir.age += years
+	world.advance(years, rng)
+	party.on_years(self, years, msgs)
 	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * 0.1)))
-	if heir.age >= float(GameData.bal("midlife_age")):
+	if heir.age >= heir.midlife_age():
 		_check_milestone("midlife")
 	if heir.age >= heir.lifespan * float(GameData.bal("elder_fraction")):
 		_check_milestone("elder_years")
-	if state == "life" and heir.age >= heir.lifespan:
+	# Covers every year since the last roll, including years lost to defeats and disasters.
+	var dies := rng.randf() < heir.old_age_death_chance(heir.hazard_age, heir.age)
+	heir.hazard_age = heir.age
+	if state == "life" and dies:
 		var dm := _die("old age")
 		for m in dm:
 			msgs.append(m)
@@ -450,7 +589,7 @@ func retire() -> Array:
 func _die(cause: String) -> Array:
 	var msgs: Array = []
 	var rec := {
-		"gen": gen, "name": heir.full_name(), "class_id": heir.class_id,
+		"gen": gen, "name": heir.full_name(), "class_id": heir.class_id, "race_id": heir.race_id,
 		"traits": heir.traits.map(func(t): return GameData.trait_name(t)),
 		"level": heir.level, "age": int(heir.age), "cause": cause, "gold": heir.gold,
 		"battles_won": heir.battles_won, "kills": heir.kills.duplicate(),
@@ -463,8 +602,9 @@ func _die(cause: String) -> Array:
 	if cause == "slain in battle":
 		if killer_id != "":
 			_add_echo("slayer", killer_id, "%s fell to %s" % [heir.name, _creature_name(killer_id)], 0.15)
-	elif heir.level >= 6:
-		_add_echo("glory", "life", "%s lived a celebrated life" % heir.name, clampf(0.02 * float(heir.level), 0.0, 0.2))
+	elif heir.level >= glory_level(heir):
+		var strength := 0.1 * float(heir.level) / glory_level(heir)
+		_add_echo("glory", "life", "%s lived a celebrated life" % heir.name, clampf(strength, 0.0, 0.2))
 	var kids: Array = heir.children
 	if kids.is_empty():
 		msgs.append("%s left no children. Distant cousins step forward." % heir.name)
@@ -477,6 +617,12 @@ func _die(cause: String) -> Array:
 	return msgs
 
 
+## Level needed for a "celebrated life"; longer-lived heirs must reach higher.
+func glory_level(h: GameHeir) -> float:
+	var span_ratio := maxf(1.0, h.lifespan / float(GameData.bal("glory_reference_lifespan")))
+	return float(GameData.bal("glory_min_level")) * pow(span_ratio, 0.7)
+
+
 func _cousins() -> Array:
 	var out: Array = []
 	for i in 2:
@@ -485,7 +631,8 @@ func _cousins() -> Array:
 		c.id = _take_id()
 		c.name = GameInheritance.random_name(rng)
 		c.surname = dynasty_name
-		c.class_id = _child_class(heir.class_id)
+		c.race_id = heir.race_id
+		c.class_id = _child_class(heir.class_id, "")
 		c.traits = res["traits"]
 		c.dormant = res["dormant"]
 		c.parent_names = ["(distant cousin of %s)" % heir.name]
@@ -511,9 +658,7 @@ func choose_heir(index: int) -> Array:
 		c.archetype_bonus = a["bonus"].duplicate()
 		msgs.append("%s is a %s. %s" % [c.name, a["name"], a["desc"]])
 		if pending_archetype == "rebel":
-			var ids: Array = GameData.classes.keys()
-			ids.sort()
-			ids = ids.filter(func(x): return x != parent.class_id)
+			var ids := GameData.starting_ids(GameData.classes).filter(func(x): return x != parent.class_id)
 			c.class_id = ids[rng.randi() % ids.size()]
 			msgs.append("%s rejects the family trade and becomes a %s." % [c.name, c.cls()["name"]])
 		if pending_archetype == "redeemer":
@@ -524,14 +669,21 @@ func choose_heir(index: int) -> Array:
 					msgs.append("%s shed the burden of %s (now dormant)." % [c.name, GameData.trait_name(t)])
 					break
 	pending_archetype = ""
+	world.visit(GameData.world["start"])
 	_setup_new_heir(c)
+	# The heir inherits what the family has left: its gold and the items bought.
 	c.gold = int(float(parent.gold) * float(GameData.bal("gold_inherit_fraction")))
+	c.potions = maxi(c.potions, parent.potions)
 	var bonus_gold: int = int(GameFate.ARCHETYPES.get(c.archetype, {}).get("gold", 0))
 	if bonus_gold > 0:
 		c.gold += int(float(bonus_gold) * GameData.enemy_scale(gen))
+	# Gear and carried items pass down with the house.
+	c.equipment = parent.equipment.duplicate()
+	c.inventory = parent.inventory.duplicate()
 	c.refresh_derived()
 	c.full_heal()
 	heir = c
+	party.on_succession(self, msgs)
 	candidates = []
 	state = "life"
 	_say("Generation %d: %s takes up the family name." % [gen, c.full_name()])
@@ -552,7 +704,8 @@ func to_dict() -> Dictionary:
 		"heirlooms": heirlooms, "slain_bosses": slain_bosses, "pending_archetype": pending_archetype,
 		"candidates": candidates.map(func(c): return c.to_dict()), "last_death": last_death,
 		"journal": journal.slice(maxi(0, journal.size() - 60)), "next_id": next_id, "total_hunts": total_hunts,
-		"killer_id": killer_id,
+		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
+		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
 	}
 
 
@@ -582,6 +735,11 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.next_id = int(d["next_id"])
 	g.total_hunts = int(d["total_hunts"])
 	g.killer_id = d.get("killer_id", "")
+	g.world = GameWorld.from_dict(d["world"]) if d.has("world") else GameWorld.create(g.rng)
+	g.flags = d.get("flags", {})
+	g.quests = GameQuests.from_dict(d.get("quests", {}))
+	g.party = GameParty.from_dict(d.get("party", {}))
+	g.pending_event = d.get("pending_event", {})
 	return g
 
 

@@ -7,6 +7,8 @@ var enemies: Array = []        # [{id,name,hp,max_hp,atk,def,agi,color,element,x
 var rng: RandomNumberGenerator
 var damage_bonus: float = 0.0  # from legacy echoes
 var slayer_bonus: Dictionary = {}  # creature id -> extra damage fraction
+var weather: Dictionary = {}       # combat modifiers from the weather: dodge, crit, flee, mp_regen
+var allies: Array = []             # companions fighting beside the heir (see GameParty)
 var result: String = ""        # "", "victory", "defeat", "fled"
 var defending: bool = false
 var turn: int = 0
@@ -50,22 +52,24 @@ func _calc_damage(power: float, mult: float, e: Dictionary, pierce: float, crit_
 	var dmg: float = maxf(1.0, power * mult - float(e["def"]) * (1.0 - pierce) * 0.5)
 	dmg *= rng.randf_range(0.9, 1.1)
 	dmg *= 1.0 + damage_bonus + float(slayer_bonus.get(e["id"], 0.0))
-	var crit := rng.randf() < heir.crit_chance() + crit_bonus
+	var crit := rng.randf() < heir.crit_chance() + crit_bonus + float(weather.get("crit", 0.0))
 	if crit:
 		dmg *= 1.75
 	return {"amount": maxi(1, int(round(dmg))), "crit": crit}
 
 
-func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: float) -> void:
+func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: float) -> int:
 	var e: Dictionary = enemies[idx]
 	var r := _calc_damage(power, mult, e, pierce, crit_bonus)
 	var amount: int = r["amount"]
+	var hp_before: int = e["hp"]
 	e["hp"] = maxi(0, e["hp"] - amount)
 	events.append({"type": "damage", "side": "enemy", "index": idx, "amount": amount, "crit": r["crit"]})
 	_say("%s hits %s for %d%s." % [heir.name, e["name"], amount, " (CRIT!)" if r["crit"] else ""])
 	if e["hp"] == 0:
 		events.append({"type": "death", "side": "enemy", "index": idx})
 		_say("%s is defeated." % e["name"])
+	return hp_before - int(e["hp"])
 
 
 func attack(target: int) -> void:
@@ -84,28 +88,45 @@ func skill_info(i: int) -> Dictionary:
 	return heir.cls()["skills"][i]
 
 
+## Skill costs grow with level, so max MP growth buys stronger casts rather than endless heals.
+func skill_cost(i: int) -> int:
+	var growth := float(GameData.bal("skill_cost_growth_per_level"))
+	return int(round(float(skill_info(i)["mp"]) * (1.0 + growth * float(heir.level - 1))))
+
+
 func can_use_skill(i: int) -> bool:
-	return result == "" and heir.mp >= int(skill_info(i)["mp"])
+	return result == "" and heir.mp >= skill_cost(i)
 
 
 func use_skill(i: int, target: int) -> void:
 	if not _begin_action() or not can_use_skill(i):
 		return
 	var s := skill_info(i)
-	heir.mp -= int(s["mp"])
+	heir.mp -= skill_cost(i)
 	if s["type"] == "heal":
 		var amt := int(round(float(heir.max_hp()) * float(s["pct_max_hp"]) * (1.0 + heir.trait_total("healing_power"))))
 		_heal_player(amt, s["name"])
 	else:
 		target = _valid_target(target)
-		var power: float = heir.magic_power() if s["stat"] == "mag" else heir.attack_power()
+		var power: float
+		match str(s.get("stat", "str")):
+			"mag":
+				power = heir.magic_power()
+			"both":  # hybrid classes draw on body and spell alike
+				power = (heir.attack_power() + heir.magic_power()) * 0.6
+			_:
+				power = heir.attack_power()
 		var hits: int = int(s.get("hits", 1))
+		var dealt := 0
 		for h in hits:
 			if enemies[target]["hp"] <= 0:
 				target = first_target()
 				if target < 0:
 					break
-			_hit_enemy(target, power, float(s["mult"]), float(s.get("pierce", 0.0)), float(s.get("crit_bonus", 0.0)))
+			dealt += _hit_enemy(target, power, float(s["mult"]), float(s.get("pierce", 0.0)), float(s.get("crit_bonus", 0.0)))
+		var drain := float(s.get("drain", 0.0))
+		if drain > 0.0 and dealt > 0:
+			_heal_player(int(round(float(dealt) * drain)), s["name"])
 	_end_player_turn()
 
 
@@ -131,7 +152,7 @@ func use_potion() -> void:
 func flee() -> void:
 	if not _begin_action():
 		return
-	var chance := clampf(0.45 + heir.trait_total("stealth") + heir.trait_total("intimidation") * 0.5 + heir.dodge_chance() * 0.3, 0.1, 0.9)
+	var chance := clampf(0.45 + heir.trait_total("stealth") + heir.trait_total("intimidation") * 0.5 + heir.dodge_chance() * 0.3 + float(weather.get("flee", 0.0)), 0.1, 0.9)
 	var boss := false
 	for e in enemies:
 		boss = boss or e.get("boss", false)
@@ -172,12 +193,13 @@ func _end_player_turn() -> void:
 			return
 	defending = false
 	turn += 1
-	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * float(GameData.bal("mp_regen_per_turn_pct")))))
+	var regen := maxf(0.0, float(GameData.bal("mp_regen_per_turn_pct")) + float(weather.get("mp_regen", 0.0)))
+	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * regen)))
 
 
 func _enemy_act(i: int) -> void:
 	var e: Dictionary = enemies[i]
-	if rng.randf() < heir.dodge_chance():
+	if rng.randf() < clampf(heir.dodge_chance() + float(weather.get("dodge", 0.0)), 0.0, 0.6):
 		events.append({"type": "miss", "side": "player", "index": i})
 		_say("%s attacks, but %s dodges." % [e["name"], heir.name])
 		return
