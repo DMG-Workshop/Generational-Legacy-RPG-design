@@ -1,4 +1,10 @@
 {
+  "effect_labels": {
+    "melee_damage": "damage", "strength": "strength", "element_power": "spell power", "divine_magic_power": "holy power",
+    "dark_magic_power": "dark power", "max_hp": "max HP", "max_mp": "max MP", "defense": "defense", "luck": "crit",
+    "reflexes": "dodge", "fire_resistance": "fire resistance", "xp_gain": "XP", "healing_power": "healing",
+    "persuasion": "persuasion", "stealth": "escape", "work_gold": "work pay"
+  },
   "items": [
     {"id": "iron_sword", "name": "Iron Sword", "slot": "weapon", "tier": 1, "shop": "forge", "price": 50, "description": "Plain, honest steel's poorer cousin.", "effects": [{"stat": "melee_damage", "value": 0.1}]},
     {"id": "oak_staff", "name": "Oak Staff", "slot": "weapon", "tier": 1, "shop": "forge", "price": 50, "description": "A walking stick that learned a few tricks.", "effects": [{"stat": "element_power", "value": 0.1}]},
