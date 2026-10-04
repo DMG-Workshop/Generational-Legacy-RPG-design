@@ -462,7 +462,7 @@ func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle = GameBattle.new(heir, foes, rng)
 	battle.slayer_bonus = slayer_map()
 	battle.weather = world.weather().get("combat", {})
-	battle.allies = party.battle_allies(self)
+	battle.add_allies(party.battle_allies(self))
 	battle_kind = kind
 	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
 	return battle

@@ -37,6 +37,18 @@ func first_target() -> int:
 	return l[0] if l.size() > 0 else -1
 
 
+## Companions join before the first blow. Foes facing a party are hardier, so allies make a
+## fight safer more than shorter.
+func add_allies(units: Array) -> void:
+	allies = units
+	var hp_mult := 1.0 + float(GameData.bal("companion_foe_hp")) * float(units.size())
+	var atk_mult := 1.0 + float(GameData.bal("companion_foe_atk")) * float(units.size())
+	for e in enemies:
+		e["max_hp"] = maxi(1, int(round(float(e["max_hp"]) * hp_mult)))
+		e["hp"] = maxi(1, int(round(float(e["hp"]) * hp_mult)))
+		e["atk"] = float(e["atk"]) * atk_mult
+
+
 ## Indices of allies still standing; an ally at 0 HP is out for the rest of the battle.
 func conscious_allies() -> Array:
 	var out: Array = []
@@ -78,13 +90,14 @@ func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: 
 	var e: Dictionary = enemies[idx]
 	var r := _calc_damage(power, mult, e, pierce, crit_bonus, by)
 	var amount: int = r["amount"]
+	var hp_before: int = e["hp"]
 	e["hp"] = maxi(0, e["hp"] - amount)
 	events.append({"type": "damage", "side": "enemy", "index": idx, "amount": amount, "crit": r["crit"], "by": by})
 	_say("%s hits %s for %d%s." % [_unit(by).name, e["name"], amount, " (CRIT!)" if r["crit"] else ""])
 	if e["hp"] == 0:
 		events.append({"type": "death", "side": "enemy", "index": idx})
 		_say("%s is defeated." % e["name"])
-	return amount
+	return hp_before - int(e["hp"])
 
 
 func attack(target: int) -> void:
@@ -205,7 +218,7 @@ func flee() -> void:
 	if rng.randf() < chance:
 		result = "fled"
 		events.append({"type": "flee"})
-		_say("%s escapes!" % heir.name if allies.is_empty() else "%s and companions escape!" % heir.name)
+		_say("%s escapes!" % heir.name if allies.is_empty() else "%s and the party escape!" % heir.name)
 		return
 	_say("%s fails to escape!" % heir.name)
 	_end_player_turn()
@@ -261,21 +274,16 @@ func _end_player_turn() -> void:
 		a.mp = mini(a.max_mp(), a.mp + int(ceil(float(a.max_mp()) * regen)))
 
 
-## A companion's turn: mend the heir when they are badly hurt, then itself, otherwise fight.
+## A companion's turn: mend the heir when they are badly hurt, otherwise fight.
 func _ally_act(ai: int) -> void:
 	var a: GameHeir = allies[ai]
 	var skills: Array = a.cls()["skills"]
 	var heal := unit_skill_of(a, "heal")
-	if heal >= 0 and a.mp >= unit_skill_cost(a, heal):
-		var s: Dictionary = skills[heal]
-		if float(heir.hp) < float(heir.max_hp()) * float(GameData.bal("companion_heal_below")):
-			a.mp -= unit_skill_cost(a, heal)
-			_heal_player(heal_amount(a, heir, s), s["name"], ai)
-			return
-		if float(a.hp) < float(a.max_hp()) * float(GameData.bal("companion_self_heal_below")):
-			a.mp -= unit_skill_cost(a, heal)
-			_heal_ally(ai, heal_amount(a, a, s), s["name"])
-			return
+	var hurt := float(heir.hp) < float(heir.max_hp()) * float(GameData.bal("companion_heal_below"))
+	if hurt and heal >= 0 and a.mp >= unit_skill_cost(a, heal):
+		a.mp -= unit_skill_cost(a, heal)
+		_heal_player(heal_amount(a, heir, skills[heal]), skills[heal]["name"], ai)
+		return
 	var target := _valid_target(focus)
 	var strike := unit_skill_of(a, "damage")
 	if strike >= 0 and a.mp >= unit_skill_cost(a, strike):

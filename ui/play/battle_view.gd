@@ -137,8 +137,15 @@ func _build_actors() -> void:
 			eye.position = Vector2(w * ex, h * 0.22)
 			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(eye)
-		var lbl := Kit.label("%s  Lv%d" % [e["name"], int(e.get("level", 1))], 14)
+		var lv := Kit.label("Lv %d" % int(e.get("level", 1)), 13, Kit.ACCENT if str(e["name"]).begins_with("Elite") else Kit.TEXT)
+		lv.add_theme_constant_override("outline_size", 4)
+		lv.add_theme_color_override("font_outline_color", Color.BLACK)
+		lv.position = Vector2(4, h - 22)
+		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		body.add_child(lv)
+		var lbl := Kit.label(e["name"], 14)
 		lbl.position = Vector2(0, h + 6)
+		lbl.z_index = 1
 		root.add_child(lbl)
 		var hp := Kit.bar(Kit.BAD, e["max_hp"], e["hp"], Vector2(w, 10))
 		hp.position = Vector2(0, h + 28)
@@ -283,6 +290,7 @@ func _play_events(events: Array) -> void:
 					_float_text(hero_node.position + Vector2(40, 0), "+%d" % ev["amount"], Kit.GOOD)
 					hero_hp.value += float(ev["amount"])
 			"miss":
+				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 				if ev["side"] == "ally":
 					_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.DIM)
 				else:
@@ -303,7 +311,7 @@ func _play_events(events: Array) -> void:
 func _step_ally_hp(i: int, delta: int) -> void:
 	var an: Dictionary = ally_nodes[i]
 	an["hp"].value = clampf(an["hp"].value + float(delta), 0.0, an["hp"].max_value)
-	an["info"].text = "Lv%d  HP %d/%d" % [b.allies[i].level, int(an["hp"].value), int(an["hp"].max_value)]
+	an["info"].text = "Lv%d  HP %d" % [b.allies[i].level, int(an["hp"].value)]
 
 
 func _knock_out(i: int) -> void:
@@ -364,7 +372,7 @@ func _update_view() -> void:
 		an["hp"].value = a.hp
 		an["mp"].max_value = maxf(1.0, a.max_mp())
 		an["mp"].value = a.mp
-		an["info"].text = "Lv%d  HP %d/%d" % [a.level, a.hp, a.max_hp()]
+		an["info"].text = "Lv%d  HP %d" % [a.level, a.hp]
 
 
 func _show_result() -> void:

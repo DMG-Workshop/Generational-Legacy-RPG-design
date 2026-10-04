@@ -60,7 +60,7 @@ func _build() -> void:
 
 	right.add_child(Kit.label("Your party (%d / %d)" % [p.members.size(), GameParty.max_size()], 19, Kit.ACCENT))
 	if p.members.is_empty():
-		right.add_child(_dim("No one rides with %s. Hirelings fight beside the heir, draw blows away and mend wounds." % d.heir.name))
+		right.add_child(_dim("No one rides with %s. Hirelings fight beside the heir, take some of the blows and mend wounds, though foes come on harder against a crowd." % d.heir.name))
 	for m in p.members:
 		right.add_child(_member_card(m))
 	var past := _records()
@@ -171,15 +171,18 @@ func _offer_card(id: String) -> Control:
 	if p.history.has(id) and not (p.history[id]["fallen"] as Array).is_empty():
 		who = "Takes up the work of %s, who fell for your house. %s" % [" and ".join(p.history[id]["fallen"]), who]
 	v.add_child(_wrap(who, 14))
-	v.add_child(Kit.label(_preview(u), 14))
+	v.add_child(_wrap(_preview(u), 14))
 	v.add_child(_wrap(_skills(u), 13, Kit.DIM))
 	var fee := p.fee(d, id)
-	side.add_child(Kit.label("Fee: %s" % ("none, served before" if fee == 0 else "%d gold" % fee), 14, Kit.GOOD if fee == 0 else Kit.TEXT))
+	side.add_child(Kit.label("Fee: %s" % ("waived" if fee == 0 else "%d gold" % fee), 14, Kit.GOOD if fee == 0 else Kit.TEXT))
 	side.add_child(Kit.label("Upkeep: %d a year" % p.upkeep(d, id), 14))
 	var block := p.hire_block(d, id)
 	var btn := Kit.button("Hire", func(): _hire(id), Vector2(150, 34))
 	btn.disabled = block != ""
-	btn.tooltip_text = block if block != "" else "Hire %s." % u.name
+	if block != "":
+		btn.tooltip_text = block
+	else:
+		btn.tooltip_text = "%s served the house before and asks no fee." % u.name if fee == 0 else "Hire %s." % u.name
 	side.add_child(btn)
 	if block != "":
 		var why := Kit.label(block, 12, Kit.BAD)

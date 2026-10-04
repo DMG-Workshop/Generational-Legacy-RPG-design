@@ -44,7 +44,12 @@ static func build_unit(id: String, level: int, gen: int, name: String = "") -> G
 	u.race_id = c.get("race", "human")
 	u.gen = gen
 	u.level = maxi(1, level)
-	u.archetype_bonus = (c.get("bonus", {}) as Dictionary).duplicate()
+	# Hirelings fight at a share of an heir's strength; the companion's own bonus comes on top.
+	var bonus: Dictionary = (c.get("bonus", {}) as Dictionary).duplicate()
+	var power := float(GameData.bal("companion_power"))
+	bonus["all_stats"] = (1.0 + float(bonus.get("all_stats", 0.0))) * power - 1.0
+	bonus["hp"] = float(bonus.get("hp", 0.0)) + power - 1.0
+	u.archetype_bonus = bonus
 	u.lifespan = u.compute_lifespan()
 	u.full_heal()
 	u.set_meta("companion", id)
@@ -113,13 +118,16 @@ func locked_reason(d: GameDynasty, id: String) -> String:
 	for f in req.get("flags", []):
 		if not d.flags.has(f):
 			return "Waiting on a deed your house has not done."
+	for place_id in req.get("visited", []):
+		if place_id not in d.world.visited:
+			return "Talks only to those who have walked %s." % GameWorld.place(place_id).get("name", place_id)
 	if d.heir.level < int(req.get("min_level", 1)):
 		return "Wants an heir of level %d." % int(req.get("min_level", 1))
 	return ""
 
 
 ## Companions who drink at this tavern and would hear an offer (met or not).
-func at_tavern(d: GameDynasty, place_id: String) -> Array:
+func at_tavern(_d: GameDynasty, place_id: String) -> Array:
 	var out: Array = []
 	for c in GameData.companions:
 		if place_id in c.get("where", []) and not has_member(c["id"]):
@@ -137,6 +145,8 @@ func available_here(d: GameDynasty) -> Array:
 func hire_block(d: GameDynasty, id: String) -> String:
 	if d.state != "life":
 		return "No one hires in mourning."
+	if has_member(id):
+		return "%s already rides with %s." % [display_name(id), d.heir.name]
 	if not d.world.has_service("tavern") or id not in at_tavern(d, d.world.location):
 		return "%s does not drink here." % display_name(id)
 	var lock := locked_reason(d, id)
@@ -248,7 +258,7 @@ func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 		m["due"] = float(m["due"]) + float(upkeep(d, m["id"])) * years
 		if not _settle(d, m):
 			_part(d, m, "left")
-			var text := "%s's purse is empty, so %s packs up and walks out. Wages will be owed if they are ever wanted back." % [d.heir.name, m["name"]]
+			var text := "Wages go unpaid and %s walks out on %s. Winning them back will cost the full fee." % [m["name"], d.heir.name]
 			d._say(text)
 			msgs.append(text)
 			continue

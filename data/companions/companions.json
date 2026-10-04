@@ -50,7 +50,7 @@
       "race": "dwarf", "class": "warden",
       "personality": "Tunnel scout. Went quiet after Deepstone and only talks about what he saw there to those who have seen it.",
       "where": ["ironford"], "fee": 110, "upkeep": 3,
-      "requires": {"min_level": 12, "min_gen": 1, "flags": ["deepstone_surveyed"]},
+      "requires": {"min_level": 12, "min_gen": 1, "flags": [], "visited": ["deepstone_halls"]},
       "bonus": {"all_stats": 0.05, "agi": 0.1},
       "hint": "A grey-bearded scout asks every stranger whether they have been down to Deepstone Halls."
     },
