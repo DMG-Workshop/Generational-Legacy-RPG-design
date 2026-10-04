@@ -216,6 +216,8 @@ func _coming_of_age() -> void:
 # ---------------------------------------------------------------- actions
 
 func years_for(action: String) -> int:
+	if action == "event":   # a fight an event led to; exploring already took its year
+		return int(GameData.bal("event_fight_years"))
 	return int(GameData.bal("years_per_action").get(action, 3))
 
 
