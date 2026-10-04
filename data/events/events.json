@@ -73,6 +73,17 @@
           }
         },
         {
+          "text": "Take up a drunk lordling's challenge to a bout",
+          "requires": {"class": ["duelist", "spellblade"]},
+          "check": {"attr": "agi", "dc": 14, "bonus_if": [{"class": "duelist", "value": 3}, {"class": "spellblade", "value": 1}]},
+          "outcomes": {
+            "crit_success": {"text": "Three passes, and his blade is in the rushes. Lady Orsenne laughs loudest of all and sends you a purse.", "xp": 35, "gold": 40, "echo": {"kind": "glory", "strength": 0.07, "text": "{heir} disarmed a river lord at Lady Orsenne's table"}},
+            "success": {"text": "First touch to you. He bows stiffly and drinks to your health.", "xp": 25, "gold": 15},
+            "failure": {"text": "He is better than he looked. You yield with a cut sleeve and most of your dignity.", "xp": 10, "hp_pct": -0.1},
+            "crit_failure": {"text": "You slip on spilled wine and he opens your arm to the bone.", "xp": 5, "hp_pct": -0.25}
+          }
+        },
+        {
           "text": "Decline politely",
           "outcomes": {"always": {"text": "The herald bows and moves on to the next likely face."}}
         }
@@ -200,13 +211,14 @@
       "title": "Lanterns at Low Tide",
       "text": "Boats are landing casks in the cove below the harbour wall, long after the customs house has shut.",
       "where": {"places": ["brinehaven"]},
+      "requires": {"not_flags": ["smugglers_broken"]},
       "weight": 9,
       "choices": [
         {
           "text": "Tell the harbourmaster",
           "check": {"attr": "persuasion", "dc": 12, "bonus_if": [{"trait": "noble_blood", "value": 2}]},
           "outcomes": {
-            "crit_success": {"text": "The harbourmaster takes the whole ring that night and pays you a finder's share.", "gold": 45, "xp": 25, "echo": {"kind": "glory", "strength": 0.06, "text": "{heir} broke the Brinehaven smuggling ring"}},
+            "crit_success": {"text": "The harbourmaster takes the whole ring that night and pays you a finder's share.", "gold": 45, "xp": 25, "echo": {"kind": "glory", "strength": 0.06, "text": "{heir} broke the Brinehaven smuggling ring"}, "flag": "smugglers_broken"},
             "success": {"text": "Customs men seize the casks. A small reward follows.", "gold": 25, "xp": 15},
             "failure": {"text": "He thanks you and does nothing. By morning the casks are gone.", "xp": 5},
             "crit_failure": {"text": "The harbourmaster takes a cut from the smugglers. They hear your name before you reach the inn.", "xp": 5, "fight": {"foes": ["bandit", "bandit"], "level": 1.0}}
@@ -220,6 +232,17 @@
             "success": {"text": "You haul casks till dawn and are paid in silver.", "gold": 35, "xp": 8},
             "failure": {"text": "Customs men come down the steps with lanterns. You lose your share and nearly your boots.", "xp": 5},
             "crit_failure": {"text": "You are caught with a cask on your shoulder. The fine is steep.", "gold": -40, "echo": {"kind": "infamy", "strength": 0.06, "text": "{heir} was caught smuggling in Brinehaven"}}
+          }
+        },
+        {
+          "text": "Swim out and cut their boats loose",
+          "requires": {"class": ["ninja", "arcane_trickster"]},
+          "check": {"attr": "stealth", "dc": 13, "bonus_if": [{"class": "ninja", "value": 3}, {"class": "arcane_trickster", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "Every boat drifts off on the ebb. By dawn the casks are bobbing in the harbour and the customs house pays you for the tip.", "xp": 30, "gold": 50},
+            "success": {"text": "Two boats drift off on the tide. The smugglers spend the night blaming each other.", "xp": 25, "gold": 15},
+            "failure": {"text": "A lantern swings your way. You go back over the wall empty-handed.", "xp": 5},
+            "crit_failure": {"text": "You climb out of the water into a boat full of very surprised men.", "fight": {"foes": ["bandit", "bandit"], "level": 1.0}}
           }
         },
         {
@@ -293,6 +316,17 @@
             "success": {"text": "A hard season, honestly paid.", "xp": 35, "gold": 25, "years": 1},
             "failure": {"text": "Frostbite sends you home early with half pay.", "xp": 15, "gold": 10, "hp_pct": -0.15, "years": 1},
             "crit_failure": {"text": "Raiders catch your patrol in the open. You come home on a cart.", "xp": 10, "hp_pct": -0.35, "years": 1}
+          }
+        },
+        {
+          "text": "Take command of a squad",
+          "requires": {"class": ["warrior"], "traits": ["warriors_steel"], "any": true},
+          "check": {"attr": "str", "dc": 14, "bonus_if": [{"class": "warrior", "value": 2}, {"trait": "warriors_steel", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "Your squad holds the ford for six days and loses no one. The captain writes your name in his report to the king.", "xp": 55, "gold": 50, "years": 1, "echo": {"kind": "glory", "strength": 0.07, "text": "{heir} held the northern ford for the king"}},
+            "success": {"text": "A hard season. Your squad comes home, most of it.", "xp": 40, "gold": 35, "years": 1},
+            "failure": {"text": "Raiders slip past your pickets twice. You are relieved of command at midwinter.", "xp": 15, "gold": 10, "hp_pct": -0.1, "years": 1},
+            "crit_failure": {"text": "An ambush at the ford. You carry two of your men home and are carried the rest of the way.", "xp": 10, "hp_pct": -0.35, "years": 1}
           }
         },
         {
@@ -555,6 +589,17 @@
           }
         },
         {
+          "text": "Ask the spirits in the lights what they want",
+          "requires": {"class": ["shaman"], "traits": ["faetouched", "fully_fae"], "any": true},
+          "check": {"attr": "mag", "dc": 12, "bonus_if": [{"class": "shaman", "value": 4}, {"trait": "faetouched", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "They are the drowned, lost and cold. You lead them to the deep pool where they can rest, and in thanks they show you where they fell.", "xp": 35, "gold": 50, "fate": -0.01},
+            "success": {"text": "They want only to be remembered. You say their names after them.", "xp": 25, "fate": -0.005},
+            "failure": {"text": "The lights flicker and draw away from you.", "xp": 5},
+            "crit_failure": {"text": "They want company. You wake waist-deep in black water.", "xp": 5, "hp_pct": -0.2}
+          }
+        },
+        {
           "text": "Mark a safe path with stones and leave",
           "outcomes": {"always": {"text": "Someone will thank you for it one day.", "xp": 5, "fate": -0.005}}
         }
@@ -586,6 +631,17 @@
           }
         },
         {
+          "text": "Talk the mule out of the mud",
+          "requires": {"class": ["druid"], "race": ["beastkin"], "any": true},
+          "check": {"attr": "mag", "dc": 10, "bonus_if": [{"class": "beastmaster", "value": 4}, {"class": "druid", "value": 2}, {"race": "beastkin", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "You hum low in your chest. The mule stops thrashing, finds its feet and walks out as if it had meant to all along. The pedlar pays you from the pack.", "xp": 25, "gold": 30},
+            "success": {"text": "The mule calms at your voice and lets you lead it out.", "xp": 20, "gold": 15},
+            "failure": {"text": "The mule will not listen. You get the pedlar out instead.", "xp": 8},
+            "crit_failure": {"text": "The mule panics at your touch and kicks you into the mud.", "xp": 5, "hp_pct": -0.15}
+          }
+        },
+        {
           "text": "Leave them to it",
           "outcomes": {"always": {"text": "The pedlar's curses follow you through the reeds."}}
         }
@@ -610,6 +666,17 @@
             "success": {"text": "Dull letters, but there is coin sewn into the lining.", "gold": 30, "xp": 15},
             "failure": {"text": "The ink has frozen to smears.", "xp": 5},
             "crit_failure": {"text": "Whatever killed the courier was waiting for someone to stop. It was waiting for you.", "fight": {"foes": ["local", "local"], "level": 1.0}}
+          }
+        },
+        {
+          "text": "Read the tracks round the horse",
+          "requires": {"class": ["ranger"]},
+          "check": {"attr": "agi", "dc": 12, "bonus_if": [{"class": "warden", "value": 3}, {"class": "ranger", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "Claw marks, a drag trail, and a den two ridges over. Whatever lived there has moved on, but the last courier's purse is still in it.", "xp": 25, "gold": 50},
+            "success": {"text": "The tracks tell you what killed him and which way it went. You go the other way and warn the next village.", "xp": 20, "gold": 10},
+            "failure": {"text": "The snow has drifted over everything.", "xp": 5},
+            "crit_failure": {"text": "You follow the tracks straight into the thing that made them.", "xp": 5, "fight": {"foes": ["local"], "level": 1.0}}
           }
         },
         {
@@ -654,6 +721,17 @@
             "success": {"text": "The snow turns aside, grudgingly.", "xp": 30},
             "failure": {"text": "The mountain is not listening.", "xp": 10, "hp_pct": -0.2},
             "crit_failure": {"text": "The song breaks, and so does the slope.", "xp": 5, "hp_pct": -0.35}
+          }
+        },
+        {
+          "text": "Burn a hollow in the snow",
+          "requires": {"traits": ["mageblood", "ice_mage", "wild_mage"]},
+          "check": {"attr": "mag", "dc": 12, "bonus_if": [{"trait": "mageblood", "value": 2}, {"trait": "ice_mage", "value": 3}]},
+          "outcomes": {
+            "crit_success": {"text": "You melt a hollow into the slope and the slide roars over the top of it. You climb out into sunlight with steam rising off your coat.", "xp": 40},
+            "success": {"text": "The snow boils round you and most of the slide goes past.", "xp": 25},
+            "failure": {"text": "The spell gutters in the cold.", "xp": 10, "hp_pct": -0.2},
+            "crit_failure": {"text": "The blast loosens the rest of the slope.", "xp": 5, "hp_pct": -0.35}
           }
         }
       ]
@@ -719,6 +797,11 @@
             "failure": {"text": "Most of it is rotten.", "gold": 5},
             "crit_failure": {"text": "A beam rolls onto your leg.", "hp_pct": -0.1}
           }
+        },
+        {
+          "text": "Ask the sea to repay its debt",
+          "requires": {"flag": "drowned_priest_rests", "reason": "Requires: the drowned priest laid to rest by House {house}"},
+          "outcomes": {"always": {"text": "House {house} gave the drowned priest his rest. You wade into the hold and the sea draws back from you, just long enough.", "xp": 15, "gold": 60}}
         },
         {
           "text": "Say words for the drowned",
@@ -843,6 +926,11 @@
           }
         },
         {
+          "text": "Trade recipes with the cook",
+          "requires": {"race": ["halfling"]},
+          "outcomes": {"always": {"text": "You and the cook argue about saffron until midnight and part as friends. She sends you off with a flask of her own cordial.", "xp": 15, "potions": 1, "hp_pct": 0.2}}
+        },
+        {
           "text": "Share their fire and move on",
           "outcomes": {"always": {"text": "Peppered mutton, a song in a language you don't know, and a good night's sleep.", "xp": 10, "hp_pct": 0.15}}
         }
@@ -879,6 +967,17 @@
             "success": {"text": "You are gone before the drums stop.", "xp": 10},
             "failure": {"text": "A sentry spots you. Arrows chase you down the hill.", "xp": 5, "hp_pct": -0.15},
             "crit_failure": {"text": "You walk straight into their scouts.", "xp": 5, "fight": {"foes": ["local", "local"], "level": 1.0}}
+          }
+        },
+        {
+          "text": "Ride into their camp in black iron",
+          "requires": {"class": ["dread_knight"]},
+          "check": {"attr": "intimidation", "dc": 13, "bonus_if": [{"class": "dread_knight", "value": 4}, {"race": "orc", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "The drums stop. The chief looks at your armour, at the cold that rides with you, and offers you his axe hilt-first.", "xp": 45, "gold": 40, "echo": {"kind": "glory", "strength": 0.06, "text": "{heir} rode into an orc camp and was offered the chief's axe"}},
+            "success": {"text": "They do not like you, but they let you warm your hands and leave by daylight.", "xp": 30},
+            "failure": {"text": "The chief laughs. His warriors do not.", "xp": 10, "hp_pct": -0.15},
+            "crit_failure": {"text": "They have seen black iron before, and they did not run from it then either.", "xp": 5, "fight": {"foes": ["local", "local"], "level": 1.0}}
           }
         }
       ]
@@ -989,6 +1088,11 @@
           }
         },
         {
+          "text": "Raise your bow so they can see the maker's mark",
+          "requires": {"item": ["elven_bow"]},
+          "outcomes": {"always": {"text": "The voices go quiet. A warden drops from the branches to look at the mark, and after that you are a guest.", "xp": 30, "hp_pct": 0.3, "echo": {"kind": "glory", "strength": 0.05, "text": "{heir} was a guest of the wardens of {place}"}}}
+        },
+        {
           "text": "Turn back",
           "outcomes": {"always": {"text": "Their laughter follows you to the edge of the trees."}}
         }
@@ -1021,6 +1125,11 @@
             "failure": {"text": "The words fall flat in the dark.", "xp": 10},
             "crit_failure": {"text": "Something in the dark does not want to rest. It shoves you out of the alcove.", "xp": 5, "hp_pct": -0.15}
           }
+        },
+        {
+          "text": "Lay a holy token on the knight's breast",
+          "requires": {"item": ["prayer_beads", "holy_symbol", "saints_relic"]},
+          "outcomes": {"always": {"text": "You set the token on the carved knight and say a soldier's prayer. The air in the alcove warms, as if something old were grateful.", "xp": 25, "fate": -0.01}}
         },
         {
           "text": "Leave the dead their goods",
@@ -1059,6 +1168,17 @@
             "success": {"text": "They stand aside, and stay standing aside.", "xp": 35},
             "failure": {"text": "They have their orders, and their orders are older than you.", "fight": {"foes": ["skeleton"], "level": 1.0}},
             "crit_failure": {"text": "They turn on you as one.", "fight": {"foes": ["skeleton", "skeleton"], "level": 1.0}}
+          }
+        },
+        {
+          "text": "Set your shield and hold the corridor in the light",
+          "requires": {"class": ["paladin", "templar"]},
+          "check": {"attr": "divine_magic_power", "dc": 12, "bonus_if": [{"class": "paladin", "value": 3}, {"class": "templar", "value": 3}]},
+          "outcomes": {
+            "crit_success": {"text": "Light pours from your shield. The dead fall apart where they stand, and the corridor is quiet for the first time in three hundred years.", "xp": 50, "echo": {"kind": "glory", "strength": 0.06, "text": "{heir} laid a dead patrol to rest in {place}"}},
+            "success": {"text": "They break against your light and fall back into the dark.", "xp": 35},
+            "failure": {"text": "Your light wavers. They come on.", "fight": {"foes": ["skeleton"], "level": 1.0}},
+            "crit_failure": {"text": "The light fails you at the worst moment.", "fight": {"foes": ["skeleton", "skeleton"], "level": 1.0}}
           }
         }
       ]
@@ -1130,6 +1250,17 @@
           }
         },
         {
+          "text": "Hold the roof up with a spell",
+          "requires": {"class": ["mage"]},
+          "check": {"attr": "mag", "dc": 13, "bonus_if": [{"class": "mage", "value": 2}, {"trait": "mageblood", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "You hold the whole tunnel on your will and walk through slowly enough to pick up a dead miner's purse.", "xp": 30, "gold": 30},
+            "success": {"text": "The props groan, but your spell holds until you are through.", "xp": 20},
+            "failure": {"text": "The spell slips. You run the last stretch.", "xp": 5, "hp_pct": -0.15},
+            "crit_failure": {"text": "The roof comes down on your spell, and on you.", "xp": 5, "hp_pct": -0.35}
+          }
+        },
+        {
           "text": "Find another way",
           "outcomes": {"always": {"text": "The long way round takes most of a season.", "xp": 5}}
         }
@@ -1164,6 +1295,17 @@
           }
         },
         {
+          "text": "Wake the runes on the anvil",
+          "requires": {"class": ["spellblade"], "traits": ["mageblood"], "any": true},
+          "check": {"attr": "mag", "dc": 13, "bonus_if": [{"class": "spellblade", "value": 3}, {"trait": "mageblood", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "The runes drink your magic and blaze. You quench a blade in the trough and it comes out humming.", "xp": 40, "item": "spell_saber"},
+            "success": {"text": "The runes flicker and remember. An hour of their light teaches you more than a year of books.", "xp": 35},
+            "failure": {"text": "The runes stay dark.", "xp": 10},
+            "crit_failure": {"text": "The runes wake angry, and the backlash throws you across the forge.", "xp": 5, "hp_pct": -0.25}
+          }
+        },
+        {
           "text": "Leave the dead forge in peace",
           "outcomes": {"always": {"text": "The anvil's runes seem to dim as you leave."}}
         }
@@ -1190,6 +1332,17 @@
           "text": "Walk through the heat below",
           "requires": {"race": ["dragonborn"], "traits": ["dragonblood", "draconic_form", "wyrm_eternal"], "any": true},
           "outcomes": {"always": {"text": "The heat that would cook anyone else only warms you. You cross on the river's crust.", "xp": 35, "gold": 25}}
+        },
+        {
+          "text": "Run the chains",
+          "requires": {"class": ["monk"]},
+          "check": {"attr": "agi", "dc": 12, "bonus_if": [{"class": "monk", "value": 3}]},
+          "outcomes": {
+            "crit_success": {"text": "You run the chain like a temple rail and lift a dead man's purse off the far post as you pass.", "xp": 40, "gold": 40},
+            "success": {"text": "Balance, breath, and the far side.", "xp": 30},
+            "failure": {"text": "The chain swings. You make it across with a burned palm.", "xp": 10, "hp_pct": -0.15},
+            "crit_failure": {"text": "The chain parts behind you and you swing down into the heat.", "xp": 5, "hp_pct": -0.4}
+          }
         },
         {
           "text": "Find the long way round",
@@ -1269,6 +1422,17 @@
           }
         },
         {
+          "text": "Answer them, and name your price",
+          "requires": {"class": ["warlock"], "traits": ["lichs_binding", "fallen"], "any": true},
+          "check": {"attr": "dark_magic_power", "dc": 13, "bonus_if": [{"class": "warlock", "value": 4}]},
+          "outcomes": {
+            "crit_success": {"text": "One voice accepts. It teaches you a word that makes the others fall silent, and asks for nothing yet.", "xp": 90},
+            "success": {"text": "You bargain for an hour and come away with more than you gave.", "xp": 55, "gold": 30},
+            "failure": {"text": "They laugh at your terms.", "xp": 15, "hp_pct": -0.2},
+            "crit_failure": {"text": "You agree to something. You are not sure what.", "xp": 10, "fate": 0.02}
+          }
+        },
+        {
           "text": "Back away from the edge",
           "outcomes": {"always": {"text": "The voices call after you, using names you have not told anyone."}}
         }
@@ -1298,6 +1462,11 @@
           }
         },
         {
+          "text": "Walk a while with the dead",
+          "requires": {"traits": ["marked_by_death", "undead", "lich_king"]},
+          "outcomes": {"always": {"text": "Death has met you before, so {ancestor} walks beside you as with an old friend, and tells you how it ended.", "xp": 35, "fate": -0.015}}
+        },
+        {
           "text": "Bow your head and walk past",
           "outcomes": {"always": {"text": "When you look back, the path is empty.", "fate": -0.005}}
         }
@@ -1324,6 +1493,222 @@
         {
           "text": "Write it down and let it go",
           "outcomes": {"always": {"text": "You fill a page and close the book.", "xp": 5}}
+        }
+      ]
+    },
+    {
+      "id": "drowned_bell",
+      "title": "The Drowned Bell",
+      "text": "At slack tide a bell tolls somewhere under the water off the point. The fishermen haul their boats up the shingle and will not put out while it rings.",
+      "where": {"biomes": ["coast"]},
+      "requires": {"not_flags": ["heard_drowned_bell"]},
+      "weight": 8,
+      "choices": [
+        {
+          "text": "Row out and dive where it is loudest",
+          "check": {"attr": "vit", "dc": 14, "bonus_if": [{"class": "monk", "value": 2}, {"race": "beastkin", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "Far down in the green dark is a temple roof, and a bell swinging with no one to ring it. You come up with the way to it fixed in your head.", "xp": 30, "flag": "heard_drowned_bell"},
+            "success": {"text": "You touch the bell's lip before your breath runs out. The current runs from it toward the sunken temple.", "xp": 20, "flag": "heard_drowned_bell"},
+            "failure": {"text": "The cold drives you back to the boat.", "xp": 8, "hp_pct": -0.1},
+            "crit_failure": {"text": "Something in the dark wraps round your ankle. The fishermen pull you in, choking.", "xp": 5, "hp_pct": -0.3}
+          }
+        },
+        {
+          "text": "Buy a round and ask the old fishwives",
+          "requires": {"min_gold": 10},
+          "check": {"attr": "persuasion", "dc": 12, "bonus_if": [{"race": "halfling", "value": 2}, {"race": "human", "value": 1}]},
+          "outcomes": {
+            "crit_success": {"text": "Three ales in, Old Nan tells you of the temple that sank with its priests, and the bell they rang for drowned men. She draws you the way in spilled beer.", "xp": 15, "gold": -10, "flag": "heard_drowned_bell"},
+            "success": {"text": "Old Nan says the bell hangs in the sunken temple and rings when the sea wants something back.", "xp": 10, "gold": -10, "flag": "heard_drowned_bell"},
+            "failure": {"text": "They drink your ale and tell you about their husbands.", "xp": 5, "gold": -10}
+          }
+        },
+        {
+          "text": "Listen with the Sight",
+          "requires": {"traits": ["the_sight", "oracle"]},
+          "outcomes": {"always": {"text": "You close your eyes and see it: a temple under the sea, a bell as big as a cottage, and a drowned priest still pulling the rope.", "xp": 25, "fate": -0.005, "flag": "heard_drowned_bell"}}
+        },
+        {
+          "text": "Pull your hood up and walk on",
+          "outcomes": {"always": {"text": "The bell stops at the turn of the tide, as if it had only been clearing its throat."}}
+        }
+      ]
+    },
+    {
+      "id": "bell_below",
+      "title": "The Bell Below",
+      "text": "In the lowest hall of the temple hangs the bell you heard from the shore, green bronze as big as a cottage. A drowned priest in rotted vestments still holds its rope.",
+      "where": {"places": ["sunken_temple"]},
+      "requires": {"flags": ["heard_drowned_bell"]},
+      "weight": 30,
+      "once": true,
+      "choices": [
+        {
+          "text": "Take the rope from the priest and ring it",
+          "check": {"attr": "str", "dc": 15, "bonus_if": [{"race": "orc", "value": 2}, {"race": "dwarf", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "The bell speaks once and the whole sea seems to listen. The priest lets go of the rope, bows, and is bones. On the altar beneath the bell lies the relic he kept.", "xp": 60, "item": "saints_relic", "flag": "drowned_priest_rests", "echo": {"kind": "glory", "strength": 0.1, "text": "{heir} rang the Drowned Bell and let its priest rest"}},
+            "success": {"text": "The bell speaks once. The priest lets go of the rope and sinks into the silt, at rest at last.", "xp": 45, "fate": -0.01, "flag": "drowned_priest_rests", "echo": {"kind": "glory", "strength": 0.06, "text": "{heir} rang the Drowned Bell and let its priest rest"}},
+            "failure": {"text": "The rope will not move, and the priest will not let go.", "xp": 15},
+            "crit_failure": {"text": "The priest turns his head. Other things stir in the dark of the hall.", "xp": 5, "fight": {"foes": ["local", "local"], "level": 1.0}}
+          }
+        },
+        {
+          "text": "Pray the drowned priest to his rest",
+          "requires": {"class": ["cleric"], "traits": ["divine_favor", "saints_blood", "chosen_one"], "any": true},
+          "check": {"attr": "divine_magic_power", "dc": 13, "bonus_if": [{"class": "cleric", "value": 3}, {"trait": "saints_blood", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "You say the rite for the drowned. The priest's hands open, the rope swings free, and on the altar he guarded lies a relic left for whoever came.", "xp": 60, "fate": -0.02, "item": "saints_relic", "flag": "drowned_priest_rests", "echo": {"kind": "glory", "strength": 0.1, "text": "{heir} prayed the drowned priest of the Tide-Mother to rest"}},
+            "success": {"text": "The priest lets go of the rope and sinks into the silt, at rest at last.", "xp": 45, "fate": -0.01, "flag": "drowned_priest_rests"},
+            "failure": {"text": "The words echo in the hall and change nothing.", "xp": 15},
+            "crit_failure": {"text": "Your prayer wakes him fully. He is not grateful.", "xp": 5, "fight": {"foes": ["local"], "level": 1.0}}
+          }
+        },
+        {
+          "text": "Pry the silver from the bell's lip",
+          "check": {"attr": "agi", "dc": 14, "bonus_if": [{"class": "rogue", "value": 2}, {"race": "gnome", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "A whole band of old silver, worked with drowned saints. It comes away clean.", "xp": 20, "gold": 140},
+            "success": {"text": "You work a strip of silver loose and get it into your pack.", "xp": 15, "gold": 80},
+            "failure": {"text": "The bronze cuts your hands to ribbons for a fistful of silver.", "gold": 30, "hp_pct": -0.15},
+            "crit_failure": {"text": "The bell swings. You are underneath it.", "xp": 5, "hp_pct": -0.4}
+          }
+        },
+        {
+          "text": "Leave the priest to his work",
+          "outcomes": {"always": {"text": "Some things are better left ringing.", "xp": 10}}
+        }
+      ]
+    },
+    {
+      "id": "smugglers_revenge",
+      "title": "Old Debts at Low Tide",
+      "text": "Smugglers are waiting where the path comes down to the sea: the crew House {house} sold to the harbourmaster, or their grown children. Either way they have not forgotten the name, and one of them has a crossbow.",
+      "where": {"biomes": ["coast"]},
+      "requires": {"flags": ["smugglers_broken"]},
+      "weight": 20,
+      "once": true,
+      "choices": [
+        {
+          "text": "Draw steel",
+          "outcomes": {"always": {"text": "No more talk. They come at you across the shingle.", "fight": {"foes": ["bandit", "bandit", "bandit"], "level": 1.0, "reward": 1.6}}}
+        },
+        {
+          "text": "Talk them down: they chose their trade",
+          "check": {"attr": "persuasion", "dc": 15, "bonus_if": [{"trait": "noble_blood", "value": 2}, {"trait": "outlaws_cunning", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "By the end of it they are buying you a drink and asking if you need hired hands.", "xp": 40, "gold": 20},
+            "success": {"text": "They spit on the stones and let you pass. It is over.", "xp": 30},
+            "failure": {"text": "They have waited a long time for this. Talking will not do.", "fight": {"foes": ["bandit", "bandit"], "level": 1.0}},
+            "crit_failure": {"text": "Halfway through your speech, the crossbow answers.", "hp_pct": -0.15, "fight": {"foes": ["bandit", "bandit", "bandit"], "level": 1.0}}
+          }
+        },
+        {
+          "text": "Pay them for the years they lost",
+          "requires": {"min_gold": 60},
+          "outcomes": {"always": {"text": "They count it twice and walk away. The debt is settled.", "xp": 15, "gold": -60}}
+        },
+        {
+          "text": "Run for the rocks",
+          "check": {"attr": "agi", "dc": 13, "bonus_if": [{"race": "halfling", "value": 2}, {"race": "beastkin", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "Over the rocks and gone before the crossbow is spanned. They will not find you again.", "xp": 10},
+            "success": {"text": "Over the rocks and away. A bolt cracks off the stone beside your head.", "xp": 10},
+            "failure": {"text": "The bolt finds your shoulder, but you get away.", "xp": 5, "hp_pct": -0.2},
+            "crit_failure": {"text": "You slip on the weed and they are on you.", "fight": {"foes": ["bandit", "bandit"], "level": 1.0}}
+          }
+        }
+      ]
+    },
+    {
+      "id": "hedge_witch",
+      "title": "The Hedge-Witch",
+      "text": "A woman with mud to the elbows steps out of the alders and looks you up and down. 'You carry something that isn't yours,' she says. 'I can take it off you. Everything has a price.'",
+      "where": {"types": ["wilds"], "biomes": ["swamp", "forest", "fae"]},
+      "requires": {"traits": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]},
+      "weight": 25,
+      "choices": [
+        {
+          "text": "Pay her in silver",
+          "requires": {"min_gold": 80},
+          "outcomes": {"always": {"text": "She takes the coin, spits on her thumb and draws it down your brow. Something you had stopped noticing lifts away.", "gold": -80, "remove_trait": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]}}
+        },
+        {
+          "text": "Pay her in years",
+          "outcomes": {"always": {"text": "She takes your hand. When she lets go two winters have passed, and the weight has gone with them.", "years": 2, "remove_trait": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]}}
+        },
+        {
+          "text": "Let her cut it out of you",
+          "check": {"attr": "vit", "dc": 13, "bonus_if": [{"race": "dwarf", "value": 2}, {"race": "orc", "value": 2}, {"class": "monk", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "It comes out of you like a splinter, black and twisting. She drops it in the fire, and you feel lighter than you have in years.", "xp": 20, "remove_trait": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]},
+            "success": {"text": "It hurts more than any wound you have taken, and then it is gone.", "hp_pct": -0.2, "remove_trait": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]},
+            "failure": {"text": "It is in too deep. She stops before it kills you.", "xp": 5, "hp_pct": -0.3},
+            "crit_failure": {"text": "It fights her, and you, and wins. You wake in the alders at dusk, still carrying it.", "xp": 5, "hp_pct": -0.4}
+          }
+        },
+        {
+          "text": "Keep what you carry",
+          "outcomes": {"always": {"text": "She shrugs. 'It will still be there when you change your mind.'"}}
+        }
+      ]
+    },
+    {
+      "id": "temple_exorcism",
+      "title": "A Priest with Steady Eyes",
+      "text": "An old priest stops you on the temple steps and lays two fingers on your wrist. 'You are carrying something,' he says. 'We can try to lift it. It is not gentle.'",
+      "where": {"places": ["hearthmere", "kingshold", "brinehaven"]},
+      "requires": {"traits": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]},
+      "weight": 20,
+      "choices": [
+        {
+          "text": "Pay the temple's tithe and fast",
+          "requires": {"min_gold": 120},
+          "outcomes": {"always": {"text": "Three days of cold water and chanting. On the fourth morning you wake clean.", "xp": 10, "gold": -120, "remove_trait": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]}}
+        },
+        {
+          "text": "Pray with him through the night",
+          "check": {"attr": "divine_magic_power", "dc": 13, "bonus_if": [{"class": "cleric", "value": 3}, {"class": "paladin", "value": 2}, {"class": "templar", "value": 2}, {"trait": "saints_blood", "value": 3}]},
+          "outcomes": {
+            "crit_success": {"text": "At the third bell something tears loose and the candles gutter. The priest wipes his brow and says it is gone.", "xp": 25, "fate": -0.005, "remove_trait": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]},
+            "success": {"text": "By dawn you are both hoarse, and it is gone.", "xp": 15, "remove_trait": ["prophecy_binding", "lichs_binding", "blood_debt", "fae_contract", "werewolf_curse", "cursed"]},
+            "failure": {"text": "By dawn you are both hoarse, and it is still there.", "xp": 10},
+            "crit_failure": {"text": "Whatever you carry does not like prayer, and it shows you how much.", "xp": 5, "hp_pct": -0.15}
+          }
+        },
+        {
+          "text": "Thank him and go",
+          "outcomes": {"always": {"text": "He nods as if he expected nothing else. 'The door is open,' he says."}}
+        }
+      ]
+    },
+    {
+      "id": "founders_cairn",
+      "title": "The Founder's Cairn",
+      "text": "The village has raised a cairn where {founder} set out from, ten generations and more ago. Children leave pebbles on it for luck. The headwoman asks if you will say a few words for your house.",
+      "where": {"places": ["hearthmere"]},
+      "requires": {"min_gen": 10},
+      "weight": 12,
+      "once": true,
+      "choices": [
+        {
+          "text": "Speak of the founder",
+          "check": {"attr": "persuasion", "dc": 12, "bonus_if": [{"trait": "noble_blood", "value": 2}, {"race": "human", "value": 1}]},
+          "outcomes": {
+            "crit_success": {"text": "You tell it plain: a hard road, a sword, a name nobody knew. When you finish, the old men are wiping their eyes.", "xp": 30, "echo": {"kind": "glory", "strength": 0.08, "text": "{heir} spoke for House {house} at the Founder's Cairn"}},
+            "success": {"text": "You say what you know, and the village nods along.", "xp": 20, "echo": {"kind": "glory", "strength": 0.04, "text": "{heir} spoke for House {house} at the Founder's Cairn"}},
+            "failure": {"text": "You stumble over the old names. The children giggle.", "xp": 8},
+            "crit_failure": {"text": "You forget the founder's name halfway through. A child has to tell you.", "xp": 5}
+          }
+        },
+        {
+          "text": "Leave a pebble like the children do",
+          "outcomes": {"always": {"text": "Your pebble clicks against ten generations of others.", "xp": 10, "fate": -0.01}}
+        },
+        {
+          "text": "Thank her and go",
+          "outcomes": {"always": {"text": "The headwoman says the words herself. She does them well."}}
         }
       ]
     }

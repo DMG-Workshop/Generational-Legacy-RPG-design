@@ -3,6 +3,13 @@
 ## GameDynasty.pending_event:
 ##   {id, heir, place, source, stage: "choose"}                 while a choice is awaited
 ##   {..., stage: "result", result: {choice_text, roll, ...}}    after the choice, until dismissed
+##
+## Event: id, title, text, where {types, biomes, places}, requires {min_gen, max_gen, min_level,
+## flags, not_flags, traits (any)}, weight, once, choices (2-4). Choice: text, requires {traits,
+## race, class, item (one or a list), flag (+ reason), min_level, min_gold, any, reason},
+## check {attr, dc, bonus_if [{race|class|trait, value}]}, outcomes {crit_success, success,
+## failure, crit_failure} or {always}. Outcome: EFFECT_KEYS. Texts may use {heir} {house} {place}
+## {founder} {ancestor}. validate() lists anything wrong with the data.
 class_name GameEvents
 extends RefCounted
 
@@ -39,11 +46,12 @@ static func current(d: GameDynasty) -> Dictionary:
 	return event_def(str(d.pending_event.get("id", "")))
 
 
-## Replaces {heir}, {house}, {place} and {ancestor} in event text.
+## Replaces {heir}, {house}, {place}, {founder} and {ancestor} in event text.
 static func fill(d: GameDynasty, text: String) -> String:
 	var place: Dictionary = GameWorld.place(str(d.pending_event.get("place", d.world.location)))
-	return text.replace("{heir}", d.heir.name).replace("{house}", d.dynasty_name) \
-		.replace("{place}", str(place.get("name", ""))).replace("{ancestor}", str(d.pending_event.get("ancestor", "an ancestor")))
+	var founder: String = str(d.history[0]["name"]) if not d.history.is_empty() else d.heir.full_name()
+	return text.replace("{heir}", d.heir.name).replace("{house}", d.dynasty_name).replace("{founder}", founder) \
+		.replace("{place}", str(place.get("name", ""))).replace("{ancestor}", str(d.pending_event.get("ancestor", "your forebears")))
 
 
 static func event_title(d: GameDynasty) -> String:
@@ -120,7 +128,7 @@ static func begin(d: GameDynasty, id: String, source: String = "explore") -> boo
 	if ev.is_empty() or d.state != "life":
 		return false
 	d.pending_event = {"id": id, "heir": d.heir.id, "place": d.world.location, "source": source, "stage": "choose"}
-	if str(ev.get("text", "")).contains("{ancestor}") or str(ev.get("title", "")).contains("{ancestor}"):
+	if JSON.stringify(ev).contains("{ancestor}"):
 		d.pending_event["ancestor"] = _ancestor_name(d)
 	if ev.get("once", false):
 		d.set_flag(SEEN + id)
@@ -131,7 +139,7 @@ static func begin(d: GameDynasty, id: String, source: String = "explore") -> boo
 
 static func _ancestor_name(d: GameDynasty) -> String:
 	if d.history.is_empty():
-		return "a stranger with your family's eyes"
+		return "your forebears"
 	return str(d.history[d.rng.randi() % d.history.size()]["name"])
 
 
@@ -213,6 +221,15 @@ static func _owns(h: GameHeir, item: String) -> bool:
 	return item in h.inventory or item in h.equipment.values()
 
 
+static func _item_name(id: String) -> String:
+	return str(GameItems.item_def(id).get("name", id))
+
+
+## A field that holds one id or a list of them, as a list.
+static func _ids(v: Variant) -> Array:
+	return (v as Array) if v is Array else [str(v)]
+
+
 static func gold_amount(d: GameDynasty, base: float) -> int:
 	return int(round(base * GameData.enemy_scale(d.gen)))
 
@@ -247,11 +264,12 @@ static func choice_status(d: GameDynasty, c: Dictionary) -> Dictionary:
 		else:
 			failed.append(_names(GameData.classes, r["class"]))
 	if r.has("item"):
-		var item: String = r["item"]
-		if _owns(h, item):
-			passed.append(GameItems.item_def(item).get("name", item))
+		var items := _ids(r["item"])
+		var held: Array = items.filter(func(it): return _owns(h, it))
+		if held.is_empty():
+			failed.append(" or ".join(items.map(func(it): return _item_name(it))))
 		else:
-			failed.append(GameItems.item_def(item).get("name", item))
+			passed.append(_item_name(held[0]))
 	if r.has("flag"):
 		if d.flags.has(r["flag"]):
 			passed.append("")
@@ -274,7 +292,7 @@ static func choice_status(d: GameDynasty, c: Dictionary) -> Dictionary:
 	if ok:
 		return {"ok": true, "reason": "", "tag": tag}
 	var why: String = r.get("reason", "Requires: " + (" or " if r.get("any", false) else ", ").join(failed))
-	return {"ok": false, "reason": why, "tag": ""}
+	return {"ok": false, "reason": fill(d, why), "tag": ""}
 
 
 ## The button text for choice `i` of the pending event, e.g. "Climb the cliff  [AGI vs DC 15: +9, 70%]".
@@ -291,8 +309,13 @@ static func choice_label(d: GameDynasty, i: int) -> String:
 		extra.append("%d gold" % gold_amount(d, float(c["requires"]["min_gold"])))
 	if c.has("check"):
 		extra.append(check_text(d, c["check"]))
-	elif outcome_for(c, "always").has("fight"):
-		extra.append("Battle")
+	else:
+		var o := outcome_for(c, "always")
+		var years := int(o.get("years", 0))
+		if years > 0:
+			extra.append("1 year" if years == 1 else "%d years" % years)
+		if o.has("fight"):
+			extra.append("Battle")
 	return text if extra.is_empty() else "%s  [%s]" % [text, ", ".join(extra)]
 
 
@@ -371,7 +394,7 @@ static func check_bonus(d: GameDynasty, check: Dictionary) -> int:
 static func check_dc(d: GameDynasty, check: Dictionary) -> int:
 	var place: Dictionary = GameWorld.place(str(d.pending_event.get("place", d.world.location)))
 	var danger := float(place.get("danger", 1.0))
-	return int(check["dc"]) + int(round((danger - 1.0) * float(GameData.bal("event_dc_per_danger"))))
+	return int(check["dc"]) + int(round(snappedf((danger - 1.0) * float(GameData.bal("event_dc_per_danger")), 0.001)))
 
 
 ## Degree index (0 crit failure .. 3 crit success) of a d20 roll; a natural 20 / 1 moves it one step.
@@ -410,11 +433,15 @@ static func check_text(d: GameDynasty, check: Dictionary) -> String:
 	return "%s vs DC %d: %+d, %d%%" % [ATTR_LABELS.get(check["attr"], check["attr"]), check_dc(d, check), check_bonus(d, check), int(round(success_chance(d, check) * 100.0))]
 
 
-## "d20 (14) +9 = 23 vs DC 15: Success" for a stored roll.
+## "d20 (14) +9 = 23 vs DC 15: Success" for a stored roll, noting a natural 1 or 20 that moved the result.
 static func roll_text(roll: Dictionary) -> String:
 	if roll.is_empty():
 		return ""
-	return "d20 (%d) %+d = %d vs DC %d: %s" % [int(roll["die"]), int(roll["bonus"]), int(roll["total"]), int(roll["dc"]), DEGREE_LABELS[roll["degree"]]]
+	var die := int(roll["die"])
+	var s := "d20 (%d) %+d = %d vs DC %d: %s" % [die, int(roll["bonus"]), int(roll["total"]), int(roll["dc"]), DEGREE_LABELS[roll["degree"]]]
+	if (die == 1 or die == 20) and degree_index(10, int(roll["total"]), int(roll["dc"])) != DEGREES.find(roll["degree"]):
+		s += " (natural %d)" % die
+	return s
 
 
 # ---------------------------------------------------------------- resolution
@@ -455,6 +482,11 @@ static func _resolve(d: GameDynasty, choice: int, forced: String) -> Array:
 		var bonus := check_bonus(d, c["check"])
 		var dc := check_dc(d, c["check"])
 		var die := d.rng.randi_range(1, 20)
+		if forced != "":   # show a die that gives the forced degree, when one can
+			for k in range(1, 21):
+				if DEGREES[degree_index(k, k + bonus, dc)] == forced:
+					die = k
+					break
 		degree = DEGREES[degree_index(die, die + bonus, dc)] if forced == "" else forced
 		roll = {"attr": c["check"]["attr"], "die": die, "bonus": bonus, "total": die + bonus, "dc": dc, "degree": degree}
 	var outcome := outcome_for(c, degree)
@@ -468,7 +500,7 @@ static func _resolve(d: GameDynasty, choice: int, forced: String) -> Array:
 	var fx := _apply(d, ev, outcome, msgs)
 	var years := int(outcome.get("years", 0))
 	if years > 0:
-		fx.append({"t": "%d year%s pass" % [years, "" if years == 1 else "s"], "k": "bad"})
+		fx.append({"t": "1 year passes" if years == 1 else "%d years pass" % years, "k": "bad"})
 		msgs = d._pass_years(float(years), msgs)
 	else:
 		for m in msgs:
@@ -494,6 +526,7 @@ static func _resolve(d: GameDynasty, choice: int, forced: String) -> Array:
 static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -> Array:
 	var h := d.heir
 	var fx: Array = []
+	var level_up := ""
 	if o.has("gold"):
 		var g := gold_amount(d, float(o["gold"]))
 		if g < 0:
@@ -506,7 +539,7 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		fx.append({"t": "+%d XP" % xp, "k": "good"})
 		if h.gain_xp(xp) > 0:
 			fx.append({"t": "Level up! Now level %d" % h.level, "k": "good"})
-			msgs.append("Level up! %s is now level %d." % [h.name, h.level])
+			level_up = "Level up! %s is now level %d." % [h.name, h.level]
 	if o.has("hp_pct"):
 		var before := h.hp
 		h.hp = clampi(h.hp + int(round(float(h.max_hp()) * float(o["hp_pct"]))), 1, h.max_hp())   # events wound, never kill
@@ -522,8 +555,7 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		if d._add_trait(h, t):
 			fx.append({"t": "Trait gained: %s" % GameData.trait_name(t), "k": "bad" if is_harmful_trait(t) else "good"})
 	if o.has("remove_trait"):
-		var ids: Array = o["remove_trait"] if o["remove_trait"] is Array else [o["remove_trait"]]
-		for t in ids:
+		for t in _ids(o["remove_trait"]):   # the first listed trait the heir has
 			if t in h.traits:
 				h.traits.erase(t)
 				h.lifespan = h.compute_lifespan()
@@ -536,14 +568,15 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		if _owns(h, item):
 			var g := maxi(1, int(round(float(GameItems.item_def(item).get("price", 0)) * GameData.enemy_scale(d.gen) * float(GameData.bal("event_duplicate_item_gold")))))
 			h.gold += g
-			fx.append({"t": "Already owned %s: sold for %d gold" % [GameItems.item_def(item).get("name", item), g], "k": "good"})
+			fx.append({"t": "Already owned %s: sold for %d gold" % [_item_name(item), g], "k": "good"})
 		else:
-			fx.append({"t": d.give_item(item).trim_suffix("."), "k": "good"})
+			d.give_item(item)
+			fx.append({"t": "Received %s" % _item_name(item), "k": "good"})
 	if o.has("echo"):
 		var e: Dictionary = o["echo"]
 		var etext := fill(d, str(e["text"]))
 		d._add_echo(e["kind"], "event_" + str(ev["id"]), etext, float(e["strength"]))
-		fx.append({"t": "Legacy echo: %s (%s)" % [etext, e["kind"]], "k": "good" if e["kind"] == "glory" else "bad"})
+		fx.append({"t": "%s: %s" % [str(e["kind"]).capitalize(), etext], "k": "good" if e["kind"] == "glory" else "bad"})
 	if o.has("fate"):
 		var before := h.fate_value
 		h.fate_value = snappedf(clampf(h.fate_value + float(o["fate"]), float(GameData.bal("fate_min")), float(GameData.bal("fate_max"))), 0.0001)
@@ -553,6 +586,8 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 	var summary: Array = fx.filter(func(f): return not str(f["t"]).begins_with("Level up")).map(func(f): return f["t"])
 	if not summary.is_empty():
 		msgs.append(", ".join(summary) + ".")
+	if level_up != "":
+		msgs.append(level_up)
 	return fx
 
 
@@ -644,8 +679,7 @@ static func outcome_value(d: GameDynasty, o: Dictionary) -> float:
 	if o.has("add_trait") and o["add_trait"] not in h.traits:
 		v += -150.0 if is_harmful_trait(o["add_trait"]) else 50.0
 	if o.has("remove_trait"):
-		var ids: Array = o["remove_trait"] if o["remove_trait"] is Array else [o["remove_trait"]]
-		for t in ids:
+		for t in _ids(o["remove_trait"]):
 			if t in h.traits:
 				v += 80.0 if is_harmful_trait(t) else -50.0
 				break
@@ -673,6 +707,7 @@ static func validate() -> Array:
 	for c in GameData.creatures:
 		if not c.get("boss", false):
 			creature_ids[c["id"]] = true
+	var settable := content_flags()
 	for ev in GameData.events:
 		var id: String = ev.get("id", "?")
 		if ids.has(id):
@@ -681,6 +716,16 @@ static func validate() -> Array:
 		for k in ["title", "text"]:
 			if str(ev.get(k, "")) == "":
 				errs.append("%s: missing %s" % [id, k])
+		if float(ev.get("weight", 10)) <= 0.0:
+			errs.append("%s: weight must be positive" % id)
+		if ev.has("once") and not ev["once"] is bool:
+			errs.append("%s: once must be true or false" % id)
+		var er: Dictionary = ev.get("requires", {})
+		if int(er.get("min_gen", 1)) > int(er.get("max_gen", 1000000)):
+			errs.append("%s: min_gen above max_gen" % id)
+		for f in er.get("flags", []):
+			if not settable.has(f):
+				errs.append("%s: requires flag %s, which nothing sets" % [id, f])
 		var w: Dictionary = ev.get("where", {})
 		for t in w.get("types", []):
 			if t not in ["town", "wilds", "dungeon"]:
@@ -713,8 +758,14 @@ static func validate() -> Array:
 			for x in r.get("class", []):
 				if not GameData.classes.has(x):
 					errs.append("%s: unknown class %s" % [where, x])
-			if r.has("item") and not GameData.items.has(r["item"]):
-				errs.append("%s: unknown item %s" % [where, r["item"]])
+			for x in (_ids(r["item"]) if r.has("item") else []):
+				if not GameData.items.has(x):
+					errs.append("%s: unknown item %s" % [where, x])
+			if r.has("flag"):
+				if not settable.has(r["flag"]):
+					errs.append("%s: requires flag %s, which nothing sets" % [where, r["flag"]])
+				if not r.has("reason"):
+					errs.append("%s: a flag gate needs a reason the player can read" % where)
 			var outs: Dictionary = c.get("outcomes", {})
 			if c.has("check"):
 				var ch: Dictionary = c["check"]
@@ -744,9 +795,11 @@ static func validate() -> Array:
 						errs.append("%s/%s: unknown effect %s" % [where, k, key])
 				if str(o.get("text", "")) == "":
 					errs.append("%s/%s: outcome without text" % [where, k])
-				for t in ([o["add_trait"]] if o.has("add_trait") else []) + ((o["remove_trait"] if o["remove_trait"] is Array else [o["remove_trait"]]) if o.has("remove_trait") else []):
+				for t in (_ids(o["add_trait"]) if o.has("add_trait") else []) + (_ids(o["remove_trait"]) if o.has("remove_trait") else []):
 					if not GameData.traits.has(t):
 						errs.append("%s/%s: unknown trait %s" % [where, k, t])
+				if o.has("add_trait") and o["add_trait"] is Array:
+					errs.append("%s/%s: add_trait takes one trait" % [where, k])
 				if o.has("item") and not GameData.items.has(o["item"]):
 					errs.append("%s/%s: unknown item %s" % [where, k, o["item"]])
 				if o.has("echo") and o["echo"].get("kind", "") not in ["glory", "infamy"]:
@@ -756,3 +809,31 @@ static func validate() -> Array:
 						if not creature_ids.has(f):
 							errs.append("%s/%s: unknown or boss creature %s" % [where, k, f])
 	return errs
+
+
+## Every story flag some content can set: event outcomes, once-events being seen, and any "flag"
+## field in quest data.
+static func content_flags() -> Dictionary:
+	GameData.load_all()
+	var out := {}
+	for ev in GameData.events:
+		if ev.get("once", false):
+			out[SEEN + str(ev.get("id", ""))] = true
+		for c in ev.get("choices", []):
+			for o in c.get("outcomes", {}).values():
+				if o.has("flag"):
+					out[o["flag"]] = true
+	_collect_flags(GameData.quests, out)
+	return out
+
+
+static func _collect_flags(v: Variant, out: Dictionary) -> void:
+	if v is Dictionary:
+		for k in v:
+			if str(k).contains("flag") and (v[k] is String or v[k] is Array):
+				for f in _ids(v[k]):
+					out[str(f)] = true
+			_collect_flags(v[k], out)
+	elif v is Array:
+		for x in v:
+			_collect_flags(x, out)

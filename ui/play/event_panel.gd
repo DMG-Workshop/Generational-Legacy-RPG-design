@@ -8,6 +8,7 @@ const COLUMN := 900.0
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
 var body: VBoxContainer
+var sub: Label
 
 
 func _ready() -> void:
@@ -19,8 +20,7 @@ func _ready() -> void:
 	# An event wants an answer, and every event has a way to walk away, so there is no Close.
 	var top: HBoxContainer = v.get_child(0)
 	top.get_child(top.get_child_count() - 1).visible = false
-	var place: Dictionary = GameWorld.place(str(dynasty.pending_event.get("place", dynasty.world.location)))
-	var sub := Kit.label("%s  -  %s  -  %s, level %d" % [place.get("name", ""), dynasty.world.date_text(), dynasty.heir.name, dynasty.heir.level], 15, Kit.DIM)
+	sub = Kit.label("", 15, Kit.DIM)
 	v.add_child(sub)
 	v.add_child(HSeparator.new())
 	var scroll := ScrollContainer.new()
@@ -45,6 +45,8 @@ func _wrapped(text: String, size: int, color: Color = Kit.TEXT) -> Label:
 
 
 func _build() -> void:
+	var place: Dictionary = GameWorld.place(str(dynasty.pending_event.get("place", dynasty.world.location)))
+	sub.text = "%s  -  %s  -  %s, level %d" % [place.get("name", ""), dynasty.world.date_text(), dynasty.heir.name, dynasty.heir.level]
 	Kit.clear(body)
 	body.add_child(_wrapped(GameEvents.event_text(dynasty), 18))
 	var spacer := Control.new()

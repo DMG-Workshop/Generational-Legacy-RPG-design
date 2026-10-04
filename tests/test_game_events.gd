@@ -41,6 +41,12 @@ func _init() -> void:
 	_test_bot()
 	_test_high_level()
 	_test_determinism()
+	_test_once_and_chains()
+	_test_curse_removal()
+	_test_text_and_journal()
+	_test_gate_coverage()
+	_test_validator()
+	_test_old_save()
 	print("%d checks, %d failures" % [checks, failures])
 	print("ALL PASS" if failures == 0 else "TESTS FAILED")
 	quit(1 if failures > 0 else 0)
@@ -85,6 +91,9 @@ func _test_degrees() -> void:
 	_check(di.call(1, 2, 15) == 0, "natural 1 cannot go below critical failure")
 	_check(GameEvents.roll_text({"die": 14, "bonus": 9, "total": 23, "dc": 15, "degree": "success"}) == "d20 (14) +9 = 23 vs DC 15: Success", "roll text")
 	_check(GameEvents.roll_text({"die": 3.0, "bonus": -2.0, "total": 1.0, "dc": 12.0, "degree": "crit_failure"}) == "d20 (3) -2 = 1 vs DC 12: Critical failure", "roll text from JSON floats")
+	_check(GameEvents.roll_text({"die": 1, "bonus": 9, "total": 10, "dc": 13, "degree": "crit_failure"}) == "d20 (1) +9 = 10 vs DC 13: Critical failure (natural 1)", "a natural 1 that moved the result is named")
+	_check(GameEvents.roll_text({"die": 20, "bonus": -6, "total": 14, "dc": 15, "degree": "success"}).ends_with("Success (natural 20)"), "a natural 20 that moved the result is named")
+	_check(not GameEvents.roll_text({"die": 20, "bonus": 10, "total": 30, "dc": 15, "degree": "crit_success"}).contains("natural"), "a natural 20 that changed nothing is not named")
 
 
 func _test_bonus() -> void:
@@ -126,6 +135,10 @@ func _test_bonus() -> void:
 	_check(GameEvents.check_dc(ho, {"attr": "str", "dc": 15}) == 14, "safe town lowers the DC")
 	ho.pending_event["place"] = "the_rift"
 	_check(GameEvents.check_dc(ho, {"attr": "str", "dc": 15}) == 19, "the Rift raises the DC")
+	ho.pending_event["place"] = "hollow_barrow"
+	_check(GameEvents.check_dc(ho, {"attr": "str", "dc": 15}) == 17, "danger 1.15 rounds half up to +2, not float-jittered to +1")
+	ho.pending_event["place"] = "mirefen"
+	_check(GameEvents.check_dc(ho, {"attr": "str", "dc": 15}) == 16, "danger 1.05 adds 1")
 
 
 func _test_odds() -> void:
@@ -241,9 +254,11 @@ func _setup_for(ev: Dictionary, ci: int) -> GameDynasty:
 	if r.has("traits") and not (any and (r.has("class") or r.has("race"))):
 		d.heir.traits.append(r["traits"][0])
 	if r.has("item"):
-		d.heir.inventory.append(r["item"])
+		d.heir.inventory.append(GameEvents._ids(r["item"])[0])
 	if r.has("flag"):
 		d.set_flag(r["flag"])
+	for f in er.get("flags", []):
+		d.set_flag(f)
 	if r.has("min_level"):
 		d.heir.level = maxi(d.heir.level, int(r["min_level"]))
 	d.heir.gold = 5000
@@ -290,6 +305,11 @@ func _test_every_outcome() -> void:
 				_check(h.hp >= 1 or d.state != "life", "%s never kills by hp loss" % where)
 				if o.has("add_trait") and o["add_trait"] not in traits_before:
 					_check(o["add_trait"] in h.traits, "%s adds %s" % [where, o["add_trait"]])
+				if o.has("remove_trait"):
+					var held: Array = GameEvents._ids(o["remove_trait"]).filter(func(t): return t in traits_before)
+					_check(not held.is_empty(), "%s: the heir carries something to remove" % where)
+					if not held.is_empty():
+						_check(held[0] not in h.traits, "%s removes %s" % [where, held[0]])
 				if o.has("item"):
 					_check(o["item"] in h.inventory or h.gold > gold_before, "%s gives %s" % [where, o["item"]])
 				if o.has("flag"):
@@ -340,6 +360,23 @@ func _test_event_fight() -> void:
 	_check(d.battle == null, "battle over")
 	if d.state == "life" and d.heir.battles_won > wins:
 		_check(_near(d.heir.age - age, float(GameData.bal("event_fight_years"))), "victory costs event_fight_years")
+	# Fleeing and losing an event fight settle like any other battle.
+	for outcome in ["fled", "defeat"]:
+		for k in 6:
+			var f := _fresh("warrior", "human", 300 + k)
+			f.world.visit("whisperwood")
+			GameEvents.begin(f, "wolf_den")
+			GameEvents.resolve(f, 0)
+			GameEvents.dismiss(f)
+			var a := f.heir.age
+			f.battle.result = outcome
+			var out := f.finish_battle()
+			_check(f.battle == null and not out.is_empty(), "%s: event battle finishes" % outcome)
+			if f.state == "life":
+				var spent := float(f.years_for("rest")) if outcome == "fled" else float(GameData.bal("defeat_years")) + float(f.years_for("event"))
+				_check(_near(f.heir.age - a, spent), "%s: %.1f years pass (%.2f)" % [outcome, spent, f.heir.age - a])
+			else:
+				_check(outcome == "defeat" and f.state == "succession", "only a defeat can end the line here")
 	# Creatures out of their era are replaced by local ones.
 	var late := _fresh()
 	late.gen = 400
@@ -364,6 +401,8 @@ func _test_event_fight() -> void:
 
 
 func _test_explore_and_arrive() -> void:
+	var explore_chance: float = GameData.bal("event_explore_chance")
+	var arrive_chance: float = GameData.bal("event_arrive_chance")
 	var d := _fresh("ranger", "human", 11)
 	d.world.visit("whisperwood")
 	GameData.balance["event_explore_chance"] = 1.0
@@ -382,7 +421,7 @@ func _test_explore_and_arrive() -> void:
 	d.explore()
 	_check(not d.has_pending_event(), "chance 0: nothing happens")
 	_check(d.heir.xp != xp_before or d.heir.level != lvl, "a quiet year still teaches something")
-	GameData.balance["event_explore_chance"] = 0.65
+	GameData.balance["event_explore_chance"] = explore_chance
 	# Arrival
 	GameData.balance["event_arrive_chance"] = 1.0
 	var t := _fresh("warrior", "human", 12)
@@ -392,14 +431,14 @@ func _test_explore_and_arrive() -> void:
 	GameEvents.dismiss(t)
 	t.travel("hearthmere")
 	_check(not t.has_pending_event(), "no arrival events in towns")
-	GameData.balance["event_arrive_chance"] = 0.2
+	GameData.balance["event_arrive_chance"] = arrive_chance
 	# Exploring a town works too.
 	var town := _fresh("warrior", "human", 13)
 	GameData.balance["event_explore_chance"] = 1.0
 	town.explore()
 	_check(town.has_pending_event(), "towns have events")
 	_check(GameEvents.current(town)["where"].get("types", []).has("town") or GameEvents.current(town)["where"].get("places", []).has("hearthmere"), "a town event")
-	GameData.balance["event_explore_chance"] = 0.65
+	GameData.balance["event_explore_chance"] = explore_chance
 
 
 func _test_save_load() -> void:
@@ -526,3 +565,220 @@ func _test_determinism() -> void:
 				log.append(str(d.heir.gold))
 		runs.append(log)
 	_check(runs[0] == runs[1] and not runs[0].is_empty(), "same seed, same events (%s)" % str(runs[0]))
+
+
+func _test_once_and_chains() -> void:
+	# The Drowned Bell rings once a generation until someone hears it; then the Bell Below opens, once ever.
+	var d := _fresh("warrior", "human", 71)
+	d.heir.gold = 1000
+	d.world.visit("stormcoast")
+	var bell := GameEvents.event_def("drowned_bell")
+	var below := GameEvents.event_def("bell_below")
+	_check(GameEvents.is_eligible(d, bell), "drowned bell on the coast")
+	d.world.visit("sunken_temple")
+	_check(not GameEvents.is_eligible(d, below), "the bell below needs the bell heard first")
+	d.world.visit("stormcoast")
+	GameEvents.begin(d, "drowned_bell")
+	GameEvents.resolve_as(d, 0, "failure")
+	GameEvents.dismiss(d)
+	_check(not d.flags.has("heard_drowned_bell"), "a failed dive learns nothing")
+	d.gen = 2
+	_check(GameEvents.is_eligible(d, bell), "the bell rings again for the next heir")
+	GameEvents.begin(d, "drowned_bell")
+	GameEvents.resolve_as(d, 0, "success")
+	GameEvents.dismiss(d)
+	_check(d.flags.has("heard_drowned_bell"), "a good dive finds the way")
+	d.gen = 3
+	_check(not GameEvents.is_eligible(d, bell), "not_flags: the bell is not heard twice")
+	d.world.visit("sunken_temple")
+	_check(GameEvents.is_eligible(d, below), "flags: the bell below opens")
+	GameEvents.begin(d, "bell_below")
+	_check(d.flags.has(GameEvents.SEEN + "bell_below"), "a once event is marked when it opens")
+	var l := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(d.to_dict())))
+	GameEvents.dismiss(l)
+	l.gen = 40
+	_check(not GameEvents.is_eligible(l, below), "a once event never comes back, even after a reload")
+	# A choice gated on a flag from the chain: the sea's debt at the shipwreck.
+	var wreck := _fresh("warrior", "human", 73)
+	wreck.world.visit("stormcoast")
+	GameEvents.begin(wreck, "shipwreck")
+	var debt := -1
+	for i in GameEvents.current(wreck)["choices"].size():
+		if GameEvents.current(wreck)["choices"][i].get("requires", {}).has("flag"):
+			debt = i
+	_check(debt >= 0, "the shipwreck has a flag-gated choice")
+	var st := GameEvents.choice_status(wreck, GameEvents.current(wreck)["choices"][debt])
+	_check(not st["ok"] and st["reason"].contains("House " + wreck.dynasty_name), "flag gate reason is filled in (%s)" % st["reason"])
+	GameEvents.resolve_as(d, 0, "success")
+	_check(d.flags.has("drowned_priest_rests"), "ringing the bell lays the priest to rest")
+	wreck.set_flag("drowned_priest_rests")
+	_check(GameEvents.choice_status(wreck, GameEvents.current(wreck)["choices"][debt])["ok"], "...which opens the sea's debt")
+	# Breaking the smuggling ring ends the cove and brings revenge.
+	var s := _fresh("warrior", "human", 72)
+	s.world.visit("brinehaven")
+	var cove := GameEvents.event_def("smugglers_cove")
+	var revenge := GameEvents.event_def("smugglers_revenge")
+	_check(GameEvents.is_eligible(s, cove) and not GameEvents.is_eligible(s, revenge), "casks at the cove; no revenge yet")
+	GameEvents.begin(s, "smugglers_cove")
+	GameEvents.resolve_as(s, 0, "crit_success")
+	GameEvents.dismiss(s)
+	s.gen = 2
+	_check(not GameEvents.is_eligible(s, cove), "a broken ring lands no more casks")
+	_check(GameEvents.is_eligible(s, revenge), "and comes back for revenge")
+
+
+func _test_curse_removal() -> void:
+	var d := _fresh("warrior", "human", 81)
+	d.world.visit("mirefen")
+	var witch := GameEvents.event_def("hedge_witch")
+	_check(not GameEvents.is_eligible(d, witch), "the hedge-witch only finds the cursed")
+	d.heir.traits.append("cursed")
+	d.heir.traits.append("blood_debt")
+	_check(GameEvents.is_eligible(d, witch), "a cursed heir meets her")
+	d.heir.gold = 0
+	GameEvents.begin(d, "hedge_witch")
+	_check(not GameEvents.choice_status(d, witch["choices"][0])["ok"], "silver needs silver")
+	_check(GameEvents.choice_label(d, 1) == "Pay her in years  [2 years]", "a choice that costs years says so (%s)" % GameEvents.choice_label(d, 1))
+	d.heir.gold = 100000
+	_check(GameEvents.choice_value(d, witch["choices"][0]) > GameEvents.choice_value(d, witch["choices"][3]), "the bot values lifting a curse")
+	var before := d.heir.gold
+	GameEvents.resolve(d, 0)
+	_check("blood_debt" not in d.heir.traits and "cursed" in d.heir.traits, "the worse curse goes first")
+	_check(before - d.heir.gold == GameEvents.gold_amount(d, 80.0), "she takes her price")
+	var fx: Array = d.pending_event["result"]["effects"]
+	_check(fx.any(func(f): return f["t"] == "Trait lost: " + GameData.trait_name("blood_debt") and f["k"] == "good"), "losing a curse shows as good")
+	GameEvents.dismiss(d)
+	# The temple in town does the same, and the autopilot takes the offer.
+	var t := _fresh("cleric", "human", 82)
+	t.heir.traits.append("fae_contract")
+	t.heir.gold = 100000
+	_check(GameEvents.is_eligible(t, GameEvents.event_def("temple_exorcism")), "the temple sees a curse")
+	GameEvents.begin(t, "temple_exorcism")
+	GameEvents.bot_resolve(t)
+	_check("fae_contract" not in t.heir.traits, "the bot pays to lift a curse")
+
+
+func _test_text_and_journal() -> void:
+	var d := _fresh("warrior", "human", 91)
+	d.world.visit("whisperwood")
+	GameEvents.begin(d, "hermit_seer")
+	GameEvents.resolve(d, 0)
+	var t: String = d.pending_event["result"]["text"]
+	_check(t.contains("your forebears") and not t.contains("{"), "ancestor fallback without ancestors (%s)" % t)
+	# The XP line comes before the level-up it caused, in the journal and on the panel.
+	var xi := -1
+	var li := -1
+	for i in d.journal.size():
+		if str(d.journal[i]).begins_with("+") and str(d.journal[i]).contains(" XP"):
+			xi = i
+		if str(d.journal[i]).begins_with("Level up!"):
+			li = i
+	_check(xi >= 0 and li > xi, "journal: XP, then level up (%d, %d)" % [xi, li])
+	var labels: Array = (d.pending_event["result"]["effects"] as Array).map(func(f): return f["t"])
+	_check(str(labels[0]).ends_with(" XP") and str(labels[1]).begins_with("Level up!"), "panel: XP, then level up (%s)" % str(labels))
+	var e := _fresh("warrior", "human", 92)
+	e.history = [{"name": "Wulfric Test"}]
+	e.world.visit("whisperwood")
+	GameEvents.begin(e, "hermit_seer")
+	GameEvents.resolve(e, 0)
+	_check(str(e.pending_event["result"]["text"]).contains("Wulfric Test"), "an ancestor named in an outcome")
+	var f := _fresh()
+	f.gen = 12
+	f.history = [{"name": "Founder Test"}, {"name": "Second Test"}]
+	_check(GameEvents.is_eligible(f, GameEvents.event_def("founders_cairn")), "the cairn appears in Hearthmere by gen 12")
+	GameEvents.begin(f, "founders_cairn")
+	_check(GameEvents.event_text(f).contains("Founder Test"), "the founder is named")
+	# item gates accept any of several items, carried or worn
+	var g := _fresh("warrior", "human", 93)
+	g.world.visit("hollow_barrow")
+	GameEvents.begin(g, "sealed_tomb")
+	var token: Dictionary = {}
+	for c in GameEvents.current(g)["choices"]:
+		if c.get("requires", {}).has("item"):
+			token = c
+	var st := GameEvents.choice_status(g, token)
+	_check(not st["ok"] and st["reason"].contains(" or "), "item gate lists the items (%s)" % st["reason"])
+	g.heir.equipment["trinket"] = "holy_symbol"
+	st = GameEvents.choice_status(g, token)
+	_check(st["ok"] and st["tag"] == GameItems.item_def("holy_symbol")["name"], "a worn holy symbol opens it")
+
+
+func _test_gate_coverage() -> void:
+	var races := {}
+	var classes := {}
+	var traits := {}
+	var n := {"once": 0, "not_flags": 0, "flags": 0, "item": 0, "flag_gate": 0, "remove": 0, "min_gold": 0}
+	for ev in GameData.events:
+		if ev.get("once", false):
+			n["once"] += 1
+		for k in ["flags", "not_flags"]:
+			if ev.get("requires", {}).has(k):
+				n[k] += 1
+		for c in ev["choices"]:
+			var r: Dictionary = c.get("requires", {})
+			for x in r.get("race", []):
+				races[x] = true
+			for x in r.get("class", []):
+				classes[x] = true
+			for x in r.get("traits", []):
+				traits[x] = true
+			for k in ["item", "min_gold"]:
+				if r.has(k):
+					n[k] += 1
+			if r.has("flag"):
+				n["flag_gate"] += 1
+			for o in c["outcomes"].values():
+				if o.has("remove_trait"):
+					n["remove"] += 1
+	for x in ["elf", "dwarf", "orc", "halfling", "gnome", "dragonborn", "beastkin", "human"]:
+		_check(races.has(x), "a choice only %s heirs can take" % x)
+	for x in ["mage", "cleric", "rogue", "warrior", "ranger", "monk", "necromancer", "druid"]:
+		_check(classes.has(x), "a choice for the %s class" % x)
+	var hybrids: Array = classes.keys().filter(func(x): return GameData.classes[x].has("parents"))
+	_check(hybrids.size() >= 6, "choices for hybrid classes (%s)" % str(hybrids))
+	for x in ["the_sight", "faetouched", "noble_blood", "outlaws_cunning", "divine_favor", "mageblood", "dragonblood", "warriors_steel", "marked_by_death", "craftmaster_hands", "saints_blood"]:
+		_check(traits.has(x), "a choice opened by %s" % x)
+	for k in n:
+		_check(n[k] >= 1, "content uses %s (%d)" % [k, n[k]])
+
+
+func _test_validator() -> void:
+	var saved: Array = GameData.events
+	var bad := {
+		"id": "broken", "title": "Broken", "text": "x", "where": {"places": ["nowhere"]}, "requires": {"flags": ["never_set"]},
+		"choices": [
+			{"text": "a", "requires": {"traits": ["no_such_trait"], "flag": "also_never", "item": ["no_such_item"]}, "outcomes": {"always": {"text": "t", "add_trait": "nope", "fight": {"foes": ["grimfang"]}}}},
+			{"text": "b", "check": {"attr": "charm", "dc": 10}, "outcomes": {"success": {"text": "s", "gold": 5, "glitter": 1}}},
+		],
+	}
+	GameData.events = saved + [bad]
+	var errs := GameEvents.validate()
+	GameData.events = saved
+	var joined := "\n".join(errs)
+	for want in ["unknown place nowhere", "matches no place", "requires flag never_set", "unknown trait no_such_trait", "unknown item no_such_item",
+			"requires flag also_never", "needs a reason", "unknown trait nope", "boss creature grimfang", "unknown check attribute charm",
+			"needs success and failure", "unknown effect glitter"]:
+		_check(joined.contains(want), "validator catches: %s" % want)
+	_check(GameEvents.validate().is_empty(), "real content still validates")
+
+
+func _test_old_save() -> void:
+	# A save from before events existed: no pending_event, no flags at all.
+	var d := _fresh("ranger", "human", 101)
+	d.world.visit("whisperwood")
+	var old: Dictionary = JSON.parse_string(JSON.stringify(d.to_dict()))
+	old.erase("pending_event")
+	old.erase("flags")
+	var l := GameDynasty.from_dict(old)
+	_check(not l.has_pending_event() and l.flags.is_empty(), "an old save loads clean")
+	var chance: float = GameData.bal("event_explore_chance")
+	GameData.balance["event_explore_chance"] = 1.0
+	l.explore()
+	GameData.balance["event_explore_chance"] = chance
+	_check(l.has_pending_event(), "an old save finds events")
+	var id := str(l.pending_event["id"])
+	GameEvents.bot_resolve(l)
+	_check(not l.has_pending_event() and l.battle == null, "and settles them")
+	var again := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(l.to_dict())))
+	_check(again.flags.keys() == l.flags.keys(), "event bookkeeping survives a save")
+	_check(again.state != "life" or not GameEvents.is_eligible(again, GameEvents.event_def(id)), "a repeatable event still waits a generation after a reload")
