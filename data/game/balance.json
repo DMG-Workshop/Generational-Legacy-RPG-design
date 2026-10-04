@@ -62,5 +62,8 @@
   "bot_gear_weights": {
     "melee": {"melee_damage": 1.0, "strength": 1.0, "element_power": 0.1, "divine_magic_power": 0.1, "luck": 0.8, "reflexes": 1.2, "defense": 0.5, "max_hp": 0.8, "max_mp": 0.05, "xp_gain": 0.6, "healing_power": 0.3, "fire_resistance": 0.15, "persuasion": 0.2},
     "magic": {"element_power": 1.0, "divine_magic_power": 1.0, "dark_magic_power": 1.0, "melee_damage": 0.1, "luck": 0.8, "reflexes": 1.2, "defense": 0.5, "max_hp": 0.8, "max_mp": 0.5, "xp_gain": 0.6, "healing_power": 0.3, "fire_resistance": 0.15, "persuasion": 0.2}
-  }
+  },
+  "quest_max_active": 4,
+  "quest_gold_mult": 1.0,
+  "quest_xp_mult": 1.0
 }

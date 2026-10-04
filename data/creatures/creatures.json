@@ -211,6 +211,36 @@
    "element": "fire"
   },
   {
+   "id": "rift_shade",
+   "name": "Rift Shade",
+   "biomes": ["rift"],
+   "min_gen": 55,
+   "max_gen": 420,
+   "hp": 88,
+   "atk": 31,
+   "defense": 5,
+   "agi": 10,
+   "xp": 24,
+   "gold": 22,
+   "color": "#4a3a6f",
+   "element": ""
+  },
+  {
+   "id": "shard_crawler",
+   "name": "Shard Crawler",
+   "biomes": ["rift"],
+   "min_gen": 55,
+   "max_gen": 420,
+   "hp": 120,
+   "atk": 28,
+   "defense": 9,
+   "agi": 4,
+   "xp": 24,
+   "gold": 24,
+   "color": "#8f7fbf",
+   "element": ""
+  },
+  {
    "id": "void_stalker",
    "name": "Void Stalker",
    "biomes": ["rift"],

@@ -685,6 +685,7 @@ func choose_heir(index: int) -> Array:
 	c.full_heal()
 	heir = c
 	party.on_succession(self, msgs)
+	quests.on_succession(self, msgs)
 	candidates = []
 	state = "life"
 	_say("Generation %d: %s takes up the family name." % [gen, c.full_name()])
