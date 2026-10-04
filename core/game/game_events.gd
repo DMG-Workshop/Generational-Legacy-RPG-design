@@ -144,11 +144,14 @@ static func _ancestor_name(d: GameDynasty) -> String:
 
 
 ## A pending event left by an heir who has since died (or content that no longer exists) is dropped.
+## One saved without a usable stage is still waiting for its choice, so the panel can always settle it.
 static func drop_stale(d: GameDynasty) -> void:
 	if d.pending_event.is_empty():
 		return
 	if int(d.pending_event.get("heir", -1)) != d.heir.id or current(d).is_empty():
 		d.pending_event = {}
+	elif stage(d) not in ["choose", "result"]:
+		d.pending_event["stage"] = "choose"
 
 
 static func dismiss(d: GameDynasty) -> void:
@@ -179,7 +182,8 @@ static func explore(d: GameDynasty) -> Array:
 		if h.gain_xp(xp) > 0:
 			msgs.append("Level up! %s is now level %d." % [h.name, h.level])
 		return d._finish_time("explore", msgs)
-	var out := d._finish_time("explore", ["%s spends a year exploring %s." % [h.name, place["name"]]])
+	var span := d.years_for("explore")
+	var out := d._finish_time("explore", ["%s spends %s exploring %s." % [h.name, "a year" if span == 1 else "%d years" % span, place["name"]]])
 	if d.state == "life":
 		begin(d, ev["id"], "explore")
 		var m := "Something happens: %s." % event_title(d)

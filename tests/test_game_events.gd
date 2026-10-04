@@ -782,3 +782,18 @@ func _test_old_save() -> void:
 	var again := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(l.to_dict())))
 	_check(again.flags.keys() == l.flags.keys(), "event bookkeeping survives a save")
 	_check(again.state != "life" or not GameEvents.is_eligible(again, GameEvents.event_def(id)), "a repeatable event still waits a generation after a reload")
+	# A pending event saved without a stage still waits for its choice: the panel has no Close button.
+	var s := _fresh("warrior", "human", 102)
+	s.world.visit("whisperwood")
+	s.pending_event = {"id": "wounded_pilgrim", "heir": s.heir.id, "place": "whisperwood"}
+	s = GameDynasty.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	GameEvents.drop_stale(s)
+	_check(GameEvents.stage(s) == "choose", "a stage-less pending event reopens at the choice")
+	_check(not GameEvents.resolve(s, 3).is_empty() and GameEvents.stage(s) == "result", "and can be settled")
+	# The cairn's text counts ten generations back to the founder.
+	var c := _fresh("warrior", "human", 103)
+	c.world.visit("hearthmere")
+	c.gen = 10
+	_check(not GameEvents.is_eligible(c, GameEvents.event_def("founders_cairn")), "no cairn while the founder is only nine generations back")
+	c.gen = 11
+	_check(GameEvents.is_eligible(c, GameEvents.event_def("founders_cairn")), "the cairn from generation 11")

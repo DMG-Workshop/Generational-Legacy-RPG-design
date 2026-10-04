@@ -1688,7 +1688,7 @@
       "title": "The Founder's Cairn",
       "text": "The village has raised a cairn where {founder} set out from, ten generations and more ago. Children leave pebbles on it for luck. The headwoman asks if you will say a few words for your house.",
       "where": {"places": ["hearthmere"]},
-      "requires": {"min_gen": 10},
+      "requires": {"min_gen": 11},
       "weight": 12,
       "once": true,
       "choices": [
