@@ -372,20 +372,27 @@ func to_dict() -> Dictionary:
 static func from_dict(v: Dictionary) -> GameParty:
 	var p := GameParty.new()
 	for raw in v.get("members", []):
-		if typeof(raw) != TYPE_DICTIONARY or def(str(raw.get("id", ""))).is_empty():
+		if typeof(raw) != TYPE_DICTIONARY or def(str(raw.get("id", ""))).is_empty() or p.has_member(str(raw["id"])):
 			continue
-		var id: String = raw["id"]
+		var id: String = str(raw["id"])
 		p.members.append({
 			"id": id, "name": str(raw.get("name", def(id)["name"])), "hp": int(raw.get("hp", 1)), "mp": int(raw.get("mp", 0)),
 			"level": int(raw.get("level", 1)), "gen": int(raw.get("gen", 1)), "due": float(raw.get("due", 0.0)),
 			"battles": int(raw.get("battles", 0)), "hired_gen": int(raw.get("hired_gen", 1)),
 		})
-	var h: Dictionary = v.get("history", {})
+	var h = v.get("history", {})
+	if typeof(h) != TYPE_DICTIONARY:
+		return p
 	for id in h:
+		if typeof(h[id]) != TYPE_DICTIONARY or def(str(id)).is_empty():
+			continue
 		var r: Dictionary = h[id]
-		p.history[id] = {
-			"name": str(r.get("name", def(id).get("name", id))), "status": str(r.get("status", "dismissed")),
+		var rec := {
+			"name": str(r.get("name", def(id)["name"])), "status": str(r.get("status", "dismissed")),
 			"gen": int(r.get("gen", 1)), "first_gen": int(r.get("first_gen", 1)), "battles": int(r.get("battles", 0)),
 			"fallen": Array(r.get("fallen", [])),
 		}
+		if rec["status"] == "fallen" and (rec["fallen"] as Array).is_empty():
+			rec["fallen"] = [def(id)["name"]]
+		p.history[str(id)] = rec
 	return p

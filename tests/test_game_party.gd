@@ -63,6 +63,14 @@ func test_data() -> void:
 	ok(hybrid, "some companions follow hybrid classes")
 	for town in ["hearthmere", "ironford", "kingshold", "brinehaven"]:
 		ok(GameData.companions.any(func(c): return town in c["where"]), "someone drinks in %s" % town)
+	# The Rift-gated legend costs the most, so she must outlast every other hireling and outhit Bren.
+	for lg in [[45, 300], [5000, 300], [99999, 999]]:
+		var warden := GameParty.build_unit("pale_warden", lg[0], lg[1])
+		var bren := GameParty.build_unit("bren_cask", lg[0], lg[1])
+		ok(warden.attack_power() > bren.attack_power(), "the Pale Warden outhits Bren at L%d" % lg[0])
+		for c in GameData.companions:
+			if c["id"] != "pale_warden":
+				ok(warden.max_hp() > GameParty.build_unit(c["id"], lg[0], lg[1]).max_hp(), "the Pale Warden outlasts %s at L%d" % [c["id"], lg[0]])
 
 
 func test_hire_dismiss() -> void:
@@ -622,6 +630,19 @@ func test_save_load() -> void:
 	tavern.dynasty = sparse
 	ok(tavern._records().size() == 2, "records list both past hires")
 	tavern.free()
+	# Malformed records: a fallen entry without names, an unknown id, a non-dictionary, a duplicate member.
+	raw["party"] = {"members": [{"id": "bren_cask"}, {"id": "bren_cask", "hp": 2}],
+		"history": {"grull_one_tusk": {"status": "fallen", "gen": 1}, "ghost": {"status": "left"}, "maddy_thorn": "junk"}}
+	var odd := GameDynasty.from_dict(raw)
+	ok(odd.party.members.size() == 1, "a duplicated member loads once")
+	ok(odd.party.history.keys() == ["grull_one_tusk"], "unknown and malformed history dropped (%s)" % str(odd.party.history.keys()))
+	ok(odd.party.history["grull_one_tusk"]["fallen"] == ["Grull One-Tusk"], "a fallen record always names the fallen")
+	odd.world.location = "brinehaven"
+	var t2 = Tavern.new()
+	t2.dynasty = odd
+	ok(t2._records().size() == 1 and str(t2._records()[0]).begins_with("Grull One-Tusk: fell"), "fallen record renders: %s" % str(t2._records()))
+	ok(t2._rumour("grull_one_tusk").contains("Grull One-Tusk"), "mourning rumour renders")
+	t2.free()
 
 
 func test_bot() -> void:

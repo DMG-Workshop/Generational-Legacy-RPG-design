@@ -60,7 +60,7 @@
       "personality": "A knight without a lord, still polishing a crest he no longer wears.",
       "where": ["kingshold"], "fee": 140, "upkeep": 4,
       "requires": {"min_level": 12, "min_gen": 1, "flags": []},
-      "bonus": {"all_stats": 0.05, "hp": 0.1},
+      "bonus": {"all_stats": 0.15, "hp": 0.2},
       "hint": "A knight in faded colours will only swear to a name that has drawn blood."
     },
     {
@@ -101,7 +101,7 @@
       "personality": "Kept watch over the Rift seal longer than anyone remembers. Now it is open, she means to see what comes out.",
       "where": ["kingshold"], "fee": 360, "upkeep": 8,
       "requires": {"min_level": 45, "min_gen": 300, "flags": ["rift_open"]},
-      "bonus": {"all_stats": 0.15, "hp": 0.15},
+      "bonus": {"all_stats": 0.5, "hp": 0.4},
       "hint": "A tall figure in white scale sits alone, facing north towards Highcrag. She is waiting for the Rift to open."
     }
   ]
