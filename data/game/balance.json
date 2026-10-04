@@ -80,5 +80,15 @@
   "event_crit_margin": 10,
   "event_dc_per_danger": 10,
   "event_duplicate_item_gold": 0.35,
-  "event_bot_explore_every": 6
+  "event_bot_explore_every": 6,
+  "party_max_size": 2,
+  "companion_power": 0.6,
+  "companion_heir_target_chance": 0.6,
+  "companion_heal_below": 0.4,
+  "companion_foe_hp": 1.0,
+  "companion_death_chance": 0.25,
+  "companion_ko_recover_hp": 0.15,
+  "companion_mend_per_year": 0.2,
+  "companion_kin_gens": 2,
+  "companion_bot_reserve_years": 10
 }

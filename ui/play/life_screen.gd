@@ -110,7 +110,10 @@ func _build_left() -> void:
 	left.add_child(Kit.bar(Kit.MP_BLUE, maxf(1.0, h.max_mp()), h.mp))
 	left.add_child(Kit.label("XP %d / %d" % [h.xp, h.xp_to_next()], 14))
 	left.add_child(Kit.bar(Kit.ACCENT, h.xp_to_next(), h.xp, Vector2(200, 10)))
-	left.add_child(Kit.label("STR %d   MAG %d   AGI %d   VIT %d" % [int(h.stat("str")), int(h.stat("mag")), int(h.stat("agi")), int(h.stat("vit"))], 15))
+	var stats := Kit.label("STR %d   MAG %d   AGI %d   VIT %d" % [int(h.stat("str")), int(h.stat("mag")), int(h.stat("agi")), int(h.stat("vit"))], 15)
+	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # six-figure stats must not widen the column
+	stats.custom_minimum_size = Vector2(270, 0)
+	left.add_child(stats)
 	left.add_child(Kit.label("Gold %d    Potions %d" % [h.gold, h.potions], 16, Kit.ACCENT))
 	left.add_child(HSeparator.new())
 	left.add_child(Kit.label("Traits (hover for details)", 15, Kit.DIM))
