@@ -65,5 +65,20 @@
   },
   "quest_max_active": 4,
   "quest_gold_mult": 1.0,
-  "quest_xp_mult": 1.0
+  "quest_xp_mult": 1.0,
+  "event_explore_chance": 0.65,
+  "event_arrive_chance": 0.2,
+  "event_arrive_types": ["wilds", "dungeon"],
+  "event_quiet_xp": 5,
+  "event_fight_years": 1,
+  "event_fight_power": 0.9,
+  "event_fight_reward": 1.2,
+  "event_proficiency_step": 1,
+  "event_stat_bonus_max": 8,
+  "event_skill_bonus_mult": 20,
+  "event_skill_bonus_cap": 8,
+  "event_crit_margin": 10,
+  "event_dc_per_danger": 10,
+  "event_duplicate_item_gold": 0.35,
+  "event_bot_explore_every": 6
 }
