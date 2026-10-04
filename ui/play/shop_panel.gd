@@ -201,7 +201,11 @@ func _build_temple() -> void:
 	var floor_pct := int(round(float(GameData.bal("fate_min")) * 100.0))
 	var drop := int(round(float(GameData.bal("prayer_fate_drop")) * 100.0))
 	var fate_now := "Fate Value %d%%; prayer cannot take it below %d%%." % [int(round(h.fate_value * 100.0)), floor_pct]
-	var effect := "-%d%% Fate Value" % drop if GameItems.can_pray(dynasty) else "Fate is as light as it gets"
+	var effect := "-%d%% Fate Value" % drop
+	if GameItems.trials_left(h) == 0:
+		effect = "No trials left to face"
+	elif not GameItems.can_pray(dynasty):
+		effect = "Fate is as light as it gets"
 	rows.add_child(_service_row("Prayer", fate_now, effect, "%dg" % pcost, Kit.TEXT, "A lower Fate Value makes failure at life's milestones less likely.", pb, _afford(pcost)))
 	var c := GameItems.temple_uses(dynasty, "cleanse")
 	var p := GameItems.temple_uses(dynasty, "prayer")

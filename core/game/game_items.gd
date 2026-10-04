@@ -252,8 +252,17 @@ static func prayer_price(d: GameDynasty) -> int:
 	return maxi(1, int(round(p)))
 
 
+## Life milestones the heir has yet to face. Fate Value is only rolled against these.
+static func trials_left(h: GameHeir) -> int:
+	var n := 0
+	for m in GameFate.MILESTONE_LABELS:
+		if m not in h.milestones_done:
+			n += 1
+	return n
+
+
 static func can_pray(d: GameDynasty) -> bool:
-	return d.heir.fate_value > float(GameData.bal("fate_min")) + 0.00005
+	return trials_left(d.heir) > 0 and d.heir.fate_value > float(GameData.bal("fate_min")) + 0.00005
 
 
 ## Lift a curse from the heir entirely: it is neither expressed nor carried to children born later.
@@ -279,6 +288,8 @@ static func pray(d: GameDynasty) -> String:
 	var h := d.heir
 	if not d.world.has_service("temple"):
 		return "There is no temple in %s." % d.world.here()["name"]
+	if trials_left(h) == 0:
+		return "%s has faced every trial of this life. The priests say prayer can change nothing now." % h.name
 	if not can_pray(d):
 		return "The priests say %s's fate is as light as prayer can make it." % h.name
 	var cost := prayer_price(d)
@@ -365,6 +376,6 @@ static func bot_tick(d: GameDynasty) -> void:
 			worst = t
 	if worst != "" and h.gold - cleanse_price(d) >= reserve:
 		d._say(cleanse(d, worst))
-	var trials_left := "elder_years" not in h.milestones_done
-	if trials_left and h.fate_value >= float(GameData.bal("bot_pray_fate")) and can_pray(d) and h.gold - prayer_price(d) >= reserve * 2:
+	var before_elder := "elder_years" not in h.milestones_done
+	if before_elder and h.fate_value >= float(GameData.bal("bot_pray_fate")) and can_pray(d) and h.gold - prayer_price(d) >= reserve * 2:
 		d._say(pray(d))

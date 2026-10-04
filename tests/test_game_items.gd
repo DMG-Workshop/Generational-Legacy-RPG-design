@@ -257,6 +257,16 @@ func _test_temple() -> void:
 	GameItems.pray(d)
 	_check(h.gold == g, "no charge for a refused prayer")
 	_check(GameItems.temple_uses(d, "prayer") >= 2, "prayers counted")
+	# Fate Value only matters for milestones still ahead; with none left, prayer is refused free of charge.
+	h.fate_value = 0.15
+	_check(GameItems.can_pray(d) and GameItems.trials_left(h) > 0, "prayer open while trials remain")
+	var done: Array = h.milestones_done.duplicate()
+	h.milestones_done = GameFate.MILESTONE_LABELS.keys()
+	g = h.gold
+	msg = GameItems.pray(d)
+	_check(GameItems.trials_left(h) == 0 and not GameItems.can_pray(d), "no prayer once every trial is faced")
+	_check(h.gold == g and _near(h.fate_value, 0.15), "a pointless prayer is not charged (%s)" % msg)
+	h.milestones_done = done
 
 
 func _roundtrip(d: GameDynasty) -> GameDynasty:
