@@ -154,6 +154,15 @@ func _add_trait(h: GameHeir, id: String) -> bool:
 	return true
 
 
+## "A bad omen at Coming of Age: you lose 40 gold and are Cursed." - with no gold, the loss is left out.
+func _setback_text(what: String, label: String, loss: int, extra: String) -> String:
+	if loss > 0:
+		return "%s at %s: you lose %d gold%s." % [what, label, loss, " and " + extra if extra != "" else ""]
+	if extra != "":
+		return "%s at %s: you %s." % [what, label, extra]
+	return "%s at %s, but there was no gold to lose." % [what, label]
+
+
 func _check_milestone(milestone: String) -> void:
 	if milestone in heir.milestones_done:
 		return
@@ -168,22 +177,22 @@ func _check_milestone(milestone: String) -> void:
 		"minor":
 			var loss := int(float(heir.gold) * 0.2)
 			heir.gold -= loss
-			msgs.append("A minor setback at %s: you lose %d gold." % [label, loss])
+			msgs.append(_setback_text("A minor setback", label, loss, ""))
 		"moderate":
 			var loss := int(float(heir.gold) * 0.4)
 			heir.gold -= loss
 			if rng.randf() < float(GameData.bal("moderate_curse_chance")):
 				_add_trait(heir, "cursed")
-				msgs.append("A bad omen at %s: you lose %d gold and are Cursed." % [label, loss])
+				msgs.append(_setback_text("A bad omen", label, loss, "are Cursed"))
 			else:
-				msgs.append("A bad omen at %s: you lose %d gold." % [label, loss])
+				msgs.append(_setback_text("A bad omen", label, loss, ""))
 		"major":
 			var loss := int(float(heir.gold) * 0.7)
 			heir.gold -= loss
 			var curse := ""
 			if rng.randf() < float(GameData.bal("major_curse_chance")):
 				curse = _random_new_curse(heir)
-			msgs.append("A major failure at %s: you lose %d gold%s." % [label, loss, " and gain %s" % GameData.trait_name(curse) if curse != "" else ""])
+			msgs.append(_setback_text("A major failure", label, loss, "gain %s" % GameData.trait_name(curse) if curse != "" else ""))
 			_add_echo("infamy", "major", "%s's failure is whispered about" % heir.name, 0.3)
 		"critical":
 			var curse := _random_new_curse(heir)
