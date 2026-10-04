@@ -330,6 +330,7 @@ func buy_potion() -> String:
 
 func rest() -> Array:
 	heir.full_heal()
+	party.rest(self)
 	var msgs: Array = ["%s rests and recovers fully." % heir.name]
 	return _finish_time("rest", msgs)
 
@@ -488,6 +489,7 @@ func finish_battle() -> Array:
 	var msgs: Array = []
 	if b == null:
 		return msgs
+	var party_msgs := party.after_battle(self, b)
 	match b.result:
 		"victory":
 			var xp := 0
@@ -545,6 +547,7 @@ func finish_battle() -> Array:
 				msgs.append("%s is dragged from the field, barely alive. Lost %d gold." % [heir.name, loss])
 				_say(msgs[0])
 				msgs.append_array(_finish_time(battle_kind, []))
+	msgs.append_array(party_msgs)
 	return msgs
 
 

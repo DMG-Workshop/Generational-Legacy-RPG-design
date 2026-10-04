@@ -12,6 +12,7 @@ var hero_hp: ProgressBar
 var hero_mp: ProgressBar
 var hero_label: Label
 var enemy_nodes: Array = []   # [{root, body, hp, label}]
+var ally_nodes: Array = []    # [{root, body, hp, mp, info, ko}] - companions, same order as b.allies
 var log_label: RichTextLabel
 var command_box: HBoxContainer
 var target: int = 0
@@ -64,8 +65,14 @@ func _ready() -> void:
 	_build_actors()
 	_build_commands()
 	target = b.first_target()
+	_update_view()
 	call_deferred("_layout")
 	_say("A battle begins!")
+	if not b.allies.is_empty():
+		var party: PackedStringArray = []
+		for a in b.allies:
+			party.append(a.name)
+		_say("%s fight%s beside %s." % [" and ".join(party), "s" if party.size() == 1 else "", d.heir.name])
 
 
 func _say(text: String) -> void:
@@ -97,6 +104,9 @@ func _build_actors() -> void:
 	hero_node.add_child(hero_mp)
 	arena.add_child(hero_node)
 
+	for a in b.allies:
+		ally_nodes.append(_build_ally(a))
+
 	for i in b.enemies.size():
 		var e: Dictionary = b.enemies[i]
 		var root := Control.new()
@@ -118,7 +128,7 @@ func _build_actors() -> void:
 		body.gui_input.connect(func(ev: InputEvent):
 			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and e["hp"] > 0:
 				target = idx
-				_update_view())
+				_update_marks())
 		root.add_child(body)
 		for ex in [0.28, 0.62]:
 			var eye := ColorRect.new()
@@ -137,16 +147,67 @@ func _build_actors() -> void:
 		enemy_nodes.append({"root": root, "body": body, "hp": hp, "sel": sel, "w": w, "h": h})
 
 
+## A companion: smaller figure in class colours with a race-tinted head, name, level and HP.
+func _build_ally(a: GameHeir) -> Dictionary:
+	var root := Control.new()
+	root.size = Vector2(110, 180)
+	var body := ColorRect.new()
+	body.color = Color(a.cls()["color"])
+	body.size = Vector2(66, 92)
+	body.position = Vector2(22, 30)
+	root.add_child(body)
+	var head := ColorRect.new()
+	head.color = Color(a.race().get("color", "#f0d9b5"))
+	head.size = Vector2(34, 34)
+	head.position = Vector2(38, 0)
+	root.add_child(head)
+	var ko := Kit.label("KO", 22, Kit.BAD)
+	ko.add_theme_color_override("font_outline_color", Color.BLACK)
+	ko.add_theme_constant_override("outline_size", 6)
+	ko.position = Vector2(38, 52)
+	ko.visible = a.hp <= 0
+	root.add_child(ko)
+	var nm := Kit.label(a.name, 13)
+	nm.position = Vector2(0, 126)
+	root.add_child(nm)
+	var info := Kit.label("", 12, Kit.DIM)
+	info.position = Vector2(0, 143)
+	root.add_child(info)
+	var hp := _thin_bar(Kit.GOOD, a.max_hp(), a.hp, Vector2(110, 8))
+	hp.position = Vector2(0, 162)
+	root.add_child(hp)
+	var mp := _thin_bar(Kit.MP_BLUE, maxf(1.0, a.max_mp()), a.mp, Vector2(110, 5))
+	mp.position = Vector2(0, 173)
+	root.add_child(mp)
+	if a.hp <= 0:
+		body.modulate = Color(0.35, 0.35, 0.4)
+	arena.add_child(root)
+	return {"root": root, "body": body, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0}
+
+
+## A bar exactly `size` tall (Kit bars pad to the stylebox margins).
+func _thin_bar(color: Color, max_value: float, value: float, size: Vector2) -> ProgressBar:
+	var pb := Kit.bar(color, max_value, value, size)
+	for k in ["background", "fill"]:
+		(pb.get_theme_stylebox(k) as StyleBoxFlat).set_content_margin_all(0)
+	return pb
+
+
 func _layout() -> void:
 	if arena == null or hero_node == null:
 		return
 	var sz := arena.size
 	hero_node.position = Vector2(sz.x * 0.16, sz.y * 0.5 - 90)
+	# Companions stand in a column between the hero and the foes.
+	var na := ally_nodes.size()
+	for i in na:
+		var y := sz.y * 0.5 - 80.0 if na == 1 else sz.y * 0.5 - 195.0 + float(i) * 215.0
+		ally_nodes[i]["root"].position = Vector2(sz.x * 0.30 + float(i % 2) * 24.0, y)
 	var n := enemy_nodes.size()
 	for i in n:
 		var en: Dictionary = enemy_nodes[i]
 		var x := sz.x * 0.62 + (i % 2) * 150.0 - (n - 1) * 20.0
-		var y := sz.y * 0.5 - float(en["h"]) * 0.5 - 20.0 + (i - (n - 1) * 0.5) * 70.0
+		var y := sz.y * 0.5 - float(en["h"]) * 0.5 - 20.0 + (i - (n - 1) * 0.5) * 95.0
 		en["root"].position = Vector2(x, y)
 
 
@@ -193,28 +254,75 @@ func _do(action: Callable) -> void:
 
 func _play_events(events: Array) -> void:
 	for ev in events:
+		var by := int(ev.get("by", -1))
+		if by >= 0 and by < ally_nodes.size() and ev["type"] in ["damage", "heal"]:
+			_lunge(ally_nodes[by]["root"], 22.0)
 		match ev["type"]:
 			"damage":
 				if ev["side"] == "enemy":
 					var en: Dictionary = enemy_nodes[ev["index"]]
 					_float_text(en["root"].position + Vector2(en["w"] * 0.4, 10), str(ev["amount"]) + ("!" if ev["crit"] else ""), Color("#ffd24a") if ev["crit"] else Color.WHITE)
 					_flash(en["body"])
-					en["hp"].value = b.enemies[ev["index"]]["hp"]
+					en["hp"].value = maxf(float(b.enemies[ev["index"]]["hp"]), en["hp"].value - float(ev["amount"]))
+				elif ev["side"] == "ally":
+					_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+					var an: Dictionary = ally_nodes[ev["ally"]]
+					_float_text(an["root"].position + Vector2(34, -6), str(ev["amount"]), Kit.BAD)
+					_flash(an["body"])
+					_step_ally_hp(ev["ally"], -int(ev["amount"]))
 				else:
+					_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 					_float_text(hero_node.position + Vector2(40, 0), str(ev["amount"]), Kit.BAD)
 					_flash(hero_node.get_child(0))
+					hero_hp.value -= float(ev["amount"])
 			"heal":
-				_float_text(hero_node.position + Vector2(40, 0), "+%d" % ev["amount"], Kit.GOOD)
+				if ev["side"] == "ally":
+					_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), "+%d" % ev["amount"], Kit.GOOD)
+					_step_ally_hp(ev["ally"], int(ev["amount"]))
+				else:
+					_float_text(hero_node.position + Vector2(40, 0), "+%d" % ev["amount"], Kit.GOOD)
+					hero_hp.value += float(ev["amount"])
 			"miss":
-				_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.DIM)
+				if ev["side"] == "ally":
+					_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.DIM)
+				else:
+					_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.DIM)
+			"ko":
+				_knock_out(ev["ally"])
 			"death":
 				var en2: Dictionary = enemy_nodes[ev["index"]]
 				var t := create_tween()
 				t.tween_property(en2["root"], "modulate:a", 0.0, 0.4)
 			"defend":
 				_float_text(hero_node.position + Vector2(30, 0), "guard", Kit.MP_BLUE)
-		_update_view()
+		_update_marks()
 		await get_tree().create_timer(0.35).timeout
+
+
+## Bars follow the blows one by one; _update_view snaps them to the true values afterwards.
+func _step_ally_hp(i: int, delta: int) -> void:
+	var an: Dictionary = ally_nodes[i]
+	an["hp"].value = clampf(an["hp"].value + float(delta), 0.0, an["hp"].max_value)
+	an["info"].text = "Lv%d  HP %d/%d" % [b.allies[i].level, int(an["hp"].value), int(an["hp"].max_value)]
+
+
+func _knock_out(i: int) -> void:
+	var an: Dictionary = ally_nodes[i]
+	if an["down"]:
+		return
+	an["down"] = true
+	an["ko"].visible = true
+	_float_text(an["root"].position + Vector2(10, -6), "knocked out", Kit.BAD)
+	var t := create_tween()
+	t.tween_property(an["body"], "modulate", Color(0.35, 0.35, 0.4), 0.4)
+
+
+## A short step towards the other side and back, so it is clear who acted.
+func _lunge(node: Control, dx: float) -> void:
+	var home := node.position
+	var t := create_tween()
+	t.tween_property(node, "position:x", home.x + dx, 0.1)
+	t.tween_property(node, "position:x", home.x, 0.15)
 
 
 func _flash(node: CanvasItem) -> void:
@@ -236,13 +344,27 @@ func _float_text(pos: Vector2, text: String, color: Color) -> void:
 	t.chain().tween_callback(l.queue_free)
 
 
+func _update_marks() -> void:
+	for i in enemy_nodes.size():
+		enemy_nodes[i]["sel"].visible = (i == target and b.enemies[i]["hp"] > 0 and not b.is_over())
+
+
 func _update_view() -> void:
 	hero_hp.max_value = d.heir.max_hp()
 	hero_hp.value = d.heir.hp
 	hero_mp.max_value = maxf(1.0, d.heir.max_mp())
 	hero_mp.value = d.heir.mp
+	_update_marks()
 	for i in enemy_nodes.size():
-		enemy_nodes[i]["sel"].visible = (i == target and b.enemies[i]["hp"] > 0 and not b.is_over())
+		enemy_nodes[i]["hp"].value = b.enemies[i]["hp"]
+	for i in ally_nodes.size():
+		var a: GameHeir = b.allies[i]
+		var an: Dictionary = ally_nodes[i]
+		an["hp"].max_value = a.max_hp()
+		an["hp"].value = a.hp
+		an["mp"].max_value = maxf(1.0, a.max_mp())
+		an["mp"].value = a.mp
+		an["info"].text = "Lv%d  HP %d/%d" % [a.level, a.hp, a.max_hp()]
 
 
 func _show_result() -> void:

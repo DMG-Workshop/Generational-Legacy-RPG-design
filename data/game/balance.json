@@ -47,5 +47,14 @@
   "elite_level_mult": 1.6,
   "skill_cost_growth_per_level": 0.1,
   "glory_min_level": 45,
-  "glory_reference_lifespan": 100
+  "glory_reference_lifespan": 100,
+  "party_max_size": 2,
+  "companion_heir_target_chance": 0.6,
+  "companion_heal_below": 0.4,
+  "companion_self_heal_below": 0.3,
+  "companion_death_chance": 0.25,
+  "companion_ko_recover_hp": 0.15,
+  "companion_mend_per_year": 0.2,
+  "companion_kin_gens": 2,
+  "companion_bot_reserve_years": 10
 }

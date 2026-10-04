@@ -1,3 +1,108 @@
 {
-  "companions": []
+  "taverns": {
+    "hearthmere": {"name": "The Lantern and Last Coin", "text": "Low beams, a dog by the fire, and swords for hire along the back wall."},
+    "ironford": {"name": "The Anvil's Rest", "text": "Smiths drink here after the forges bank. The hirelings sit nearest the door."},
+    "kingshold": {"name": "The Crown and Candle", "text": "Knights without lords and scholars without patrons share the long tables."},
+    "brinehaven": {"name": "The Salt Anchor", "text": "Tar, fish stew and sailors' gossip. Half the room is waiting for a ship."}
+  },
+  "companions": [
+    {
+      "id": "bren_cask", "name": "Bren Cask", "successor": "{given} Cask",
+      "race": "human", "class": "warrior",
+      "personality": "Former caravan guard. Counts his coin twice and his friends once.",
+      "where": ["hearthmere"], "fee": 40, "upkeep": 1,
+      "requires": {"min_level": 1, "min_gen": 1, "flags": []}
+    },
+    {
+      "id": "maddy_thorn", "name": "Maddy Thorn", "successor": "{given} Thorn",
+      "race": "halfling", "class": "rogue",
+      "personality": "Laughs at the wrong moments and never misses the right ones.",
+      "where": ["hearthmere", "kingshold"], "fee": 35, "upkeep": 1,
+      "requires": {"min_level": 1, "min_gen": 1, "flags": []}
+    },
+    {
+      "id": "sister_oriel", "name": "Sister Oriel", "successor": "Sister {given}",
+      "race": "human", "class": "cleric",
+      "personality": "Left the temple before her vows. Still prays before every fight, and after.",
+      "where": ["hearthmere"], "fee": 70, "upkeep": 2,
+      "requires": {"min_level": 5, "min_gen": 1, "flags": []},
+      "hint": "A young woman in a grey habit watches the door. She wants a patron with some battles behind them."
+    },
+    {
+      "id": "hulda_stonebrow", "name": "Hulda Stonebrow", "successor": "{given} Stonebrow",
+      "race": "dwarf", "class": "warrior",
+      "personality": "Mine-guard. Claims she has buried more goblins than coin, and she is not poor.",
+      "where": ["ironford"], "fee": 55, "upkeep": 1,
+      "requires": {"min_level": 3, "min_gen": 1, "flags": []},
+      "hint": "A dwarf in a dented helm says she does not guard green recruits."
+    },
+    {
+      "id": "tarsk_ember_eye", "name": "Tarsk Ember-Eye", "successor": "{given} Ember-Eye",
+      "race": "dragonborn", "class": "spellblade",
+      "personality": "Cast out of the forge-temples for asking why the fire answers.",
+      "where": ["ironford"], "fee": 120, "upkeep": 3,
+      "requires": {"min_level": 15, "min_gen": 1, "flags": []},
+      "bonus": {"mag": 0.1},
+      "hint": "A dragonborn with a scorched sleeve sizes up every sword that walks in. Not yours, yet."
+    },
+    {
+      "id": "varn_deepdelver", "name": "Varn Deepdelver", "successor": "{given} Deepdelver",
+      "race": "dwarf", "class": "warden",
+      "personality": "Tunnel scout. Went quiet after Deepstone and only talks about what he saw there to those who have seen it.",
+      "where": ["ironford"], "fee": 110, "upkeep": 3,
+      "requires": {"min_level": 12, "min_gen": 1, "flags": ["deepstone_surveyed"]},
+      "bonus": {"all_stats": 0.05, "agi": 0.1},
+      "hint": "A grey-bearded scout asks every stranger whether they have been down to Deepstone Halls."
+    },
+    {
+      "id": "ser_aldric_vane", "name": "Ser Aldric Vane", "successor": "Ser {given} Vane",
+      "race": "human", "class": "paladin",
+      "personality": "A knight without a lord, still polishing a crest he no longer wears.",
+      "where": ["kingshold"], "fee": 140, "upkeep": 4,
+      "requires": {"min_level": 12, "min_gen": 1, "flags": []},
+      "bonus": {"all_stats": 0.05, "hp": 0.1},
+      "hint": "A knight in faded colours will only swear to a name that has drawn blood."
+    },
+    {
+      "id": "ysolde_marrow", "name": "Ysolde Marrow", "successor": "{given} Marrow",
+      "race": "elf", "class": "necromancer",
+      "personality": "Speaks to the dead politely and to the living rarely.",
+      "where": ["kingshold"], "fee": 130, "upkeep": 3,
+      "requires": {"min_level": 10, "min_gen": 25, "flags": []},
+      "bonus": {"mag": 0.1},
+      "hint": "The barkeep says an elf comes to Kingshold whenever the barrows grow restless."
+    },
+    {
+      "id": "corwin_saltmere", "name": "Corwin Saltmere", "successor": "{given} Saltmere",
+      "race": "half_elf", "class": "arcane_trickster",
+      "personality": "A charming liar with marked cards, a knife in each boot and a spell for the third.",
+      "where": ["brinehaven"], "fee": 90, "upkeep": 2,
+      "requires": {"min_level": 8, "min_gen": 1, "flags": []},
+      "hint": "A smiling half-elf deals cards to himself. He works only for someone worth robbing."
+    },
+    {
+      "id": "old_netta", "name": "Old Netta", "successor": "Young {given}",
+      "race": "gnome", "class": "druid",
+      "personality": "Mends nets, bones and quarrels, in that order.",
+      "where": ["brinehaven"], "fee": 60, "upkeep": 2,
+      "requires": {"min_level": 4, "min_gen": 1, "flags": []},
+      "hint": "An old gnome mending a net says she will not walk the roads with a child."
+    },
+    {
+      "id": "grull_one_tusk", "name": "Grull One-Tusk", "successor": "{given} One-Tusk",
+      "race": "orc", "class": "monk",
+      "personality": "Walked away from the war-camps to learn stillness. Mostly learned to punch.",
+      "where": ["brinehaven", "ironford"], "fee": 50, "upkeep": 1,
+      "requires": {"min_level": 2, "min_gen": 1, "flags": []}
+    },
+    {
+      "id": "pale_warden", "name": "The Pale Warden", "successor": "The Pale Warden",
+      "race": "half_dragon", "class": "templar",
+      "personality": "Kept watch over the Rift seal longer than anyone remembers. Now it is open, she means to see what comes out.",
+      "where": ["kingshold"], "fee": 360, "upkeep": 8,
+      "requires": {"min_level": 45, "min_gen": 300, "flags": ["rift_open"]},
+      "bonus": {"all_stats": 0.15, "hp": 0.15},
+      "hint": "A tall figure in white scale sits alone, facing north towards Highcrag. She is waiting for the Rift to open."
+    }
+  ]
 }
