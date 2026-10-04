@@ -106,10 +106,15 @@ static func sold_here(d: GameDynasty, id: String) -> bool:
 	return false
 
 
+## The heir's haggling, capped both ways: charm lowers prices, a wary welcome (orcs) raises them.
+static func persuasion(d: GameDynasty) -> float:
+	var cap := float(GameData.bal("shop_persuasion_cap"))
+	return clampf(d.heir.trait_total("persuasion"), -cap, cap)
+
+
 ## Shop price multiplier: generation scaling, the heir's persuasion, the house's infamy.
 static func price_mult(d: GameDynasty) -> float:
-	var persuasion := clampf(d.heir.trait_total("persuasion"), 0.0, float(GameData.bal("shop_persuasion_cap")))
-	return GameData.enemy_scale(d.gen) * (1.0 + d.echo_total("infamy")) * (1.0 - persuasion)
+	return GameData.enemy_scale(d.gen) * (1.0 + d.echo_total("infamy")) * (1.0 - persuasion(d))
 
 
 static func price(d: GameDynasty, id: String) -> int:

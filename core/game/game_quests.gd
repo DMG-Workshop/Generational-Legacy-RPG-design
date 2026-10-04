@@ -245,13 +245,19 @@ func turn_in(d: GameDynasty, id: String) -> Array:
 	return msgs
 
 
-func _complete_note(d: GameDynasty, q: Dictionary) -> void:
-	d._say("Quest done: %s. Report to the notice board in %s." % [q["name"], place_name(q["giver"])])
+## The hooks below journal at once, or append to `out` when the caller journals its own lines
+## first (a travel or battle line must come before the quest it finished).
+func _complete_note(d: GameDynasty, q: Dictionary, out: Variant) -> void:
+	var line := "Quest done: %s. Report to the notice board in %s." % [q["name"], place_name(q["giver"])]
+	if out is Array:
+		out.append(line)
+	else:
+		d._say(line)
 
 
 # ---------------------------------------------------------------- hooks from the dynasty
 
-func on_kill(d: GameDynasty, creature_id: String) -> void:
+func on_kill(d: GameDynasty, creature_id: String, out: Variant = null) -> void:
 	for e in active:
 		var q := def(e["id"])
 		if kind(q) != "kill" or creature_id not in targets(q) or is_complete(e):
@@ -261,23 +267,23 @@ func on_kill(d: GameDynasty, creature_id: String) -> void:
 			continue
 		e["progress"] = int(e["progress"]) + 1
 		if is_complete(e):
-			_complete_note(d, q)
+			_complete_note(d, q, out)
 
 
-func on_arrive(d: GameDynasty, place_id: String) -> void:
+func on_arrive(d: GameDynasty, place_id: String, out: Variant = null) -> void:
 	for e in active:
 		var q := def(e["id"])
 		if kind(q) == "visit" and q["objective"].get("target", "") == place_id and not is_complete(e):
 			e["progress"] = 1
-			_complete_note(d, q)
+			_complete_note(d, q, out)
 
 
-func on_flag(d: GameDynasty, flag: String) -> void:
+func on_flag(d: GameDynasty, flag: String, out: Variant = null) -> void:
 	for e in active:
 		var q := def(e["id"])
 		if kind(q) == "flag" and q["objective"].get("flag", "") == flag and not is_complete(e):
 			e["progress"] = 1
-			_complete_note(d, q)
+			_complete_note(d, q, out)
 
 
 ## A new heir takes up the house's open quests. Hunts whose quarry has died out lapse.

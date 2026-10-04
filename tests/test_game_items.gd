@@ -98,6 +98,10 @@ func _test_prices() -> void:
 	d.heir.traits.erase("__haggler")
 	GameData.traits.erase("__haggler")
 	GameItems.unequip(d, "trinket")
+	d.heir.race_id = "orc"
+	_check(GameItems.price(d, "iron_sword") == int(round(50.0 * 1.1)), "wary merchants charge an orc 10% more")
+	_check(d.potion_price() == maxi(1, int(round(float(GameData.bal("potion_cost")) * 1.1))), "potions cost an orc 10% more too")
+	d.heir.race_id = "human"
 	d._add_echo("infamy", "test", "test", 0.3)
 	_check(GameItems.price(d, "iron_sword") == int(round(50.0 * 1.3)), "infamy raises prices")
 	_check(GameItems.sell_price(d, "iron_sword") == int(round(50.0 * float(GameData.bal("sell_fraction")) / 1.3)), "infamy lowers what merchants pay")

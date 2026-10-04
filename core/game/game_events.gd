@@ -565,8 +565,9 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 				h.lifespan = h.compute_lifespan()
 				fx.append({"t": "Trait lost: %s" % GameData.trait_name(t), "k": "good" if is_harmful_trait(t) else "bad"})
 				break
+	var notes: Array = []   # quest lines a flag completes; they follow this outcome's own lines
 	if o.has("flag"):
-		d.set_flag(o["flag"])
+		d.set_flag(o["flag"], notes)
 	if o.has("item"):
 		var item: String = o["item"]
 		if _owns(h, item):
@@ -592,6 +593,7 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		msgs.append(", ".join(summary) + ".")
 	if level_up != "":
 		msgs.append(level_up)
+	msgs.append_array(notes)
 	return fx
 
 

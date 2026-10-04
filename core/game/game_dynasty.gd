@@ -154,6 +154,15 @@ func _add_trait(h: GameHeir, id: String) -> bool:
 	return true
 
 
+## "A bad omen at Coming of Age: you lose 40 gold and are Cursed." - with no gold, the loss is left out.
+func _setback_text(what: String, label: String, loss: int, extra: String) -> String:
+	if loss > 0:
+		return "%s at %s: you lose %d gold%s." % [what, label, loss, " and " + extra if extra != "" else ""]
+	if extra != "":
+		return "%s at %s: you %s." % [what, label, extra]
+	return "%s at %s, but there was no gold to lose." % [what, label]
+
+
 func _check_milestone(milestone: String) -> void:
 	if milestone in heir.milestones_done:
 		return
@@ -168,22 +177,22 @@ func _check_milestone(milestone: String) -> void:
 		"minor":
 			var loss := int(float(heir.gold) * 0.2)
 			heir.gold -= loss
-			msgs.append("A minor setback at %s: you lose %d gold." % [label, loss])
+			msgs.append(_setback_text("A minor setback", label, loss, ""))
 		"moderate":
 			var loss := int(float(heir.gold) * 0.4)
 			heir.gold -= loss
 			if rng.randf() < float(GameData.bal("moderate_curse_chance")):
 				_add_trait(heir, "cursed")
-				msgs.append("A bad omen at %s: you lose %d gold and are Cursed." % [label, loss])
+				msgs.append(_setback_text("A bad omen", label, loss, "are Cursed"))
 			else:
-				msgs.append("A bad omen at %s: you lose %d gold." % [label, loss])
+				msgs.append(_setback_text("A bad omen", label, loss, ""))
 		"major":
 			var loss := int(float(heir.gold) * 0.7)
 			heir.gold -= loss
 			var curse := ""
 			if rng.randf() < float(GameData.bal("major_curse_chance")):
 				curse = _random_new_curse(heir)
-			msgs.append("A major failure at %s: you lose %d gold%s." % [label, loss, " and gain %s" % GameData.trait_name(curse) if curse != "" else ""])
+			msgs.append(_setback_text("A major failure", label, loss, "gain %s" % GameData.trait_name(curse) if curse != "" else ""))
 			_add_echo("infamy", "major", "%s's failure is whispered about" % heir.name, 0.3)
 		"critical":
 			var curse := _random_new_curse(heir)
@@ -224,8 +233,7 @@ func years_for(action: String) -> int:
 
 
 func potion_price() -> int:
-	var persuasion := clampf(heir.trait_total("persuasion"), -0.5, 0.5)
-	var p := float(GameData.bal("potion_cost")) * GameData.enemy_scale(gen) * (1.0 + echo_total("infamy")) * (1.0 - persuasion)
+	var p := float(GameData.bal("potion_cost")) * GameData.enemy_scale(gen) * (1.0 + echo_total("infamy")) * (1.0 - GameItems.persuasion(self))
 	return maxi(1, int(round(p)))
 
 
@@ -244,10 +252,10 @@ func available_boss() -> Dictionary:
 
 # ---------------------------------------------------------------- flags, items, events
 
-func set_flag(flag: String) -> void:
+func set_flag(flag: String, out: Variant = null) -> void:
 	if not flags.has(flag):
 		flags[flag] = gen
-		quests.on_flag(self, flag)
+		quests.on_flag(self, flag, out)
 
 
 func give_item(id: String) -> String:
@@ -285,7 +293,7 @@ func travel(to: String) -> Array:
 	msgs.append("%s travels to %s: %s%s." % [heir.name, dest["name"], _span_text(years), slow])
 	if first:
 		msgs.append("No one of House %s has walked %s before. %s" % [dynasty_name, dest["name"], dest.get("description", "")])
-	quests.on_arrive(self, to)
+	quests.on_arrive(self, to, msgs)
 	msgs = _pass_years(years, msgs)
 	if state == "life":
 		msgs.append_array(GameEvents.on_arrive(self, to))
@@ -334,6 +342,7 @@ func buy_potion() -> String:
 
 func rest() -> Array:
 	heir.full_heal()
+	party.rest(self)
 	var msgs: Array = ["%s rests and recovers fully." % heir.name]
 	return _finish_time("rest", msgs)
 
@@ -367,12 +376,12 @@ func found_family() -> Array:
 	sp.class_id = class_ids[rng.randi() % class_ids.size()]
 	var race_ids := GameData.starting_ids(GameData.races)
 	sp.race_id = heir.race_id if rng.randf() < float(GameData.bal("spouse_same_race_chance")) else race_ids[rng.randi() % race_ids.size()]
-	sp.lifespan = sp.compute_lifespan()
 	var pool := GameData.traits_in(["bloodline", "blessing"]).filter(func(t): return t not in heir.traits)
 	if rng.randf() < float(GameData.bal("spouse_trait_chance")) and not pool.is_empty():
 		sp.traits.append(pool[rng.randi() % pool.size()])
 	if rng.randf() < float(GameData.bal("spouse_trait_chance")) * 0.4 and not pool.is_empty():
 		sp.dormant.append(pool[rng.randi() % pool.size()])
+	sp.lifespan = sp.compute_lifespan()
 	heir.spouse = sp
 	var counts: Array = heir.race().get("children", [GameData.bal("child_count_min"), GameData.bal("child_count_max")])
 	var n := rng.randi_range(int(counts[0]), int(counts[1]))
@@ -465,7 +474,7 @@ func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle = GameBattle.new(heir, foes, rng)
 	battle.slayer_bonus = slayer_map()
 	battle.weather = world.weather().get("combat", {})
-	battle.allies = party.battle_allies(self)
+	battle.add_allies(party.battle_allies(self))
 	battle_kind = kind
 	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
 	return battle
@@ -492,15 +501,17 @@ func finish_battle() -> Array:
 	var msgs: Array = []
 	if b == null:
 		return msgs
+	var party_msgs := party.after_battle(self, b)
 	match b.result:
 		"victory":
 			var xp := 0
 			var gold := 0
+			var quest_msgs: Array = []
 			for e in b.enemies:
 				xp += int(e["xp"])
 				gold += int(e["gold"])
 				heir.kills[e["id"]] = int(heir.kills.get(e["id"], 0)) + 1
-				quests.on_kill(self, e["id"])
+				quests.on_kill(self, e["id"], quest_msgs)
 				if e["boss"] and not slain_bosses.has(e["id"]):
 					slain_bosses[e["id"]] = gen
 					if e["heirloom"] != "":
@@ -516,13 +527,17 @@ func finish_battle() -> Array:
 			msgs.append("Victory! +%d XP, +%d gold." % [xp, gold])
 			if heir.gain_xp(xp) > 0:
 				msgs.append("Level up! %s is now level %d." % [heir.name, heir.level])
+			msgs.append_array(quest_msgs)
+			msgs.append_array(party_msgs)
 			for m in msgs:
 				_say(m)
 			_check_milestone("first_quest")
 			msgs.append_array(_finish_time(battle_kind, []))
 		"fled":
 			msgs.append("%s flees from the battle." % heir.name)
-			_say(msgs[0])
+			msgs.append_array(party_msgs)
+			for m in msgs:
+				_say(m)
 			msgs.append_array(_finish_time("rest", []))
 		"defeat":
 			killer_id = ""
@@ -534,11 +549,15 @@ func finish_battle() -> Array:
 				heir.extra_life_used = true
 				heir.hp = heir.max_hp()
 				msgs.append("Death refuses %s! Marked by Death, they rise again at full health." % heir.name)
-				_say(msgs[0])
+				msgs.append_array(party_msgs)
+				for m in msgs:
+					_say(m)
 				msgs.append_array(_finish_time(battle_kind, []))
 			elif rng.randf() < float(GameData.bal("death_chance_on_defeat")):
 				msgs.append("%s was slain in battle." % heir.name)
-				_say(msgs[0])
+				msgs.append_array(party_msgs)
+				for m in msgs:
+					_say(m)
 				msgs.append_array(_die("slain in battle"))
 			else:
 				var loss := int(float(heir.gold) * float(GameData.bal("defeat_gold_loss")))
@@ -547,8 +566,14 @@ func finish_battle() -> Array:
 				heir.mp = 0
 				heir.age += float(GameData.bal("defeat_years"))
 				msgs.append("%s is dragged from the field, barely alive. Lost %d gold." % [heir.name, loss])
-				_say(msgs[0])
+				msgs.append_array(party_msgs)
+				for m in msgs:
+					_say(m)
 				msgs.append_array(_finish_time(battle_kind, []))
+		_:
+			msgs.append_array(party_msgs)
+			for m in msgs:
+				_say(m)
 	return msgs
 
 
@@ -741,11 +766,11 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.total_hunts = int(d["total_hunts"])
 	g.killer_id = d.get("killer_id", "")
 	g.world = GameWorld.from_dict(d["world"]) if d.has("world") else GameWorld.create(g.rng)
-	g.flags = d.get("flags", {})
+	g.flags = _ints(d.get("flags", {}))
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
 	g.party = GameParty.from_dict(d.get("party", {}))
-	g.pending_event = d.get("pending_event", {})
-	g.shop_state = d.get("shop_state", {})
+	g.pending_event = _ints(d.get("pending_event", {}))
+	g.shop_state = _ints(d.get("shop_state", {}))
 	return g
 
 

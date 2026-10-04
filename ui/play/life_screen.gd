@@ -9,6 +9,9 @@ const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const EventPanel := preload("res://ui/play/event_panel.gd")
 
+const COLUMN_W := 300
+const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
+
 var app: Node
 var d: GameDynasty
 var left: VBoxContainer
@@ -31,8 +34,12 @@ func _ready() -> void:
 	margin.add_child(root)
 
 	header = Kit.label("", 22, Kit.ACCENT)
+	header.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	header.mouse_filter = Control.MOUSE_FILTER_PASS
 	root.add_child(header)
 	where = Kit.label("", 15, Kit.DIM)
+	where.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	where.mouse_filter = Control.MOUSE_FILTER_PASS
 	root.add_child(where)
 
 	var cols := HBoxContainer.new()
@@ -40,12 +47,7 @@ func _ready() -> void:
 	cols.add_theme_constant_override("separation", 10)
 	root.add_child(cols)
 
-	var lp := Kit.panel()
-	lp.custom_minimum_size = Vector2(300, 0)
-	cols.add_child(lp)
-	left = VBoxContainer.new()
-	left.add_theme_constant_override("separation", 5)
-	lp.add_child(left)
+	left = _column(cols)
 
 	var mid := VBoxContainer.new()
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -62,15 +64,25 @@ func _ready() -> void:
 	actions.add_theme_constant_override("v_separation", 8)
 	mid.add_child(actions)
 
-	var rp := Kit.panel()
-	rp.custom_minimum_size = Vector2(300, 0)
-	cols.add_child(rp)
-	right = VBoxContainer.new()
-	right.add_theme_constant_override("separation", 5)
-	rp.add_child(right)
+	right = _column(cols)
 	_refresh()
 	if d.has_pending_event():
 		_open.call_deferred(EventPanel)
+
+
+## A fixed-width side panel that scrolls when a long life fills it.
+func _column(cols: HBoxContainer) -> VBoxContainer:
+	var p := Kit.panel()
+	p.custom_minimum_size = Vector2(COLUMN_W, 0)
+	cols.add_child(p)
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	p.add_child(sc)
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 5)
+	sc.add_child(v)
+	return v
 
 
 func _refresh() -> void:
@@ -78,6 +90,8 @@ func _refresh() -> void:
 	header.text = "House %s  -  Generation %d  -  %s the %s %s" % [d.dynasty_name, d.gen, h.name, h.race()["name"], h.cls()["name"]]
 	var place := d.world.here()
 	where.text = "%s (%s)  -  %s  -  %s: %s" % [place["name"], place["type"], d.world.date_text(), d.world.weather()["name"], d.world.weather().get("text", "")]
+	header.tooltip_text = header.text
+	where.tooltip_text = where.text
 	_build_left()
 	_build_right()
 	_build_actions()
@@ -128,6 +142,16 @@ func _build_left() -> void:
 			l.tooltip_text = Kit.trait_tooltip(id)
 			l.mouse_filter = Control.MOUSE_FILTER_STOP
 			left.add_child(l)
+	_fit_column(left)
+
+
+## Every line in a side column wraps at the column's width: six-figure stats at level 5000,
+## long names and long class titles must never push the other columns off-screen.
+func _fit_column(col: VBoxContainer) -> void:
+	for c in col.get_children():
+		if c is Label:
+			c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			c.custom_minimum_size.x = COLUMN_TEXT_W
 
 
 func _build_right() -> void:
@@ -138,15 +162,10 @@ func _build_right() -> void:
 		right.add_child(Kit.label("Spouse: %s (%s %s)" % [h.spouse.name, h.spouse.race()["name"], h.spouse.cls()["name"]], 15))
 		for c in h.children:
 			var traits_txt: String = ", ".join(c.traits.map(func(t): return GameData.trait_name(t)))
-			var l := Kit.label("%s (%s %s)  Fate %d%%\n   %s" % [c.name, c.race()["name"], c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits"], 14)
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			l.custom_minimum_size = Vector2(270, 0)
-			right.add_child(l)
+			right.add_child(Kit.label("%s (%s %s)  Fate %d%%\n   %s" % [c.name, c.race()["name"], c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits"], 14))
 	else:
-		var single := Kit.label("Unmarried. Without children, distant cousins inherit with weaker blood.", 14, Kit.DIM)
-		single.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		single.custom_minimum_size = Vector2(270, 0)
-		right.add_child(single)
+		right.add_child(Kit.label("Unmarried. Without children, distant cousins inherit with weaker blood.", 14, Kit.DIM))
+	_section("Gear", ShopPanel.summary_lines(d))
 	_section("Companions", TavernPanel.summary_lines(d))
 	_section("Quests", BoardPanel.summary_lines(d))
 	right.add_child(HSeparator.new())
@@ -156,10 +175,8 @@ func _build_right() -> void:
 	if d.echoes.is_empty():
 		right.add_child(Kit.label("No legacy echoes yet.", 14, Kit.DIM))
 	for e in d.echoes:
-		var l := Kit.label(d.describe_echo(e), 13, Kit.DIM)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(270, 0)
-		right.add_child(l)
+		right.add_child(Kit.label(d.describe_echo(e), 13, Kit.DIM))
+	_fit_column(right)
 
 
 func _section(title: String, lines: Array) -> void:
@@ -168,10 +185,7 @@ func _section(title: String, lines: Array) -> void:
 	right.add_child(HSeparator.new())
 	right.add_child(Kit.label(title, 20, Kit.ACCENT))
 	for line in lines:
-		var l := Kit.label(str(line), 13, Kit.TEXT)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(270, 0)
-		right.add_child(l)
+		right.add_child(Kit.label(str(line), 13, Kit.TEXT))
 
 
 func _build_actions() -> void:
@@ -181,10 +195,10 @@ func _build_actions() -> void:
 	_act("Hunt", func(): _hunt("hunt"))
 	var hard := _act("Hard hunt", func(): _hunt("hunt_hard"))
 	hard.tooltip_text = "Tougher monsters and more Elites, for double XP and gold."
-	var legend := _act("Legend: %s" % boss["name"] if not boss.is_empty() else "No legend here", func(): _legend())
+	var legend := _act("Fight %s" % boss.get("short", boss["name"]) if not boss.is_empty() else "No legend here", func(): _legend())
 	legend.disabled = boss.is_empty()
 	if not boss.is_empty():
-		legend.tooltip_text = "Level %d. Slaying a legend grants a permanent heirloom and a legacy echo." % int(boss["min_level"])
+		legend.tooltip_text = "%s, level %d. Slaying a legend grants a permanent heirloom and a legacy echo." % [boss["name"], int(boss["min_level"])]
 	else:
 		var rumors: Array = d.stirring_legends().map(func(c): return "%s (level %d) lairs in %s" % [c["name"], int(c.get("min_level", 1)), GameWorld.place(c.get("lair", "")).get("name", "somewhere")])
 		legend.tooltip_text = "Legends are fought in their lairs.\n" + ("\n".join(rumors) if not rumors.is_empty() else "None stir in this generation.")
@@ -197,12 +211,15 @@ func _build_actions() -> void:
 		_act("Tavern", func(): _open(TavernPanel))
 	if w.has_service("board"):
 		_act("Notice board", func(): _open(BoardPanel))
+	var gear := _act("Gear", func(): _gear())
+	gear.tooltip_text = "What %s wears and carries. Swap gear anywhere; selling needs a town shop." % h.name
 	for s in ["str", "mag", "agi", "vit"]:
 		var st: String = s
 		_act("Train %s" % st.to_upper(), func(): _do(func(): return d.train(st)))
 	_act("Work", func(): _do(func(): return d.work()))
 	_act("Rest", func(): _do(func(): return d.rest()))
-	var buy := _act("Buy potion (%dg)" % d.potion_price(), _say_buy)
+	var buy := _act("Potion (%dg)" % d.potion_price(), _say_buy)
+	buy.tooltip_text = "Buy a healing potion for %d gold." % d.potion_price()
 	buy.disabled = h.gold < d.potion_price()
 	var fam := _act("Found family", func(): _do(func(): return d.found_family()))
 	fam.disabled = not d.can_found_family()
@@ -220,6 +237,8 @@ func _act(text: String, cb: Callable) -> Button:
 	var b := Kit.button(text, cb, Vector2(150, 40))
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.clip_text = true
+	if text.length() > 15:
+		b.add_theme_font_size_override("font_size", 14)
 	b.tooltip_text = text
 	actions.add_child(b)
 	return b
@@ -249,6 +268,15 @@ func _changed() -> void:
 
 func _open(panel_script: Script) -> void:
 	var p: Control = panel_script.new()
+	p.dynasty = d
+	p.on_change = _changed
+	add_child(p)
+
+
+## The shop panel's Gear tab on its own, so gear can be changed in the wilds too.
+func _gear() -> void:
+	var p: Control = ShopPanel.new()
+	p.gear_only = true
 	p.dynasty = d
 	p.on_change = _changed
 	add_child(p)
