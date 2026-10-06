@@ -688,7 +688,10 @@ func _play_one(ev: Dictionary) -> void:
 			var def := GameCombat.status_def(str(ev["id"]))
 			var heal: bool = ev.get("heal", false)
 			var amt := int(ev["amount"])
-			_float_text(_ref_node(ev["ref"]).position + Vector2(30, 0), ("+%d" if heal else "-%d") % amt, Kit.GOOD if heal else Color(def.get("color", "#ff9a3c")))
+			var txt := ("+%d" if heal else "-%d") % amt
+			if amt == 0 and int(ev.get("absorbed", 0)) > 0:
+				txt = "absorbed"
+			_float_text(_ref_node(ev["ref"]).position + Vector2(30, 0), txt, Kit.GOOD if heal else Color(def.get("color", "#ff9a3c")))
 			_step_ref_hp(str(ev["ref"]), amt if heal else -amt)
 		"status":
 			var def := GameCombat.status_def(str(ev["id"]))
