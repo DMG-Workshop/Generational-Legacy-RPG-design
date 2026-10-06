@@ -1,23 +1,33 @@
 ## Side-view battle rendering. All rules live in GameBattle; this only draws and forwards input.
+## Every combatant stands where the battle placed it (paces, see GameCombat); an area ability is
+## shown on the field, with every foe it would catch outlined, before it is cast.
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const AREA := Color("#ff9a3c")
 
 var app: Node
 var d: GameDynasty
 var b: GameBattle
 var arena: Control
+var field: Control             # draws the area being aimed, under the figures
 var hero_node: Control
 var hero_hp: ProgressBar
 var hero_mp: ProgressBar
 var hero_label: Label
-var enemy_nodes: Array = []   # [{root, body, hp, label}]
-var ally_nodes: Array = []    # [{root, body, hp, mp, info, ko}] - companions, same order as b.allies
+var hero_chips: HBoxContainer
+var enemy_nodes: Array = []    # [{root, body, hp, sel, mark, chips, w, h}]
+var ally_nodes: Array = []     # [{root, body, hp, mp, info, ko, down, chips}] - companions, same order as b.allies
 var log_label: RichTextLabel
+var hint: Label
 var command_box: HBoxContainer
 var target: int = 0
 var busy: bool = false
 var result_shown: bool = false
+var aiming: Dictionary = {}    # {ab, skill, spell} while the player picks where an ability lands
+var aim_at: int = -1
+var shown: Dictionary = {}     # {ab, at}: the area drawn on the field
+var spell_list: Control = null
 
 
 func _ready() -> void:
@@ -32,8 +42,10 @@ func _ready() -> void:
 	root.add_theme_constant_override("separation", 8)
 	margin.add_child(root)
 
-	var names: Array = b.enemies.map(func(e): return e["name"])
-	root.add_child(Kit.label("Battle: %s" % ", ".join(names), 22, Kit.ACCENT))
+	var title := Kit.label("Battle: %s" % _foe_list(), 22, Kit.ACCENT)
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	title.clip_text = true
+	root.add_child(title)
 
 	var ap := Kit.panel(Color("#191726"))
 	ap.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -42,6 +54,11 @@ func _ready() -> void:
 	arena = Control.new()
 	arena.clip_contents = true
 	ap.add_child(arena)
+	field = Control.new()
+	field.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	field.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	field.draw.connect(_draw_field)
+	arena.add_child(field)
 	arena.resized.connect(_layout)
 
 	var bottom := HBoxContainer.new()
@@ -54,11 +71,14 @@ func _ready() -> void:
 	log_label = Kit.rich()
 	lp.add_child(log_label)
 	var cp := Kit.panel()
-	cp.custom_minimum_size = Vector2(560, 0)
+	cp.custom_minimum_size = Vector2(600, 0)
 	bottom.add_child(cp)
 	var cv := VBoxContainer.new()
 	cp.add_child(cv)
-	cv.add_child(Kit.label("Commands  (click an enemy to target it)", 14, Kit.DIM))
+	hint = Kit.label("", 14, Kit.DIM)
+	hint.clip_text = true
+	hint.custom_minimum_size = Vector2(560, 0)
+	cv.add_child(hint)
 	command_box = HBoxContainer.new()
 	command_box.add_theme_constant_override("separation", 8)
 	cv.add_child(command_box)
@@ -75,44 +95,83 @@ func _ready() -> void:
 		_say("%s fight%s beside %s." % [" and ".join(party), "s" if party.size() == 1 else "", d.heir.name])
 
 
+## "Dire Wolf x3, Elite Dire Wolf" - the same foe is counted, not repeated.
+func _foe_list() -> String:
+	var order: Array = []
+	var count := {}
+	for e in b.enemies:
+		if not count.has(e["name"]):
+			order.append(e["name"])
+		count[e["name"]] = int(count.get(e["name"], 0)) + 1
+	return ", ".join(order.map(func(n): return n if count[n] == 1 else "%s x%d" % [n, count[n]]))
+
+
 func _say(text: String) -> void:
 	log_label.append_text(text + "\n")
+
+
+func _unhandled_input(ev: InputEvent) -> void:
+	if ev.is_action_pressed("ui_cancel") and not aiming.is_empty():
+		_cancel_aim()
+		get_viewport().set_input_as_handled()
+
+
+# ---------------------------------------------------------------- figures
+
+func _chips() -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 3)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return h
 
 
 func _build_actors() -> void:
 	var cls := d.heir.cls()
 	hero_node = Control.new()
-	hero_node.size = Vector2(120, 210)
+	hero_node.size = Vector2(124, 192)
 	var hero_body := ColorRect.new()
 	hero_body.color = Color(cls["color"])
-	hero_body.size = Vector2(90, 130)
-	hero_body.position = Vector2(15, 30)
+	hero_body.size = Vector2(80, 110)
+	hero_body.position = Vector2(22, 34)
 	hero_node.add_child(hero_body)
 	var head := ColorRect.new()
 	head.color = Color("#f0d9b5")
-	head.size = Vector2(46, 46)
-	head.position = Vector2(37, -10)
+	head.size = Vector2(40, 40)
+	head.position = Vector2(42, 0)
 	hero_node.add_child(head)
 	hero_label = Kit.label("%s  Lv%d" % [d.heir.name, d.heir.level], 14)
-	hero_label.position = Vector2(0, 166)
+	hero_label.position = Vector2(0, 146)
+	hero_label.size = Vector2(124, 20)
+	hero_label.clip_text = true
 	hero_node.add_child(hero_label)
-	hero_hp = Kit.bar(Kit.GOOD, d.heir.max_hp(), d.heir.hp, Vector2(120, 10))
-	hero_hp.position = Vector2(0, 188)
+	hero_hp = _thin_bar(Kit.GOOD, d.heir.max_hp(), d.heir.hp, Vector2(124, 9))
+	hero_hp.position = Vector2(0, 167)
 	hero_node.add_child(hero_hp)
-	hero_mp = Kit.bar(Kit.MP_BLUE, maxf(1.0, d.heir.max_mp()), d.heir.mp, Vector2(120, 6))
-	hero_mp.position = Vector2(0, 202)
+	hero_mp = _thin_bar(Kit.MP_BLUE, maxf(1.0, d.heir.max_mp()), d.heir.mp, Vector2(124, 5))
+	hero_mp.position = Vector2(0, 178)
 	hero_node.add_child(hero_mp)
+	hero_chips = _chips()
+	hero_chips.position = Vector2(0, 186)
+	hero_node.add_child(hero_chips)
 	arena.add_child(hero_node)
 
 	for a in b.allies:
 		ally_nodes.append(_build_ally(a))
 
+	var solo := b.enemies.size() == 1
 	for i in b.enemies.size():
 		var e: Dictionary = b.enemies[i]
 		var root := Control.new()
-		var w := 170.0 if e["boss"] else 110.0
-		var h := 200.0 if e["boss"] else 130.0
-		root.size = Vector2(w, h + 50)
+		var w := 170.0 if e["boss"] else (120.0 if solo else 88.0)
+		var h := 190.0 if e["boss"] else (110.0 if solo else 76.0)
+		root.size = Vector2(w, h + 48)
+		var mark := Panel.new()
+		mark.add_theme_stylebox_override("panel", Kit.style(Color(AREA, 0.12), 10, AREA))
+		mark.size = Vector2(w + 18, h + 18)
+		mark.position = Vector2(-9, -9)
+		mark.visible = false
+		mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(mark)
 		var sel := Panel.new()
 		sel.add_theme_stylebox_override("panel", Kit.style(Color(0, 0, 0, 0), 8, Kit.ACCENT))
 		sel.size = Vector2(w + 10, h + 10)
@@ -125,10 +184,9 @@ func _build_actors() -> void:
 		body.size = Vector2(w, h)
 		body.mouse_filter = Control.MOUSE_FILTER_STOP
 		var idx := i
-		body.gui_input.connect(func(ev: InputEvent):
-			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and e["hp"] > 0:
-				target = idx
-				_update_marks())
+		body.gui_input.connect(func(ev: InputEvent): _on_foe_input(idx, ev))
+		body.mouse_entered.connect(func(): _on_foe_hover(idx, true))
+		body.mouse_exited.connect(func(): _on_foe_hover(idx, false))
 		root.add_child(body)
 		for ex in [0.28, 0.62]:
 			var eye := ColorRect.new()
@@ -143,53 +201,65 @@ func _build_actors() -> void:
 		lv.position = Vector2(4, h - 22)
 		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(lv)
-		var lbl := Kit.label(e["name"], 14)
-		lbl.position = Vector2(0, h + 6)
+		var lbl := Kit.label(e["name"], 13)
+		lbl.position = Vector2(0, h + 3)
+		lbl.size = Vector2(w + 64, 18)
+		lbl.clip_text = true
+		lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		lbl.z_index = 1
 		root.add_child(lbl)
-		var hp := Kit.bar(Kit.BAD, e["max_hp"], e["hp"], Vector2(w, 10))
-		hp.position = Vector2(0, h + 28)
+		var hp := _thin_bar(Kit.BAD, e["max_hp"], e["hp"], Vector2(w, 8))
+		hp.position = Vector2(0, h + 23)
 		root.add_child(hp)
+		var chips := _chips()
+		chips.position = Vector2(0, h + 33)
+		chips.z_index = 1
+		root.add_child(chips)
 		arena.add_child(root)
-		enemy_nodes.append({"root": root, "body": body, "hp": hp, "sel": sel, "w": w, "h": h})
+		enemy_nodes.append({"root": root, "body": body, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h})
 
 
 ## A companion: smaller figure in class colours with a race-tinted head, name, level and HP.
 func _build_ally(a: GameHeir) -> Dictionary:
 	var root := Control.new()
-	root.size = Vector2(110, 180)
+	root.size = Vector2(110, 168)
 	var body := ColorRect.new()
 	body.color = Color(a.cls()["color"])
-	body.size = Vector2(66, 92)
-	body.position = Vector2(22, 30)
+	body.size = Vector2(58, 72)
+	body.position = Vector2(26, 28)
 	root.add_child(body)
 	var head := ColorRect.new()
 	head.color = Color(a.race().get("color", "#f0d9b5"))
-	head.size = Vector2(34, 34)
-	head.position = Vector2(38, 0)
+	head.size = Vector2(30, 30)
+	head.position = Vector2(40, 0)
 	root.add_child(head)
 	var ko := Kit.label("KO", 22, Kit.BAD)
 	ko.add_theme_color_override("font_outline_color", Color.BLACK)
 	ko.add_theme_constant_override("outline_size", 6)
-	ko.position = Vector2(38, 52)
+	ko.position = Vector2(38, 46)
 	ko.visible = a.hp <= 0
 	root.add_child(ko)
 	var nm := Kit.label(a.name, 13)
-	nm.position = Vector2(0, 126)
+	nm.position = Vector2(0, 103)
+	nm.size = Vector2(110, 18)
+	nm.clip_text = true
 	root.add_child(nm)
 	var info := Kit.label("", 12, Kit.DIM)
-	info.position = Vector2(0, 143)
+	info.position = Vector2(0, 120)
 	root.add_child(info)
 	var hp := _thin_bar(Kit.GOOD, a.max_hp(), a.hp, Vector2(110, 8))
-	hp.position = Vector2(0, 162)
+	hp.position = Vector2(0, 139)
 	root.add_child(hp)
 	var mp := _thin_bar(Kit.MP_BLUE, maxf(1.0, a.max_mp()), a.mp, Vector2(110, 5))
-	mp.position = Vector2(0, 173)
+	mp.position = Vector2(0, 149)
 	root.add_child(mp)
+	var chips := _chips()
+	chips.position = Vector2(0, 156)
+	root.add_child(chips)
 	if a.hp <= 0:
 		body.modulate = Color(0.35, 0.35, 0.4)
 	arena.add_child(root)
-	return {"root": root, "body": body, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0}
+	return {"root": root, "body": body, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
 
 
 ## A bar exactly `size` tall (Kit bars pad to the stylebox margins).
@@ -200,26 +270,155 @@ func _thin_bar(color: Color, max_value: float, value: float, size: Vector2) -> P
 	return pb
 
 
+# ---------------------------------------------------------------- the field
+
+## Paces on the field to pixels in the arena: the party at the left, the back row near the right.
+func _px(p: Vector2) -> Vector2:
+	var f: Dictionary = GameCombat.formation()["field"]
+	var x0 := minf(GameCombat.heir_point().x, GameCombat.ally_point(0).x)
+	var x1 := float(f["rows"]["back"])
+	var reach := maxf(absf(GameCombat.ally_point(0).y), float(f["spacing"]) * float(int(f["row_max"]["front"]) - 1) * 0.5) + 1.3
+	var sz := arena.size
+	return Vector2(sz.x * (0.08 + (p.x - x0) / maxf(1.0, x1 - x0) * 0.74), sz.y * (0.5 + p.y / (2.0 * reach)))
+
+
+func _place(node: Control, center: Vector2, anchor_y: float) -> void:
+	var pos := center - Vector2(node.size.x * 0.5, anchor_y)
+	pos.x = clampf(pos.x, 0.0, maxf(0.0, arena.size.x - node.size.x))
+	pos.y = clampf(pos.y, 0.0, maxf(0.0, arena.size.y - node.size.y))
+	node.position = pos
+
+
 func _layout() -> void:
 	if arena == null or hero_node == null:
 		return
-	var sz := arena.size
-	hero_node.position = Vector2(sz.x * 0.16, sz.y * 0.5 - 90)
-	# Companions stand in a column between the hero and the foes.
-	var na := ally_nodes.size()
-	for i in na:
-		var y := sz.y * 0.5 - 80.0 if na == 1 else sz.y * 0.5 - 195.0 + float(i) * 215.0
-		ally_nodes[i]["root"].position = Vector2(sz.x * 0.30 + float(i % 2) * 24.0, y)
-	var n := enemy_nodes.size()
-	for i in n:
+	_place(hero_node, _px(b.unit_point(-1)), 90.0)
+	for i in ally_nodes.size():
+		_place(ally_nodes[i]["root"], _px(b.unit_point(i)), 64.0)
+	for i in enemy_nodes.size():
 		var en: Dictionary = enemy_nodes[i]
-		var x := sz.x * 0.62 + (i % 2) * 150.0 - (n - 1) * 20.0
-		var y := sz.y * 0.5 - float(en["h"]) * 0.5 - 20.0 + (i - (n - 1) * 0.5) * 95.0
-		en["root"].position = Vector2(x, y)
+		_place(en["root"], _px(b.enemy_point(i)), float(en["h"]) * 0.5 + 10.0)
+	field.queue_redraw()
 
+
+## The area being aimed, drawn on the ground in paces mapped to the screen.
+func _draw_field() -> void:
+	if shown.is_empty() or b.is_over():
+		return
+	var ab: Dictionary = shown["ab"]
+	var at := b._valid_target(int(shown["at"]))
+	if at < 0:
+		return
+	var origin := b.unit_point(-1)
+	var aim := b.enemy_point(at)
+	var t: Dictionary = ab.get("target", {})
+	var pts := PackedVector2Array()
+	match GameCombat.shape(ab):
+		"burst":
+			var r := float(t.get("radius", 3.0))
+			for k in 40:
+				pts.append(_px(aim + Vector2.from_angle(TAU * float(k) / 40.0) * r))
+		"cone":
+			var reach := float(t.get("range", 16.0))
+			var half := deg_to_rad(float(t.get("angle", 60.0)) * 0.5)
+			var dir := (aim - origin).angle()
+			pts.append(_px(origin))
+			for k in 25:
+				pts.append(_px(origin + Vector2.from_angle(dir - half + 2.0 * half * float(k) / 24.0) * reach))
+		"line":
+			var along := (aim - origin).normalized()
+			var side := Vector2(-along.y, along.x) * float(t.get("width", 3.0)) * 0.5
+			var end := origin + along * float(t.get("length", 18.0))
+			pts = PackedVector2Array([_px(origin + side), _px(end + side), _px(end - side), _px(origin - side)])
+	if pts.size() >= 3:
+		field.draw_colored_polygon(pts, Color(AREA, 0.13))
+		var ring := pts.duplicate()
+		ring.append(pts[0])
+		field.draw_polyline(ring, Color(AREA, 0.7), 2.0)
+
+
+func _show_area(ab: Dictionary, at: int) -> void:
+	shown = {} if ab.is_empty() or not GameCombat.aims_at_foe(ab) else {"ab": ab, "at": at}
+	_update_marks()
+	field.queue_redraw()
+
+
+# ---------------------------------------------------------------- input
+
+func _on_foe_input(idx: int, ev: InputEvent) -> void:
+	if not (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) or b.enemies[idx]["hp"] <= 0 or busy:
+		return
+	if aiming.is_empty():
+		target = idx
+		_update_marks()
+	elif idx == aim_at:
+		_confirm_aim()
+	else:
+		aim_at = idx
+		_show_area(aiming["ab"], aim_at)
+		_build_commands()
+
+
+func _on_foe_hover(idx: int, inside: bool) -> void:
+	if aiming.is_empty() or busy or b.enemies[idx]["hp"] <= 0:
+		return
+	_show_area(aiming["ab"], idx if inside else aim_at)
+
+
+## An area ability (or any spell aimed at a foe) waits for the player to pick where it lands.
+func _begin_aim(ab: Dictionary, skill: int, spell: String) -> void:
+	aiming = {"ab": ab, "skill": skill, "spell": spell}
+	aim_at = b._valid_target(target)
+	_show_area(ab, aim_at)
+	_build_commands()
+
+
+func _cancel_aim() -> void:
+	aiming = {}
+	_show_area({}, -1)
+	_build_commands()
+
+
+func _confirm_aim() -> void:
+	if aiming.is_empty():
+		return
+	var plan := aiming
+	var at := aim_at
+	aiming = {}
+	_show_area({}, -1)
+	if float(plan["ab"].get("mult", 0.0)) > 0.0:
+		target = at
+	if int(plan["skill"]) >= 0:
+		_do(func(): b.use_skill(int(plan["skill"]), at))
+	else:
+		_do(func(): b.cast_spell(str(plan["spell"]), at))
+
+
+func _use_skill(i: int) -> void:
+	var s := b.skill_info(i)
+	if GameCombat.is_aoe(s):
+		_begin_aim(s, i, "")
+	else:
+		_do(func(): b.use_skill(i, target))
+
+
+func _use_spell(id: String) -> void:
+	_close_spells()
+	var sp := GameCombat.spell(id)
+	if GameCombat.aims_at_foe(sp):
+		_begin_aim(sp, -1, id)
+	else:
+		_do(func(): b.cast_spell(id, target))
+
+
+# ---------------------------------------------------------------- commands
 
 func _build_commands() -> void:
 	Kit.clear(command_box)
+	if not aiming.is_empty():
+		_build_aim_commands()
+		return
+	hint.text = "Commands  (click an enemy to target it)"
 	var col1 := VBoxContainer.new()
 	var col2 := VBoxContainer.new()
 	var col3 := VBoxContainer.new()
@@ -232,19 +431,154 @@ func _build_commands() -> void:
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
-		var btn := Kit.button("%s (%d MP)" % [s["name"], b.skill_cost(i)], func(): _do(func(): b.use_skill(idx, target)))
+		var btn := _small_button("%s (%d MP)" % [s["name"], b.skill_cost(i)], func(): _use_skill(idx))
 		btn.disabled = not b.can_use_skill(i)
+		btn.tooltip_text = "%s  -  %s\n%s" % [s["name"], GameCombat.shape_text(s), GameCombat.describe(s)]
+		btn.mouse_entered.connect(func(): _show_area(s, target))
+		btn.mouse_exited.connect(func(): _show_area({}, -1))
 		col2.add_child(btn)
+	if not GameCombat.class_spell_plan(d.heir.class_id).is_empty() or not b.known_spells().is_empty():
+		var sb := Kit.button("Spells (%d)" % b.known_spells().size(), func(): _open_spells())
+		sb.disabled = b.known_spells().is_empty()
+		sb.tooltip_text = "The spells %s knows." % d.heir.name if not b.known_spells().is_empty() else "%s has learned no spells yet." % d.heir.name
+		col3.add_child(sb)
 	var pot := Kit.button("Potion (%d)" % d.heir.potions, func(): _do(func(): b.use_potion()))
 	pot.disabled = d.heir.potions <= 0
 	col3.add_child(pot)
 	col3.add_child(Kit.button("Flee", func(): _do(func(): b.flee())))
 
 
+func _small_button(text: String, cb: Callable) -> Button:
+	var btn := Kit.button(text, cb)
+	btn.add_theme_font_size_override("font_size", 14)
+	btn.clip_text = true
+	btn.custom_minimum_size = Vector2(0, 38)
+	return btn
+
+
+func _build_aim_commands() -> void:
+	var ab: Dictionary = aiming["ab"]
+	var caught := b.aoe_targets(ab, -1, aim_at)
+	hint.text = "%s: click a foe to aim, click it again to cast." % ab["name"]
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 4)
+	command_box.add_child(v)
+	var what := Kit.label("%s  -  %s" % [GameCombat.shape_text(ab), GameCombat.describe(ab)], 13, Kit.TEXT)
+	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	what.custom_minimum_size = Vector2(380, 0)
+	v.add_child(what)
+	var aimed: String = b.enemies[aim_at]["name"] if aim_at >= 0 else "-"
+	v.add_child(Kit.label("Aimed at %s: catches %d foe%s." % [aimed, caught.size(), "" if caught.size() == 1 else "s"], 14, AREA))
+	var side := VBoxContainer.new()
+	side.add_theme_constant_override("separation", 6)
+	side.custom_minimum_size = Vector2(150, 0)
+	command_box.add_child(side)
+	side.add_child(Kit.button("Cast", func(): _confirm_aim()))
+	side.add_child(Kit.button("Cancel", func(): _cancel_aim()))
+
+
+# ---------------------------------------------------------------- spell list
+
+func _open_spells() -> void:
+	if busy or spell_list != null:
+		return
+	spell_list = Control.new()
+	spell_list.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	spell_list.z_index = 5
+	add_child(spell_list)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.45)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed:
+			_close_spells())
+	spell_list.add_child(dim)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
+	p.position = Vector2(150, 48)
+	p.size = Vector2(980, 470)
+	spell_list.add_child(p)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	p.add_child(v)
+	var top := HBoxContainer.new()
+	v.add_child(top)
+	var t := Kit.label("Spells  -  %s has %d / %d MP" % [d.heir.name, d.heir.mp, d.heir.max_mp()], 20, Kit.ACCENT)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(t)
+	top.add_child(Kit.button("Close", func(): _close_spells(), Vector2(100, 34)))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(scroll)
+	var rows := VBoxContainer.new()
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rows.add_theme_constant_override("separation", 4)
+	scroll.add_child(rows)
+	var groups: Dictionary = GameData.combat["spells"].get("groups", {})
+	for g in groups:
+		var ids: Array = b.known_spells().filter(func(id): return GameCombat.spell(id).get("group", "") == g)
+		if ids.is_empty():
+			continue
+		rows.add_child(Kit.label(str(groups[g]), 15, Kit.DIM))
+		for id in ids:
+			rows.add_child(_spell_row(id))
+	var next := _next_spell()
+	if next != "":
+		rows.add_child(Kit.label(next, 13, Kit.DIM))
+
+
+func _spell_row(id: String) -> Control:
+	var sp := GameCombat.spell(id)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var btn := Kit.button("%s  (%d MP)" % [sp["name"], b.spell_cost(id)], func(): _use_spell(id), Vector2(260, 34))
+	btn.add_theme_font_size_override("font_size", 15)
+	btn.clip_text = true
+	btn.disabled = not b.can_cast(id)
+	btn.tooltip_text = str(sp.get("text", ""))
+	btn.mouse_entered.connect(func(): _show_area(sp, target))
+	btn.mouse_exited.connect(func(): _show_area({}, -1))
+	row.add_child(btn)
+	var el := str(sp.get("element", ""))
+	var shape := Kit.label(GameCombat.shape_text(sp), 14, Color(GameCombat.element_color(el)) if el != "" else Kit.TEXT)
+	shape.custom_minimum_size = Vector2(96, 0)
+	row.add_child(shape)
+	var what := Kit.label(GameCombat.describe(sp) + ("" if b.can_cast(id) else "  (not enough MP)"), 13, Kit.TEXT if b.can_cast(id) else Kit.DIM)
+	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	what.clip_text = true
+	what.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	what.tooltip_text = what.text
+	what.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(what)
+	return row
+
+
+## "Next: Haste at level 32." for the class's next spell, if any.
+func _next_spell() -> String:
+	for p in GameCombat.class_spell_plan(d.heir.class_id):
+		if p[0] not in b.known_spells():
+			return "Next: %s at level %d." % [GameCombat.spell(p[0])["name"], p[1]]
+	return ""
+
+
+func _close_spells() -> void:
+	if spell_list != null:
+		spell_list.queue_free()
+		spell_list = null
+	_show_area({}, -1)
+
+
+# ---------------------------------------------------------------- playing a turn
+
 func _do(action: Callable) -> void:
 	if busy or b.is_over():
 		return
 	busy = true
+	_close_spells()
+	Kit.clear(command_box)
+	hint.text = ""
 	var log_start := b.log.size()
 	action.call()
 	for i in range(log_start, b.log.size()):
@@ -255,61 +589,157 @@ func _do(action: Callable) -> void:
 	_update_view()
 	if b.is_over():
 		_show_result()
-	else:
-		_build_commands()
+		return
+	if b.heir_skip:   # a status cost the heir this turn: the round goes on without them
+		hint.text = "%s cannot act this turn." % d.heir.name
+		Kit.clear(command_box)
+		await get_tree().create_timer(0.6).timeout
+		_do(func(): b.pass_turn())
+		return
+	_build_commands()
+
+
+## Next event of the same area cast, past deaths and statuses: if there is one, they land together.
+func _lands_with_next(events: Array, i: int) -> bool:
+	var cast := int(events[i].get("cast", 0))
+	if cast == 0 or events[i]["type"] != "damage":
+		return false
+	for j in range(i + 1, events.size()):
+		var t: String = events[j]["type"]
+		if t in ["death", "status"]:
+			continue
+		return t == "damage" and int(events[j].get("cast", 0)) == cast
+	return false
 
 
 func _play_events(events: Array) -> void:
-	for ev in events:
-		var by := int(ev.get("by", -1))
-		if by >= 0 and by < ally_nodes.size() and ev["type"] in ["damage", "heal"]:
-			_lunge(ally_nodes[by]["root"], 22.0)
-		elif by < 0 and ev["type"] == "damage" and ev["side"] == "enemy":
-			_lunge(hero_node, 22.0)
-		match ev["type"]:
-			"damage":
-				if ev["side"] == "enemy":
-					var en: Dictionary = enemy_nodes[ev["index"]]
-					_float_text(en["root"].position + Vector2(en["w"] * 0.4, 10), str(ev["amount"]) + ("!" if ev["crit"] else ""), Color("#ffd24a") if ev["crit"] else Color.WHITE)
-					_flash(en["body"])
-					en["hp"].value = maxf(float(b.enemies[ev["index"]]["hp"]), en["hp"].value - float(ev["amount"]))
-				elif ev["side"] == "ally":
-					_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
-					var an: Dictionary = ally_nodes[ev["ally"]]
-					_float_text(an["root"].position + Vector2(34, -6), str(ev["amount"]), Kit.BAD)
-					_flash(an["body"])
-					_step_ally_hp(ev["ally"], -int(ev["amount"]))
-				else:
-					_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
-					_float_text(hero_node.position + Vector2(40, 0), str(ev["amount"]), Kit.BAD)
-					_flash(hero_node.get_child(0))
-					hero_hp.value -= float(ev["amount"])
-			"heal":
-				if ev["side"] == "ally":
-					_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), "+%d" % ev["amount"], Kit.GOOD)
-					_step_ally_hp(ev["ally"], int(ev["amount"]))
-				else:
-					_float_text(hero_node.position + Vector2(40, 0), "+%d" % ev["amount"], Kit.GOOD)
-					hero_hp.value += float(ev["amount"])
-			"miss":
-				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
-				if ev["side"] == "ally":
-					_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.DIM)
-				else:
-					_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.DIM)
-			"ko":
-				_knock_out(ev["ally"])
-				for en3 in enemy_nodes:   # the foes lose the toughness that companion's presence gave them
-					en3["hp"].value *= float(ev.get("foe_scale", 1.0))
-					en3["hp"].max_value *= float(ev.get("foe_scale", 1.0))
-			"death":
-				var en2: Dictionary = enemy_nodes[ev["index"]]
-				var t := create_tween()
-				t.tween_property(en2["root"], "modulate:a", 0.0, 0.4)
-			"defend":
-				_float_text(hero_node.position + Vector2(30, 0), "guard", Kit.MP_BLUE)
+	for i in events.size():
+		var ev: Dictionary = events[i]
+		_play_one(ev)
+		_refresh_chips()
 		_update_marks()
-		await get_tree().create_timer(0.35).timeout
+		if ev["type"] in ["death", "status"] or _lands_with_next(events, i):
+			continue
+		await get_tree().create_timer(0.25 if ev["type"] == "cast" else 0.35).timeout
+
+
+func _play_one(ev: Dictionary) -> void:
+	var by := int(ev.get("by", -1))
+	match ev["type"]:
+		"cast":
+			_lunge(_unit_node(by), 22.0)
+			var el := str(ev.get("element", ""))
+			_float_text(_unit_node(by).position + Vector2(0, -30), str(ev["name"]), Color(GameCombat.element_color(el)) if el != "" else Kit.ACCENT, 20)
+			for t in ev.get("targets", []):
+				if ev.get("aoe", false):
+					_pulse(enemy_nodes[t]["mark"])
+		"damage":
+			if ev["side"] == "enemy":
+				if int(ev.get("cast", 0)) == 0:
+					_lunge(_unit_node(by), 22.0)
+				var en: Dictionary = enemy_nodes[ev["index"]]
+				var txt := str(ev["amount"]) + ("!" if ev["crit"] else "")
+				if ev.get("shatter", false):
+					txt += " shatter"
+				_float_text(en["root"].position + Vector2(en["w"] * 0.3, 6), txt, Color("#ffd24a") if ev["crit"] else Color.WHITE)
+				_flash(en["body"])
+				en["hp"].value = maxf(float(b.enemies[ev["index"]]["hp"]), en["hp"].value - float(ev["amount"]))
+			elif ev["side"] == "ally":
+				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+				var an: Dictionary = ally_nodes[ev["ally"]]
+				_float_text(an["root"].position + Vector2(34, -6), _hurt_text(ev), Kit.BAD)
+				_flash(an["body"])
+				_step_ally_hp(ev["ally"], -int(ev["amount"]))
+			else:
+				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+				_float_text(hero_node.position + Vector2(40, 0), _hurt_text(ev), Kit.BAD)
+				_flash(hero_node.get_child(0))
+				hero_hp.value -= float(ev["amount"])
+		"heal":
+			if ev["side"] == "ally":
+				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), "+%d" % ev["amount"], Kit.GOOD)
+				_step_ally_hp(ev["ally"], int(ev["amount"]))
+			else:
+				_float_text(hero_node.position + Vector2(40, 0), "+%d" % ev["amount"], Kit.GOOD)
+				hero_hp.value += float(ev["amount"])
+		"tick":
+			var def := GameCombat.status_def(str(ev["id"]))
+			var heal: bool = ev.get("heal", false)
+			var amt := int(ev["amount"])
+			_float_text(_ref_node(ev["ref"]).position + Vector2(30, 0), ("+%d" if heal else "-%d") % amt, Kit.GOOD if heal else Color(def.get("color", "#ff9a3c")))
+			_step_ref_hp(str(ev["ref"]), amt if heal else -amt)
+		"status":
+			var def := GameCombat.status_def(str(ev["id"]))
+			if ev.get("applied", false):
+				_float_text(_low_point(ev["ref"]), str(def.get("name", ev["id"])), Color(def.get("color", "#ffffff")), 16)
+			elif not ev.has("removed"):
+				_float_text(_low_point(ev["ref"]), "resisted", Kit.DIM, 16)
+		"skip":
+			var def := GameCombat.status_def(str(ev["id"]))
+			_float_text(_low_point(ev["ref"]), "%s - no turn" % def.get("name", ev["id"]), Color(def.get("color", "#ffffff")), 16)
+		"mana":
+			_float_text(_unit_node(by).position + Vector2(30, 0), "+%d MP" % ev["amount"], Kit.MP_BLUE, 18)
+		"miss":
+			_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+			if ev["side"] == "ally":
+				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.DIM)
+			else:
+				_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.DIM)
+		"ko":
+			_knock_out(ev["ally"])
+			for en3 in enemy_nodes:   # the foes lose the toughness that companion's presence gave them
+				en3["hp"].value *= float(ev.get("foe_scale", 1.0))
+				en3["hp"].max_value *= float(ev.get("foe_scale", 1.0))
+		"death":
+			var en2: Dictionary = enemy_nodes[ev["index"]]
+			en2["mark"].visible = false
+			var t := create_tween()
+			t.tween_property(en2["root"], "modulate:a", 0.0, 0.4)
+		"defend":
+			_float_text(hero_node.position + Vector2(30, 0), "guard", Kit.MP_BLUE)
+
+
+func _hurt_text(ev: Dictionary) -> String:
+	if int(ev["amount"]) == 0 and int(ev.get("absorbed", 0)) > 0:
+		return "absorbed"
+	return str(ev["amount"])
+
+
+func _unit_node(by: int) -> Control:
+	return hero_node if by < 0 or by >= ally_nodes.size() else ally_nodes[by]["root"]
+
+
+func _ref_node(ref: String) -> Control:
+	var i := int(ref.get_slice(":", 1))
+	match ref.get_slice(":", 0):
+		"ally":
+			return ally_nodes[i]["root"]
+		"enemy":
+			return enemy_nodes[i]["root"]
+	return hero_node
+
+
+## Where a status word floats up from: low on the figure, clear of the damage numbers.
+func _low_point(ref: String) -> Vector2:
+	var i := int(ref.get_slice(":", 1))
+	match ref.get_slice(":", 0):
+		"ally":
+			return ally_nodes[i]["root"].position + Vector2(4, 70)
+		"enemy":
+			return enemy_nodes[i]["root"].position + Vector2(0, float(enemy_nodes[i]["h"]) - 26.0)
+	return hero_node.position + Vector2(10, 100)
+
+
+func _step_ref_hp(ref: String, delta: int) -> void:
+	var i := int(ref.get_slice(":", 1))
+	match ref.get_slice(":", 0):
+		"ally":
+			_step_ally_hp(i, delta)
+		"enemy":
+			var bar: ProgressBar = enemy_nodes[i]["hp"]
+			bar.value = clampf(bar.value + float(delta), 0.0, bar.max_value)
+		_:
+			hero_hp.value += float(delta)
 
 
 ## Bars follow the blows one by one; _update_view snaps them to the true values afterwards.
@@ -344,11 +774,23 @@ func _flash(node: CanvasItem) -> void:
 	t.tween_property(node, "modulate", Color.WHITE, 0.25)
 
 
-func _float_text(pos: Vector2, text: String, color: Color) -> void:
-	var l := Kit.label(text, 26, color)
+## An area cast lights up every foe it catches for a moment.
+func _pulse(mark: CanvasItem) -> void:
+	mark.visible = true
+	mark.modulate = Color(1, 1, 1, 1)
+	var t := create_tween()
+	t.tween_property(mark, "modulate:a", 0.0, 0.6)
+	t.tween_callback(func():
+		mark.modulate = Color.WHITE
+		_update_marks())
+
+
+func _float_text(pos: Vector2, text: String, color: Color, size: int = 26) -> void:
+	var l := Kit.label(text, size, color)
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
 	l.add_theme_constant_override("outline_size", 6)
 	l.position = pos
+	l.z_index = 3
 	arena.add_child(l)
 	var t := create_tween()
 	t.set_parallel(true)
@@ -357,9 +799,40 @@ func _float_text(pos: Vector2, text: String, color: Color) -> void:
 	t.chain().tween_callback(l.queue_free)
 
 
+# ---------------------------------------------------------------- state
+
 func _update_marks() -> void:
+	var caught: Array = []
+	if not shown.is_empty() and not b.is_over():
+		caught = b.aoe_targets(shown["ab"], -1, int(shown["at"]))
+	var aimed := aim_at if not aiming.is_empty() else target
 	for i in enemy_nodes.size():
-		enemy_nodes[i]["sel"].visible = (i == target and b.enemies[i]["hp"] > 0 and not b.is_over())
+		var alive: bool = b.enemies[i]["hp"] > 0 and not b.is_over()
+		enemy_nodes[i]["sel"].visible = alive and i == aimed
+		if not busy:
+			enemy_nodes[i]["mark"].visible = alive and i in caught
+
+
+## Status chips under every figure: tag and turns left, coloured by the status.
+func _refresh_chips() -> void:
+	_fill_chips(hero_chips, "heir")
+	for i in ally_nodes.size():
+		_fill_chips(ally_nodes[i]["chips"], GameBattle.ref_of(i))
+	for i in enemy_nodes.size():
+		_fill_chips(enemy_nodes[i]["chips"], GameBattle.enemy_ref(i))
+
+
+func _fill_chips(box: HBoxContainer, ref: String) -> void:
+	Kit.clear(box)
+	for inst in b.status_list(ref):
+		var def := GameCombat.status_def(inst["id"])
+		var stacks := int(inst["stacks"])
+		var l := Kit.label("%s%s %d" % [def.get("tag", inst["id"]), "x%d" % stacks if stacks > 1 else "", int(inst["turns"])], 11, Color(def.get("color", "#ffffff")))
+		l.add_theme_color_override("font_outline_color", Color.BLACK)
+		l.add_theme_constant_override("outline_size", 3)
+		l.tooltip_text = "%s: %d turn%s left" % [def.get("name", inst["id"]), int(inst["turns"]), "" if int(inst["turns"]) == 1 else "s"]
+		l.mouse_filter = Control.MOUSE_FILTER_PASS
+		box.add_child(l)
 
 
 func _update_view() -> void:
@@ -368,6 +841,7 @@ func _update_view() -> void:
 	hero_mp.max_value = maxf(1.0, d.heir.max_mp())
 	hero_mp.value = d.heir.mp
 	_update_marks()
+	_refresh_chips()
 	for i in enemy_nodes.size():
 		enemy_nodes[i]["hp"].max_value = b.enemies[i]["max_hp"]
 		enemy_nodes[i]["hp"].value = b.enemies[i]["hp"]
@@ -385,6 +859,8 @@ func _show_result() -> void:
 	if result_shown:
 		return
 	result_shown = true
+	aiming = {}
+	_close_spells()
 	var msgs: Array = d.finish_battle()
 	hero_label.text = "%s  Lv%d" % [d.heir.name, d.heir.level]
 	app.autosave()

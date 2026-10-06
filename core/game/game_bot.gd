@@ -3,30 +3,14 @@ class_name GameBot
 extends RefCounted
 
 
-static func _skill_of(b: GameBattle, kind: String) -> int:
-	for i in b.skill_count():
-		if b.skill_info(i)["type"] == kind:
-			return i
-	return -1
-
-
+## Fights the battle in progress to the end with GameTactics (potions and heals when low, areas
+## against packs, control on the worst foe) and settles it.
 static func fight(d: GameDynasty) -> void:
 	var b := d.battle
-	var h := d.heir
-	var heal := _skill_of(b, "heal")
-	var strike := _skill_of(b, "damage")
 	var guard := 0
-	while not b.is_over() and guard < 200:
+	while not b.is_over() and guard < 300:
 		guard += 1
-		var low := float(h.hp) < float(h.max_hp()) * 0.4
-		if low and h.potions > 0:
-			b.use_potion()
-		elif low and heal >= 0 and b.can_use_skill(heal):
-			b.use_skill(heal, -1)
-		elif strike >= 0 and b.can_use_skill(strike):
-			b.use_skill(strike, b.first_target())
-		else:
-			b.attack(b.first_target())
+		GameTactics.act(b, GameTactics.choose(b, -1))
 	d.finish_battle()
 
 
