@@ -100,15 +100,27 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 	if main >= 0:
 		ctx["mp_price"] = maxf(0.0, main_v - blow) / float(maxi(1, GameBattle.unit_skill_cost(me, main)))
 	var price := float(ctx["mp_price"]) * float(ctx["scarcity"])
+	var floor_price := maxf(price, _heal_worth(b, by) * float(GameCombat.setting("bot_mp_floor")))
 	var margin := float(GameCombat.setting("bot_other_margin"))
 	var best := {}
 	for c in cands:
-		var score := float(c["value"]) - float(c["cost"]) * price
+		var score := float(c["value"]) - float(c["cost"]) * (floor_price if c["other"] else price)
 		if c["other"] and score > 0.0:
 			score /= margin
 		c["score"] = score
 		best = _keep_better(best, c)
 	return best["plan"]
+
+
+## HP one MP buys through the unit's class heal on the heir. A ward or a curse that does not
+## pay back a share of this is not worth casting while there are foes to strike.
+static func _heal_worth(b: GameBattle, by: int) -> float:
+	var u := b.unit(by)
+	var k := GameBattle.unit_skill_of(u, "heal")
+	if k < 0:
+		return 0.0
+	var s: Dictionary = u.cls()["skills"][k]
+	return float(GameBattle.heal_amount(u, b.heir, s)) / float(maxi(1, GameBattle.unit_skill_cost(u, k)))
 
 
 ## A companion with no spells and no area skill has nothing to weigh: the class strike on the

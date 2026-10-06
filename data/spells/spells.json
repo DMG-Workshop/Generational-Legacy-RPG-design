@@ -88,6 +88,22 @@
       "text": "The sky remembers every storm and lets them all fall at once."
     },
     {
+      "id": "bone_storm", "name": "Bone Storm", "group": "elemental", "school": "necromancy", "element": "shadow", "type": "damage",
+      "mp": 13, "stat": "mag", "mult": 1.15, "pierce": 0.3,
+      "target": {"shape": "burst", "radius": 5.5, "falloff": 0.2}, "is_aoe": true,
+      "statuses": [{"id": "bleed", "chance": 0.45, "turns": 3, "potency": 0.08}],
+      "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 60, "levels": {"warlock": 120, "dread_knight": 250}},
+      "text": "Shards of old bone whirl through the enemy ranks."
+    },
+    {
+      "id": "wrath_of_heaven", "name": "Wrath of Heaven", "group": "elemental", "school": "divine", "element": "holy", "type": "damage",
+      "mp": 16, "stat": "mag", "mult": 1.25, "pierce": 0.4,
+      "target": {"shape": "all"}, "is_aoe": true,
+      "statuses": [{"id": "stun", "chance": 0.1, "turns": 1}],
+      "learn": {"classes": ["cleric", "templar", "paladin"], "min_level": 220, "levels": {"templar": 600, "paladin": 1100}},
+      "text": "Pillars of light fall on every foe. The dead burn brightest."
+    },
+    {
       "id": "sleep", "name": "Sleep", "group": "control", "school": "enchantment", "element": "", "type": "control",
       "mp": 6, "stat": "mag", "mult": 0,
       "target": {"shape": "burst", "radius": 3.0}, "is_aoe": true,
@@ -142,6 +158,14 @@
       "statuses": [{"id": "weaken", "chance": 0.8, "turns": 3, "potency": 0.25}],
       "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 10, "levels": {"warlock": 14, "dread_knight": 24}},
       "text": "Arms grow heavy and blows fall soft."
+    },
+    {
+      "id": "requiem", "name": "Requiem", "group": "control", "school": "necromancy", "element": "shadow", "type": "control",
+      "mp": 14, "stat": "mag", "mult": 0.5, "pierce": 0.3,
+      "target": {"shape": "all"}, "is_aoe": true,
+      "statuses": [{"id": "fear", "chance": 0.5, "turns": 2, "potency": 0.5}, {"id": "weaken", "chance": 0.6, "turns": 3, "potency": 0.25}],
+      "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 600, "levels": {"warlock": 1500, "dread_knight": 3000}},
+      "text": "A dirge for the living. Those who hear it falter."
     },
     {
       "id": "mass_heal", "name": "Mass Heal", "group": "utility", "school": "divine", "element": "holy", "type": "heal",

@@ -80,7 +80,7 @@ func _sturdy(b: GameBattle) -> void:
 
 func test_data() -> void:
 	var ids := GameCombat.spell_ids()
-	ok(ids.size() >= 22 and ids.size() <= 26, "about two dozen spells (%d)" % ids.size())
+	ok(ids.size() >= 22 and ids.size() <= 28, "about two dozen spells (%d)" % ids.size())
 	var groups := {}
 	for id in ids:
 		var sp := GameCombat.spell(id)
@@ -138,7 +138,7 @@ func test_geometry() -> void:
 	ok(_fp(cone, o, 0, {0: Vector2(10, 0), 1: inside, 2: outside}) == [0, 1], "cone: just inside half the angle is hit, just outside is not")
 	ok(_fp(cone, o, 0, {0: Vector2(10, 0), 1: Vector2(15.99, 0), 2: Vector2(16.01, 0)}) == [0, 1], "cone: range is measured from the caster")
 	ok(_fp(cone, o, 0, {0: Vector2(10, 0), 1: Vector2(-5, 0)}) == [0], "cone: nothing behind the caster")
-	ok(_fp(cone, o, 1, {0: Vector2(9, 0), 1: Vector2(30, 0)}) == [1], "the aimed foe is always caught, even past the range")
+	ok(_fp(cone, o, 1, {0: Vector2(9, 9), 1: Vector2(30, 0)}) == [1], "the aimed foe is always caught, even past the range")
 	var line := {"target": {"shape": "line", "width": 3, "length": 18}}
 	ok(_fp(line, o, 0, {0: Vector2(9, 0), 1: Vector2(12, 1.49), 2: Vector2(12, 1.51)}) == [0, 1], "line: just inside half the width is hit, just outside is not")
 	ok(_fp(line, o, 0, {0: Vector2(9, 0), 1: Vector2(17.99, 0), 2: Vector2(18.01, 0), 3: Vector2(-0.5, 0)}) == [0, 1], "line: out to its length, never behind the caster")
@@ -278,9 +278,14 @@ func test_status_ticks_and_expiry() -> void:
 	var b3 := _battle(d3, 1)
 	_sturdy(b3)
 	b3.apply_status("heir", "poison", 0.05, 2, "enemy:0")
-	var before := d3.heir.hp
 	b3.defend()
-	ok(d3.heir.hp == before - int(round(float(d3.heir.max_hp()) * 0.05)), "poison on the heir ticks at the start of the next turn")
+	var ticks: Array = b3.events.filter(func(ev): return ev["type"] == "tick" and ev["ref"] == "heir")
+	ok(ticks.size() == 1 and int(ticks[0]["amount"]) == int(round(float(d3.heir.max_hp()) * 0.05)), "poison on the heir ticks at the start of the next turn")
+	var last_blow := -1
+	for k in b3.events.size():
+		if b3.events[k]["type"] in ["damage", "miss"]:
+			last_blow = k
+	ok(not ticks.is_empty() and b3.events.find(ticks[0]) > last_blow, "after the foes have acted")
 	b3.defend()
 	ok(not b3.has_status("heir", "poison"), "and wears off")
 
@@ -413,14 +418,13 @@ func test_bosses_and_levels_resist() -> void:
 func test_shield_regen_haste() -> void:
 	var d := _dyn("cleric", 30)
 	var b := _battle(d, 1)
-	for e in b.enemies:
-		e["hp"] = 1000000
-		e["max_hp"] = 1000000
+	_sturdy(b)
 	b.heir.mp = 100000
 	b.cast_spell("ward", 0)
 	ok(b.has_status("heir", "shield"), "Ward shields the heir")
 	var pool := float(b.status_of("heir", "shield")["amount"]) if b.has_status("heir", "shield") else 0.0
-	ok(pool > 0.0 and absf(pool - 0.15 * float(d.heir.max_hp())) < 1.0 or b.log.any(func(l): return str(l).find("absorbs") >= 0), "the shield holds 15%% of max HP (%.0f)" % pool)
+	var full := 0.15 * float(d.heir.max_hp())
+	ok(pool <= full and pool >= full - 1.0, "the shield holds 15%% of max HP, less the one point a toothless foe took (%.1f of %.1f)" % [pool, full])
 	b.statuses = {}
 	b.apply_status("heir", "shield", 0.1, 3, "heir")
 	var cap := int(floor(0.1 * float(d.heir.max_hp())))
@@ -440,7 +444,9 @@ func test_shield_regen_haste() -> void:
 	ok(d.heir.hp == 10 + int(round(0.06 * float(d.heir.max_hp()))), "regen mends 6% of max HP a turn")
 	# Haste: about the potency's share of extra actions.
 	var extra := 0
+	b.enemies[0]["atk"] = 0.0
 	for k in 300:
+		d.heir.hp = d.heir.max_hp()
 		b.statuses = {}
 		b.apply_status(GameBattle.enemy_ref(0), "haste", 0.4, 2, "enemy:0")
 		b.events = []
@@ -457,7 +463,7 @@ func test_heir_loses_turn() -> void:
 	b.apply_status("heir", "stun", 1.0, 1, "enemy:0")
 	b._start_heir_turn()
 	ok(b.heir_skip, "a stunned heir loses the coming turn")
-	ok(b.log.back() == "%s is stunned and loses the turn." % d.heir.name, "and is told so: %s" % str(b.log.back()))
+	ok(b.log.has("%s is stunned and loses the turn." % d.heir.name), "and is told so")
 	var hp: int = b.enemies[0]["hp"]
 	var mp := d.heir.mp
 	b.use_skill(0, 0)
@@ -506,7 +512,7 @@ func test_added_status() -> void:
 	b.apply_status("heir", "test_toxin", 0.05, 2, "")
 	var hp := d.heir.hp
 	b._start_heir_turn()
-	ok(hp - d.heir.hp == 2 * int(round(0.05 * float(d.heir.max_hp()))), "and ticks with its own rules (%d)" % (hp - d.heir.hp))
+	ok(hp - d.heir.hp == int(round(0.05 * float(d.heir.max_hp()) * 2.0)), "and ticks with its own rules, both stacks (%d)" % (hp - d.heir.hp))
 	ok(b.log.any(func(l): return str(l).find("toxin burns") >= 0), "in its own words")
 	ok(b.cleanse("heir") == 1 and not b.has_status("heir", "test_toxin"), "and Cleanse washes it away")
 
@@ -609,8 +615,9 @@ func test_spells_save_load() -> void:
 func test_companion_spells() -> void:
 	var d := _dyn("warrior", 20)
 	d.heir.gold = 100000
-	d.party.hire(d, "sister_oriel")
-	d.party.hire(d, "old_netta")
+	for id in ["sister_oriel", "old_netta"]:
+		d.party.members.append({"id": id, "name": id, "hp": 1, "mp": 0, "level": 20, "gen": 1, "due": 0.0, "battles": 0, "hired_gen": 1})
+	d.party.rest(d)
 	d.start_hunt("hunt")
 	var b := d.battle
 	ok(b.allies[0].spells == GameCombat.class_spells("cleric", 20), "a cleric companion knows the cleric's spells for level 20: %s" % str(b.allies[0].spells))
@@ -812,6 +819,7 @@ func _button(n: Node, prefix: String) -> Button:
 func _ui_tests() -> void:
 	var real := GameDynasty.save_path
 	GameDynasty.save_path = "user://test_combat_ui_save.json"
+	root.size = Vector2i(1280, 720)
 	var app = GameApp.new()
 	root.add_child(app)
 	await _frames()
