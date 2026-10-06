@@ -302,7 +302,7 @@ static func pray(d: GameDynasty) -> String:
 		return "An offering of %d gold is needed to pray." % cost
 	h.gold -= cost
 	var before := h.fate_value
-	h.fate_value = snappedf(maxf(float(GameData.bal("fate_min")), h.fate_value - float(GameData.bal("prayer_fate_drop"))), 0.0001)
+	h.fate_value = snappedf(maxf(float(GameData.bal("fate_min")), h.fate_value - float(GameData.bal("prayer_fate_drop"))), GameFate.STEP)
 	_count_use(d, "prayer")
 	return "%s keeps a vigil at the temple and offers %d gold. Fate Value %d%% -> %d%%." % [h.name, cost, int(round(before * 100.0)), int(round(h.fate_value * 100.0))]
 

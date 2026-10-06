@@ -231,7 +231,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.level = int(d["level"]); h.xp = int(d["xp"]); h.hp = int(d["hp"]); h.mp = int(d["mp"])
 	h.gold = int(d["gold"]); h.potions = int(d["potions"])
 	h.traits = Array(d["traits"]); h.dormant = Array(d["dormant"])
-	h.fate_value = float(d["fate_value"]); h.milestones_done = Array(d["milestones_done"])
+	h.fate_value = snappedf(float(d["fate_value"]), GameFate.STEP); h.milestones_done = Array(d["milestones_done"])
 	h.archetype = d["archetype"]; h.archetype_bonus = d["archetype_bonus"]
 	h.training = d["training"]; h.family_founded = d["family_founded"]
 	h.extra_life_used = d["extra_life_used"]; h.battles_won = int(d["battles_won"])

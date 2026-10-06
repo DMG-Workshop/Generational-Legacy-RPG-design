@@ -110,17 +110,17 @@ func slayer_map() -> Dictionary:
 func _add_echo(kind: String, key: String, text: String, strength: float) -> void:
 	for e in echoes:
 		if e["kind"] == kind and e["key"] == key:
-			e["strength"] = snappedf(minf(1.0, float(e["strength"]) + strength), 0.0001)  # echoes compound
+			e["strength"] = snappedf(minf(1.0, float(e["strength"]) + strength), GameFate.STEP)  # echoes compound
 			e["text"] = text
 			e["gen"] = gen
 			return
-	echoes.append({"kind": kind, "key": key, "text": text, "strength": snappedf(strength, 0.0001), "gen": gen})
+	echoes.append({"kind": kind, "key": key, "text": text, "strength": snappedf(strength, GameFate.STEP), "gen": gen})
 
 
 func _decay_echoes() -> void:
 	var decay := float(GameData.bal("echo_decay"))
 	for e in echoes:
-		e["strength"] = snappedf(float(e["strength"]) * decay, 0.0001)
+		e["strength"] = snappedf(float(e["strength"]) * decay, GameFate.STEP)
 	echoes = echoes.filter(func(e): return float(e["strength"]) >= float(GameData.bal("echo_min_strength")))
 
 
@@ -753,7 +753,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.echoes = Array(d["echoes"])
 	for e in g.echoes:
 		e["gen"] = int(e["gen"])
-		e["strength"] = float(e["strength"])
+		e["strength"] = snappedf(float(e["strength"]), GameFate.STEP)
 	g.heirlooms = _ints(Array(d["heirlooms"]))
 	g.slain_bosses = _ints(d["slain_bosses"])
 	g.heir.heirloom_bonus = g.heirloom_bonus()

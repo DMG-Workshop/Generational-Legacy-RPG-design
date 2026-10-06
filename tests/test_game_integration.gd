@@ -61,6 +61,8 @@ func _init() -> void:
 	test_full_round_trip()
 	test_old_saves()
 	test_determinism()
+	test_snapped_values_reload_exactly()
+	test_long_continuity()
 	test_flag_from_event_completes_quest()
 	print("integration: %d checks, %d failures" % [checks, fails])
 	quit()
@@ -369,6 +371,75 @@ func test_determinism() -> void:
 	ok(a[1] == b[1], "same seed, identical saves")
 	var c := _run(4243)
 	ok(c[1] != a[1], "a different seed tells a different story")
+
+
+## Full precision: default-precision JSON hides a value that reloads one ulp away.
+func _exact(d: GameDynasty) -> String:
+	return JSON.stringify(d.to_dict(), "", true, true)
+
+
+func _reload(d: GameDynasty) -> GameDynasty:
+	return GameDynasty.from_dict(JSON.parse_string(JSON.stringify(d.to_dict())))
+
+
+func test_snapped_values_reload_exactly() -> void:
+	var d := _new(61)
+	var fates := [0.0185, 0.0272, 0.1599, 0.1924]
+	d.heir.fate_value = snappedf(fates[0], GameFate.STEP)
+	d.heir.age = d.heir.family_min_age()
+	d.found_family()
+	for i in d.heir.children.size():
+		d.heir.children[i].fate_value = snappedf(fates[1 + i % 3], GameFate.STEP)
+	for k in [415, 600, 710, 2125]:
+		d._add_echo("slayer", "m%d" % k, "test", float(k) * GameFate.STEP)
+	var e := _reload(d)
+	ok(e.heir.fate_value == d.heir.fate_value, "fate value reloads to the same double (%s vs %s)" % [var_to_str(d.heir.fate_value), var_to_str(e.heir.fate_value)])
+	ok(e.heir.children.size() == d.heir.children.size() and range(d.heir.children.size()).all(func(i): return e.heir.children[i].fate_value == d.heir.children[i].fate_value), "children's fate values reload exactly")
+	ok(range(d.echoes.size()).all(func(i): return float(e.echoes[i]["strength"]) == float(d.echoes[i]["strength"])), "echo strengths reload exactly")
+	d._decay_echoes()
+	e._decay_echoes()
+	ok(_exact(d) == _exact(e), "a succession's echo decay matches after a reload")
+
+
+## A player who saves and continues before every action lives the same dynasty as one who never
+## stops: travel, events, fights, companions and several successions, compared at full precision.
+func test_long_continuity() -> void:
+	var gens := 0
+	for s in 3:
+		var a := GameDynasty.new_game(5000 + s, "", ["warrior", "mage", "cleric"][s], "faetouched", ["human", "orc", "beastkin"][s])
+		var b := _reload(a)
+		var pa := RandomNumberGenerator.new()
+		pa.seed = s
+		var pb := RandomNumberGenerator.new()
+		pb.seed = s
+		var same := -1
+		for i in 450:
+			_wander(a, pa)
+			b = _reload(b)
+			_wander(b, pb)
+			if _exact(a) != _exact(b):
+				same = i
+				break
+		ok(same < 0, "seed %d: saved-and-continued dynasty matches the unsaved one (first difference at step %d)" % [s, same])
+		gens += a.gen - 1
+	ok(gens >= 12, "continuity runs cross many successions (%d)" % gens)
+
+
+## The autopilot, with random road travel and exploring mixed in; `r` is the policy's own seeded dice.
+func _wander(d: GameDynasty, r: RandomNumberGenerator) -> void:
+	if d.state == "succession":
+		d.choose_heir(r.randi() % d.candidates.size())
+		return
+	var x := r.randi() % 10
+	if x < 3 and not d.has_pending_event():
+		var roads := d.world.roads(d.world.location, d.flags)
+		d.travel(roads[r.randi() % roads.size()]["to"])
+	elif x == 3 and not d.has_pending_event():
+		d.explore()
+	else:
+		GameBot.step(d)
+	if d.has_pending_event() and d.state == "life":
+		GameEvents.bot_resolve(d)
 
 
 func _run(s: int) -> Array:

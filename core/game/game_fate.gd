@@ -20,10 +20,14 @@ const MILESTONE_LABELS := {
 }
 
 
+## Fate Values and echo strengths are kept on a 0.0001 grid. Saved JSON prints the nearest short
+## decimal, which can parse to a neighbouring double, so loading must snap again (see from_dict).
+const STEP := 0.0001
+
+
 static func roll_fate_value(rng: RandomNumberGenerator, modifier: float) -> float:
 	var v := rng.randf_range(float(GameData.bal("fate_min")), float(GameData.bal("fate_max"))) + modifier
-	# Quantized so saved JSON reloads to the exact same value.
-	return snappedf(clampf(v, float(GameData.bal("fate_min")), float(GameData.bal("fate_max"))), 0.0001)
+	return snappedf(clampf(v, float(GameData.bal("fate_min")), float(GameData.bal("fate_max"))), STEP)
 
 
 ## Fate Value is a lifetime failure chance spread over 5 milestones.
