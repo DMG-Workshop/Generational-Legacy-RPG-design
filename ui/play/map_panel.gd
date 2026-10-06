@@ -8,6 +8,7 @@ const SIDE_W := 300
 
 var dynasty: GameDynasty
 var on_travel: Callable   # called with the destination id; the life screen does the travelling
+var on_change: Callable   # called after a purchase; the life screen saves and refreshes
 
 
 ## Places are laid out on the world grid, stretched to whatever room the panel leaves.
@@ -145,8 +146,11 @@ func _go(to: String) -> void:
 
 func _buy(map_id: String) -> void:
 	dynasty._say(dynasty.buy_map(map_id))
+	if on_change.is_valid():
+		on_change.call()
 	var again: Control = get_script().new()
 	again.dynasty = dynasty
 	again.on_travel = on_travel
+	again.on_change = on_change
 	get_parent().add_child(again)
 	queue_free()

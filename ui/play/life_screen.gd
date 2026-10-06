@@ -312,6 +312,7 @@ func _map() -> void:
 	var m := MapPanel.new()
 	m.dynasty = d
 	m.on_travel = func(to: String): _do(func(): return d.travel(to))
+	m.on_change = _changed
 	add_child(m)
 
 

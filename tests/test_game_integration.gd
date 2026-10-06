@@ -5,6 +5,8 @@
 extends SceneTree
 
 const DIR := "res://tests/fixtures/"
+const UI_SAVE := "user://test_integration_ui_save.json"
+const GameApp := preload("res://ui/play/game_app.gd")
 
 var checks := 0
 var fails := 0
@@ -66,8 +68,24 @@ func _init() -> void:
 	test_snapped_values_reload_exactly()
 	test_long_continuity()
 	test_flag_from_event_completes_quest()
+	_ui_tests.call_deferred()
+
+
+## Screens need a live scene tree, so these run once it is up. They save to a test file.
+func _ui_tests() -> void:
+	var real_path := GameDynasty.save_path
+	GameDynasty.save_path = UI_SAVE
+	root.size = Vector2i(1280, 720)   # headless starts tiny; clicks need the real window
+	var app: Control = GameApp.new()
+	root.add_child(app)
+	await _frames()
+	await test_ui_event_death_is_saved(app)
+	await test_ui_map_purchase_is_saved(app)
+	app.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(UI_SAVE))
+	GameDynasty.save_path = real_path
 	print("integration: %d checks, %d failures" % [checks, fails])
-	quit()
+	quit(1 if fails > 0 else 0)
 
 
 # ---------------------------------------------------------------- events x companions x quests
@@ -499,3 +517,77 @@ func _run(s: int) -> Array:
 		lines.append_array(d.journal)
 		GameBot.choose_best(d)
 	return [lines, JSON.stringify(d.to_dict())]
+
+
+# ---------------------------------------------------------------- screens
+
+func _frames(n: int = 4) -> void:
+	for i in n:
+		await process_frame
+
+
+func _button(n: Node, prefix: String) -> Button:
+	if n is Button and n.is_visible_in_tree() and not n.disabled and n.text.begins_with(prefix):
+		return n
+	for c in n.get_children():
+		var b := _button(c, prefix)
+		if b != null:
+			return b
+	return null
+
+
+## Presses the first enabled button whose text starts with `prefix`; false if there is none.
+func _press(from: Node, prefix: String) -> bool:
+	var b := _button(from, prefix)
+	if b == null:
+		return false
+	b.pressed.emit()   # the press may rebuild the screen and free `b`
+	await _frames(3)
+	return true
+
+
+func _labels(n: Node, out: Array = []) -> Array:
+	if n is Label and n.is_visible_in_tree():
+		out.append(n.text)
+	for c in n.get_children():
+		_labels(c, out)
+	return out
+
+
+## An event choice whose year ends the heir's life is on disk at once, before Continue is pressed.
+func test_ui_event_death_is_saved(app: Control) -> void:
+	var d := GameDynasty.new_game(4321, "Ulla", "warrior", "faetouched", "human")
+	d.pending_event = {}
+	d.world.visit("frostreach")
+	d.heir.age = d.heir.lifespan * 1.6
+	d.heir.hazard_age = d.heir.age
+	GameEvents.begin(d, "frozen_courier")
+	app.dynasty = d
+	app.autosave()
+	app.show_state()
+	await _frames(6)
+	ok(await _press(app.current, "Carry the satchel"), "the courier's choice is on screen")
+	ok(d.state == "succession", "the year on the road ends an old heir's life")
+	var disk := GameDynasty.load_from_disk()
+	ok(disk != null and disk.state == "succession" and disk.history.size() == d.history.size(), "the death is saved before the result is dismissed")
+	ok(await _press(app.current, "Continue"), "the result panel offers Continue")
+	await _frames(3)
+	ok(str(app.current.get_script().resource_path).ends_with("succession_screen.gd"), "Continue leads to the succession")
+
+
+## A map bought from the map panel is saved and shows on the life screen behind it.
+func test_ui_map_purchase_is_saved(app: Control) -> void:
+	app.new_game("Tess", "warrior", "faetouched", 83, "human")
+	var d: GameDynasty = app.dynasty
+	d.pending_event = {}
+	d.heir.gold = 40
+	app.autosave()
+	app.show_state()
+	await _frames()
+	await _press(app.current, "Travel / Map")
+	ok(await _press(app.current.get_children().back(), "Valley Survey"), "the Valley Survey is for sale")
+	ok(d.heir.gold == 10 and not d.world.charted.is_empty(), "the survey charts places for 30 gold")
+	await _press(app.current.get_children().back(), "Close")
+	ok(_labels(app.current).has("Gold 10    Potions %d" % d.heir.potions), "the life screen shows the gold left")
+	var disk := GameDynasty.load_from_disk()
+	ok(disk.heir.gold == 10 and disk.world.charted == d.world.charted, "the purchase is saved (gold %d, %d charted)" % [disk.heir.gold, disk.world.charted.size()])

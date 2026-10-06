@@ -77,8 +77,11 @@ func _build_choices() -> void:
 func _choose(i: int) -> void:
 	dynasty.resolve_event(i)
 	# Save and refresh behind the panel now, unless a fight or a death would swap screens under it.
+	# A death is still saved at once, so quitting on the result cannot bring the heir back.
 	if dynasty.battle == null and dynasty.state == "life" and on_change.is_valid():
 		on_change.call()
+	else:
+		dynasty.save_to_disk()
 	_build()
 
 
