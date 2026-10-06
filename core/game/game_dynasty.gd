@@ -197,10 +197,16 @@ func _check_milestone(milestone: String) -> void:
 		"critical":
 			var curse := _random_new_curse(heir)
 			_add_trait(heir, "scarred")
+			var had_gold := heir.gold > 0
 			heir.gold = int(float(heir.gold) * 0.2)
 			heir.age += 5.0
 			heir.hp = 1
-			msgs.append("DISASTER at %s! You are gravely hurt, age 5 years, lose most of your wealth%s." % [label, " and gain %s" % GameData.trait_name(curse) if curse != "" else ""])
+			var hurt: Array = ["are gravely hurt", "age 5 years"]
+			if had_gold:
+				hurt.append("lose most of your wealth")
+			if curse != "":
+				hurt.append("gain " + GameData.trait_name(curse))
+			msgs.append("DISASTER at %s! You %s and %s." % [label, ", ".join(hurt.slice(0, -1)), hurt[-1]])
 			_add_echo("infamy", "critical", "%s's ruin became a cautionary tale" % heir.name, 0.5)
 	pending_archetype = GameFate.roll_archetype(rng)
 	msgs.append("Fate (%s): the next heir will be shaped by this: %s." % [sev, GameFate.ARCHETYPES[pending_archetype]["name"]])

@@ -61,6 +61,7 @@ func _init() -> void:
 	test_full_round_trip()
 	test_old_saves()
 	test_determinism()
+	test_setbacks_without_gold()
 	test_snapped_values_reload_exactly()
 	test_long_continuity()
 	test_flag_from_event_completes_quest()
@@ -371,6 +372,37 @@ func test_determinism() -> void:
 	ok(a[1] == b[1], "same seed, identical saves")
 	var c := _run(4243)
 	ok(c[1] != a[1], "a different seed tells a different story")
+
+
+## Every Fate setback, rolled with and without gold: a penniless heir is never told of a loss.
+func test_setbacks_without_gold() -> void:
+	var seen := {}
+	for s in range(1, 3000):
+		for gold in [0, 500]:
+			var d := _new(1)
+			d.heir.milestones_done.erase("first_quest")
+			d.heir.gold = gold
+			d.heir.fate_value = 0.2
+			d.rng.seed = s
+			var before := d.journal.size()
+			d._check_milestone("first_quest")
+			var lines: Array = d.journal.slice(before)
+			if lines.size() < 2:
+				continue
+			var text := str(lines[0])
+			var sev := "critical" if text.begins_with("DISASTER") else text.get_slice(" at ", 0)
+			var key := "%s/%d" % [sev, gold]
+			if seen.has(key):
+				continue
+			seen[key] = text
+			if gold == 0:
+				ok(not text.to_lower().contains("you lose") and not text.contains("wealth"), "no gold, no loss claimed: " + text)
+			else:
+				ok(d.heir.gold < gold and text.contains("lose"), "a loss is reported when gold is lost: " + text)
+		if seen.size() >= 8:
+			break
+	ok(seen.has("critical/0") and seen.has("critical/500"), "critical setbacks rolled with and without gold (%s)" % str(seen.keys()))
+	ok(str(seen.get("critical/500", "")).contains("lose most of your wealth"), "a disaster with gold takes most of it")
 
 
 ## Full precision: default-precision JSON hides a value that reloads one ulp away.
