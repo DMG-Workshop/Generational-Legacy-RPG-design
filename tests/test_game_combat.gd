@@ -527,6 +527,15 @@ func test_elements() -> void:
 	var frost := b.estimate(-1, GameCombat.spell("cone_of_frost"), 0)
 	var fire := b.estimate(-1, GameCombat.spell("cone_of_frost").merged({"element": "fire"}, true), 0)
 	ok(absf(frost / fire - 3.0) < 0.01, "the same spell does three times as much as frost than as fire to a fire imp")
+	# Ticks carry their element too: a fire imp shrugs off half a burn, poison bites it in full.
+	var imp := GameBattle.enemy_ref(0)
+	b.apply_status(imp, "burn", 0.2, 3, "heir", 500.0)
+	var hp: int = b.enemies[0]["hp"]
+	b._enemy_turn(0)
+	ok(hp - int(b.enemies[0]["hp"]) == 50, "a burn of 100 a turn does 50 to a fire imp (%d)" % (hp - int(b.enemies[0]["hp"])))
+	ok(b._tick_resisted(imp, 100, "nature") == 100, "poison is not resisted by fire")
+	d.heir.traits.append("draconic_form")
+	ok(b._tick_resisted("heir", 100, "fire") == 40, "the heir's draconic scales (60%% fire resistance) cool a burn of 100 to %d" % b._tick_resisted("heir", 100, "fire"))
 
 
 # ---------------------------------------------------------------- learning and costs

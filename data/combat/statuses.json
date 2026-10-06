@@ -12,12 +12,12 @@
   },
   "statuses": [
     {
-      "id": "burn", "name": "Burn", "tag": "BRN", "color": "#ff7a3a", "harmful": true,
+      "id": "burn", "name": "Burn", "tag": "BRN", "color": "#ff7a3a", "harmful": true, "element": "fire",
       "tick": "damage", "basis": "power", "stack": "refresh", "default_turns": 3, "default_potency": 0.15,
       "text": {"apply": "{t} catches fire.", "tick": "{t} burns for {n}.", "end": "The flames on {t} gutter out."}
     },
     {
-      "id": "poison", "name": "Poison", "tag": "PSN", "color": "#8fd14f", "harmful": true,
+      "id": "poison", "name": "Poison", "tag": "PSN", "color": "#8fd14f", "harmful": true, "element": "nature",
       "tick": "damage", "basis": "max_hp", "stack": "refresh", "default_turns": 3, "default_potency": 0.03,
       "text": {"apply": "{t} is poisoned.", "tick": "Poison eats at {t} for {n}.", "end": "The poison runs out of {t}."}
     },

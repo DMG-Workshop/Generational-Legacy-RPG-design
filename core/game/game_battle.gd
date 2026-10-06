@@ -403,6 +403,7 @@ func _start_turn(ref: String) -> bool:
 		var n := maxi(1, int(round(float(inst["amount"]) * float(inst["stacks"]))))
 		match str(def.get("tick", "")):
 			"damage":
+				n = _tick_resisted(ref, n, str(def.get("element", "")))
 				_say(_status_text(def, "tick", ref, n))
 				_tick_damage(ref, n, inst["id"])
 				if not _ref_alive(ref):
@@ -428,6 +429,21 @@ func _start_turn(ref: String) -> bool:
 		if int(inst["turns"]) <= 0:
 			remove_status(ref, inst["id"], "end")
 	return skip == ""
+
+
+## Elements bite on ticks as on blows: a fire imp shrugs off half a burn, and the heir's and a
+## companion's fire resistance cools one.
+func _tick_resisted(ref: String, n: int, element: String) -> int:
+	if element == "":
+		return n
+	var f := 1.0
+	match _side(ref):
+		"enemy":
+			f = GameCombat.element_mult(element, str(enemies[_index(ref)].get("element", "")))
+		"heir", "ally":
+			var u: GameHeir = heir if ref == "heir" else allies[_index(ref)]
+			f = 1.0 - clampf(u.trait_total(element + "_resistance"), 0.0, 0.8)
+	return maxi(1, int(round(float(n) * f)))
 
 
 func _tick_damage(ref: String, n: int, id: String) -> void:
