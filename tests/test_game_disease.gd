@@ -327,6 +327,9 @@ func _test_resistance() -> void:
 	_check(GameDisease.resistance(dwarf, "camp_cough") > GameDisease.resistance(human, "camp_cough") + 0.3, "dwarves are hardy (%.2f vs %.2f)" % [GameDisease.resistance(dwarf, "camp_cough"), GameDisease.resistance(human, "camp_cough")])
 	_check(GameDisease.resistance(orc, "camp_cough") > GameDisease.resistance(human, "camp_cough") + 0.25, "orcs are hardy")
 	_check(GameDisease.resist_sources(dwarf, "camp_cough")[0][1] == "dwarven hardiness", "resistance names its source")
+	var necro := _fresh(1, "necromancer", "human").heir
+	_check(GameDisease.resistance(necro, "grave_rot") > GameDisease.resistance(necro, "rat_plague") + 0.25, "a disease's own resistances count (necromancers and grave rot)")
+	_check(GameDisease.resist_sources(necro, "grave_rot")[0][1] == "Necromancer training", "and are named: %s" % GameDisease.resist_sources(necro, "grave_rot")[0][1])
 	var god := _fresh(1, "mage", "human").heir
 	god.traits.append("demigod")
 	_check(_near(GameDisease.resistance(god, "rat_plague"), 1.0), "divine blood is immune")

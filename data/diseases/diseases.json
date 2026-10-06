@@ -92,6 +92,7 @@
       ],
       "end": {"kind": "chronic"},
       "contagion": {"spouse": 0.08, "child": 0.06, "companion": 0.08, "birth": 0.0},
+      "resist": {"beastkin": 0.2, "druid": 0.1},
       "cures": {"temple": 1.0, "remedies": ["willowbark_tonic", "physicians_draught", "saints_salts"], "natural": [0.4, 0.15, 0.02], "rest": 0.25},
       "vectors": {"milestone": 0.5, "corpse": {"creatures": ["slime", "bog_troll"], "biomes": ["swamp"], "weight": 2.0}}
     },
@@ -105,6 +106,7 @@
       ],
       "end": {"kind": "lethal", "death_per_year": 0.05, "cause": "taken by Grave Rot"},
       "contagion": {"spouse": 0.04, "child": 0.03, "companion": 0.05, "birth": 0.0},
+      "resist": {"necromancer": 0.3, "dread_knight": 0.3, "warlock": 0.2},
       "cures": {"temple": 1.5, "remedies": ["gravewort_poultice", "saints_salts"], "natural": [0.25, 0.0, 0.0], "rest": 0.2},
       "vectors": {"corpse": {"creatures": ["skeleton", "wraith", "lich_acolyte"], "biomes": ["crypt", "ruins"], "weight": 2.0}}
     },
@@ -169,6 +171,7 @@
       ],
       "end": {"kind": "chronic"},
       "contagion": {"spouse": 0.0, "child": 0.0, "companion": 0.0, "birth": 0.0},
+      "resist": {"rogue": 0.25, "ninja": 0.25, "arcane_trickster": 0.15},
       "cures": {"temple": 1.0, "remedies": ["physicians_draught", "smugglers_theriac"], "natural": [0.35, 0.03], "rest": 0.25},
       "vectors": {"toxin": true}
     }
