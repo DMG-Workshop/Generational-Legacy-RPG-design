@@ -1,0 +1,176 @@
+{
+  "settings": {
+    "level_milestones": [5, 10, 20, 35, 50, 75, 100, 150, 250, 400, 650, 1000, 1600, 2500, 4000, 6500, 10000, 16000, 25000, 40000, 65000, 99999],
+    "milestone_chance": 0.07,
+    "milestone_biome_mult": 3.0,
+    "resist_cap": 0.9,
+    "vit_resist": {"from": 0.7, "per": 0.3, "max": 0.2},
+    "vit_label": "a hardy frame",
+    "resist": {
+      "dwarf": 0.35, "orc": 0.3, "half_orc": 0.2, "dragonborn": 0.15, "half_dragon": 0.1, "beastkin": 0.1,
+      "cleric": 0.15, "druid": 0.15, "paladin": 0.15, "shaman": 0.15, "templar": 0.15, "monk": 0.1,
+      "saints_blood": 0.5, "blessed": 0.15, "undead": 1.0, "death_knight": 0.5, "draconic_form": 0.3
+    },
+    "category_resist": {"divine": 1.0},
+    "resist_labels": {
+      "dwarf": "dwarven hardiness", "orc": "an orc's hide", "half_orc": "orc blood", "dragonborn": "dragon blood",
+      "half_dragon": "dragon blood", "beastkin": "a beastkin's hardiness", "cleric": "a healer's habits",
+      "druid": "a healer's habits", "paladin": "a healer's habits", "shaman": "a healer's habits",
+      "templar": "a healer's habits", "monk": "a monk's discipline", "divine": "divine blood", "undead": "dead flesh"
+    },
+    "recovery": {"cleric": 0.5, "druid": 0.5, "shaman": 0.5, "paladin": 0.35, "templar": 0.35, "monk": 0.2, "saints_blood": 0.5},
+    "family_recovery": 0.4,
+    "young_years": 8,
+    "cure_cost": 40,
+    "cure_stage_step": 0.5,
+    "bargain_taint_chance": 0.5,
+    "black_market_infamy": 0.02,
+    "corpse_chance": 0.04
+  },
+  "diseases": [
+    {
+      "id": "camp_cough", "name": "Camp Cough",
+      "description": "A wet cough from damp bedrolls and smoky fires. Mild, unless it is let settle in the chest.",
+      "stages": [
+        {"name": "Tickling Cough", "years": 2, "effects": [{"stat": "max_hp", "value": -0.03}]},
+        {"name": "Hacking Cough", "years": 3, "effects": [{"stat": "max_hp", "value": -0.06}, {"stat": "reflexes", "value": -0.02}]},
+        {"name": "Rattling Chest", "effects": [{"stat": "max_hp", "value": -0.08}, {"stat": "reflexes", "value": -0.03}, {"stat": "max_mp", "value": -0.05}]}
+      ],
+      "end": {"kind": "chronic"},
+      "contagion": {"spouse": 0.15, "child": 0.12, "companion": 0.1, "birth": 0.0},
+      "cures": {"temple": 0.6, "remedies": ["willowbark_tonic", "physicians_draught"], "natural": [0.45, 0.2, 0.04], "rest": 0.3},
+      "vectors": {"milestone": 3.0}
+    },
+    {
+      "id": "red_flux", "name": "Red Flux",
+      "description": "Bad water and worse cooking. It empties the gut and the strength with it.",
+      "stages": [
+        {"name": "Griping Gut", "years": 1, "effects": [{"stat": "melee_damage", "value": -0.04}, {"stat": "max_hp", "value": -0.02}]},
+        {"name": "Bloody Flux", "years": 2, "effects": [{"stat": "melee_damage", "value": -0.08}, {"stat": "max_hp", "value": -0.05}]},
+        {"name": "Wasting Flux", "effects": [{"stat": "melee_damage", "value": -0.1}, {"stat": "max_hp", "value": -0.08}, {"stat": "work_gold", "value": -0.1}]}
+      ],
+      "end": {"kind": "chronic"},
+      "contagion": {"spouse": 0.1, "child": 0.1, "companion": 0.12, "birth": 0.0},
+      "cures": {"temple": 0.6, "remedies": ["willowbark_tonic", "physicians_draught"], "natural": [0.5, 0.2, 0.03], "rest": 0.3},
+      "vectors": {"milestone": 3.0}
+    },
+    {
+      "id": "shaking_ague", "name": "Shaking Ague",
+      "description": "A fever that comes and goes with the seasons. Bad for steady hands and spellwork.",
+      "biomes": ["swamp", "coast"],
+      "stages": [
+        {"name": "Night Sweats", "years": 3, "effects": [{"stat": "element_power", "value": -0.04}, {"stat": "luck", "value": -0.01}]},
+        {"name": "Shaking Fits", "years": 4, "effects": [{"stat": "element_power", "value": -0.08}, {"stat": "luck", "value": -0.02}, {"stat": "reflexes", "value": -0.02}]},
+        {"name": "Recurring Ague", "effects": [{"stat": "element_power", "value": -0.1}, {"stat": "luck", "value": -0.03}, {"stat": "reflexes", "value": -0.03}]}
+      ],
+      "end": {"kind": "chronic"},
+      "contagion": {"spouse": 0.05, "child": 0.05, "companion": 0.05, "birth": 0.0},
+      "cures": {"temple": 0.8, "remedies": ["willowbark_tonic", "physicians_draught"], "natural": [0.3, 0.1, 0.02], "rest": 0.25},
+      "vectors": {"milestone": 1.5}
+    },
+    {
+      "id": "blister_pox", "name": "Blister Pox",
+      "description": "Itching blisters that run through a household. Most shake it off; some keep the scars.",
+      "stages": [
+        {"name": "Red Spots", "years": 1, "effects": [{"stat": "persuasion", "value": -0.05}, {"stat": "max_hp", "value": -0.02}]},
+        {"name": "Blisters", "years": 2, "effects": [{"stat": "persuasion", "value": -0.1}, {"stat": "max_hp", "value": -0.04}]},
+        {"name": "Pox-Scarred", "effects": [{"stat": "persuasion", "value": -0.12}, {"stat": "max_hp", "value": -0.03}]}
+      ],
+      "end": {"kind": "chronic"},
+      "contagion": {"spouse": 0.1, "child": 0.25, "companion": 0.1, "birth": 0.05},
+      "cures": {"temple": 0.5, "remedies": ["willowbark_tonic", "physicians_draught"], "natural": [0.6, 0.35, 0.03], "rest": 0.3},
+      "vectors": {"milestone": 2.0}
+    },
+    {
+      "id": "bog_fever", "name": "Bog Fever",
+      "description": "Caught from the drowned and the things that feed on them. It settles in the lungs.",
+      "biomes": ["swamp"],
+      "stages": [
+        {"name": "Chills", "years": 2, "effects": [{"stat": "element_power", "value": -0.05}, {"stat": "reflexes", "value": -0.02}]},
+        {"name": "Bog Fever", "years": 3, "effects": [{"stat": "element_power", "value": -0.1}, {"stat": "reflexes", "value": -0.04}, {"stat": "xp_gain", "value": -0.05}]},
+        {"name": "Marsh Lung", "effects": [{"stat": "max_hp", "value": -0.1}, {"stat": "reflexes", "value": -0.05}, {"stat": "xp_gain", "value": -0.08}]}
+      ],
+      "end": {"kind": "chronic"},
+      "contagion": {"spouse": 0.08, "child": 0.06, "companion": 0.08, "birth": 0.0},
+      "cures": {"temple": 1.0, "remedies": ["willowbark_tonic", "physicians_draught", "saints_salts"], "natural": [0.4, 0.15, 0.02], "rest": 0.25},
+      "vectors": {"milestone": 0.5, "corpse": {"creatures": ["slime", "bog_troll"], "biomes": ["swamp"], "weight": 2.0}}
+    },
+    {
+      "id": "grave_rot", "name": "Grave Rot",
+      "description": "Grey flesh that will not heal, from handling the long dead. Left alone it blackens and kills.",
+      "stages": [
+        {"name": "Grey Skin", "years": 2, "effects": [{"stat": "max_hp", "value": -0.04}, {"stat": "healing_power", "value": -0.1}]},
+        {"name": "Rotting Flesh", "years": 3, "effects": [{"stat": "max_hp", "value": -0.08}, {"stat": "defense", "value": -0.08}, {"stat": "healing_power", "value": -0.2}]},
+        {"name": "Black Rot", "effects": [{"stat": "max_hp", "value": -0.15}, {"stat": "defense", "value": -0.12}, {"stat": "healing_power", "value": -0.3}]}
+      ],
+      "end": {"kind": "lethal", "death_per_year": 0.05, "cause": "taken by Grave Rot"},
+      "contagion": {"spouse": 0.04, "child": 0.03, "companion": 0.05, "birth": 0.0},
+      "cures": {"temple": 1.5, "remedies": ["gravewort_poultice", "saints_salts"], "natural": [0.25, 0.0, 0.0], "rest": 0.2},
+      "vectors": {"corpse": {"creatures": ["skeleton", "wraith", "lich_acolyte"], "biomes": ["crypt", "ruins"], "weight": 2.0}}
+    },
+    {
+      "id": "rat_plague", "name": "Rat Plague",
+      "description": "Fever, then swellings at the neck and groin. It moves fast and jumps from bed to bed.",
+      "stages": [
+        {"name": "Fever", "years": 1, "effects": [{"stat": "max_hp", "value": -0.05}, {"stat": "melee_damage", "value": -0.05}]},
+        {"name": "Swellings", "years": 1, "effects": [{"stat": "max_hp", "value": -0.1}, {"stat": "melee_damage", "value": -0.1}, {"stat": "element_power", "value": -0.1}]},
+        {"name": "Black Swellings", "effects": [{"stat": "max_hp", "value": -0.2}, {"stat": "melee_damage", "value": -0.15}, {"stat": "element_power", "value": -0.15}]}
+      ],
+      "end": {"kind": "lethal", "death_per_year": 0.1, "cause": "taken by the Rat Plague"},
+      "contagion": {"spouse": 0.3, "child": 0.2, "companion": 0.2, "birth": 0.1},
+      "cures": {"temple": 2.0, "remedies": ["gravewort_poultice", "physicians_draught", "saints_salts", "smugglers_theriac"], "natural": [0.15, 0.05, 0.0], "rest": 0.15},
+      "vectors": {"corpse": {"creatures": ["goblin", "bandit"], "biomes": ["cave", "coast"], "weight": 1.0}, "vial": true, "bargain": true}
+    },
+    {
+      "id": "weeping_sores", "name": "Weeping Sores",
+      "description": "Sores where the straps rub, passed on in a dead man's gear. Unsightly, stubborn, rarely worse.",
+      "stages": [
+        {"name": "Itching Sores", "years": 2, "effects": [{"stat": "defense", "value": -0.03}, {"stat": "persuasion", "value": -0.05}]},
+        {"name": "Weeping Sores", "years": 4, "effects": [{"stat": "defense", "value": -0.06}, {"stat": "persuasion", "value": -0.1}, {"stat": "max_hp", "value": -0.04}]},
+        {"name": "Open Sores", "effects": [{"stat": "defense", "value": -0.1}, {"stat": "persuasion", "value": -0.15}, {"stat": "max_hp", "value": -0.06}]}
+      ],
+      "end": {"kind": "chronic"},
+      "contagion": {"spouse": 0.1, "child": 0.05, "companion": 0.08, "birth": 0.0},
+      "cures": {"temple": 1.0, "remedies": ["gravewort_poultice", "saints_salts", "smugglers_theriac"], "natural": [0.3, 0.1, 0.02], "rest": 0.2},
+      "vectors": {"bargain": true}
+    },
+    {
+      "id": "grey_veil", "name": "Grey Veil",
+      "description": "A poisoner's plague, sold sealed in glass. The skin greys, the breath shortens, and then it stops.",
+      "stages": [
+        {"name": "Grey Pallor", "years": 1, "effects": [{"stat": "max_hp", "value": -0.06}, {"stat": "xp_gain", "value": -0.05}]},
+        {"name": "Veil Cough", "years": 2, "effects": [{"stat": "max_hp", "value": -0.12}, {"stat": "reflexes", "value": -0.06}, {"stat": "xp_gain", "value": -0.05}]},
+        {"name": "The Grey Veil", "effects": [{"stat": "max_hp", "value": -0.2}, {"stat": "reflexes", "value": -0.1}, {"stat": "xp_gain", "value": -0.1}]}
+      ],
+      "end": {"kind": "lethal", "death_per_year": 0.08, "cause": "taken by the Grey Veil"},
+      "contagion": {"spouse": 0.25, "child": 0.15, "companion": 0.15, "birth": 0.05},
+      "cures": {"temple": 2.5, "remedies": ["saints_salts", "smugglers_theriac"], "natural": [0.1, 0.0, 0.0], "rest": 0.1},
+      "vectors": {"vial": true, "bargain": true}
+    },
+    {
+      "id": "lockjaw", "name": "Lockjaw",
+      "description": "A nick from a rusted blade, and weeks later the jaw sets and the muscles knot. Not catching, but deadly.",
+      "stages": [
+        {"name": "Stiff Jaw", "years": 1, "effects": [{"stat": "melee_damage", "value": -0.05}, {"stat": "reflexes", "value": -0.03}]},
+        {"name": "Knotting Muscles", "years": 1, "effects": [{"stat": "melee_damage", "value": -0.12}, {"stat": "reflexes", "value": -0.08}]},
+        {"name": "Lockjaw", "effects": [{"stat": "melee_damage", "value": -0.2}, {"stat": "reflexes", "value": -0.12}, {"stat": "element_power", "value": -0.1}]}
+      ],
+      "end": {"kind": "lethal", "death_per_year": 0.12, "cause": "taken by Lockjaw"},
+      "contagion": {"spouse": 0.0, "child": 0.0, "companion": 0.0, "birth": 0.0},
+      "cures": {"temple": 1.5, "remedies": ["gravewort_poultice", "physicians_draught", "smugglers_theriac"], "natural": [0.2, 0.05, 0.0], "rest": 0.15},
+      "vectors": {"bargain": true}
+    },
+    {
+      "id": "nightshade_palsy", "name": "Nightshade Palsy",
+      "description": "The tremor of those who handle poison too often. Not catching; it lives in the hands.",
+      "stages": [
+        {"name": "Tremor", "years": 2, "effects": [{"stat": "luck", "value": -0.02}, {"stat": "melee_damage", "value": -0.04}]},
+        {"name": "Palsied Hands", "effects": [{"stat": "luck", "value": -0.04}, {"stat": "melee_damage", "value": -0.08}, {"stat": "element_power", "value": -0.06}]}
+      ],
+      "end": {"kind": "chronic"},
+      "contagion": {"spouse": 0.0, "child": 0.0, "companion": 0.0, "birth": 0.0},
+      "cures": {"temple": 1.0, "remedies": ["physicians_draught", "smugglers_theriac"], "natural": [0.35, 0.03], "rest": 0.25},
+      "vectors": {"toxin": true}
+    }
+  ]
+}

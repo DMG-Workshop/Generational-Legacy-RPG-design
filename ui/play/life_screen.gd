@@ -142,7 +142,23 @@ func _build_left() -> void:
 			l.tooltip_text = Kit.trait_tooltip(id)
 			l.mouse_filter = Control.MOUSE_FILTER_STOP
 			left.add_child(l)
+	_afflictions(h)
 	_fit_column(left)
+
+
+## Sicknesses: the stage, what it takes away and how long until it worsens.
+func _afflictions(h: GameHeir) -> void:
+	if h.diseases.is_empty():
+		return
+	left.add_child(HSeparator.new())
+	left.add_child(Kit.label("Afflictions (cures at temples)", 15, Kit.BAD))
+	for e in h.diseases:
+		var info := GameDisease.describe_entry(e)
+		var l := Kit.label("%s: %s (%d/%d)" % [info["name"], info["stage_name"], info["stage"], info["stages"]], 15, Kit.BAD)
+		l.tooltip_text = "%s\n%s" % [info["name"], info["description"]]
+		l.mouse_filter = Control.MOUSE_FILTER_STOP
+		left.add_child(l)
+		left.add_child(Kit.label("  %s\n  %s" % [info["effects"], info["outlook"]], 13, Kit.DIM))
 
 
 ## Every line in a side column wraps at the column's width: six-figure stats at level 5000,
@@ -159,10 +175,10 @@ func _build_right() -> void:
 	var h := d.heir
 	right.add_child(Kit.label("Family", 20, Kit.ACCENT))
 	if h.spouse != null:
-		right.add_child(Kit.label("Spouse: %s (%s %s)" % [h.spouse.name, h.spouse.race()["name"], h.spouse.cls()["name"]], 15))
+		right.add_child(Kit.label("Spouse: %s (%s %s)%s" % [h.spouse.name, h.spouse.race()["name"], h.spouse.cls()["name"], _sick(h.spouse)], 15))
 		for c in h.children:
 			var traits_txt: String = ", ".join(c.traits.map(func(t): return GameData.trait_name(t)))
-			right.add_child(Kit.label("%s (%s %s)  Fate %d%%\n   %s" % [c.name, c.race()["name"], c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits"], 14))
+			right.add_child(Kit.label("%s (%s %s)  Fate %d%%\n   %s%s" % [c.name, c.race()["name"], c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits", _sick(c)], 14))
 	else:
 		right.add_child(Kit.label("Unmarried. Without children, distant cousins inherit with weaker blood.", 14, Kit.DIM))
 	_section("Gear", ShopPanel.summary_lines(d))
@@ -177,6 +193,10 @@ func _build_right() -> void:
 	for e in d.echoes:
 		right.add_child(Kit.label(d.describe_echo(e), 13, Kit.DIM))
 	_fit_column(right)
+
+
+func _sick(m: GameHeir) -> String:
+	return "" if m.diseases.is_empty() else "\n   sick: %s" % GameDisease.status_text(m)
 
 
 func _section(title: String, lines: Array) -> void:
