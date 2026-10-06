@@ -40,6 +40,7 @@ func _finish_with_ui() -> void:
 	await process_frame
 	_test_empty_data()
 	_test_board_ui()
+	await _test_board_keeps_scroll()
 	print("%d checks, %d failures" % [checks, failures])
 	print("ALL PASS" if failures == 0 else "TESTS FAILED")
 	quit(1 if failures > 0 else 0)
@@ -657,6 +658,52 @@ func _buttons(n: Node, text: String) -> Array:
 		out.append(n)
 	for c in n.get_children():
 		out.append_array(_buttons(c, text))
+	return out
+
+
+## Abandon on a card low in a scrolled list: the board rebuilds, but the list stays where it was so
+## the "Really abandon" / "Keep it" pair appears in view, where the player clicked.
+func _test_board_keeps_scroll() -> void:
+	root.size = Vector2i(1280, 720)
+	var d := _fresh(120, 200, "kingshold", 87)
+	for loc in ["kingshold", "ironford", "hearthmere"]:
+		d.world.visit(loc)
+		for q in d.quests.postings(d, loc):
+			if d.quests.active.size() < int(GameData.bal("quest_max_active")) and d.quests.accept_block(d, q["id"]) == "":
+				d.quests.accept(d, q["id"])
+	var p = BoardPanel.new()
+	p.dynasty = d
+	root.add_child(p)
+	for i in 4:
+		await process_frame
+	var mine: ScrollContainer = _lists(p)[1]
+	mine.scroll_vertical = int(mine.get_v_scroll_bar().max_value)
+	for i in 4:
+		await process_frame
+	var scrolled := mine.scroll_vertical
+	_check(d.quests.active.size() == 4 and scrolled > 0, "a full quest log scrolls (%d obligations, scrolled %d)" % [d.quests.active.size(), scrolled])
+	_buttons(mine, "Abandon").back().pressed.emit()
+	for i in 4:
+		await process_frame
+	mine = _lists(p)[1]
+	_check(mine.scroll_vertical == scrolled, "the list keeps its place after Abandon (%d, was %d)" % [mine.scroll_vertical, scrolled])
+	var view := mine.get_global_rect()
+	var really: Array = _buttons(mine, "Really abandon")
+	var keep: Array = _buttons(mine, "Keep it")
+	_check(really.size() == 1 and keep.size() == 1 and view.encloses(really[0].get_global_rect()) and view.encloses(keep[0].get_global_rect()), "the confirm pair is in view")
+	keep[0].pressed.emit()
+	for i in 4:
+		await process_frame
+	_check(_lists(p)[1].scroll_vertical == scrolled and d.quests.active.size() == 4, "Keep it leaves the list where it was")
+	p.free()
+
+
+## The board's two scrolling columns (offered, then the house's obligations), live ones only.
+func _lists(n: Node, out: Array = []) -> Array:
+	if n is ScrollContainer and not n.is_queued_for_deletion():
+		out.append(n)
+	for c in n.get_children():
+		_lists(c, out)
 	return out
 
 
