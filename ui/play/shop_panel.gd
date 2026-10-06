@@ -233,9 +233,10 @@ func _build_cures() -> void:
 		var cost := GameDisease.cure_price(dynasty, id)
 		var b := Kit.button("Cure", func(): _act(GameDisease.temple_cure(dynasty, id)), Vector2(96, 34))
 		b.disabled = h.gold < cost
+		b.tooltip_text = "The priests cure it at once."
 		var title := "%s: %s (stage %d of %d)" % [info["name"], info["stage_name"], info["stage"], info["stages"]]
-		var sub := "%s  -  %s" % [info["effects"], info["outlook"]]
-		rows.add_child(_service_row(title, sub, "Cured at once.", "%dg" % cost, Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
+		var outlook: String = info["outlook"]
+		rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%dg" % cost, Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
 
 
 func _build_gear() -> void:

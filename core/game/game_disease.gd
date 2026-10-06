@@ -386,19 +386,22 @@ static func _milestone_pick(d: GameDynasty) -> String:
 	return pool.back()[0]
 
 
-## Rest: early stages may break (a roll on top of the year's own), later ones are held back for
-## the time spent abed. Lines go into `msgs`; the rest action journals them.
+## Rest: early stages may break (a roll on top of the year's own), stages that never clear alone
+## are held back for the time spent abed, and a last stage is past helping. Lines go into `msgs`;
+## the rest action journals them.
 static func on_rest(d: GameDynasty, msgs: Array) -> void:
 	var h := d.heir
 	var mult := recovery_mult(h)
 	var span := float(d.years_for("rest"))
 	for e in h.diseases.duplicate():
 		var id: String = e["id"]
+		if is_last_stage(e):
+			continue
 		if natural_chance(id, int(e["stage"])) > 0.0:
 			if d.rng.randf() < float(def(id)["cures"].get("rest", 0.0)) * mult:
 				cure(h, id)
 				msgs.append("Bed rest breaks %s's %s." % [h.name, disease_name(id)])
-		elif not is_last_stage(e):
+		else:
 			e["years_in_stage"] = _snap(float(e["years_in_stage"]) - span)
 			msgs.append("Bed rest keeps %s's %s from worsening." % [h.name, disease_name(id)])
 
@@ -647,7 +650,7 @@ static func _worse_text(h: GameHeir, e: Dictionary) -> String:
 	else:
 		line = "%s's %s worsens: %s (%s)." % [h.name, disease_name(id), st["name"], fx]
 	if is_last_stage(e):
-		line += " Untreated, it can kill." if is_lethal(id) else " Untreated, it stays for life."
+		line += " Untreated, it can kill." if is_lethal(id) else " Untreated, it may stay for life."
 	return line
 
 
@@ -669,9 +672,11 @@ static func outlook(e: Dictionary) -> String:
 		parts.append("worsens in %s" % GameDynasty._span_text(left))
 	elif is_lethal(id):
 		parts.append("can kill: %d%% a year" % int(round(death_chance(id, int(e["stage"])) * 100.0)))
+	elif natural_chance(id, int(e["stage"])) > 0.0:
+		parts.append("lingers; rarely clears without a cure")
 	else:
 		parts.append("stays until cured")
-	if natural_chance(id, int(e["stage"])) > 0.0:
+	if not is_last_stage(e) and natural_chance(id, int(e["stage"])) > 0.0:
 		parts.append("may clear with rest")
 	return "; ".join(parts)
 

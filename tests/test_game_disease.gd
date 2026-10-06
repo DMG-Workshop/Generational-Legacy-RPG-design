@@ -192,7 +192,7 @@ func _test_progression() -> void:
 	GameDisease.on_years(d, 4.0, msgs)
 	_check(int(e["stage"]) == 2 and _near(float(e["years_in_stage"]), 2.5), "a long stretch carries into the last stage (%.2f)" % float(e["years_in_stage"]))
 	_check(h.max_hp() < hp_mid, "the last stage hits harder")
-	_check(msgs.any(func(l): return "stays for life" in str(l)), "reaching a chronic end is spelled out")
+	_check(msgs.any(func(l): return "may stay for life" in str(l)), "reaching a chronic end is spelled out")
 	GameDisease.on_years(d, 30.0, msgs)
 	_check(int(e["stage"]) == 2 and d.state == "life", "a chronic last stage lingers and never kills")
 	_check(GameDisease.outlook(e) == "stays until cured", "chronic outlook: %s" % GameDisease.outlook(e))
@@ -281,6 +281,12 @@ func _test_rest() -> void:
 	var e := GameDisease.entry(h, "__rot")
 	_check(int(e["stage"]) == 1 and _near(float(e["years_in_stage"]), 1.0), "rest holds a later stage where it is (%.2f)" % float(e["years_in_stage"]))
 	_check(_journal_has(d, "Bed rest keeps"), "holding is journaled")
+	GameDisease._set_stage(h, e, 2)
+	e["years_in_stage"] = 4.0
+	var state := d.rng.state
+	var lines: Array = []
+	GameDisease.on_rest(d, lines)
+	_check(lines.is_empty() and d.rng.state == state and _near(float(e["years_in_stage"]), 4.0), "rest does nothing for a last stage")
 	_check(msgs.size() > 0, "rest returns its lines")
 	_drop_test_disease("__rot")
 	# With the real numbers, rest clears camp cough far more often than a year of work.
@@ -810,6 +816,8 @@ func _test_text() -> void:
 	GameDisease.infect(h, "camp_cough", "test")
 	_check(GameDisease.outlook(GameDisease.entry(h, "camp_cough")) == "worsens in 2.0 years; may clear with rest", "mild outlook: %s" % GameDisease.outlook(GameDisease.entry(h, "camp_cough")))
 	_check(GameDisease.status_text(h) == "Rat Plague, Camp Cough", "status text")
+	GameDisease.infect(h, "shaking_ague", "test", 2)
+	_check(GameDisease.outlook(GameDisease.entry(h, "shaking_ague")) == "lingers; rarely clears without a cure", "chronic outlook with a slim natural chance")
 	# Lines read their age.
 	h.age = h.adult_age()
 	_check(GameDisease.age_band(h) == "young" and GameDisease._caught_text(h, "camp_cough", "level").begins_with("Green to the road"), "a young heir's line")

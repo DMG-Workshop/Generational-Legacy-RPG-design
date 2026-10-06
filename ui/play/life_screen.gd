@@ -126,6 +126,7 @@ func _build_left() -> void:
 	left.add_child(Kit.bar(Kit.ACCENT, h.xp_to_next(), h.xp, Vector2(200, 10)))
 	left.add_child(Kit.label("STR %d   MAG %d   AGI %d   VIT %d" % [int(h.stat("str")), int(h.stat("mag")), int(h.stat("agi")), int(h.stat("vit"))], 15))
 	left.add_child(Kit.label("Gold %d    Potions %d" % [h.gold, h.potions], 16, Kit.ACCENT))
+	_afflictions(h)
 	left.add_child(HSeparator.new())
 	left.add_child(Kit.label("Traits (hover for details)", 15, Kit.DIM))
 	for id in h.all_traits():
@@ -142,7 +143,6 @@ func _build_left() -> void:
 			l.tooltip_text = Kit.trait_tooltip(id)
 			l.mouse_filter = Control.MOUSE_FILTER_STOP
 			left.add_child(l)
-	_afflictions(h)
 	_fit_column(left)
 
 

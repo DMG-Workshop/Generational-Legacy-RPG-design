@@ -86,7 +86,9 @@ func trait_total(stat: String) -> float:
 			for e in GameItems.item_def(equipment[slot]).get("effects", []):
 				if e["stat"] == stat:
 					total += float(e["value"])
-	return total + GameDisease.effect_total(self, stat)
+	if not diseases.is_empty():
+		total += GameDisease.effect_total(self, stat)
+	return total
 
 
 func fate_modifier_total() -> float:
