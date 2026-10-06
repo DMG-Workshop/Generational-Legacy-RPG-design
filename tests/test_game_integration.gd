@@ -62,6 +62,7 @@ func _init() -> void:
 	test_old_saves()
 	test_determinism()
 	test_setbacks_without_gold()
+	test_journal_survives_reload()
 	test_snapped_values_reload_exactly()
 	test_long_continuity()
 	test_flag_from_event_completes_quest()
@@ -372,6 +373,22 @@ func test_determinism() -> void:
 	ok(a[1] == b[1], "same seed, identical saves")
 	var c := _run(4243)
 	ok(c[1] != a[1], "a different seed tells a different story")
+
+
+## The Chronicle shows the last JOURNAL_SAVED lines; a reload must not cut that history short.
+func test_journal_survives_reload() -> void:
+	var d := _new(71)
+	var guard := 0
+	while d.journal.size() < GameDynasty.JOURNAL_SAVED + 20 and guard < 400:
+		guard += 1
+		if d.state == "succession":
+			d.choose_heir(0)
+		else:
+			GameBot.step(d)
+	ok(d.journal.size() > GameDynasty.JOURNAL_SAVED, "a long journal (%d lines)" % d.journal.size())
+	var e := _reload(d)
+	var shown: Array = d.journal.slice(d.journal.size() - GameDynasty.JOURNAL_SAVED)
+	ok(e.journal == shown, "a reload keeps every journal line the Chronicle showed (%d of %d)" % [e.journal.size(), shown.size()])
 
 
 ## Every Fate setback, rolled with and without gold: a penniless heir is never told of a loss.

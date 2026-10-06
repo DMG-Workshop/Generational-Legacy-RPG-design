@@ -35,7 +35,7 @@ func _ready() -> void:
 	tabs.add_child(ech)
 	var jr := Kit.rich()
 	jr.name = "Journal"
-	jr.text = "\n".join(dynasty.journal.slice(maxi(0, dynasty.journal.size() - 120)))
+	jr.text = "\n".join(dynasty.journal.slice(maxi(0, dynasty.journal.size() - GameDynasty.JOURNAL_SAVED)))
 	tabs.add_child(jr)
 
 

@@ -4,6 +4,7 @@ class_name GameDynasty
 extends RefCounted
 
 static var save_path: String = "user://dynasty_save.json"
+const JOURNAL_SAVED := 120   # journal lines a save keeps; the Chronicle shows the same span
 
 var seed_value: int = 0
 var rng := RandomNumberGenerator.new()
@@ -738,7 +739,7 @@ func to_dict() -> Dictionary:
 		"gen": gen, "heir": heir.to_dict(), "state": state, "history": history, "echoes": echoes,
 		"heirlooms": heirlooms, "slain_bosses": slain_bosses, "pending_archetype": pending_archetype,
 		"candidates": candidates.map(func(c): return c.to_dict()), "last_death": last_death,
-		"journal": journal.slice(maxi(0, journal.size() - 60)), "next_id": next_id, "total_hunts": total_hunts,
+		"journal": journal.slice(maxi(0, journal.size() - JOURNAL_SAVED)), "next_id": next_id, "total_hunts": total_hunts,
 		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
 		"shop_state": shop_state,
