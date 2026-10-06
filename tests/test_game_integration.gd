@@ -7,6 +7,7 @@ extends SceneTree
 const DIR := "res://tests/fixtures/"
 const UI_SAVE := "user://test_integration_ui_save.json"
 const GameApp := preload("res://ui/play/game_app.gd")
+const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
 
 var checks := 0
 var fails := 0
@@ -81,6 +82,7 @@ func _ui_tests() -> void:
 	await _frames()
 	await test_ui_event_death_is_saved(app)
 	await test_ui_map_purchase_is_saved(app)
+	await test_ui_chronicle_is_modal(app)
 	app.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(UI_SAVE))
 	GameDynasty.save_path = real_path
@@ -546,12 +548,33 @@ func _press(from: Node, prefix: String) -> bool:
 	return true
 
 
+## A real left click pushed through the viewport: whatever is on top at `pos` receives it.
+func _click(pos: Vector2) -> void:
+	var mm := InputEventMouseMotion.new()
+	mm.position = pos
+	mm.global_position = pos
+	root.push_input(mm)
+	await _frames(2)
+	for pressed in [true, false]:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.position = pos
+		ev.global_position = pos
+		ev.pressed = pressed
+		root.push_input(ev)
+		await _frames(2)
+
+
 func _labels(n: Node, out: Array = []) -> Array:
 	if n is Label and n.is_visible_in_tree():
 		out.append(n.text)
 	for c in n.get_children():
 		_labels(c, out)
 	return out
+
+
+func _count_open(n: Node, script: Script) -> int:
+	return n.get_children().filter(func(c): return c.get_script() == script and not c.is_queued_for_deletion()).size()
 
 
 ## An event choice whose year ends the heir's life is on disk at once, before Continue is pressed.
@@ -591,3 +614,34 @@ func test_ui_map_purchase_is_saved(app: Control) -> void:
 	ok(_labels(app.current).has("Gold 10    Potions %d" % d.heir.potions), "the life screen shows the gold left")
 	var disk := GameDynasty.load_from_disk()
 	ok(disk.heir.gold == 10 and disk.world.charted == d.world.charted, "the purchase is saved (gold %d, %d charted)" % [disk.heir.gold, disk.world.charted.size()])
+
+
+## Nothing behind the Chronicle takes a click: not the life screen's buttons, not an heir's card.
+func test_ui_chronicle_is_modal(app: Control) -> void:
+	app.new_game("Tess", "warrior", "faetouched", 85, "human")
+	app.dynasty.pending_event = {}
+	app.show_state()
+	await _frames(6)
+	var life: Control = app.current
+	var menu := _button(life, "Menu")
+	var again := _button(life, "Chronicle")
+	await _press(life, "Chronicle")
+	ok(_count_open(life, ChroniclePanel) == 1, "the Chronicle opens")
+	await _click(again.get_global_rect().get_center())
+	await _click(menu.get_global_rect().get_center())
+	ok(app.current == life and _count_open(life, ChroniclePanel) == 1, "clicks on Chronicle and Menu behind it do nothing")
+	if app.current != life:
+		return
+	await _press(life.get_children().back(), "Close")
+	ok(_count_open(life, ChroniclePanel) == 0, "Close shuts it")
+	var d: GameDynasty = app.dynasty
+	d.heir.age = maxf(d.heir.age, d.heir.family_min_age())
+	d.found_family()
+	d.retire()
+	app.show_state()
+	await _frames(6)
+	var choose := _button(app.current, "Choose")
+	await _press(app.current, "Chronicle")
+	await _click(choose.get_global_rect().position + Vector2(8, 8))
+	await _click(choose.get_global_rect().get_center())
+	ok(d.state == "succession" and d.gen == 1, "an heir cannot be chosen through the Chronicle")
