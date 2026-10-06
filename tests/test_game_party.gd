@@ -129,6 +129,22 @@ func test_requirements() -> void:
 	d.set_flag("rift_open")
 	ok(p.locked_reason(d, "pale_warden") == "", "the Pale Warden comes once the Rift is open")
 	ok("pale_warden" in p.available_here(d), "offered in Kingshold")
+	# She keeps pace with the Rift chain: once a house opens it she is in this age, whenever that is.
+	var rift_gen := 1
+	for q in GameData.quests:
+		if q.get("chain", "") == "rift":
+			rift_gen = maxi(rift_gen, int(q["requires"].get("min_gen", 1)))
+	var w := _new(71)
+	w.world.visit("kingshold")
+	w.gen = rift_gen
+	w.heir.gen = rift_gen
+	w.heir.level = 10
+	w.set_flag("rift_open")
+	ok(w.party.locked_reason(w, "pale_warden").begins_with("Wants an heir of level"), "after the Rift opens at gen %d only her level gate remains (%s)" % [rift_gen, w.party.locked_reason(w, "pale_warden")])
+	var hint: String = GameParty.def("pale_warden")["hint"]
+	ok(not hint.contains("waiting for the Rift"), "her rumour does not claim the Rift is still sealed: " + hint)
+	w.heir.level = 45
+	ok(w.party.locked_reason(w, "pale_warden") == "", "she rides with a level-45 heir from gen %d" % rift_gen)
 
 
 func test_upkeep() -> void:
