@@ -28,6 +28,7 @@ func _fresh(class_id: String = "warrior") -> GameDynasty:
 func _init() -> void:
 	GameData.load_all()
 	_test_stock()
+	_test_every_item_obtainable()
 	_test_prices()
 	_test_describe()
 	_test_buy_equip_sell()
@@ -72,6 +73,47 @@ func _test_stock() -> void:
 			for town in ["hearthmere", "ironford", "kingshold", "brinehaven"]:
 				d.world.visit(town)
 				_check(not GameItems.sold_here(d, id), "%s not sold in %s" % [id, town])
+
+
+## Every item reaches the player somehow: a town shop, a quest reward or an event outcome.
+func _test_every_item_obtainable() -> void:
+	var found := {}
+	var d := _fresh()
+	for l in GameData.world["locations"]:
+		d.world.visit(l["id"])
+		for s in GameItems.shops_here(d):
+			for id in GameItems.stock(d, s):
+				found[id] = "shop"
+	for q in GameData.quests:
+		for id in q["reward"].get("items", []):
+			found[id] = "quest"
+	for ev in GameData.events:
+		_event_items(ev, found)
+	for id in GameData.items:
+		_check(found.has(id), "%s can be obtained (shop, quest or event)" % id)
+	# The Crown of Whispers comes from Lady Orsenne's table; a second one is sold on, not stacked.
+	d.world.visit("kingshold")
+	d.heir.traits.append("noble_blood")
+	for i in 2:
+		d.pending_event = {}
+		GameEvents.begin(d, "noble_supper")
+		var gold := d.heir.gold
+		GameEvents.resolve_as(d, 0, "crit_success")
+		var crowns := d.heir.inventory.count("crown_of_whispers") + d.heir.equipment.values().count("crown_of_whispers")
+		_check(crowns == 1, "noble supper crown, visit %d: %d owned" % [i + 1, crowns])
+		_check((d.heir.gold > gold) == (i == 1), "a second crown turns to gold (visit %d)" % (i + 1))
+
+
+func _event_items(v: Variant, found: Dictionary) -> void:
+	if v is Dictionary:
+		if v.has("item"):
+			for id in (v["item"] if v["item"] is Array else [v["item"]]):
+				found[id] = "event"
+		for k in v:
+			_event_items(v[k], found)
+	elif v is Array:
+		for x in v:
+			_event_items(x, found)
 
 
 func _test_prices() -> void:
