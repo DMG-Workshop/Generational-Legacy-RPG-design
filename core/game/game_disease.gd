@@ -9,7 +9,9 @@
 ##
 ## For the battle phase: contagion_check() is one exposure (looting, a vial's splash, a toxin's
 ## backfire), corpse_risk() says what a corpse carries, pass_on(..., "companion", ...) spreads a
-## sickness between fighters, advance() moves a companion's sickness along. Items: "toxin"
+## sickness between fighters, advance() moves a companion's sickness along. Companion units are
+## rebuilt from data, so their list belongs on the party member dict (saved through load_list())
+## and is copied onto the unit. Items: "toxin"
 ## {poison_pct, turns, weaken?, backfire {disease, chance}}, "vial" {disease, weaken, turns, splash}.
 class_name GameDisease
 extends RefCounted
@@ -516,20 +518,20 @@ static func on_buy(d: GameDynasty, item_id: String) -> void:
 			d.heir.tainted_gear.append(item_id)
 
 
-## The heir puts gear on: a tainted bargain gives up its sickness now. Returns a line or "".
+## The heir puts gear on: a tainted bargain gives up its sickness now. Returns a line or "",
+## which follows the caller's sentence naming the item.
 static func on_wear(d: GameDynasty, item_id: String) -> String:
 	var h := d.heir
 	if item_id not in h.tainted_gear:
 		return ""
 	h.tainted_gear.erase(item_id)
 	var id: String = str(GameItems.item_def(item_id)["taint"]["disease"])
-	var iname := GameItems.item_name(item_id)
 	match _expose(d, h, id, 1.0):
 		"caught":
 			infect(h, id, "bargain")
-			return "The %s came cheap for a reason: %s has %s (%s)." % [iname, h.name, disease_name(id), _fx(id, 0)]
+			return "It came cheap for a reason: %s has %s (%s)." % [h.name, disease_name(id), _fx(id, 0)]
 		"resisted":
-			return "The %s carried %s, but %s keeps %s well." % [iname, disease_name(id), resist_sources(h, id)[0][1], h.name]
+			return "It carried %s, but %s keeps %s well." % [disease_name(id), resist_sources(h, id)[0][1], h.name]
 	return ""
 
 

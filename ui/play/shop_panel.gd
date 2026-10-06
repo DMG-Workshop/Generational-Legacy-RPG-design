@@ -45,6 +45,8 @@ func _ready() -> void:
 	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # a bargain's reveal runs long
+	note.max_lines_visible = 2
 	note.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	note.custom_minimum_size = Vector2(100, 0)
 	top.add_child(note)
