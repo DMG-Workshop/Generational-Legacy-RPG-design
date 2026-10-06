@@ -49,6 +49,7 @@ static func new_game(p_seed: int, founder_name: String, class_id: String, bloodl
 	h.dormant = [others[d.rng.randi() % others.size()]]
 	d.world = GameWorld.create(d.rng)
 	d._setup_new_heir(h)
+	h.gold = int(GameData.bal("founder_gold"))
 	d.heir = h
 	d._say("The %s dynasty begins with %s, %s %s." % [d.dynasty_name, h.name, h.race()["name"], h.cls()["name"]])
 	d._coming_of_age()

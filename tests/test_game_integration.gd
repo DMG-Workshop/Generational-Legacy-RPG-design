@@ -65,6 +65,7 @@ func _init() -> void:
 	test_full_round_trip()
 	test_old_saves()
 	test_determinism()
+	test_founders_start_equipped()
 	test_setbacks_without_gold()
 	test_journal_survives_reload()
 	test_snapped_values_reload_exactly()
@@ -395,6 +396,32 @@ func test_determinism() -> void:
 	ok(a[1] == b[1], "same seed, identical saves")
 	var c := _run(4243)
 	ok(c[1] != a[1], "a different seed tells a different story")
+
+
+## A founder inherits nothing, so the house starts with a purse: enough for the forge's first
+## weapon and armour with the potion reserve kept. Hunts are tuned for an heir so equipped.
+func test_founders_start_equipped() -> void:
+	var d := _new(81)
+	ok(d.heir.gold == int(GameData.bal("founder_gold")), "the founder starts with the house's purse (%d)" % d.heir.gold)
+	GameItems.bot_tick(d)
+	ok(GameItems.equipped(d.heir, "weapon") != "" and GameItems.equipped(d.heir, "armor") != "", "the autopilot founder buys a weapon and armour at once (%s)" % str(d.heir.equipment))
+	ok(d.heir.gold >= GameItems.bot_reserve(d), "and keeps the potion reserve (%d)" % d.heir.gold)
+	# Founders across the starting classes: few die in battle, and not far more often than their heirs.
+	var slain := [0, 0]
+	var lives := [0, 0]
+	var classes := GameData.starting_ids(GameData.classes)
+	for i in 36:
+		var f := GameDynasty.new_game(9100 + i, "", classes[i % classes.size()], "faetouched", "human")
+		for life in 2:
+			GameBot.live_life(f)
+			lives[life] += 1
+			if f.last_death.get("cause", "") == "slain in battle":
+				slain[life] += 1
+			if f.state != "succession":
+				break
+			GameBot.choose_best(f)
+	ok(slain[0] * 100 <= lives[0] * 15, "human founders slain in battle: %d of %d" % [slain[0], lives[0]])
+	print("  founders slain %d/%d, their heirs %d/%d" % [slain[0], lives[0], slain[1], lives[1]])
 
 
 ## The Chronicle shows the last JOURNAL_SAVED lines; a reload must not cut that history short.
