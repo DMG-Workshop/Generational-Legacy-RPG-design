@@ -87,6 +87,7 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 		if ab.has("pct_max_hp"):
 			continue
 		var aims: Array = [-1]
+		var prints := {}   # aim -> footprint, when already worked out
 		if GameCombat.aims_at_foe(ab):
 			match GameCombat.shape(ab):
 				"all":
@@ -94,18 +95,21 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 				"single":
 					aims = [aim, ctx["worst"]] if ab.has("statuses") and ctx["worst"] != aim else [aim]
 				_:
-					aims = _area_aims(ab, ctx, aim)
+					aims = _area_aims(ab, ctx, aim, prints)
 		var seen := {}
 		var mp_back := 0.0
 		if ab.get("mana", false):
 			mp_back = minf(float(ctx["nums"]["max_mp"] - me.mp), ceilf(float(ctx["nums"]["max_mp"]) * float(GameCombat.setting("mana_tap_pct"))))
 		for t in aims:
-			var hits: Array = GameCombat.footprint(ab, ctx["origin"], t, ctx["points"]) if t >= 0 else []
-			# Aims that catch the same foes alike are one option, unless a sleeper is near.
-			var key := str(hits) + ("" if ctx["calm"] else "@%d" % t)
-			if seen.has(key):
-				continue
-			seen[key] = true
+			var hits: Array = []
+			if t >= 0:
+				hits = prints[t] if prints.has(t) else GameCombat.footprint(ab, ctx["origin"], t, ctx["points"])
+			if aims.size() > 1:
+				# Aims that catch the same foes alike are one option, unless a sleeper is near.
+				var key := str(hits) + ("" if ctx["calm"] else "@%d" % t)
+				if seen.has(key):
+					continue
+				seen[key] = true
 			var v := _value(b, by, ab, t, ctx, hits)
 			if int(o["skill"]) == main and main >= 0:
 				main_v = maxf(main_v, v)
@@ -132,7 +136,7 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 
 ## Where an area is worth aiming: the spot that catches the most threat, plus the foes a single
 ## strike or a hold would go for. Weighing every spot in full is too slow for the autopilot.
-static func _area_aims(ab: Dictionary, ctx: Dictionary, aim: int) -> Array:
+static func _area_aims(ab: Dictionary, ctx: Dictionary, aim: int, prints: Dictionary) -> Array:
 	var out: Array = [aim]
 	if ab.has("statuses") and ctx["worst"] != aim:
 		out.append(ctx["worst"])
@@ -142,6 +146,7 @@ static func _area_aims(ab: Dictionary, ctx: Dictionary, aim: int) -> Array:
 	var threat: Dictionary = ctx["threat"]
 	for t in ctx["living"]:
 		var hits := GameCombat.footprint(ab, ctx["origin"], t, ctx["points"])
+		prints[t] = hits
 		if hits.size() < 2:
 			continue
 		var w := 0.0
@@ -344,38 +349,44 @@ static func _value(b: GameBattle, by: int, ab: Dictionary, t: int, ctx: Dictiona
 	for st in ab.get("statuses", []):
 		if str(st.get("on", "target")) != "target":
 			continue
-		var def := GameCombat.status_def(str(st["id"]))
+		# What the status does is the same on every foe; work it out once.
+		var id := str(st["id"])
+		var def := GameCombat.status_def(id)
 		var pot := float(st.get("potency", def.get("default_potency", 1.0)))
+		var base := float(st.get("chance", 1.0))
+		var turns := minf(float(st.get("turns", def.get("default_turns", 1))), turns_left)
+		var skip := str(def.get("skip", ""))
+		var control := bool(def.get("control", false))
+		if def.get("wake_on_hit", false) and awake_outside == 0:
+			turns = 0.0   # the party would have to strike it awake
+		var mods: Dictionary = def.get("mods", {})
+		var per_turn := pot if mods.has("damage_dealt") or mods.has("damage_taken") else 0.0
+		match skip:
+			"always":
+				per_turn += 1.0
+			"chance":
+				per_turn += pot
+		var dot: bool = def.get("tick", "") == "damage"
+		var by_power: float = pot * float(ctx["nums"].get(str(ab.get("stat", "str")), ctx["nums"]["str"])) if def.get("basis", "") == "power" else -1.0
 		for h in hits:
 			var i: int = h[0]
 			if falls.has(i):
 				continue
 			var ref := GameBattle.enemy_ref(i)
-			var th := float(threat.get(i, 0.0))
-			if def.has("skip") and b.has_status(ref, str(st["id"])):
+			if skip != "" and b.has_status(ref, id):
 				continue
-			var chance := _odds(b, ref, str(st["id"]), src, ctx) * float(st.get("chance", 1.0))
+			var chance := _odds(b, ref, id, src, ctx) * base
 			if chance <= 0.0:
 				continue
-			var held := minf(float(st.get("turns", def.get("default_turns", 1))), turns_left)
-			if def.get("control", false) and b.enemies[i].get("boss", false):
+			var held := turns
+			if control and b.enemies[i].get("boss", false):
 				held = minf(held, float(ctx["boss_turns"]))
-			if def.get("wake_on_hit", false) and awake_outside == 0:
-				held = 0.0   # the party would have to strike it awake
-			match str(def.get("skip", "")):
-				"always":
-					v += chance * held * th
-				"chance":
-					v += chance * held * th * pot
-				"alternate":
-					v += chance * floorf(held * 0.5) * th
-			var mods: Dictionary = def.get("mods", {})
-			if mods.has("damage_dealt") or mods.has("damage_taken"):
-				v += chance * held * th * pot
-			if def.get("tick", "") == "damage":
-				var per := pot * float(b.enemies[i]["max_hp"])
-				if def.get("basis", "") == "power":
-					per = pot * float(ctx["nums"].get(str(ab.get("stat", "str")), ctx["nums"]["str"]))
+			var th := float(threat.get(i, 0.0))
+			v += chance * held * th * per_turn
+			if skip == "alternate":
+				v += chance * floorf(held * 0.5) * th
+			if dot:
+				var per := by_power if by_power >= 0.0 else pot * float(b.enemies[i]["max_hp"])
 				v += chance * minf(per * held, float(b.enemies[i]["hp"])) * float(weight.get(i, 0.0)) / dps
 	return v
 

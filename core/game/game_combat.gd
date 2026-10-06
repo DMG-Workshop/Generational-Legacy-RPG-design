@@ -13,6 +13,7 @@ static var _statuses: Dictionary = {}
 static var _creatures: Dictionary = {}
 static var _settings: Dictionary = {}
 static var _added: Dictionary = {}   # statuses other systems register from their own data files
+static var _plans: Dictionary = {}   # class id -> [[spell id, level], ...], earliest first
 
 
 static func _index() -> void:
@@ -22,6 +23,7 @@ static func _index() -> void:
 	if is_same(_src, GameData.combat):
 		return
 	_src = GameData.combat
+	_plans.clear()
 	_spells.clear()
 	_spell_order.clear()
 	for s in _src["spells"]["spells"]:
@@ -101,26 +103,30 @@ static func learn_level(sp: Dictionary, class_id: String) -> int:
 
 ## Spells a class knows by `level`, earliest first.
 static func class_spells(class_id: String, level: int) -> Array:
-	_index()
 	var out: Array = []
-	for id in _spell_order:
-		var lv := learn_level(_spells[id], class_id)
-		if lv >= 1 and lv <= level:
-			out.append(id)
-	out.sort_custom(func(a, b): return learn_level(_spells[a], class_id) < learn_level(_spells[b], class_id))
+	for p in _plan_of(class_id):
+		if int(p[1]) > level:
+			break
+		out.append(p[0])
 	return out
 
 
 ## Every spell on a class's list with its learning level, earliest first: [[id, level], ...].
 static func class_spell_plan(class_id: String) -> Array:
+	return _plan_of(class_id).duplicate(true)
+
+
+static func _plan_of(class_id: String) -> Array:
 	_index()
-	var out: Array = []
-	for id in _spell_order:
-		var lv := learn_level(_spells[id], class_id)
-		if lv >= 1:
-			out.append([id, lv])
-	out.sort_custom(func(a, b): return a[1] < b[1])
-	return out
+	if not _plans.has(class_id):
+		var out: Array = []
+		for id in _spell_order:
+			var lv := learn_level(_spells[id], class_id)
+			if lv >= 1:
+				out.append([id, lv])
+		out.sort_custom(func(a, b): return a[1] < b[1])
+		_plans[class_id] = out
+	return _plans[class_id]
 
 
 ## Costs grow with level like class skills do, so a level-5000 caster still has to choose.
