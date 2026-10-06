@@ -7,6 +7,7 @@ extends SceneTree
 const DIR := "res://tests/fixtures/"
 const UI_SAVE := "user://test_integration_ui_save.json"
 const GameApp := preload("res://ui/play/game_app.gd")
+const MapPanel := preload("res://ui/play/map_panel.gd")
 const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
 
 var checks := 0
@@ -69,6 +70,7 @@ func _init() -> void:
 	test_snapped_values_reload_exactly()
 	test_long_continuity()
 	test_flag_from_event_completes_quest()
+	test_map_canvas()
 	_ui_tests.call_deferred()
 
 
@@ -645,3 +647,16 @@ func test_ui_chronicle_is_modal(app: Control) -> void:
 	await _click(choose.get_global_rect().position + Vector2(8, 8))
 	await _click(choose.get_global_rect().get_center())
 	ok(d.state == "succession" and d.gen == 1, "an heir cannot be chosen through the Chronicle")
+
+
+## The map draws an open road as open, and every place name fits inside its box.
+func test_map_canvas() -> void:
+	var link := {"to": "the_rift", "requires_flag": "rift_open"}
+	ok(MapPanel.MapCanvas.sealed(link, {}), "a road behind an unset flag is sealed")
+	ok(not MapPanel.MapCanvas.sealed(link, {"rift_open": 60}), "the same road is open once the flag is set")
+	ok(not MapPanel.MapCanvas.sealed({"to": "kingshold"}, {}), "a plain road is never sealed")
+	var font := ThemeDB.fallback_font
+	for l in GameData.world["locations"]:
+		var fs := MapPanel.MapCanvas.name_size(font, str(l["name"]))
+		var w := font.get_string_size(str(l["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		ok(w <= MapPanel.BOX.x - 6.0 and fs >= 9, "%s fits its map box (%.0fpx at %dpx)" % [l["name"], w, fs])

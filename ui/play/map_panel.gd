@@ -14,7 +14,18 @@ var on_change: Callable   # called after a purchase; the life screen saves and r
 ## Places are laid out on the world grid, stretched to whatever room the panel leaves.
 class MapCanvas extends Control:
 	var world: GameWorld
+	var flags: Dictionary = {}
 	var grid := Vector2(1, 1)
+
+	static func sealed(link: Dictionary, p_flags: Dictionary) -> bool:
+		return link.has("requires_flag") and not p_flags.has(link["requires_flag"])
+
+	## Names are drawn at 11px, smaller only when a long one would not fit inside its box.
+	static func name_size(font: Font, text: String) -> int:
+		var fs := 11
+		while fs > 8 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > BOX.x - 6.0:
+			fs -= 1
+		return fs
 
 	func _ready() -> void:
 		for l in GameData.world["locations"]:
@@ -35,8 +46,7 @@ class MapCanvas extends Control:
 			for link in l["links"]:
 				if world.knowledge(link["to"]) == "unknown" or link["to"] < l["id"]:
 					continue
-				var locked: bool = link.has("requires_flag")
-				draw_line(_pos(l["id"]), _pos(link["to"]), Color("#5a5470") if not locked else Color("#3a2a3a"), 2.0)
+				draw_line(_pos(l["id"]), _pos(link["to"]), Color("#3a2a3a") if sealed(link, flags) else Color("#5a5470"), 2.0)
 		for l in GameData.world["locations"]:
 			var k := world.knowledge(l["id"])
 			if k == "unknown":
@@ -51,7 +61,7 @@ class MapCanvas extends Control:
 			draw_rect(r, Kit.ACCENT if here else Color("#8d88a0"), false, 2.0 if here else 1.0)
 			var label: String = "?" if k == "seen" else str(l["name"])
 			var col := Kit.TEXT if k == "visited" else Kit.DIM
-			draw_string(font, p + Vector2(-43, 4), label, HORIZONTAL_ALIGNMENT_CENTER, 86, 11, col)
+			draw_string(font, p + Vector2(-BOX.x * 0.5, 4), label, HORIZONTAL_ALIGNMENT_CENTER, BOX.x, name_size(font, label), col)
 			if l.has("lair") and k != "seen":
 				draw_circle(p + Vector2(40, -12), 4, Kit.BAD)
 
@@ -87,6 +97,7 @@ func _ready() -> void:
 	v.add_child(row)
 	var canvas := MapCanvas.new()
 	canvas.world = w
+	canvas.flags = dynasty.flags
 	canvas.custom_minimum_size = Vector2(600, 420)
 	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(canvas)
