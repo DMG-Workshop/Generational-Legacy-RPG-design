@@ -35,6 +35,8 @@ func _init() -> void:
 	test_ko_outcomes()
 	test_ally_heals_and_drain()
 	test_battle_rules()
+	test_fallen_ally_sheds_foe_hp()
+	test_party_never_riskier()
 	test_message_order()
 	test_succession()
 	test_save_load()
@@ -520,6 +522,87 @@ func test_battle_rules() -> void:
 	ok(fled and d3.battle.log.back() == "Aldo and the party escape!", "the party escapes together")
 	d3.finish_battle()
 	ok(d3.party.members.size() == 1, "fleeing keeps the party")
+
+
+## Foes are tougher only for the companions still standing: when one is knocked out, every living
+## foe sheds that share and keeps the fraction of HP it had. Legends never scale with the party.
+func test_fallen_ally_sheds_foe_hp() -> void:
+	var d := _new(99)
+	d.heir.gold = 5000
+	d.party.hire(d, "bren_cask")
+	d.party.hire(d, "maddy_thorn")
+	var foes := [d._make_enemy(GameData.creatures[1], 1.0, 1.0, 5), d._make_enemy(GameData.creatures[1], 1.0, 1.0, 5)]
+	var base: int = foes[0]["max_hp"]
+	d._begin_battle(foes, "hunt")
+	var b := d.battle
+	var k := float(GameData.bal("companion_foe_hp"))
+	ok(b.enemies[0]["max_hp"] == int(round(base * (1.0 + 2.0 * k))), "two companions: foes start with the party's share")
+	b.enemies[0]["hp"] = int(b.enemies[0]["max_hp"] / 2)
+	b.enemies[1]["hp"] = 0
+	for i in 2:
+		b.allies[i].hp = 1
+		b.enemies[0]["atk"] = 1000000.0
+		b.events = []
+		var guard := 0
+		while b.allies[i].hp > 0 and guard < 50:   # dodges are rolled; keep swinging until the blow lands
+			guard += 1
+			b._enemy_hit_ally(0, i)
+		var up := 1 - i
+		var want := int(round(base * (1.0 + float(up) * k)))
+		var e0: Dictionary = b.enemies[0]
+		ok(absi(int(e0["max_hp"]) - want) <= 1, "%d standing: foe max HP back to %d (got %d)" % [up, want, e0["max_hp"]])
+		ok(absf(float(e0["hp"]) / float(e0["max_hp"]) - 0.5) < 0.01, "the foe keeps the share of HP it had (%d / %d)" % [e0["hp"], e0["max_hp"]])
+		ok(b.enemies[1]["hp"] == 0 and b.enemies[1]["max_hp"] == int(round(base * (1.0 + 2.0 * k))), "a slain foe is left alone")
+		var ko: Array = b.events.filter(func(ev): return ev["type"] == "ko")
+		ok(ko.size() == 1 and float(ko[0].get("foe_scale", 1.0)) < 1.0, "the knock-out tells the screen how far the foes shrank")
+	ok(is_equal_approx(b.foe_hp_mult, 1.0), "with the party down the foes are as tough as for a lone heir")
+	d.battle = null
+	# Legends are fought at full strength, band or no band.
+	var g := _new(100)
+	g.heir.gold = 5000
+	g.heir.level = 15
+	g.party.hire(g, "bren_cask")
+	g.world.visit("whisperwood")
+	var boss := g.available_boss()
+	var lone: int = g._make_enemy(boss, 1.0, 1.0, int(boss["min_level"]))["max_hp"]
+	g.start_legend()
+	ok(g.battle.allies.size() == 1 and g.battle.enemies[0]["max_hp"] == lone, "a legend's HP ignores the party (%d)" % lone)
+	g.battle = null
+
+
+## Hiring help never makes the heir likelier to lose: a legend at its level, and a fresh heir's first
+## hunts in a late era, fought by the autopilot alone and with two hirelings on the same seeds.
+func test_party_never_riskier() -> void:
+	for spec in [["warrior", 300, 45, "deepstone_halls", "legend"], ["ranger", 1, 15, "whisperwood", "legend"], ["warrior", 150, 1, "hearthmere", "hunt"]]:
+		var lost := [0, 0]
+		for with_party in [0, 1]:
+			for t in 40:
+				var d := GameDynasty.new_game(7000 + t * 17, "T", spec[0], "faetouched", "human")
+				d.pending_event = {}
+				d.heir.traits = []
+				d.heir.dormant = []
+				d.gen = spec[1]
+				d.heir.gen = spec[1]
+				d.heir.level = spec[2]
+				d.heir.potions = 3
+				if spec[1] > 1:
+					d.heir.equipment = {"weapon": "steel_sword", "armor": "chainmail", "trinket": "ring_of_vigor"}
+				d.world.visit(spec[3])
+				d.world.weather_id = "clear"
+				if with_party == 1:
+					for id in ["maddy_thorn", "bren_cask"]:
+						d.party.members.append({"id": id, "name": id, "hp": 1, "mp": 0, "level": spec[2], "gen": spec[1], "due": 0.0, "battles": 0, "hired_gen": spec[1]})
+					d.party.rest(d)
+				d.heir.full_heal()
+				if spec[4] == "legend":
+					d.start_legend()
+				else:
+					d.start_hunt("hunt")
+				var b := d.battle
+				GameBot.fight(d)
+				if b.result == "defeat":
+					lost[with_party] += 1
+		ok(lost[1] <= lost[0] + 2, "%s gen %d level %d %s: party lost %d of 40, alone %d" % [spec[0], spec[1], spec[2], spec[4], lost[1], lost[0]])
 
 
 ## A companion's fate is told after the battle's own result, in the returned lines and the journal.

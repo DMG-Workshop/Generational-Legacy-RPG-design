@@ -299,6 +299,9 @@ func _play_events(events: Array) -> void:
 					_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.DIM)
 			"ko":
 				_knock_out(ev["ally"])
+				for en3 in enemy_nodes:   # the foes lose the toughness that companion's presence gave them
+					en3["hp"].value *= float(ev.get("foe_scale", 1.0))
+					en3["hp"].max_value *= float(ev.get("foe_scale", 1.0))
 			"death":
 				var en2: Dictionary = enemy_nodes[ev["index"]]
 				var t := create_tween()
@@ -366,6 +369,7 @@ func _update_view() -> void:
 	hero_mp.value = d.heir.mp
 	_update_marks()
 	for i in enemy_nodes.size():
+		enemy_nodes[i]["hp"].max_value = b.enemies[i]["max_hp"]
 		enemy_nodes[i]["hp"].value = b.enemies[i]["hp"]
 	for i in ally_nodes.size():
 		var a: GameHeir = b.allies[i]

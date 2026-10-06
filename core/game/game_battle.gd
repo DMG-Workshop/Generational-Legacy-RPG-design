@@ -10,6 +10,7 @@ var damage_bonus: float = 0.0  # from legacy echoes
 var slayer_bonus: Dictionary = {}  # creature id -> extra damage fraction
 var weather: Dictionary = {}       # combat modifiers from the weather: dodge, crit, flee, mp_regen
 var allies: Array = []             # Array[GameHeir]: companions fighting beside the heir (see GameParty)
+var foe_hp_mult: float = 1.0       # extra toughness foes have for the companions still standing
 var result: String = ""        # "", "victory", "defeat", "fled"
 var defending: bool = false
 var turn: int = 0
@@ -42,10 +43,22 @@ func first_target() -> int:
 ## fair fight into one where the heir falls before they can act.
 func add_allies(units: Array) -> void:
 	allies = units
-	var hp_mult := 1.0 + float(GameData.bal("companion_foe_hp")) * float(units.size())
+	_scale_foes_to_party()
+
+
+## Foes are tougher by companion_foe_hp for each companion still standing. When one falls, the
+## foes lose that share at once (keeping the fraction of HP they had), so a party that is knocked
+## out never leaves the heir facing a tougher foe than they would have met alone. Legends are
+## never scaled: hirelings barely scratch one, and a band is how a house brings one down.
+func _scale_foes_to_party() -> float:
+	var mult := 1.0 + float(GameData.bal("companion_foe_hp")) * float(conscious_allies().size())
+	var f := mult / foe_hp_mult
+	foe_hp_mult = mult
 	for e in enemies:
-		e["max_hp"] = maxi(1, int(round(float(e["max_hp"]) * hp_mult)))
-		e["hp"] = maxi(1, int(round(float(e["hp"]) * hp_mult)))
+		if e["hp"] > 0 and f != 1.0 and not e.get("boss", false):
+			e["max_hp"] = maxi(1, int(round(float(e["max_hp"]) * f)))
+			e["hp"] = maxi(1, int(round(float(e["hp"]) * f)))
+	return f
 
 
 ## Indices of allies still standing; an ally at 0 HP is out for the rest of the battle.
@@ -336,5 +349,5 @@ func _enemy_hit_ally(i: int, ai: int) -> void:
 	events.append({"type": "damage", "side": "ally", "index": i, "ally": ai, "amount": amount, "crit": false})
 	_say("%s hits %s for %d." % [e["name"], a.name, amount])
 	if a.hp == 0:
-		events.append({"type": "ko", "side": "ally", "ally": ai})
+		events.append({"type": "ko", "side": "ally", "ally": ai, "foe_scale": _scale_foes_to_party()})
 		_say("%s is knocked senseless and out of the fight." % a.name)
