@@ -65,6 +65,9 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 	if by >= 0 and _plain(b.unit(by)):
 		return _plain_blow(b, by, opts)
 	var ctx := _context(b, by)
+	var last: Array = ctx["living"]
+	if last.size() == 1 and b.estimate(by, {}, int(last[0]), ctx["nums"]) >= float(b.enemies[last[0]]["hp"]):
+		return {"act": "attack", "target": int(last[0])}   # a plain blow finishes the fight
 	# Every option at every sensible aim, valued; then MP is priced by the main damage skill's
 	# gain over a plain blow (per point, dearer as MP runs low) and the best is taken.
 	var cands: Array = []
@@ -75,7 +78,7 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 		if v > blow:
 			blow = v
 			aim = t
-		cands.append({"plan": {"act": "attack", "target": t}, "value": v, "cost": 0, "other": false})
+		cands.append({"plan": {"act": "attack", "target": t}, "value": v, "cost": 0, "other": false, "mp_back": 0.0})
 	var me := b.unit(by)
 	var main := GameBattle.unit_skill_of(me, "damage")
 	var main_v := 0.0
@@ -89,22 +92,37 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 				"all":
 					aims = [ctx["living"][0]]
 				"single":
-					aims = [aim]
+					aims = [aim, ctx["worst"]] if ab.has("statuses") and ctx["worst"] != aim else [aim]
 				_:
-					aims = ctx["living"]
+					aims = _area_aims(ab, ctx, aim)
+		var seen := {}
+		var mp_back := 0.0
+		if ab.get("mana", false):
+			mp_back = minf(float(ctx["nums"]["max_mp"] - me.mp), ceilf(float(ctx["nums"]["max_mp"]) * float(GameCombat.setting("mana_tap_pct"))))
 		for t in aims:
-			var v := _value(b, by, ab, t, ctx)
+			var hits: Array = GameCombat.footprint(ab, ctx["origin"], t, ctx["points"]) if t >= 0 else []
+			# Aims that catch the same foes alike are one option, unless a sleeper is near.
+			var key := str(hits) + ("" if ctx["calm"] else "@%d" % t)
+			if seen.has(key):
+				continue
+			seen[key] = true
+			var v := _value(b, by, ab, t, ctx, hits)
 			if int(o["skill"]) == main and main >= 0:
 				main_v = maxf(main_v, v)
-			cands.append({"plan": _plan(o, t), "value": v, "cost": int(o["cost"]), "other": float(ab.get("mult", 0.0)) <= 0.0})
+			cands.append({"plan": _plan(o, t), "value": v, "cost": int(o["cost"]), "other": float(ab.get("mult", 0.0)) <= 0.0, "mp_back": mp_back})
 	if main >= 0:
 		ctx["mp_price"] = maxf(0.0, main_v - blow) / float(maxi(1, GameBattle.unit_skill_cost(me, main)))
 	var price := float(ctx["mp_price"]) * float(ctx["scarcity"])
-	var floor_price := maxf(price, _heal_worth(b, by) * float(GameCombat.setting("bot_mp_floor")))
+	var floor_price := -1.0   # worked out only if a blessing or a curse is in the running
 	var margin := float(GameCombat.setting("bot_other_margin"))
 	var best := {}
 	for c in cands:
-		var score := float(c["value"]) - float(c["cost"]) * (floor_price if c["other"] else price)
+		var cost_price := price
+		if c["other"] and float(c["value"]) > 0.0:
+			if floor_price < 0.0:
+				floor_price = maxf(price, _heal_worth(b, by) * float(GameCombat.setting("bot_mp_floor")))
+			cost_price = floor_price
+		var score := float(c["value"]) + (float(c["mp_back"]) - float(c["cost"])) * cost_price
 		if c["other"] and score > 0.0:
 			score /= margin
 		c["score"] = score
@@ -112,15 +130,40 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 	return best["plan"]
 
 
+## Where an area is worth aiming: the spot that catches the most threat, plus the foes a single
+## strike or a hold would go for. Weighing every spot in full is too slow for the autopilot.
+static func _area_aims(ab: Dictionary, ctx: Dictionary, aim: int) -> Array:
+	var out: Array = [aim]
+	if ab.has("statuses") and ctx["worst"] != aim:
+		out.append(ctx["worst"])
+	var best := -1
+	var best_w := 0.0
+	var weight: Dictionary = ctx["weight"]
+	var threat: Dictionary = ctx["threat"]
+	for t in ctx["living"]:
+		var hits := GameCombat.footprint(ab, ctx["origin"], t, ctx["points"])
+		if hits.size() < 2:
+			continue
+		var w := 0.0
+		for h in hits:
+			w += (float(weight[h[0]]) + float(threat[h[0]])) * float(h[1])
+		if w > best_w:
+			best_w = w
+			best = t
+	if best >= 0 and best not in out:
+		out.append(best)
+	return out
+
+
 ## HP one MP buys through the unit's class heal on the heir. A ward or a curse that does not
 ## pay back a share of this is not worth casting while there are foes to strike.
 static func _heal_worth(b: GameBattle, by: int) -> float:
-	var u := b.unit(by)
-	var k := GameBattle.unit_skill_of(u, "heal")
-	if k < 0:
-		return 0.0
-	var s: Dictionary = u.cls()["skills"][k]
-	return float(GameBattle.heal_amount(u, b.heir, s)) / float(maxi(1, GameBattle.unit_skill_cost(u, k)))
+	var nums := b.unit_numbers(by)   # the battle's own cache for this unit
+	if not nums.has("heal_worth"):
+		var u := b.unit(by)
+		var k := GameBattle.unit_skill_of(u, "heal")
+		nums["heal_worth"] = 0.0 if k < 0 else float(GameBattle.heal_amount(u, b.heir, u.cls()["skills"][k])) / float(maxi(1, GameBattle.unit_skill_cost(u, k)))
+	return float(nums["heal_worth"])
 
 
 ## A companion with no spells and no area skill has nothing to weigh: the class strike on the
@@ -175,9 +218,12 @@ static func _pick_heal(opts: Array, want_party: bool) -> Dictionary:
 
 ## How badly statuses weigh on a unit, as a share of its max HP (control and debuffs count too).
 static func _affliction(b: GameBattle, ref: String) -> float:
+	var list := b.status_list(ref)
+	if list.is_empty():
+		return 0.0
 	var t := 0.0
 	var max_hp := float(maxi(1, b.ref_max_hp(ref)))
-	for inst in b.status_list(ref):
+	for inst in list:
 		var def := GameCombat.status_def(inst["id"])
 		if not def.get("harmful", false):
 			continue
@@ -188,6 +234,15 @@ static func _affliction(b: GameBattle, ref: String) -> float:
 		else:
 			t += 0.05
 	return t
+
+
+## How likely a status sticks on `ref`, per point of the ability's own chance; once a decision.
+static func _odds(b: GameBattle, ref: String, id: String, src: String, ctx: Dictionary) -> float:
+	var key := ref + "|" + id
+	var odds: Dictionary = ctx["odds"]
+	if not odds.has(key):
+		odds[key] = b.status_chance(ref, {"id": id, "chance": 1.0}, src)
+	return float(odds[key])
 
 
 static func _asleep(b: GameBattle, i: int) -> bool:
@@ -240,21 +295,27 @@ static func _context(b: GameBattle, by: int) -> Dictionary:
 			d = maxf(d, p * float(s["mult"]) * float(s.get("hits", 1)) - armour * (1.0 - float(s.get("pierce", 0.0))))
 		dps += d * (1.0 + float(nums["crit"]) * 0.75)
 	var me := b.unit(by)
-	return {"living": living, "awake": awake, "blows": blows, "points": points, "origin": b.unit_point(by),
-		"threat": threat, "weight": weight, "total": maxf(1.0, total), "dps": maxf(1.0, dps),
-		"turns": maxf(1.0, hp_left / maxf(1.0, dps)), "nums": b.unit_numbers(by), "mp_price": 0.0,
-		"scarcity": 0.15 + 0.85 * clampf(1.0 - _frac(me.mp, me.max_mp()) * 1.5, 0.0, 1.0),
-		"boss_turns": float(GameCombat.setting("boss_control_max_turns"))}
+	var mine := b.unit_numbers(by)
+	var worst: int = pool[0]
+	for i in pool:
+		if float(threat[i]) > float(threat[worst]):
+			worst = i
+	return {"living": living, "awake": awake, "calm": awake.size() == living.size(), "worst": worst, "blows": blows,
+		"points": points, "origin": b.unit_point(by), "threat": threat, "weight": weight, "total": maxf(1.0, total),
+		"dps": maxf(1.0, dps), "turns": maxf(1.0, hp_left / maxf(1.0, dps)), "nums": mine, "mp_price": 0.0,
+		"scarcity": 0.15 + 0.85 * clampf(1.0 - _frac(me.mp, int(mine["max_mp"])) * 1.5, 0.0, 1.0),
+		"boss_turns": float(GameCombat.setting("boss_control_max_turns")), "odds": {}}
 
 
 ## HP of harm an action spares the party: `ab` empty for a plain blow, `t` the aimed foe.
-static func _value(b: GameBattle, by: int, ab: Dictionary, t: int, ctx: Dictionary) -> float:
+static func _value(b: GameBattle, by: int, ab: Dictionary, t: int, ctx: Dictionary, hits: Array = []) -> float:
 	if not ab.is_empty() and not GameCombat.aims_at_foe(ab):
 		return _blessing_value(b, by, ab, ctx)
 	var threat: Dictionary = ctx["threat"]
 	var weight: Dictionary = ctx["weight"]
 	var dps := float(ctx["dps"])
-	var hits: Array = [[t, 1.0]] if ab.is_empty() else GameCombat.footprint(ab, ctx["origin"], t, ctx["points"])
+	if hits.is_empty():
+		hits = [[t, 1.0]] if ab.is_empty() else GameCombat.footprint(ab, ctx["origin"], t, ctx["points"])
 	var v := 0.0
 	var falls := {}
 	var dealt := 0.0
@@ -293,7 +354,7 @@ static func _value(b: GameBattle, by: int, ab: Dictionary, t: int, ctx: Dictiona
 			var th := float(threat.get(i, 0.0))
 			if def.has("skip") and b.has_status(ref, str(st["id"])):
 				continue
-			var chance := b.status_chance(ref, st, src)
+			var chance := _odds(b, ref, str(st["id"]), src, ctx) * float(st.get("chance", 1.0))
 			if chance <= 0.0:
 				continue
 			var held := minf(float(st.get("turns", def.get("default_turns", 1))), turns_left)
@@ -316,10 +377,6 @@ static func _value(b: GameBattle, by: int, ab: Dictionary, t: int, ctx: Dictiona
 				if def.get("basis", "") == "power":
 					per = pot * float(ctx["nums"].get(str(ab.get("stat", "str")), ctx["nums"]["str"]))
 				v += chance * minf(per * held, float(b.enemies[i]["hp"])) * float(weight.get(i, 0.0)) / dps
-	if ab.get("mana", false):
-		var u := b.unit(by)
-		var back := minf(float(u.max_mp() - u.mp), ceilf(float(u.max_mp()) * float(GameCombat.setting("mana_tap_pct"))))
-		v += back * float(ctx["mp_price"]) * float(ctx["scarcity"])
 	return v
 
 

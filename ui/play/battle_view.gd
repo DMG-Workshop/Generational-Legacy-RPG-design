@@ -28,6 +28,8 @@ var aiming: Dictionary = {}    # {ab, skill, spell} while the player picks where
 var aim_at: int = -1
 var shown: Dictionary = {}     # {ab, at}: the area drawn on the field
 var spell_list: Control = null
+var aim_info: Label = null      # the aim panel's "catches N foes" line
+var floats: Dictionary = {}     # ref -> status words floated this action, so they stack instead of overlap
 
 
 func _ready() -> void:
@@ -362,10 +364,13 @@ func _on_foe_input(idx: int, ev: InputEvent) -> void:
 func _on_foe_hover(idx: int, inside: bool) -> void:
 	if aiming.is_empty() or busy or b.enemies[idx]["hp"] <= 0:
 		return
-	_show_area(aiming["ab"], idx if inside else aim_at)
+	var at := idx if inside else aim_at
+	_show_area(aiming["ab"], at)
+	if is_instance_valid(aim_info):
+		aim_info.text = _aim_text(aiming["ab"], at, at != aim_at)
 
 
-## An area ability (or any spell aimed at a foe) waits for the player to pick where it lands.
+## An area ability waits for the player to pick where it lands; single strikes go to the target.
 func _begin_aim(ab: Dictionary, skill: int, spell: String) -> void:
 	aiming = {"ab": ab, "skill": skill, "spell": spell}
 	aim_at = b._valid_target(target)
@@ -405,7 +410,7 @@ func _use_skill(i: int) -> void:
 func _use_spell(id: String) -> void:
 	_close_spells()
 	var sp := GameCombat.spell(id)
-	if GameCombat.aims_at_foe(sp):
+	if GameCombat.is_aoe(sp):
 		_begin_aim(sp, -1, id)
 	else:
 		_do(func(): b.cast_spell(id, target))
@@ -415,6 +420,7 @@ func _use_spell(id: String) -> void:
 
 func _build_commands() -> void:
 	Kit.clear(command_box)
+	aim_info = null
 	if not aiming.is_empty():
 		_build_aim_commands()
 		return
@@ -458,8 +464,7 @@ func _small_button(text: String, cb: Callable) -> Button:
 
 func _build_aim_commands() -> void:
 	var ab: Dictionary = aiming["ab"]
-	var caught := b.aoe_targets(ab, -1, aim_at)
-	hint.text = "%s: click a foe to aim, click it again to cast." % ab["name"]
+	hint.text = "%s: click a foe to aim, click it again to %s." % [ab["name"], "cast" if str(aiming["spell"]) != "" else "strike"]
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 4)
@@ -468,14 +473,30 @@ func _build_aim_commands() -> void:
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	what.custom_minimum_size = Vector2(380, 0)
 	v.add_child(what)
-	var aimed: String = b.enemies[aim_at]["name"] if aim_at >= 0 else "-"
-	v.add_child(Kit.label("Aimed at %s: catches %d foe%s." % [aimed, caught.size(), "" if caught.size() == 1 else "s"], 14, AREA))
+	aim_info = Kit.label(_aim_text(ab, aim_at, false), 14, AREA)
+	aim_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	aim_info.custom_minimum_size = Vector2(380, 0)
+	v.add_child(aim_info)
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 6)
 	side.custom_minimum_size = Vector2(150, 0)
 	command_box.add_child(side)
-	side.add_child(Kit.button("Cast", func(): _confirm_aim()))
+	side.add_child(Kit.button("Cast" if str(aiming["spell"]) != "" else "Use", func(): _confirm_aim()))
 	side.add_child(Kit.button("Cancel", func(): _cancel_aim()))
+
+
+## "Aimed at Dire Wolf: catches 3 foes, about 420 damage." (or "Over ..." while hovering).
+func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
+	at = b._valid_target(at)
+	if at < 0:
+		return ""
+	var n := b.aoe_targets(ab, -1, at).size()
+	var foes := "%d foe%s" % [n, "" if n == 1 else "s"]
+	var text := ("Over %s: would catch %s" if hovering else "Aimed at %s: catches %s") % [b.enemies[at]["name"], foes]
+	var dmg := b.estimate(-1, ab, at)
+	if dmg >= 1.0:
+		text += ", about %d damage%s" % [int(round(dmg)), " in all" if n > 1 else ""]
+	return text + "."
 
 
 # ---------------------------------------------------------------- spell list
@@ -613,6 +634,7 @@ func _lands_with_next(events: Array, i: int) -> bool:
 
 
 func _play_events(events: Array) -> void:
+	floats = {}
 	for i in events.size():
 		var ev: Dictionary = events[i]
 		_play_one(ev)
@@ -671,12 +693,12 @@ func _play_one(ev: Dictionary) -> void:
 		"status":
 			var def := GameCombat.status_def(str(ev["id"]))
 			if ev.get("applied", false):
-				_float_text(_low_point(ev["ref"]), str(def.get("name", ev["id"])), Color(def.get("color", "#ffffff")), 16)
+				_float_text(_side_point(str(ev["ref"])), str(def.get("name", ev["id"])), Color(def.get("color", "#ffffff")), 16)
 			elif not ev.has("removed"):
-				_float_text(_low_point(ev["ref"]), "resisted", Kit.DIM, 16)
+				_float_text(_side_point(str(ev["ref"])), "resisted", Kit.DIM, 16)
 		"skip":
 			var def := GameCombat.status_def(str(ev["id"]))
-			_float_text(_low_point(ev["ref"]), "%s - no turn" % def.get("name", ev["id"]), Color(def.get("color", "#ffffff")), 16)
+			_float_text(_side_point(str(ev["ref"])), "%s - no turn" % def.get("name", ev["id"]), Color(def.get("color", "#ffffff")), 16)
 		"mana":
 			_float_text(_unit_node(by).position + Vector2(30, 0), "+%d MP" % ev["amount"], Kit.MP_BLUE, 18)
 		"miss":
@@ -719,15 +741,21 @@ func _ref_node(ref: String) -> Control:
 	return hero_node
 
 
-## Where a status word floats up from: low on the figure, clear of the damage numbers.
-func _low_point(ref: String) -> Vector2:
+## Where a status word floats up from: beside the figure, clear of the damage numbers; several
+## words on one unit in the same action stack downwards.
+func _side_point(ref: String) -> Vector2:
+	var k := int(floats.get(ref, 0))
+	floats[ref] = k + 1
 	var i := int(ref.get_slice(":", 1))
+	var p: Vector2
 	match ref.get_slice(":", 0):
 		"ally":
-			return ally_nodes[i]["root"].position + Vector2(4, 70)
+			p = ally_nodes[i]["root"].position + Vector2(88, 30)
 		"enemy":
-			return enemy_nodes[i]["root"].position + Vector2(0, float(enemy_nodes[i]["h"]) - 26.0)
-	return hero_node.position + Vector2(10, 100)
+			p = enemy_nodes[i]["root"].position + Vector2(float(enemy_nodes[i]["w"]) + 6.0, float(enemy_nodes[i]["h"]) * 0.3)
+		_:
+			p = hero_node.position + Vector2(106, 50)
+	return p + Vector2(0, 20.0 * float(k))
 
 
 func _step_ref_hp(ref: String, delta: int) -> void:

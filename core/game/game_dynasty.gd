@@ -74,6 +74,7 @@ func _setup_new_heir(h: GameHeir) -> void:
 	h.level = 1
 	h.xp = 0
 	h.spells = []
+	h.spell_news = []
 	h.learn_spells()
 	h.training = {"str": 0.0, "mag": 0.0, "agi": 0.0, "vit": 0.0}
 	h.milestones_done = []

@@ -301,10 +301,16 @@ func try_status(target_ref: String, entry: Dictionary, source: String, power: fl
 		return false
 	var chance := status_chance(target_ref, entry, source)
 	if chance < 1.0 and rng.randf() >= chance:
-		events.append({"type": "status", "ref": target_ref, "id": entry["id"], "applied": false})
+		if _tells_resist(entry):
+			events.append({"type": "status", "ref": target_ref, "id": entry["id"], "applied": false})
 		return false
 	var turns := int(entry.get("turns", def.get("default_turns", 1)))
 	return apply_status(target_ref, str(entry["id"]), float(entry.get("potency", def.get("default_potency", 1.0))), turns, source, power)
+
+
+## A side effect that seldom lands (a 35% burn) fails quietly; a spell cast for its effect does not.
+static func _tells_resist(entry: Dictionary) -> bool:
+	return float(entry.get("chance", 1.0)) >= float(GameCombat.setting("tell_resist_from"))
 
 
 ## Puts a status on a unit, no roll (see try_status for chances). `potency` means what the status's
@@ -708,7 +714,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 				for h in hits:
 					if enemies[h[0]]["hp"] > 0 and not try_status(enemy_ref(h[0]), st, src, power):
 						shrugged.append(enemies[h[0]]["name"])
-				if not shrugged.is_empty():
+				if not shrugged.is_empty() and _tells_resist(st):
 					var what := str(GameCombat.status_def(str(st["id"])).get("name", st["id"]))
 					_say("%s resist%s %s." % [shrugged[0] if shrugged.size() == 1 else "%d foes" % shrugged.size(), "s" if shrugged.size() == 1 else "", what])
 	var drain := float(ab.get("drain", 0.0))
@@ -972,7 +978,7 @@ func unit_numbers(by: int) -> Dictionary:
 		var atk := u.attack_power()
 		var mag := u.magic_power()
 		c = {"unit": u, "level": u.level, "str": atk, "mag": mag, "both": (atk + mag) * 0.6, "crit": u.crit_chance(),
-			"dodge": u.dodge_chance(), "def": u.defense(), "max_hp": u.max_hp()}
+			"dodge": u.dodge_chance(), "def": u.defense(), "max_hp": u.max_hp(), "max_mp": u.max_mp()}
 		_nums[by] = c
 	return c
 

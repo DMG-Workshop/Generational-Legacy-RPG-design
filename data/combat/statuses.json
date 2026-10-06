@@ -7,7 +7,8 @@
     "boss_control_max_turns": 1,
     "boss_max_hp_tick_mult": 0.35,
     "control_immunity_turns": 1,
-    "status_turns_max": 9
+    "status_turns_max": 9,
+    "tell_resist_from": 0.5
   },
   "statuses": [
     {

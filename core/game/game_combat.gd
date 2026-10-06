@@ -323,7 +323,7 @@ static func describe(ab: Dictionary) -> String:
 				dmg += " to every foe"
 		parts.append(dmg)
 	if ab.has("pct_max_hp"):
-		parts.append("heals %d%%%s" % [int(round(float(ab["pct_max_hp"]) * 100.0)), " to the party" if ab.get("party", false) else ""])
+		parts.append("heals %s%d%% of max HP" % ["the party " if ab.get("party", false) else "", int(round(float(ab["pct_max_hp"]) * 100.0))])
 	if ab.get("cleanse", false):
 		parts.append("removes harmful effects")
 	if ab.get("mana", false):
@@ -335,10 +335,8 @@ static func describe(ab: Dictionary) -> String:
 		var chance := float(st.get("chance", 1.0))
 		var who: String = {"party": " on the party", "self": " on self"}.get(str(st.get("on", "target")), "")
 		var turns := int(st.get("turns", def.get("default_turns", 1)))
-		if chance >= 0.999:
-			parts.append("%s %dt%s" % [str(def.get("name", st["id"])).to_lower(), turns, who])
-		else:
-			parts.append("%d%% %s %dt%s" % [int(round(chance * 100.0)), str(def.get("name", st["id"])).to_lower(), turns, who])
+		var odds := "" if chance >= 0.999 else "%d%% " % int(round(chance * 100.0))
+		parts.append("%s%s%s (%d turn%s)" % [odds, str(def.get("name", st["id"])).to_lower(), who, turns, "" if turns == 1 else "s"])
 	var s := ", ".join(parts)
 	if s == "":
 		return str(ab.get("text", ""))
