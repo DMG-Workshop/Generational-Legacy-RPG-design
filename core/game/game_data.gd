@@ -24,6 +24,7 @@ static var companions: Array = []
 static var creatures: Array = []
 static var balance: Dictionary = {}
 static var names: Dictionary = {}
+static var diseases: Dictionary = {}   # {settings, diseases}: read through GameDisease
 
 
 static func load_json(path: String) -> Variant:
@@ -67,6 +68,7 @@ static func load_all() -> void:
 	companions = load_json("res://data/companions/companions.json")["companions"]
 	balance = load_json("res://data/game/balance.json")
 	names = load_json("res://data/game/names.json")
+	diseases = load_json("res://data/diseases/diseases.json")
 	_loaded = true
 
 

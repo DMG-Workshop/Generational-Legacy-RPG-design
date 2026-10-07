@@ -5,7 +5,8 @@ class_name GameItems
 extends RefCounted
 
 const SLOTS := ["weapon", "armor", "trinket"]
-const SHOPS := ["forge", "store", "temple"]
+const SHOPS := ["forge", "store", "temple", "black_market"]
+const SHELF := ["weapon", "armor", "trinket", "remedy", "toxin", "vial"]   # display order of kinds
 const ITEMS_PATH := "res://data/items/items.json"
 
 static var _labels: Dictionary = {}
@@ -23,6 +24,21 @@ static func item_name(id: String) -> String:
 
 static func slot_of(id: String) -> String:
 	return str(item_def(id).get("slot", ""))
+
+
+## Gear goes by its slot; everything else by its kind (remedy, toxin, vial).
+static func kind_of(id: String) -> String:
+	var slot := slot_of(id)
+	return slot if slot != "" else str(item_def(id).get("kind", ""))
+
+
+## How many of a consumable the pack can hold (0: one of a kind, like gear).
+static func stack_max(id: String) -> int:
+	return int(item_def(id).get("stack", 0))
+
+
+static func count(h: GameHeir, id: String) -> int:
+	return h.inventory.count(id) + h.equipment.values().count(id)
 
 
 # ---------------------------------------------------------------- describing effects
@@ -51,9 +67,12 @@ static func describe_effects(effects: Array) -> String:
 	return ", ".join(parts) if not parts.is_empty() else "no effect"
 
 
-## Short effects text for an item, for shop rows and reward messages.
+## Short effects text for an item, for shop rows and reward messages; consumables have a note.
 static func describe(id: String) -> String:
-	return describe_effects(item_def(id).get("effects", []))
+	var it := item_def(id)
+	if (it.get("effects", []) as Array).is_empty() and it.has("note"):
+		return str(it["note"])
+	return describe_effects(it.get("effects", []))
 
 
 ## "Steel Sword (+20% damage)": an item's name with what it does.
@@ -90,8 +109,8 @@ static func stock(d: GameDynasty, service: String) -> Array:
 static func _shelf_order(a: String, b: String) -> bool:
 	var da := item_def(a)
 	var db := item_def(b)
-	var sa := SLOTS.find(da.get("slot", ""))
-	var sb := SLOTS.find(db.get("slot", ""))
+	var sa := SHELF.find(kind_of(a))
+	var sb := SHELF.find(kind_of(b))
 	if sa != sb:
 		return sa < sb
 	if int(da.get("tier", 1)) != int(db.get("tier", 1)):
@@ -142,17 +161,24 @@ static func buy(d: GameDynasty, id: String) -> String:
 	var iname := item_name(id)
 	if not sold_here(d, id):
 		return "No one in %s sells the %s." % [d.world.here()["name"], iname]
-	if owns(h, id):
+	if stack_max(id) > 0 and count(h, id) >= stack_max(id):
+		return "%s cannot carry more than %d %s." % [h.name, stack_max(id), iname]
+	if stack_max(id) <= 0 and owns(h, id):
 		return "%s already has the %s." % [h.name, iname]
 	var cost := price(d, id)
 	if h.gold < cost:
 		return "Not enough gold for the %s (%d needed)." % [iname, cost]
 	h.gold -= cost
 	h.inventory.append(id)
+	GameDisease.on_buy(d, id)
 	if slot_of(id) in SLOTS and equipped(h, slot_of(id)) == "":
 		_wear(h, id)
-		return "%s buys the %s for %d gold and puts it on." % [h.name, iname, cost]
+		return _with(GameDisease.on_wear(d, id), "%s buys the %s for %d gold and puts it on." % [h.name, iname, cost])
 	return "%s buys the %s for %d gold. It goes in the pack." % [h.name, iname, cost]
+
+
+static func _with(extra: String, msg: String) -> String:
+	return msg if extra == "" else msg + " " + extra
 
 
 ## Wear an item from the pack; whatever was in that slot goes back in the pack.
@@ -163,9 +189,10 @@ static func equip(d: GameDynasty, id: String) -> String:
 	if slot_of(id) not in SLOTS:
 		return "The %s cannot be worn." % item_name(id)
 	var old := _wear(h, id)
+	var sick := GameDisease.on_wear(d, id)
 	if old != "":
-		return "%s takes up the %s and packs away the %s." % [h.name, item_name(id), item_name(old)]
-	return "%s takes up the %s." % [h.name, item_name(id)]
+		return _with(sick, "%s takes up the %s and packs away the %s." % [h.name, item_name(id), item_name(old)])
+	return _with(sick, "%s takes up the %s." % [h.name, item_name(id)])
 
 
 static func unequip(d: GameDynasty, slot: String) -> String:
@@ -188,6 +215,8 @@ static func sell(d: GameDynasty, id: String) -> String:
 		return "The %s is not in the pack." % item_name(id)
 	var gold := sell_price(d, id)
 	h.inventory.erase(id)
+	if not owns(h, id):
+		h.tainted_gear.erase(id)
 	h.gold += gold
 	return "%s sells the %s for %d gold." % [h.name, item_name(id), gold]
 
@@ -302,7 +331,7 @@ static func pray(d: GameDynasty) -> String:
 		return "An offering of %d gold is needed to pray." % cost
 	h.gold -= cost
 	var before := h.fate_value
-	h.fate_value = snappedf(maxf(float(GameData.bal("fate_min")), h.fate_value - float(GameData.bal("prayer_fate_drop"))), 0.0001)
+	h.fate_value = snappedf(maxf(float(GameData.bal("fate_min")), h.fate_value - float(GameData.bal("prayer_fate_drop"))), GameFate.STEP)
 	_count_use(d, "prayer")
 	return "%s keeps a vigil at the temple and offers %d gold. Fate Value %d%% -> %d%%." % [h.name, cost, int(round(before * 100.0)), int(round(h.fate_value * 100.0))]
 
@@ -331,11 +360,13 @@ static func bot_reserve(d: GameDynasty) -> int:
 
 ## Town errands the autopilot runs between actions (no time passes): wear the best gear carried,
 ## buy clear upgrades without touching the potion reserve, sell what was outgrown, and visit the
-## temple to lift a curse or ease a heavy fate when gold allows.
+## temple to lift a curse or ease a heavy fate when gold allows. Sickness is treated first, and
+## black-market bargains are never bought or worn.
 static func bot_tick(d: GameDynasty) -> void:
 	if d.state != "life" or d.battle != null:
 		return
 	var h := d.heir
+	GameDisease.bot_tick(d)
 	var style := fighting_style(h)
 	var margin := float(GameData.bal("bot_upgrade_margin"))
 	var displaced: Array = []   # gear the bot itself replaced; anything else in the pack is left alone
@@ -343,7 +374,7 @@ static func bot_tick(d: GameDynasty) -> void:
 		var best := ""
 		var best_score := gear_score(equipped(h, slot), style) + margin
 		for id in h.inventory:
-			if slot_of(id) == slot and gear_score(id, style) > best_score:
+			if slot_of(id) == slot and not GameDisease.is_bargain(id) and gear_score(id, style) > best_score:
 				best = id
 				best_score = gear_score(id, style)
 		if best != "":
@@ -359,7 +390,7 @@ static func bot_tick(d: GameDynasty) -> void:
 		var best := ""
 		var best_score := gear_score(equipped(h, slot), style) + margin
 		for id in wares:
-			if slot_of(id) != slot or owns(h, id):
+			if slot_of(id) != slot or owns(h, id) or GameDisease.is_bargain(id):
 				continue
 			var sc := gear_score(id, style)
 			if sc > best_score and h.gold - price(d, id) >= reserve:

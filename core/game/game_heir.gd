@@ -36,6 +36,9 @@ var spouse: GameHeir = null
 var heirloom_bonus: float = 0.0
 var equipment: Dictionary = {"weapon": "", "armor": "", "trinket": ""}   # slot -> item id
 var inventory: Array = []    # item ids carried but not worn
+var diseases: Array = []     # [{id, stage, years_in_stage, source}]: see GameDisease
+var tainted_gear: Array = [] # bargain gear still hiding a sickness until it is first worn
+var disease_level: int = 1   # level up to which the level-milestone sickness rolls are done
 
 
 func full_name() -> String:
@@ -71,7 +74,7 @@ func midlife_age() -> float:
 	return lifespan * float(GameData.bal("midlife_fraction"))
 
 
-## Sum of an effect stat across expressed traits, racial traits and equipped gear.
+## Sum of an effect stat across expressed traits, racial traits, equipped gear and sickness.
 func trait_total(stat: String) -> float:
 	var total := 0.0
 	for id in all_traits():
@@ -83,6 +86,8 @@ func trait_total(stat: String) -> float:
 			for e in GameItems.item_def(equipment[slot]).get("effects", []):
 				if e["stat"] == stat:
 					total += float(e["value"])
+	if not diseases.is_empty():
+		total += GameDisease.effect_total(self, stat)
 	return total
 
 
@@ -217,7 +222,8 @@ func to_dict() -> Dictionary:
 		"archetype_bonus": archetype_bonus, "training": training, "family_founded": family_founded,
 		"extra_life_used": extra_life_used, "battles_won": battles_won, "kills": kills,
 		"parent_names": parent_names, "heirloom_bonus": heirloom_bonus, "children": kids,
-		"equipment": equipment, "inventory": inventory,
+		"equipment": equipment, "inventory": inventory, "diseases": diseases, "tainted_gear": tainted_gear,
+		"disease_level": disease_level,
 		"spouse": spouse.to_dict() if spouse != null else null,
 	}
 
@@ -231,7 +237,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.level = int(d["level"]); h.xp = int(d["xp"]); h.hp = int(d["hp"]); h.mp = int(d["mp"])
 	h.gold = int(d["gold"]); h.potions = int(d["potions"])
 	h.traits = Array(d["traits"]); h.dormant = Array(d["dormant"])
-	h.fate_value = float(d["fate_value"]); h.milestones_done = Array(d["milestones_done"])
+	h.fate_value = snappedf(float(d["fate_value"]), GameFate.STEP); h.milestones_done = Array(d["milestones_done"])
 	h.archetype = d["archetype"]; h.archetype_bonus = d["archetype_bonus"]
 	h.training = d["training"]; h.family_founded = d["family_founded"]
 	h.extra_life_used = d["extra_life_used"]; h.battles_won = int(d["battles_won"])
@@ -242,11 +248,14 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.heirloom_bonus = float(d["heirloom_bonus"])
 	h.equipment = d.get("equipment", {"weapon": "", "armor": "", "trinket": ""})
 	h.inventory = Array(d.get("inventory", []))
+	h.diseases = GameDisease.load_list(d.get("diseases", []))
+	h.tainted_gear = Array(d.get("tainted_gear", []))
 	h.lifespan = h.compute_lifespan()
 	# A save from an older, steeper XP curve can hold more XP than the next level now costs.
 	while h.level < int(GameData.bal("level_cap")) and h.xp >= h.xp_to_next():
 		h.xp -= h.xp_to_next()
 		h.level += 1
+	h.disease_level = int(d.get("disease_level", h.level))
 	for c in d["children"]:
 		h.children.append(GameHeir.from_dict(c))
 	if d["spouse"] != null:

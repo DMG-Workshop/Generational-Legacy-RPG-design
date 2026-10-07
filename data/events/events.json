@@ -56,7 +56,7 @@
           "requires": {"traits": ["noble_blood", "usurper", "bastard"]},
           "check": {"attr": "persuasion", "dc": 12, "bonus_if": [{"trait": "noble_blood", "value": 2}]},
           "outcomes": {
-            "crit_success": {"text": "By the third course two lords are bidding for your favour. One pays in gold, the other in a promise.", "xp": 30, "gold": 60, "echo": {"kind": "glory", "strength": 0.08, "text": "{heir} dined with the river lords"}},
+            "crit_success": {"text": "By the third course two lords are bidding for your favour. Lady Orsenne outbids them both with an old silver circlet. Wearing it, you hear every word said behind a hand.", "xp": 30, "item": "crown_of_whispers", "echo": {"kind": "glory", "strength": 0.08, "text": "{heir} dined with the river lords"}},
             "success": {"text": "You hold your own among the lords and leave with a purse for your trouble.", "xp": 25, "gold": 30},
             "failure": {"text": "You spill wine on a duke. Polite laughter, and no further invitations.", "xp": 10},
             "crit_failure": {"text": "You are seated beside a man your grandmother ruined. He has not forgotten, and he tells the table so.", "xp": 5, "echo": {"kind": "infamy", "strength": 0.05, "text": "The river lords remember House {house} unkindly"}}

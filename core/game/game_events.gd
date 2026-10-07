@@ -584,7 +584,7 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		fx.append({"t": "%s: %s" % [str(e["kind"]).capitalize(), etext], "k": "good" if e["kind"] == "glory" else "bad"})
 	if o.has("fate"):
 		var before := h.fate_value
-		h.fate_value = snappedf(clampf(h.fate_value + float(o["fate"]), float(GameData.bal("fate_min")), float(GameData.bal("fate_max"))), 0.0001)
+		h.fate_value = snappedf(clampf(h.fate_value + float(o["fate"]), float(GameData.bal("fate_min")), float(GameData.bal("fate_max"))), GameFate.STEP)
 		var delta := h.fate_value - before
 		if absf(delta) > 0.00005:
 			fx.append({"t": "Fate Value %+.1f%%" % (delta * 100.0), "k": "good" if delta < 0.0 else "bad"})   # lower is kinder

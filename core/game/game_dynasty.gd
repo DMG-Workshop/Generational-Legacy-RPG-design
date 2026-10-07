@@ -4,6 +4,7 @@ class_name GameDynasty
 extends RefCounted
 
 static var save_path: String = "user://dynasty_save.json"
+const JOURNAL_SAVED := 120   # journal lines a save keeps; the Chronicle shows the same span
 
 var seed_value: int = 0
 var rng := RandomNumberGenerator.new()
@@ -48,6 +49,7 @@ static func new_game(p_seed: int, founder_name: String, class_id: String, bloodl
 	h.dormant = [others[d.rng.randi() % others.size()]]
 	d.world = GameWorld.create(d.rng)
 	d._setup_new_heir(h)
+	h.gold = int(GameData.bal("founder_gold"))
 	d.heir = h
 	d._say("The %s dynasty begins with %s, %s %s." % [d.dynasty_name, h.name, h.race()["name"], h.cls()["name"]])
 	d._coming_of_age()
@@ -110,17 +112,17 @@ func slayer_map() -> Dictionary:
 func _add_echo(kind: String, key: String, text: String, strength: float) -> void:
 	for e in echoes:
 		if e["kind"] == kind and e["key"] == key:
-			e["strength"] = snappedf(minf(1.0, float(e["strength"]) + strength), 0.0001)  # echoes compound
+			e["strength"] = snappedf(minf(1.0, float(e["strength"]) + strength), GameFate.STEP)  # echoes compound
 			e["text"] = text
 			e["gen"] = gen
 			return
-	echoes.append({"kind": kind, "key": key, "text": text, "strength": snappedf(strength, 0.0001), "gen": gen})
+	echoes.append({"kind": kind, "key": key, "text": text, "strength": snappedf(strength, GameFate.STEP), "gen": gen})
 
 
 func _decay_echoes() -> void:
 	var decay := float(GameData.bal("echo_decay"))
 	for e in echoes:
-		e["strength"] = snappedf(float(e["strength"]) * decay, 0.0001)
+		e["strength"] = snappedf(float(e["strength"]) * decay, GameFate.STEP)
 	echoes = echoes.filter(func(e): return float(e["strength"]) >= float(GameData.bal("echo_min_strength")))
 
 
@@ -197,10 +199,16 @@ func _check_milestone(milestone: String) -> void:
 		"critical":
 			var curse := _random_new_curse(heir)
 			_add_trait(heir, "scarred")
+			var had_gold := heir.gold > 0
 			heir.gold = int(float(heir.gold) * 0.2)
 			heir.age += 5.0
 			heir.hp = 1
-			msgs.append("DISASTER at %s! You are gravely hurt, age 5 years, lose most of your wealth%s." % [label, " and gain %s" % GameData.trait_name(curse) if curse != "" else ""])
+			var hurt: Array = ["are gravely hurt", "age 5 years"]
+			if had_gold:
+				hurt.append("lose most of your wealth")
+			if curse != "":
+				hurt.append("gain " + GameData.trait_name(curse))
+			msgs.append("DISASTER at %s! You %s and %s." % [label, ", ".join(hurt.slice(0, -1)), hurt[-1]])
 			_add_echo("infamy", "critical", "%s's ruin became a cautionary tale" % heir.name, 0.5)
 	pending_archetype = GameFate.roll_archetype(rng)
 	msgs.append("Fate (%s): the next heir will be shaped by this: %s." % [sev, GameFate.ARCHETYPES[pending_archetype]["name"]])
@@ -344,6 +352,7 @@ func rest() -> Array:
 	heir.full_heal()
 	party.rest(self)
 	var msgs: Array = ["%s rests and recovers fully." % heir.name]
+	GameDisease.on_rest(self, msgs)
 	return _finish_time("rest", msgs)
 
 
@@ -401,6 +410,7 @@ func found_family() -> Array:
 		heir.children.append(c)
 		for ev in res["events"]:
 			msgs.append("%s: %s" % [c.name, ev])
+		msgs.append_array(GameDisease.on_birth(self, c))
 	heir.family_founded = true
 	msgs.push_front("%s marries %s, %s %s. %d child%s born." % [heir.name, sp.name, sp.race()["name"], sp.cls()["name"], n, "" if n == 1 else "ren"])
 	_say(msgs[0])
@@ -595,6 +605,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		_check_milestone("midlife")
 	if heir.age >= heir.lifespan * float(GameData.bal("elder_fraction")):
 		_check_milestone("elder_years")
+	GameDisease.on_years(self, years, msgs)
 	# Covers every year since the last roll, including years lost to defeats and disasters.
 	var dies := rng.randf() < heir.old_age_death_chance(heir.hazard_age, heir.age)
 	heir.hazard_age = heir.age
@@ -708,6 +719,7 @@ func choose_heir(index: int) -> Array:
 	# Gear and carried items pass down with the house.
 	c.equipment = parent.equipment.duplicate()
 	c.inventory = parent.inventory.duplicate()
+	GameDisease.on_succession(self, parent, c, msgs)
 	c.refresh_derived()
 	c.full_heal()
 	heir = c
@@ -732,7 +744,7 @@ func to_dict() -> Dictionary:
 		"gen": gen, "heir": heir.to_dict(), "state": state, "history": history, "echoes": echoes,
 		"heirlooms": heirlooms, "slain_bosses": slain_bosses, "pending_archetype": pending_archetype,
 		"candidates": candidates.map(func(c): return c.to_dict()), "last_death": last_death,
-		"journal": journal.slice(maxi(0, journal.size() - 60)), "next_id": next_id, "total_hunts": total_hunts,
+		"journal": journal.slice(maxi(0, journal.size() - JOURNAL_SAVED)), "next_id": next_id, "total_hunts": total_hunts,
 		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
 		"shop_state": shop_state,
@@ -753,7 +765,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.echoes = Array(d["echoes"])
 	for e in g.echoes:
 		e["gen"] = int(e["gen"])
-		e["strength"] = float(e["strength"])
+		e["strength"] = snappedf(float(e["strength"]), GameFate.STEP)
 	g.heirlooms = _ints(Array(d["heirlooms"]))
 	g.slain_bosses = _ints(d["slain_bosses"])
 	g.heir.heirloom_bonus = g.heirloom_bonus()

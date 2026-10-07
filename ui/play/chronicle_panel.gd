@@ -1,5 +1,6 @@
-## Overlay showing the dynasty's lineage, echoes, heirlooms and journal.
-extends PanelContainer
+## Overlay showing the dynasty's lineage, echoes, heirlooms and journal. Modal: its backdrop
+## keeps clicks off the screen behind it.
+extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 
@@ -7,20 +8,7 @@ var dynasty: GameDynasty
 
 
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	offset_left = 60
-	offset_right = -60
-	offset_top = 40
-	offset_bottom = -40
-	add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 10, Kit.ACCENT))
-	var v := VBoxContainer.new()
-	add_child(v)
-	var head := HBoxContainer.new()
-	v.add_child(head)
-	var t := Kit.label("Chronicle of House %s" % dynasty.dynasty_name, 24, Kit.ACCENT)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(t)
-	head.add_child(Kit.button("Close", func(): queue_free(), Vector2(100, 36)))
+	var v := Kit.overlay(self, "Chronicle of House %s" % dynasty.dynasty_name)
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(tabs)
@@ -35,7 +23,7 @@ func _ready() -> void:
 	tabs.add_child(ech)
 	var jr := Kit.rich()
 	jr.name = "Journal"
-	jr.text = "\n".join(dynasty.journal.slice(maxi(0, dynasty.journal.size() - 120)))
+	jr.text = "\n".join(dynasty.journal.slice(maxi(0, dynasty.journal.size() - GameDynasty.JOURNAL_SAVED)))
 	tabs.add_child(jr)
 
 

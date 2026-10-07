@@ -8,6 +8,7 @@ var on_change: Callable   # call after anything that changes the dynasty; the li
 
 var body: VBoxContainer
 var confirm_abandon: String = ""   # quest id waiting for a second click on Abandon
+var scrolls: Array = []            # the two column ScrollContainers, rebuilt with the board
 
 
 func _ready() -> void:
@@ -20,6 +21,8 @@ func _ready() -> void:
 
 
 func _build(news: Array) -> void:
+	var keep: Array = scrolls.map(func(sc): return sc.scroll_vertical)
+	scrolls = []
 	Kit.clear(body)
 	var d := dynasty
 	var qs := d.quests
@@ -57,6 +60,16 @@ func _build(news: Array) -> void:
 		mine.add_child(Kit.label("Completed", 16, Kit.ACCENT))
 		var names: Array = qs.done.map(func(id): return GameQuests.def(id).get("name", id) + (" x%d" % qs.times_done(id) if qs.times_done(id) > 1 else ""))
 		mine.add_child(_wrap(", ".join(names), 13, Kit.DIM))
+	_restore_scroll.call_deferred(keep)
+
+
+## A rebuild must not jump the lists back to the top: the card the player just pressed stays put.
+func _restore_scroll(keep: Array) -> void:
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	for i in mini(keep.size(), scrolls.size()):
+		scrolls[i].scroll_vertical = keep[i]
 
 
 ## A titled, scrolling column; returns the list to fill.
@@ -71,6 +84,7 @@ func _column(parent: Control, title: String) -> VBoxContainer:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(scroll)
+	scrolls.append(scroll)
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 8)

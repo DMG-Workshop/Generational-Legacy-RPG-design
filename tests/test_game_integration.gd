@@ -5,6 +5,10 @@
 extends SceneTree
 
 const DIR := "res://tests/fixtures/"
+const UI_SAVE := "user://test_integration_ui_save.json"
+const GameApp := preload("res://ui/play/game_app.gd")
+const MapPanel := preload("res://ui/play/map_panel.gd")
+const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
 
 var checks := 0
 var fails := 0
@@ -61,9 +65,32 @@ func _init() -> void:
 	test_full_round_trip()
 	test_old_saves()
 	test_determinism()
+	test_founders_start_equipped()
+	test_setbacks_without_gold()
+	test_journal_survives_reload()
+	test_snapped_values_reload_exactly()
+	test_long_continuity()
 	test_flag_from_event_completes_quest()
+	test_map_canvas()
+	_ui_tests.call_deferred()
+
+
+## Screens need a live scene tree, so these run once it is up. They save to a test file.
+func _ui_tests() -> void:
+	var real_path := GameDynasty.save_path
+	GameDynasty.save_path = UI_SAVE
+	root.size = Vector2i(1280, 720)   # headless starts tiny; clicks need the real window
+	var app: Control = GameApp.new()
+	root.add_child(app)
+	await _frames()
+	await test_ui_event_death_is_saved(app)
+	await test_ui_map_purchase_is_saved(app)
+	await test_ui_chronicle_is_modal(app)
+	app.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(UI_SAVE))
+	GameDynasty.save_path = real_path
 	print("integration: %d checks, %d failures" % [checks, fails])
-	quit()
+	quit(1 if fails > 0 else 0)
 
 
 # ---------------------------------------------------------------- events x companions x quests
@@ -371,6 +398,148 @@ func test_determinism() -> void:
 	ok(c[1] != a[1], "a different seed tells a different story")
 
 
+## A founder inherits nothing, so the house starts with a purse: enough for the forge's first
+## weapon and armour with the potion reserve kept. Hunts are tuned for an heir so equipped.
+func test_founders_start_equipped() -> void:
+	var d := _new(81)
+	ok(d.heir.gold == int(GameData.bal("founder_gold")), "the founder starts with the house's purse (%d)" % d.heir.gold)
+	GameItems.bot_tick(d)
+	ok(GameItems.equipped(d.heir, "weapon") != "" and GameItems.equipped(d.heir, "armor") != "", "the autopilot founder buys a weapon and armour at once (%s)" % str(d.heir.equipment))
+	ok(d.heir.gold >= GameItems.bot_reserve(d), "and keeps the potion reserve (%d)" % d.heir.gold)
+	# Founders across the starting classes: few die in battle, and not far more often than their heirs.
+	var slain := [0, 0]
+	var lives := [0, 0]
+	var classes := GameData.starting_ids(GameData.classes)
+	for i in 36:
+		var f := GameDynasty.new_game(9100 + i, "", classes[i % classes.size()], "faetouched", "human")
+		for life in 2:
+			GameBot.live_life(f)
+			lives[life] += 1
+			if f.last_death.get("cause", "") == "slain in battle":
+				slain[life] += 1
+			if f.state != "succession":
+				break
+			GameBot.choose_best(f)
+	ok(slain[0] * 100 <= lives[0] * 15, "human founders slain in battle: %d of %d" % [slain[0], lives[0]])
+	print("  founders slain %d/%d, their heirs %d/%d" % [slain[0], lives[0], slain[1], lives[1]])
+
+
+## The Chronicle shows the last JOURNAL_SAVED lines; a reload must not cut that history short.
+func test_journal_survives_reload() -> void:
+	var d := _new(71)
+	var guard := 0
+	while d.journal.size() < GameDynasty.JOURNAL_SAVED + 20 and guard < 400:
+		guard += 1
+		if d.state == "succession":
+			d.choose_heir(0)
+		else:
+			GameBot.step(d)
+	ok(d.journal.size() > GameDynasty.JOURNAL_SAVED, "a long journal (%d lines)" % d.journal.size())
+	var e := _reload(d)
+	var shown: Array = d.journal.slice(d.journal.size() - GameDynasty.JOURNAL_SAVED)
+	ok(e.journal == shown, "a reload keeps every journal line the Chronicle showed (%d of %d)" % [e.journal.size(), shown.size()])
+
+
+## Every Fate setback, rolled with and without gold: a penniless heir is never told of a loss.
+func test_setbacks_without_gold() -> void:
+	var seen := {}
+	for s in range(1, 3000):
+		for gold in [0, 500]:
+			var d := _new(1)
+			d.heir.milestones_done.erase("first_quest")
+			d.heir.gold = gold
+			d.heir.fate_value = 0.2
+			d.rng.seed = s
+			var before := d.journal.size()
+			d._check_milestone("first_quest")
+			var lines: Array = d.journal.slice(before)
+			if lines.size() < 2:
+				continue
+			var text := str(lines[0])
+			var sev := "critical" if text.begins_with("DISASTER") else text.get_slice(" at ", 0)
+			var key := "%s/%d" % [sev, gold]
+			if seen.has(key):
+				continue
+			seen[key] = text
+			if gold == 0:
+				ok(not text.to_lower().contains("you lose") and not text.contains("wealth"), "no gold, no loss claimed: " + text)
+			else:
+				ok(d.heir.gold < gold and text.contains("lose"), "a loss is reported when gold is lost: " + text)
+		if seen.size() >= 8:
+			break
+	ok(seen.has("critical/0") and seen.has("critical/500"), "critical setbacks rolled with and without gold (%s)" % str(seen.keys()))
+	ok(str(seen.get("critical/500", "")).contains("lose most of your wealth"), "a disaster with gold takes most of it")
+
+
+## Full precision: default-precision JSON hides a value that reloads one ulp away.
+func _exact(d: GameDynasty) -> String:
+	return JSON.stringify(d.to_dict(), "", true, true)
+
+
+func _reload(d: GameDynasty) -> GameDynasty:
+	return GameDynasty.from_dict(JSON.parse_string(JSON.stringify(d.to_dict())))
+
+
+func test_snapped_values_reload_exactly() -> void:
+	var d := _new(61)
+	var fates := [0.0185, 0.0272, 0.1599, 0.1924]
+	d.heir.fate_value = snappedf(fates[0], GameFate.STEP)
+	d.heir.age = d.heir.family_min_age()
+	d.found_family()
+	for i in d.heir.children.size():
+		d.heir.children[i].fate_value = snappedf(fates[1 + i % 3], GameFate.STEP)
+	for k in [415, 600, 710, 2125]:
+		d._add_echo("slayer", "m%d" % k, "test", float(k) * GameFate.STEP)
+	var e := _reload(d)
+	ok(e.heir.fate_value == d.heir.fate_value, "fate value reloads to the same double (%s vs %s)" % [var_to_str(d.heir.fate_value), var_to_str(e.heir.fate_value)])
+	ok(e.heir.children.size() == d.heir.children.size() and range(d.heir.children.size()).all(func(i): return e.heir.children[i].fate_value == d.heir.children[i].fate_value), "children's fate values reload exactly")
+	ok(range(d.echoes.size()).all(func(i): return float(e.echoes[i]["strength"]) == float(d.echoes[i]["strength"])), "echo strengths reload exactly")
+	d._decay_echoes()
+	e._decay_echoes()
+	ok(_exact(d) == _exact(e), "a succession's echo decay matches after a reload")
+
+
+## A player who saves and continues before every action lives the same dynasty as one who never
+## stops: travel, events, fights, companions and several successions, compared at full precision.
+func test_long_continuity() -> void:
+	var gens := 0
+	for s in 3:
+		var a := GameDynasty.new_game(5000 + s, "", ["warrior", "mage", "cleric"][s], "faetouched", ["human", "orc", "beastkin"][s])
+		var b := _reload(a)
+		var pa := RandomNumberGenerator.new()
+		pa.seed = s
+		var pb := RandomNumberGenerator.new()
+		pb.seed = s
+		var same := -1
+		for i in 450:
+			_wander(a, pa)
+			b = _reload(b)
+			_wander(b, pb)
+			if _exact(a) != _exact(b):
+				same = i
+				break
+		ok(same < 0, "seed %d: saved-and-continued dynasty matches the unsaved one (first difference at step %d)" % [s, same])
+		gens += a.gen - 1
+	ok(gens >= 12, "continuity runs cross many successions (%d)" % gens)
+
+
+## The autopilot, with random road travel and exploring mixed in; `r` is the policy's own seeded dice.
+func _wander(d: GameDynasty, r: RandomNumberGenerator) -> void:
+	if d.state == "succession":
+		d.choose_heir(r.randi() % d.candidates.size())
+		return
+	var x := r.randi() % 10
+	if x < 3 and not d.has_pending_event():
+		var roads := d.world.roads(d.world.location, d.flags)
+		d.travel(roads[r.randi() % roads.size()]["to"])
+	elif x == 3 and not d.has_pending_event():
+		d.explore()
+	else:
+		GameBot.step(d)
+	if d.has_pending_event() and d.state == "life":
+		GameEvents.bot_resolve(d)
+
+
 func _run(s: int) -> Array:
 	var d := _new(s, "mage", "elf")
 	var lines: Array = []
@@ -379,3 +548,142 @@ func _run(s: int) -> Array:
 		lines.append_array(d.journal)
 		GameBot.choose_best(d)
 	return [lines, JSON.stringify(d.to_dict())]
+
+
+# ---------------------------------------------------------------- screens
+
+func _frames(n: int = 4) -> void:
+	for i in n:
+		await process_frame
+
+
+func _button(n: Node, prefix: String) -> Button:
+	if n is Button and n.is_visible_in_tree() and not n.disabled and n.text.begins_with(prefix):
+		return n
+	for c in n.get_children():
+		var b := _button(c, prefix)
+		if b != null:
+			return b
+	return null
+
+
+## Presses the first enabled button whose text starts with `prefix`; false if there is none.
+func _press(from: Node, prefix: String) -> bool:
+	var b := _button(from, prefix)
+	if b == null:
+		return false
+	b.pressed.emit()   # the press may rebuild the screen and free `b`
+	await _frames(3)
+	return true
+
+
+## A real left click pushed through the viewport: whatever is on top at `pos` receives it.
+func _click(pos: Vector2) -> void:
+	var mm := InputEventMouseMotion.new()
+	mm.position = pos
+	mm.global_position = pos
+	root.push_input(mm)
+	await _frames(2)
+	for pressed in [true, false]:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.position = pos
+		ev.global_position = pos
+		ev.pressed = pressed
+		root.push_input(ev)
+		await _frames(2)
+
+
+func _labels(n: Node, out: Array = []) -> Array:
+	if n is Label and n.is_visible_in_tree():
+		out.append(n.text)
+	for c in n.get_children():
+		_labels(c, out)
+	return out
+
+
+func _count_open(n: Node, script: Script) -> int:
+	return n.get_children().filter(func(c): return c.get_script() == script and not c.is_queued_for_deletion()).size()
+
+
+## An event choice whose year ends the heir's life is on disk at once, before Continue is pressed.
+func test_ui_event_death_is_saved(app: Control) -> void:
+	var d := GameDynasty.new_game(4321, "Ulla", "warrior", "faetouched", "human")
+	d.pending_event = {}
+	d.world.visit("frostreach")
+	d.heir.age = d.heir.lifespan * 1.6
+	d.heir.hazard_age = d.heir.age
+	GameEvents.begin(d, "frozen_courier")
+	app.dynasty = d
+	app.autosave()
+	app.show_state()
+	await _frames(6)
+	ok(await _press(app.current, "Carry the satchel"), "the courier's choice is on screen")
+	ok(d.state == "succession", "the year on the road ends an old heir's life")
+	var disk := GameDynasty.load_from_disk()
+	ok(disk != null and disk.state == "succession" and disk.history.size() == d.history.size(), "the death is saved before the result is dismissed")
+	ok(await _press(app.current, "Continue"), "the result panel offers Continue")
+	await _frames(3)
+	ok(str(app.current.get_script().resource_path).ends_with("succession_screen.gd"), "Continue leads to the succession")
+
+
+## A map bought from the map panel is saved and shows on the life screen behind it.
+func test_ui_map_purchase_is_saved(app: Control) -> void:
+	app.new_game("Tess", "warrior", "faetouched", 83, "human")
+	var d: GameDynasty = app.dynasty
+	d.pending_event = {}
+	d.heir.gold = 40
+	app.autosave()
+	app.show_state()
+	await _frames()
+	await _press(app.current, "Travel / Map")
+	ok(await _press(app.current.get_children().back(), "Valley Survey"), "the Valley Survey is for sale")
+	ok(d.heir.gold == 10 and not d.world.charted.is_empty(), "the survey charts places for 30 gold")
+	await _press(app.current.get_children().back(), "Close")
+	ok(_labels(app.current).has("Gold 10    Potions %d" % d.heir.potions), "the life screen shows the gold left")
+	var disk := GameDynasty.load_from_disk()
+	ok(disk.heir.gold == 10 and disk.world.charted == d.world.charted, "the purchase is saved (gold %d, %d charted)" % [disk.heir.gold, disk.world.charted.size()])
+
+
+## Nothing behind the Chronicle takes a click: not the life screen's buttons, not an heir's card.
+func test_ui_chronicle_is_modal(app: Control) -> void:
+	app.new_game("Tess", "warrior", "faetouched", 85, "human")
+	app.dynasty.pending_event = {}
+	app.show_state()
+	await _frames(6)
+	var life: Control = app.current
+	var menu := _button(life, "Menu")
+	var again := _button(life, "Chronicle")
+	await _press(life, "Chronicle")
+	ok(_count_open(life, ChroniclePanel) == 1, "the Chronicle opens")
+	await _click(again.get_global_rect().get_center())
+	await _click(menu.get_global_rect().get_center())
+	ok(app.current == life and _count_open(life, ChroniclePanel) == 1, "clicks on Chronicle and Menu behind it do nothing")
+	if app.current != life:
+		return
+	await _press(life.get_children().back(), "Close")
+	ok(_count_open(life, ChroniclePanel) == 0, "Close shuts it")
+	var d: GameDynasty = app.dynasty
+	d.heir.age = maxf(d.heir.age, d.heir.family_min_age())
+	d.found_family()
+	d.retire()
+	app.show_state()
+	await _frames(6)
+	var choose := _button(app.current, "Choose")
+	await _press(app.current, "Chronicle")
+	await _click(choose.get_global_rect().position + Vector2(8, 8))
+	await _click(choose.get_global_rect().get_center())
+	ok(d.state == "succession" and d.gen == 1, "an heir cannot be chosen through the Chronicle")
+
+
+## The map draws an open road as open, and every place name fits inside its box.
+func test_map_canvas() -> void:
+	var link := {"to": "the_rift", "requires_flag": "rift_open"}
+	ok(MapPanel.MapCanvas.sealed(link, {}), "a road behind an unset flag is sealed")
+	ok(not MapPanel.MapCanvas.sealed(link, {"rift_open": 60}), "the same road is open once the flag is set")
+	ok(not MapPanel.MapCanvas.sealed({"to": "kingshold"}, {}), "a plain road is never sealed")
+	var font := ThemeDB.fallback_font
+	for l in GameData.world["locations"]:
+		var fs := MapPanel.MapCanvas.name_size(font, str(l["name"]))
+		var w := font.get_string_size(str(l["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		ok(w <= MapPanel.BOX.x - 6.0 and fs >= 9, "%s fits its map box (%.0fpx at %dpx)" % [l["name"], w, fs])
