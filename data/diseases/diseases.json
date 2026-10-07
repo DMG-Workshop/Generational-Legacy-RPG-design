@@ -19,6 +19,7 @@
       "templar": "a healer's habits", "monk": "a monk's discipline", "divine": "divine blood", "undead": "dead flesh"
     },
     "recovery": {"cleric": 0.5, "druid": 0.5, "shaman": 0.5, "paladin": 0.35, "templar": 0.35, "monk": 0.2, "saints_blood": 0.5},
+    "recovery_floor": 0.25,
     "family_recovery": 0.4,
     "young_years": 8,
     "cure_cost": 40,

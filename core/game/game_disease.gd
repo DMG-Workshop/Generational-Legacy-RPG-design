@@ -214,7 +214,7 @@ static func recovery_mult(h: GameHeir) -> float:
 	var m := 1.0 + h.trait_total("healing_power")
 	for k in [h.race_id, h.class_id] + h.all_traits():
 		m += float(bonus.get(k, 0.0))
-	return maxf(0.25, m)
+	return maxf(float(setting("recovery_floor")), m)
 
 
 # ---------------------------------------------------------------- exposure
