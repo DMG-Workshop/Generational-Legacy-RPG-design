@@ -673,7 +673,8 @@ func test_succession() -> void:
 		ok(u.hp == u.max_hp(), "fresh at succession")
 	ok(msgs.any(func(x): return str(x).find("stay with the family and swear to serve") >= 0), "succession message: %s" % str(msgs))
 	var lines: Array = Tavern.summary_lines(d)
-	ok(lines.size() == 2 and str(lines[0]).begins_with("Bren Cask, Human Warrior Lv1  HP\u00a0"), "summary line: %s" % str(lines))
+	var bren_age := int(p.age(d, "bren_cask"))
+	ok(lines.size() == 2 and str(lines[0]).begins_with("Bren Cask (%d), Human Warrior Lv1  HP\u00a0" % bren_age), "summary line: %s" % str(lines))
 	var u0 := p.unit(d, p.members[0])
 	ok(str(lines[0]).ends_with("%d/%d" % [u0.hp, u0.max_hp()]), "summary line ends with HP now/max")
 
@@ -689,7 +690,7 @@ func test_save_load() -> void:
 	p.hire(d, "maddy_thorn")
 	p.on_years(d, 0.5, [])
 	p.members[1]["hp"] = 7
-	p.history["old_netta"] = {"name": "Young Wren", "status": "fallen", "gen": 1, "first_gen": 1, "battles": 3, "fallen": ["Old Netta"]}
+	p.history["old_netta"] = {"name": "Young Wren", "status": "fallen", "gen": 1, "first_gen": 1, "battles": 3, "fallen": ["Old Netta"], "line": 1, "past": []}
 	var text := JSON.stringify(d.to_dict())
 	var d2 := GameDynasty.from_dict(JSON.parse_string(text))
 	var p2 := d2.party
@@ -734,7 +735,7 @@ func test_save_load() -> void:
 		"history": {"grull_one_tusk": {"status": "fallen", "gen": 1}, "ghost": {"status": "left"}, "maddy_thorn": "junk"}}
 	var odd := GameDynasty.from_dict(raw)
 	ok(odd.party.members.size() == 1, "a duplicated member loads once")
-	ok(odd.party.history.keys() == ["grull_one_tusk"], "unknown and malformed history dropped (%s)" % str(odd.party.history.keys()))
+	ok(odd.party.history.keys() == ["grull_one_tusk", "bren_cask"], "unknown and malformed history dropped, members get a record (%s)" % str(odd.party.history.keys()))
 	ok(odd.party.history["grull_one_tusk"]["fallen"] == ["Grull One-Tusk"], "a fallen record always names the fallen")
 	odd.world.location = "brinehaven"
 	var t2 = Tavern.new()

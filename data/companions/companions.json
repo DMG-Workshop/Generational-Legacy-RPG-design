@@ -1,4 +1,17 @@
 {
+  "settings": {
+    "old_fraction": 0.7,
+    "decline_per_lifespan": 1.2,
+    "decline_cap": 0.5,
+    "lifespan_spread": 0.08,
+    "retire_per_lifespan": 1.0,
+    "successor_wait_years": 3,
+    "default_age_after_adult": [6, 18],
+    "past_kept": 6,
+    "past_shown": 3,
+    "bot_dismiss_decline": 0.2,
+    "farewell": "{name} says goodbye to {heir} and retires to {place} at {age}."
+  },
   "taverns": {
     "hearthmere": {"name": "The Lantern and Last Coin", "text": "Low beams, a dog by the fire, and swords for hire along the back wall."},
     "ironford": {"name": "The Anvil's Rest", "text": "Smiths drink here after the forges bank. The hirelings sit nearest the door."},
@@ -8,101 +21,125 @@
   "companions": [
     {
       "id": "bren_cask", "name": "Bren Cask", "successor": "{given} Cask",
-      "race": "human", "class": "warrior",
+      "race": "human", "class": "warrior", "age": [30, 38],
       "personality": "Former caravan guard. Counts his coin twice and his friends once.",
       "where": ["hearthmere"], "fee": 40, "upkeep": 1,
-      "requires": {"min_level": 1, "min_gen": 1, "flags": []}
+      "requires": {"min_level": 1, "min_gen": 1, "flags": []},
+      "retires_to": "brinehaven",
+      "farewell": "{name} counts the coin one last time, buys a share in a fishing boat and retires to {place} at {age}."
     },
     {
       "id": "maddy_thorn", "name": "Maddy Thorn", "successor": "{given} Thorn",
-      "race": "halfling", "class": "rogue",
+      "race": "halfling", "class": "rogue", "age": [24, 36],
       "personality": "Laughs at the wrong moments and never misses the right ones.",
       "where": ["hearthmere", "kingshold"], "fee": 35, "upkeep": 1,
-      "requires": {"min_level": 1, "min_gen": 1, "flags": []}
+      "requires": {"min_level": 1, "min_gen": 1, "flags": []},
+      "retires_to": "hearthmere",
+      "farewell": "{name} laughs that the roads have grown longer, kisses {heir} on both cheeks and retires to {place} at {age}."
     },
     {
       "id": "sister_oriel", "name": "Sister Oriel", "successor": "Sister {given}",
-      "race": "human", "class": "cleric",
+      "race": "human", "class": "cleric", "age": [20, 25],
       "personality": "Left the temple before her vows. Still prays before every fight, and after.",
       "where": ["hearthmere"], "fee": 70, "upkeep": 2,
       "requires": {"min_level": 5, "min_gen": 1, "flags": []},
-      "hint": "A young woman in a grey habit watches the door. She wants a patron with some battles behind them."
+      "hint": "A young woman in a grey habit watches the door. She wants a patron with some battles behind them.",
+      "retires_to": "kingshold",
+      "farewell": "{name} blesses {heir} one last time and goes to the temple in {place} to take the vows after all, at {age}."
     },
     {
       "id": "hulda_stonebrow", "name": "Hulda Stonebrow", "successor": "{given} Stonebrow",
-      "race": "dwarf", "class": "warrior",
+      "race": "dwarf", "class": "warrior", "age": [70, 95],
       "personality": "Mine-guard. Claims she has buried more goblins than coin, and she is not poor.",
       "where": ["ironford"], "fee": 55, "upkeep": 1,
       "requires": {"min_level": 3, "min_gen": 1, "flags": []},
-      "hint": "A dwarf in a dented helm says she does not guard green recruits."
+      "hint": "A dwarf in a dented helm says she does not guard green recruits.",
+      "retires_to": "ironford",
+      "farewell": "{name} hangs the dented helm over the door and goes home to the mines of {place} at {age}."
     },
     {
       "id": "tarsk_ember_eye", "name": "Tarsk Ember-Eye", "successor": "{given} Ember-Eye",
-      "race": "dragonborn", "class": "spellblade",
+      "race": "dragonborn", "class": "spellblade", "age": [45, 60],
       "personality": "Cast out of the forge-temples for asking why the fire answers.",
       "where": ["ironford"], "fee": 120, "upkeep": 3,
       "requires": {"min_level": 15, "min_gen": 1, "flags": []},
       "bonus": {"mag": 0.1},
-      "hint": "A dragonborn with a scorched sleeve sizes up every sword that walks in. Not yours, yet."
+      "hint": "A dragonborn with a scorched sleeve sizes up every sword that walks in. Not yours, yet.",
+      "retires_to": "ironford",
+      "farewell": "{name} goes back to the forge-temples of {place} at {age}, still asking why the fire answers."
     },
     {
       "id": "varn_deepdelver", "name": "Varn Deepdelver", "successor": "{given} Deepdelver",
-      "race": "dwarf", "class": "warden",
+      "race": "dwarf", "class": "warden", "age": [128, 140],
       "personality": "Tunnel scout. Went quiet after Deepstone and only talks about what he saw there to those who have seen it.",
       "where": ["ironford"], "fee": 110, "upkeep": 3,
       "requires": {"min_level": 12, "min_gen": 1, "flags": [], "visited": ["deepstone_halls"]},
       "bonus": {"all_stats": 0.05, "agi": 0.1},
-      "hint": "A grey-bearded scout sits with his back to the wall and his eyes on the door."
+      "hint": "A grey-bearded scout sits with his back to the wall and his eyes on the door.",
+      "retires_to": "ironford",
+      "farewell": "{name} has seen enough tunnels for one life and retires to {place} at {age}, back to the wall, eyes on the door."
     },
     {
       "id": "ser_aldric_vane", "name": "Ser Aldric Vane", "successor": "Ser {given} Vane",
-      "race": "human", "class": "paladin",
+      "race": "human", "class": "paladin", "age": [42, 50],
       "personality": "A knight without a lord, still polishing a crest he no longer wears.",
       "where": ["kingshold"], "fee": 140, "upkeep": 4,
       "requires": {"min_level": 12, "min_gen": 1, "flags": []},
       "bonus": {"all_stats": 0.15, "hp": 0.2},
-      "hint": "A knight in faded colours will only swear to a name that has drawn blood."
+      "hint": "A knight in faded colours will only swear to a name that has drawn blood.",
+      "retires_to": "kingshold",
+      "farewell": "{name} lays the old crest in {heir}'s hands, kneels once more and retires to {place} at {age}."
     },
     {
       "id": "ysolde_marrow", "name": "Ysolde Marrow", "successor": "{given} Marrow",
-      "race": "elf", "class": "necromancer",
+      "race": "elf", "class": "necromancer", "age": [150, 200],
       "personality": "Speaks to the dead politely and to the living rarely.",
       "where": ["kingshold"], "fee": 130, "upkeep": 3,
       "requires": {"min_level": 10, "min_gen": 25, "flags": []},
       "bonus": {"mag": 0.1},
-      "hint": "The barkeep says an elf comes to Kingshold whenever the barrows grow restless."
+      "hint": "The barkeep says an elf comes to Kingshold whenever the barrows grow restless.",
+      "retires_to": "hollow_barrow",
+      "farewell": "{name} thanks {heir} politely and goes to keep the dead company at {place}, at {age}."
     },
     {
       "id": "corwin_saltmere", "name": "Corwin Saltmere", "successor": "{given} Saltmere",
-      "race": "half_elf", "class": "arcane_trickster",
+      "race": "half_elf", "class": "arcane_trickster", "age": [40, 60],
       "personality": "A charming liar with marked cards, a knife in each boot and a spell for the third.",
       "where": ["brinehaven"], "fee": 90, "upkeep": 2,
       "requires": {"min_level": 8, "min_gen": 1, "flags": []},
-      "hint": "A smiling half-elf deals cards to himself. He works only for someone worth robbing."
+      "hint": "A smiling half-elf deals cards to himself. He works only for someone worth robbing.",
+      "retires_to": "brinehaven",
+      "farewell": "{name} wins one last pot, pockets the marked deck and retires to {place} at {age}."
     },
     {
       "id": "old_netta", "name": "Old Netta", "successor": "Young {given}",
-      "race": "gnome", "class": "druid",
+      "race": "gnome", "class": "druid", "age": [160, 166], "successor_age": [60, 90],
       "personality": "Mends nets, bones and quarrels, in that order.",
       "where": ["brinehaven"], "fee": 60, "upkeep": 2,
       "requires": {"min_level": 4, "min_gen": 1, "flags": []},
-      "hint": "An old gnome mending a net says she will not walk the roads with a child."
+      "hint": "An old gnome mending a net says she will not walk the roads with a child.",
+      "retires_to": "brinehaven",
+      "farewell": "{name} mends one last net, then one last quarrel, and retires to {place} at {age}."
     },
     {
       "id": "grull_one_tusk", "name": "Grull One-Tusk", "successor": "{given} One-Tusk",
-      "race": "orc", "class": "monk",
+      "race": "orc", "class": "monk", "age": [22, 30],
       "personality": "Walked away from the war-camps to learn stillness. Mostly learned to punch.",
       "where": ["brinehaven", "ironford"], "fee": 50, "upkeep": 1,
-      "requires": {"min_level": 2, "min_gen": 1, "flags": []}
+      "requires": {"min_level": 2, "min_gen": 1, "flags": []},
+      "retires_to": "brinehaven",
+      "farewell": "{name} sits down on the sea wall at {place} at {age} and, at last, learns stillness."
     },
     {
       "id": "pale_warden", "name": "The Pale Warden", "successor": "{given} of the White Scale",
-      "race": "half_dragon", "class": "templar",
+      "race": "half_dragon", "class": "templar", "age": [380, 420], "lifespan": 700, "successor_age": [140, 200],
       "personality": "Kept watch over the Rift seal longer than anyone remembers. Now it is open, she means to see what comes out.",
       "where": ["kingshold"], "fee": 360, "upkeep": 8,
       "requires": {"min_level": 45, "min_gen": 60, "flags": ["rift_open"]},
       "bonus": {"all_stats": 0.5, "hp": 0.4},
-      "hint": "A tall figure in white scale sits alone, facing north towards Highcrag. She will ride only with the house that opens the Rift."
+      "hint": "A tall figure in white scale sits alone, facing north towards Highcrag. She will ride only with the house that opens the Rift.",
+      "retires_to": "highcrag",
+      "farewell": "{name} turns north one last time and goes back to keep watch at {place}, at {age}."
     }
   ]
 }

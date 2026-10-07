@@ -57,6 +57,8 @@ static func step(d: GameDynasty) -> bool:
 		elif not target.is_empty() and hp_frac > 0.85:
 			var path := d.world.route_to(target["lair"], d.flags)
 			d.travel(path[0])
+		elif GameParty.bot_tavern(d) != "" and hp_frac > 0.85:
+			d.travel(GameParty.bot_tavern(d))
 		elif GameEvents.bot_wants_explore(d):
 			d.explore()
 			if d.has_pending_event():

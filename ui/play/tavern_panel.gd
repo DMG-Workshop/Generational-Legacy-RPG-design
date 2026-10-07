@@ -2,6 +2,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const OLD := Color("#e8a05a")
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
@@ -78,6 +79,12 @@ func _rumour(id: String) -> String:
 		var back := int(r["gen"]) + int(GameData.bal("companion_kin_gens"))
 		if d.gen < back:
 			return "The barkeep keeps a cup turned down for %s. %s may take up the work from generation %d." % [(r["fallen"] as Array).back(), r["name"], back]
+	if r.get("status", "") in ["dead", "retired"] and not (r.get("past", []) as Array).is_empty():
+		var e: Dictionary = (r["past"] as Array).back()
+		var gone := "The barkeep keeps a cup turned down for %s, who died of old age at %d." % [e["name"], int(e["age"])]
+		if e["end"] == "retired":
+			gone = "%s has retired to %s, and the regulars still ask after them." % [e["name"], p._place_name(id)]
+		return "%s %s" % [gone, p.locked_reason(d, id)]
 	var hint: String = GameParty.def(id).get("hint", "Someone at the back keeps their own counsel.")
 	return "%s %s" % [hint, p.locked_reason(d, id)]
 
@@ -158,6 +165,23 @@ func _skills(u: GameHeir) -> String:
 	return "Skills: " + ", ".join(parts)
 
 
+## Who held this role before the one now at the table, if anyone.
+func _heritage(id: String) -> String:
+	var r: Dictionary = dynasty.party.history.get(id, {})
+	var past: Array = r.get("past", [])
+	var fallen: Array = r.get("fallen", [])
+	if not past.is_empty():
+		var e: Dictionary = past.back()
+		if e["end"] == "died":
+			return "Takes up the work of %s, who died of old age at %d." % [e["name"], int(e["age"])]
+		if e["end"] == "retired":
+			return "Takes up the work of %s, who retired at %d." % [e["name"], int(e["age"])]
+		return "Takes up the work of %s, who fell for your house." % e["name"]
+	if not fallen.is_empty():
+		return "Takes up the work of %s, who fell for your house." % " and ".join(fallen)
+	return ""
+
+
 func _offer_card(id: String) -> Control:
 	var d := dynasty
 	var p := d.party
@@ -165,12 +189,14 @@ func _offer_card(id: String) -> Control:
 	var shell := _card_shell(id)
 	var v: VBoxContainer = shell[1]
 	var side: VBoxContainer = shell[2]
-	var u := GameParty.build_unit(id, d.heir.level, d.gen, p.display_name(id))
+	var u := p.offer_unit(d, id)
 	v.add_child(Kit.label("%s  -  %s %s" % [u.name, u.race()["name"], u.cls()["name"]], 17, Kit.ACCENT))
 	var who: String = c.get("personality", "")
-	if p.history.has(id) and not (p.history[id]["fallen"] as Array).is_empty():
-		who = "Takes up the work of %s, who fell for your house. %s" % [" and ".join(p.history[id]["fallen"]), who]
+	var before := _heritage(id)
+	if before != "":
+		who = "%s %s" % [before, who]
 	v.add_child(_wrap(who, 14))
+	v.add_child(_wrap(p.age_text(d, id), 14, OLD if p.is_old(d, id) else Kit.DIM))
 	v.add_child(_wrap(_preview(u), 14))
 	v.add_child(_wrap(_skills(u), 13, Kit.DIM))
 	var fee := p.fee(d, id)
@@ -203,6 +229,7 @@ func _member_card(m: Dictionary) -> Control:
 	var u := p.unit(d, m)
 	v.add_child(Kit.label(u.name, 17, Kit.ACCENT))
 	v.add_child(Kit.label("%s %s  Lv%d" % [u.race()["name"], u.cls()["name"], u.level], 14, Kit.DIM))
+	v.add_child(_wrap(p.age_text(d, id), 13, OLD if p.is_old(d, id) else Kit.DIM))
 	v.add_child(Kit.label("HP %d / %d" % [u.hp, u.max_hp()], 13))
 	v.add_child(Kit.bar(Kit.GOOD, u.max_hp(), u.hp, Vector2(150, 8)))
 	v.add_child(Kit.label("MP %d / %d" % [u.mp, u.max_mp()], 13))
@@ -223,21 +250,46 @@ func _records() -> Array:
 	var d := dynasty
 	var p := d.party
 	var out: Array = []
+	var shown := int(GameParty.setting("past_shown"))
 	for id in p.history:
 		var r: Dictionary = p.history[id]
 		var nb := int(r["battles"])
 		var fought := "" if nb == 0 else (" (1 battle)" if nb == 1 else " (%d battles)" % nb)
+		var past: Array = r.get("past", [])
+		var earlier := int(r.get("line", 0)) - mini(past.size(), shown)
+		if earlier > 0 and not past.is_empty():
+			out.append("Before them, %d more served the house in this line." % earlier)
+		for e in past.slice(maxi(0, past.size() - shown)):
+			out.append(_past_line(id, e))
+		var who := "%s, %d%s" % [r["name"], int(p.age(d, id)), " (old)" if p.is_old(d, id) else ""]
 		match r["status"]:
 			"dismissed":
-				out.append("%s: paid off in generation %d%s. Will return without a fee." % [r["name"], int(r["gen"]), fought])
+				out.append("%s: paid off in generation %d%s. Will return without a fee." % [who, int(r["gen"]), fought])
 			"left":
-				out.append("%s: walked out unpaid in generation %d%s. Wants the full fee." % [r["name"], int(r["gen"]), fought])
+				out.append("%s: walked out unpaid in generation %d%s. Wants the full fee." % [who, int(r["gen"]), fought])
 			"fallen":
 				var fallen: Array = r["fallen"]
 				var back := int(r["gen"]) + int(GameData.bal("companion_kin_gens"))
 				var kin: String = "%s may take up the work from generation %d." % [r["name"], back] if d.gen < back else "%s is ready to take up the work." % r["name"]
-				out.append("%s: fell in generation %d%s. %s" % [fallen.back(), int(r["gen"]), fought, kin])
+				if past.is_empty():
+					out.append("%s: fell in generation %d%s. %s" % [fallen.back(), int(r["gen"]), fought, kin])
+				else:
+					out.append(kin)
+			"dead", "retired":
+				if GameParty.def(id).has("successor"):
+					var lock := p.locked_reason(d, id)
+					out.append(lock if lock != "" else "%s is ready to take up the work." % r["name"])
 	return out
+
+
+func _past_line(id: String, e: Dictionary) -> String:
+	match e["end"]:
+		"fell":
+			return "%s fell in battle at %d, in year %d." % [e["name"], int(e["age"]), int(e["year"])]
+		"retired":
+			return "%s retired to %s at %d, in year %d." % [e["name"], dynasty.party._place_name(id), int(e["age"]), int(e["year"])]
+	var where := "in the house's service" if bool(e.get("served", true)) else "after leaving the house's service"
+	return "%s died of old age at %d in year %d, %s." % [e["name"], int(e["age"]), int(e["year"]), where]
 
 
 func _hire(id: String) -> void:
@@ -267,6 +319,7 @@ static func summary_lines(d: GameDynasty) -> Array:
 	var out: Array = []
 	for m in d.party.members:
 		var u := d.party.unit(d, m)
+		var years := "%d, old" % int(d.party.age(d, m["id"])) if d.party.is_old(d, m["id"]) else "%d" % int(d.party.age(d, m["id"]))
 		# A no-break space keeps "HP" with its numbers when the line wraps.
-		out.append("%s, %s %s Lv%d  HP\u00a0%d/%d" % [u.name, u.race()["name"], u.cls()["name"], u.level, u.hp, u.max_hp()])
+		out.append("%s (%s), %s %s Lv%d  HP\u00a0%d/%d" % [u.name, years, u.race()["name"], u.cls()["name"], u.level, u.hp, u.max_hp()])
 	return out
