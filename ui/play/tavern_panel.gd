@@ -230,12 +230,12 @@ func _member_card(m: Dictionary) -> Control:
 	v.add_child(Kit.label(u.name, 17, Kit.ACCENT))
 	v.add_child(Kit.label("%s %s  Lv%d" % [u.race()["name"], u.cls()["name"], u.level], 14, Kit.DIM))
 	v.add_child(_wrap(p.age_text(d, id), 13, OLD if p.is_old(d, id) else Kit.DIM))
-	v.add_child(Kit.label("HP %d / %d" % [u.hp, u.max_hp()], 13))
-	v.add_child(Kit.bar(Kit.GOOD, u.max_hp(), u.hp, Vector2(150, 8)))
-	v.add_child(Kit.label("MP %d / %d" % [u.mp, u.max_mp()], 13))
-	v.add_child(Kit.bar(Kit.MP_BLUE, maxf(1.0, u.max_mp()), u.mp, Vector2(150, 6)))
-	var fought := int(m["battles"]) + int(p.history.get(id, {}).get("battles", 0))
-	v.add_child(Kit.label("Upkeep %d a year   Battles %d" % [p.upkeep(d, id), fought], 13, Kit.DIM))
+	# Health and mana side by side keep a full party of three on screen.
+	var gauges := HBoxContainer.new()
+	gauges.add_theme_constant_override("separation", 12)
+	v.add_child(gauges)
+	gauges.add_child(_gauge("HP %d / %d" % [u.hp, u.max_hp()], Kit.GOOD, u.max_hp(), u.hp))
+	gauges.add_child(_gauge("MP %d / %d" % [u.mp, u.max_mp()], Kit.MP_BLUE, maxf(1.0, u.max_mp()), u.mp))
 	var label := "Confirm" if confirm_id == id else "Dismiss"
 	var btn := Kit.button(label, func(): _dismiss(id), Vector2(120, 34))
 	btn.tooltip_text = "Pay off %s. They go home and will come back without a fee." % u.name
@@ -243,7 +243,20 @@ func _member_card(m: Dictionary) -> Control:
 	if confirm_id == id:
 		var home: Array = GameParty.def(id).get("where", [])
 		side.add_child(_wrap("Back to %s?" % GameWorld.place(home[0]).get("name", "home"), 12, Kit.DIM))
+	else:
+		var fought := int(m["battles"]) + int(p.history.get(id, {}).get("battles", 0))
+		side.add_child(Kit.label("Upkeep %d a year" % p.upkeep(d, id), 12, Kit.DIM))
+		side.add_child(Kit.label("Battles %d" % fought, 12, Kit.DIM))
 	return shell[0]
+
+
+func _gauge(text: String, color: Color, max_value: float, value: float) -> VBoxContainer:
+	var g := VBoxContainer.new()
+	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	g.add_theme_constant_override("separation", 2)
+	g.add_child(Kit.label(text, 13))
+	g.add_child(Kit.bar(color, max_value, value, Vector2(0, 8)))
+	return g
 
 
 func _records() -> Array:
@@ -283,13 +296,15 @@ func _records() -> Array:
 
 
 func _past_line(id: String, e: Dictionary) -> String:
+	var nb := int(e.get("battles", 0))
+	var fought := "" if nb == 0 else (" (1 battle)" if nb == 1 else " (%d battles)" % nb)
 	match e["end"]:
 		"fell":
-			return "%s fell in battle at %d, in year %d." % [e["name"], int(e["age"]), int(e["year"])]
+			return "%s fell in battle at %d, in year %d%s." % [e["name"], int(e["age"]), int(e["year"]), fought]
 		"retired":
-			return "%s retired to %s at %d, in year %d." % [e["name"], dynasty.party._place_name(id), int(e["age"]), int(e["year"])]
+			return "%s retired to %s at %d, in year %d%s." % [e["name"], dynasty.party._place_name(id), int(e["age"]), int(e["year"]), fought]
 	var where := "in the house's service" if bool(e.get("served", true)) else "after leaving the house's service"
-	return "%s died of old age at %d in year %d, %s." % [e["name"], int(e["age"]), int(e["year"]), where]
+	return "%s died of old age at %d in year %d, %s%s." % [e["name"], int(e["age"]), int(e["year"]), where, fought]
 
 
 func _hire(id: String) -> void:
@@ -319,7 +334,9 @@ static func summary_lines(d: GameDynasty) -> Array:
 	var out: Array = []
 	for m in d.party.members:
 		var u := d.party.unit(d, m)
-		var years := "%d, old" % int(d.party.age(d, m["id"])) if d.party.is_old(d, m["id"]) else "%d" % int(d.party.age(d, m["id"]))
+		var years := str(int(d.party.age(d, m["id"])))
+		if d.party.is_old(d, m["id"]):
+			years += ", " + d.party.old_text(d, m["id"])
 		# A no-break space keeps "HP" with its numbers when the line wraps.
 		out.append("%s (%s), %s %s Lv%d  HP\u00a0%d/%d" % [u.name, years, u.race()["name"], u.cls()["name"], u.level, u.hp, u.max_hp()])
 	return out

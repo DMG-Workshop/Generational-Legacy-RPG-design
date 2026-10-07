@@ -167,8 +167,14 @@ func decline(d: GameDynasty, id: String) -> float:
 func age_text(d: GameDynasty, id: String) -> String:
 	var text := "Age %d of ~%d" % [int(age(d, id)), int(round(lifespan(d, id)))]
 	if is_old(d, id):
-		text += ", old: %d%% weaker" % int(round(decline(d, id) * 100.0))
+		text += ", " + old_text(d, id)
 	return text
+
+
+## "old" and, once it shows, how much weaker: "old: 12% weaker".
+func old_text(d: GameDynasty, id: String) -> String:
+	var pct := int(round(decline(d, id) * 100.0))
+	return "old" if pct == 0 else "old: %d%% weaker" % pct
 
 
 func _place_name(id: String) -> String:
@@ -456,9 +462,12 @@ func _end(d: GameDynasty, id: String, how: String, msgs: Array) -> void:
 	msgs.append(text)
 
 
-## The holder's story is over: keep it in the record and clear their age for whoever comes next.
+## The holder's story is over: keep it in the record and clear their age and battles for whoever
+## comes next.
 func _close_line(_d: GameDynasty, id: String, entry: Dictionary) -> void:
 	var rec: Dictionary = history[id]
+	entry["battles"] = int(rec.get("battles", 0))
+	rec["battles"] = 0
 	var past: Array = rec.get("past", [])
 	past.append(entry)
 	rec["past"] = past.slice(maxi(0, past.size() - int(setting("past_kept"))))
@@ -475,7 +484,14 @@ func on_succession(d: GameDynasty, msgs: Array) -> void:
 	rest(d)
 	var names: Array = members.map(func(m): return m["name"])
 	var one := names.size() == 1
-	msgs.append("%s stay%s with the family and swear%s to serve %s." % [" and ".join(names), "s" if one else "", "s" if one else "", d.heir.name])
+	msgs.append("%s stay%s with the family and swear%s to serve %s." % [names_text(names), "s" if one else "", "s" if one else "", d.heir.name])
+
+
+## "Bren", "Bren and Maddy", "Bren, Maddy and Oriel".
+static func names_text(names: Array) -> String:
+	if names.size() <= 1:
+		return "".join(PackedStringArray(names))
+	return "%s and %s" % [", ".join(PackedStringArray(names.slice(0, names.size() - 1))), names.back()]
 
 
 # ---------------------------------------------------------------- battle
@@ -540,50 +556,35 @@ static func bot_tick(d: GameDynasty) -> void:
 			if p.upkeep(d, m["id"]) > p.upkeep(d, dear["id"]):
 				dear = m
 		p.dismiss(d, dear["id"])
-	if not d.world.has_service("tavern"):
+	var pick := _bot_choice(d)
+	if pick == "":
 		return
-	# Swap whoever has grown too frail to fight for someone fresh at this table, never taking
-	# the frail back. Away from a tavern they fight on: a frail companion beats none.
-	for m in p.members.duplicate():
-		if p.decline(d, m["id"]) >= float(setting("bot_dismiss_decline")) and _bot_choice(d, d.world.location) != "":
-			p.dismiss(d, m["id"])
-	if p.members.size() < max_size() and _bot_choice(d, d.world.location) != "":
-		p.hire(d, _bot_choice(d, d.world.location))
+	# Fill an empty place first. A full party swaps whoever has grown too frail to fight for
+	# someone fresh, never taking the frail back. Away from a tavern a frail companion beats none.
+	if p.members.size() >= max_size():
+		var frail := ""
+		for m in p.members:
+			if p.decline(d, m["id"]) >= float(setting("bot_dismiss_decline")) and (frail == "" or p.decline(d, m["id"]) > p.decline(d, frail)):
+				frail = m["id"]
+		if frail == "":
+			return
+		p.dismiss(d, frail)
+	p.hire(d, pick)
 
 
-## The cheapest companion at `place` the autopilot would hire now: unlocked, not frail, and
+## The cheapest companion at this tavern the autopilot would hire now: unlocked, not frail, and
 ## affordable with a reserve for potions and years of wages kept. "" if none.
-static func _bot_choice(d: GameDynasty, place: String) -> String:
+static func _bot_choice(d: GameDynasty) -> String:
 	var p := d.party
 	var best := ""
-	for id in p.at_tavern(d, place):
-		if p.locked_reason(d, id) == "" and p.decline(d, id) < float(setting("bot_dismiss_decline")) and (best == "" or p.fee(d, id) < p.fee(d, best)):
+	for id in p.available_here(d):
+		if p.decline(d, id) < float(setting("bot_dismiss_decline")) and (best == "" or p.fee(d, id) < p.fee(d, best)):
 			best = id
 	if best == "":
 		return ""
 	var years := float(GameData.bal("companion_bot_reserve_years"))
 	var reserve := d.potion_price() * 3 + int(float(p.upkeep_total(d) + p.upkeep(d, best)) * years)
 	return best if d.heir.gold >= p.fee(d, best) + reserve else ""
-
-
-## Where the autopilot heads to fill a gap in the party: the next place on the road to the
-## nearest tavern town with someone it would hire. "" when the party is full or no one is.
-static func bot_tavern(d: GameDynasty) -> String:
-	if d.state != "life" or d.party.members.size() >= max_size():
-		return ""
-	if d.world.has_service("tavern") and _bot_choice(d, d.world.location) != "":
-		return ""
-	var best: Array = []
-	tavern("")
-	var towns: Array = _taverns.keys()
-	towns.sort()
-	for town in towns:
-		if town == d.world.location or _bot_choice(d, town) == "":
-			continue
-		var path := d.world.route_to(town, d.flags)
-		if not path.is_empty() and (best.is_empty() or path.size() < best.size()):
-			best = path
-	return "" if best.is_empty() else str(best[0])
 
 
 # ---------------------------------------------------------------- save / load
@@ -625,7 +626,8 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 		for e in r.get("past", []):
 			if typeof(e) == TYPE_DICTIONARY:
 				rec["past"].append({"name": str(e.get("name", "")), "end": str(e.get("end", "died")), "age": int(e.get("age", 0)),
-					"year": int(e.get("year", 1)), "gen": int(e.get("gen", 1)), "served": bool(e.get("served", true))})
+					"year": int(e.get("year", 1)), "gen": int(e.get("gen", 1)), "served": bool(e.get("served", true)),
+					"battles": int(e.get("battles", 0))})
 		for key in ["born", "rolled", "back_year"]:
 			if r.has(key):
 				rec[key] = float(r[key])

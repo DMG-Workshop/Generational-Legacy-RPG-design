@@ -69,10 +69,8 @@ func _ready() -> void:
 	call_deferred("_layout")
 	_say("A battle begins!")
 	if not b.allies.is_empty():
-		var party: PackedStringArray = []
-		for a in b.allies:
-			party.append(a.name)
-		_say("%s fight%s beside %s." % [" and ".join(party), "s" if party.size() == 1 else "", d.heir.name])
+		var party: Array = b.allies.map(func(a): return a.name)
+		_say("%s fight%s beside %s." % [GameParty.names_text(party), "s" if party.size() == 1 else "", d.heir.name])
 
 
 func _say(text: String) -> void:
@@ -205,11 +203,15 @@ func _layout() -> void:
 		return
 	var sz := arena.size
 	hero_node.position = Vector2(sz.x * 0.16, sz.y * 0.5 - 90)
-	# Companions stand in a column between the hero and the foes.
+	# Companions flank the hero, above and below; a third stands forward between them.
 	var na := ally_nodes.size()
 	for i in na:
 		var y := sz.y * 0.5 - 80.0 if na == 1 else sz.y * 0.5 - 195.0 + float(i) * 215.0
-		ally_nodes[i]["root"].position = Vector2(sz.x * 0.30 + float(i % 2) * 24.0, y)
+		var x := sz.x * 0.30 + float(i % 2) * 24.0
+		if i == 2:
+			x = sz.x * 0.43
+			y = sz.y * 0.5 - 80.0
+		ally_nodes[i]["root"].position = Vector2(x, y)
 	var n := enemy_nodes.size()
 	for i in n:
 		var en: Dictionary = enemy_nodes[i]

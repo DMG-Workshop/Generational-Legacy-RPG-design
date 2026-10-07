@@ -165,7 +165,12 @@ func test_old_age_and_decline() -> void:
 	ok(absf(u.attack_power() / young.attack_power() - share) < 0.01, "an old companion hits that much softer (%.3f vs %.3f)" % [u.attack_power() / young.attack_power(), share])
 	ok(absf(float(u.max_hp()) / float(young.max_hp()) - share) < 0.02, "and has that much less health")
 	ok(p.age_text(d, "bren_cask").contains("old: %d%% weaker" % int(round(p.decline(d, "bren_cask") * 100.0))), "the tavern line says so: %s" % p.age_text(d, "bren_cask"))
-	ok(str(Tavern.summary_lines(d)[0]).begins_with("Bren Cask (%d, old), Human Warrior" % int(p.age(d, "bren_cask"))), "the life screen says so: %s" % Tavern.summary_lines(d)[0])
+	ok(str(Tavern.summary_lines(d)[0]).begins_with("Bren Cask (%d, old: %d%% weaker), Human Warrior" % [int(p.age(d, "bren_cask")), int(round(p.decline(d, "bren_cask") * 100.0))]), "the life screen says so: %s" % Tavern.summary_lines(d)[0])
+	# Just past the threshold the toll does not show yet: "old", never "0% weaker".
+	var keep: float = rec["born"]
+	rec["born"] = d.world.year - (old + 0.1)
+	ok(p.is_old(d, "bren_cask") and p.age_text(d, "bren_cask").ends_with(", old") and str(Tavern.summary_lines(d)[0]).contains("(%d, old)" % int(p.age(d, "bren_cask"))), "newly old: %s / %s" % [p.age_text(d, "bren_cask"), Tavern.summary_lines(d)[0]])
+	rec["born"] = keep
 	# The decline is capped, however long they last.
 	rec["born"] = d.world.year - span * 3.0
 	ok(p.decline(d, "bren_cask") == float(GameParty.setting("decline_cap")), "decline capped")
@@ -197,6 +202,7 @@ func test_death_in_service() -> void:
 	var p := d.party
 	p.hire(d, "bren_cask")
 	p.hire(d, "maddy_thorn")
+	p.member("bren_cask")["battles"] = 7
 	var span := p.lifespan(d, "bren_cask")
 	var msgs := _force_end(d, "bren_cask", "died")
 	ok(not p.has_member("bren_cask") and p.members.size() == 1, "Bren dies and leaves the party")
@@ -220,6 +226,15 @@ func test_death_in_service() -> void:
 	ok(text.contains("joins") and p.member("bren_cask")["name"] == rec["name"], "the successor is hired: %s" % text)
 	ok(absf(p.age(d, "bren_cask") - kin_age) < 0.001 and kin_age < p.old_age(d, "bren_cask"), "at their own age (%d)" % int(kin_age))
 	ok(p.history["bren_cask"]["past"].size() == 1, "the dead stay in the record")
+	# Battles belong to whoever fought them: Bren's stay with Bren, the successor starts at none.
+	ok(int(e["battles"]) == 7 and int(rec["battles"]) == 0, "Bren's 7 battles go with him (%d), the role starts over (%d)" % [int(e["battles"]), int(rec["battles"])])
+	var t = Tavern.new()
+	t.dynasty = d
+	var card: Control = t._member_card(p.member("bren_cask"))
+	ok(_texts(card).has("Battles 0"), "the successor's card counts no battles: %s" % str(_texts(card)))
+	card.free()
+	ok(t._records().any(func(l): return str(l).begins_with("Bren Cask died of old age at") and str(l).ends_with("in the house's service (7 battles).")), "Bren's line keeps his battles: %s" % str(t._records()))
+	t.free()
 
 
 func test_retirement_in_service() -> void:
@@ -509,26 +524,36 @@ func test_bot() -> void:
 	var p := d.party
 	d.heir.gold = 5000
 	d.heir.level = 5
-	GameParty.bot_tick(d)
-	GameParty.bot_tick(d)
-	ok(p.members.size() == 2, "the bot fills the party")
+	for i in 3:
+		GameParty.bot_tick(d)
+	ok(p.members.size() == 3, "the bot fills the party with three")
 	var first: String = p.members[0]["id"]
 	var rec: Dictionary = p.history[first]
 	rec["born"] = d.world.year - p.lifespan(d, first) * 0.98
 	ok(p.decline(d, first) >= float(GameParty.setting("bot_dismiss_decline")), "%s is frail (%.2f)" % [first, p.decline(d, first)])
 	GameParty.bot_tick(d)
-	ok(not p.has_member(first) and p.history[first]["status"] == "dismissed", "the bot sends a frail companion home")
-	ok(p.members.size() == 2, "and hires someone else (%s)" % str(p.members.map(func(m): return m["id"])))
+	ok(p.has_member(first), "with no one fresh at the table, the frail one stays")
+	d.world.visit("brinehaven")
 	GameParty.bot_tick(d)
-	ok(not p.has_member(first), "never taking the frail one back for free")
+	ok(not p.has_member(first) and p.history[first]["status"] == "dismissed", "the bot sends a frail companion home")
+	ok(p.members.size() == 3, "and hires someone else (%s)" % str(p.members.map(func(m): return m["id"])))
+	# Back home with a place free, it takes back a fit companion for free, never the frail one.
+	d.world.visit("hearthmere")
+	var fit := ""
+	for m in p.members:
+		if "hearthmere" in GameParty.def(m["id"])["where"]:
+			fit = m["id"]
+	p.dismiss(d, fit)
+	GameParty.bot_tick(d)
+	ok(p.has_member(fit) and not p.has_member(first), "rehires %s, not the frail %s" % [fit, first])
 	# When a companion dies the bot hires a replacement.
 	var other: String = p.members[0]["id"]
 	_force_end(d, other, "died")
-	ok(p.members.size() == 1, "one dies")
+	ok(p.members.size() == 2, "one dies")
 	d.world.visit("brinehaven")
 	GameParty.bot_tick(d)
-	ok(p.members.size() == 2, "the bot hires a replacement (%s)" % str(p.members.map(func(m): return m["id"])))
-	# Away from a tavern a frail companion fights on; a gap sends the autopilot to hire.
+	ok(p.members.size() == 3, "the bot hires a replacement (%s)" % str(p.members.map(func(m): return m["id"])))
+	# Away from a tavern a frail companion fights on; back in town the gaps are filled first.
 	var w := _new(82)
 	w.heir.gold = 5000
 	w.heir.level = 5
@@ -537,18 +562,13 @@ func test_bot() -> void:
 	w.party.history[old_one]["born"] = w.world.year - w.party.lifespan(w, old_one) * 0.98
 	w.world.visit("greenvale")
 	GameParty.bot_tick(w)
-	ok(w.party.has_member(old_one), "no swap in the wilds: a frail companion beats none")
-	ok(GameParty.bot_tavern(w) != "", "a gap in the party sends the autopilot towards a tavern (%s)" % GameParty.bot_tavern(w))
-	var guard := 0
-	while w.party.members.size() < 2 and guard < 12 and w.state == "life":
-		guard += 1
-		w.heir.full_heal()
-		GameBot.step(w)
-	ok(w.party.members.size() == 2 and w.world.has_service("tavern"), "and it hires there (%s, %d steps)" % [w.world.location, guard])
-	ok(GameParty.bot_tavern(w) == "", "a full party stays put")
-	w.party.members.clear()
-	w.heir.gold = 0
-	ok(GameParty.bot_tavern(w) == "", "so does an empty purse")
+	ok(w.party.has_member(old_one) and w.party.members.size() == 1, "no hiring or swapping in the wilds: a frail companion beats none")
+	w.world.visit("hearthmere")
+	GameParty.bot_tick(w)
+	GameParty.bot_tick(w)
+	ok(w.party.members.size() == 3 and w.party.has_member(old_one), "back in town the empty places are filled, the frail one kept while no one else sits there (%s)" % str(w.party.members.map(func(m): return m["id"])))
+	GameParty.bot_tick(w)
+	ok(w.party.members.size() == 3 and w.party.has_member(old_one), "and the party stays as it is")
 	# Over long autopilot runs companions die and retire, and the house keeps hiring.
 	var ends := 0
 	var hires := 0
