@@ -352,6 +352,7 @@ func rest() -> Array:
 	heir.full_heal()
 	party.rest(self)
 	var msgs: Array = ["%s rests and recovers fully." % heir.name]
+	GameDisease.on_rest(self, msgs)
 	return _finish_time("rest", msgs)
 
 
@@ -409,6 +410,7 @@ func found_family() -> Array:
 		heir.children.append(c)
 		for ev in res["events"]:
 			msgs.append("%s: %s" % [c.name, ev])
+		msgs.append_array(GameDisease.on_birth(self, c))
 	heir.family_founded = true
 	msgs.push_front("%s marries %s, %s %s. %d child%s born." % [heir.name, sp.name, sp.race()["name"], sp.cls()["name"], n, "" if n == 1 else "ren"])
 	_say(msgs[0])
@@ -603,6 +605,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		_check_milestone("midlife")
 	if heir.age >= heir.lifespan * float(GameData.bal("elder_fraction")):
 		_check_milestone("elder_years")
+	GameDisease.on_years(self, years, msgs)
 	# Covers every year since the last roll, including years lost to defeats and disasters.
 	var dies := rng.randf() < heir.old_age_death_chance(heir.hazard_age, heir.age)
 	heir.hazard_age = heir.age
@@ -716,6 +719,7 @@ func choose_heir(index: int) -> Array:
 	# Gear and carried items pass down with the house.
 	c.equipment = parent.equipment.duplicate()
 	c.inventory = parent.inventory.duplicate()
+	GameDisease.on_succession(self, parent, c, msgs)
 	c.refresh_derived()
 	c.full_heal()
 	heir = c

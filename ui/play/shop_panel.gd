@@ -3,15 +3,16 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 
-const TAB_NAMES := {"forge": "Forge", "store": "Store", "temple": "Temple", "gear": "Gear"}
+const TAB_NAMES := {"forge": "Forge", "store": "Store", "temple": "Temple", "black_market": "Black Market", "gear": "Gear"}
 const TAB_NOTES := {
 	"forge": "Weapons and armor, hammered out to order.",
-	"store": "Rings, charms and curiosities.",
-	"temple": "Blessed trinkets, and the priests' services.",
+	"store": "Rings, charms, remedies and curiosities.",
+	"temple": "Blessed trinkets, cures, and the priests' services.",
+	"black_market": "Cheap, quiet, no questions. Each deal stains the house's name.",
 	"gear": "What the heir wears and carries. Gear passes to the next heir.",
 }
 const TIER_COLORS := ["#e8e4f0", "#e8e4f0", "#7fb7ff", "#c58fe8", "#ffd75e"]
-const SLOT_HEADERS := {"weapon": "Weapons", "armor": "Armor", "trinket": "Trinkets"}
+const SLOT_HEADERS := {"weapon": "Weapons", "armor": "Armor", "trinket": "Trinkets", "remedy": "Remedies", "toxin": "Toxins", "vial": "Plague Vials"}
 const LEFT_W := 370
 
 var dynasty: GameDynasty
@@ -44,6 +45,8 @@ func _ready() -> void:
 	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # a bargain's reveal runs long
+	note.max_lines_visible = 2
 	note.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	note.custom_minimum_size = Vector2(100, 0)
 	top.add_child(note)
@@ -109,6 +112,7 @@ func _rebuild() -> void:
 			_build_gear()
 		"temple":
 			_build_temple()
+			_build_cures()
 			_build_wares("temple")
 		_:
 			_build_wares(tab)
@@ -170,16 +174,17 @@ func _build_wares(service: String) -> void:
 		rows.add_child(Kit.label("Nothing on the shelves.", 15, Kit.DIM))
 	var kinds := {}
 	for id in stock:
-		kinds[GameItems.slot_of(id)] = true
+		kinds[GameItems.kind_of(id)] = true
 	var last_slot := ""
 	for id in stock:
 		var iid: String = id
-		if kinds.size() > 1 and GameItems.slot_of(iid) != last_slot:
-			last_slot = GameItems.slot_of(iid)
+		if kinds.size() > 1 and GameItems.kind_of(iid) != last_slot:
+			last_slot = GameItems.kind_of(iid)
 			rows.add_child(_section(SLOT_HEADERS.get(last_slot, last_slot.capitalize())))
 		var cost := GameItems.price(dynasty, iid)
-		var owned := GameItems.owns(h, iid)
-		var b := Kit.button("Owned" if owned else "Buy", func(): _act(GameItems.buy(dynasty, iid)), Vector2(96, 34))
+		var stack := GameItems.stack_max(iid)
+		var owned := GameItems.owns(h, iid) if stack <= 0 else GameItems.count(h, iid) >= stack
+		var b := Kit.button(("Owned" if stack <= 0 else "Full") if owned else "Buy", func(): _act(GameItems.buy(dynasty, iid)), Vector2(96, 34))
 		b.disabled = owned or h.gold < cost
 		if not owned and h.gold < cost:
 			b.tooltip_text = "You need %d more gold." % (cost - h.gold)
@@ -218,6 +223,24 @@ func _build_temple() -> void:
 	rows.add_child(Kit.label("This life: %d cleansing%s, %d prayer%s. Each costs more than the last." % [c, "" if c == 1 else "s", p, "" if p == 1 else "s"], 13, Kit.DIM))
 
 
+## The priests cure any sickness outright; the price grows with how far it has gone.
+func _build_cures() -> void:
+	var h := dynasty.heir
+	rows.add_child(_section("Healing"))
+	if h.diseases.is_empty():
+		rows.add_child(_service_row("Cure", "%s is in good health." % h.name, "", "", Kit.TEXT, "", null))
+	for e in h.diseases:
+		var id: String = e["id"]
+		var info := GameDisease.describe_entry(e)
+		var cost := GameDisease.cure_price(dynasty, id)
+		var b := Kit.button("Cure", func(): _act(GameDisease.temple_cure(dynasty, id)), Vector2(96, 34))
+		b.disabled = h.gold < cost
+		b.tooltip_text = "The priests cure it at once."
+		var title := "%s: %s (stage %d of %d)" % [info["name"], info["stage_name"], info["stage"], info["stages"]]
+		var outlook: String = info["outlook"]
+		rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%dg" % cost, Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
+
+
 func _build_gear() -> void:
 	var h := dynasty.heir
 	rows.add_child(_section("Worn"))
@@ -234,8 +257,15 @@ func _build_gear() -> void:
 	if h.inventory.is_empty():
 		rows.add_child(Kit.label("The pack is empty.", 15, Kit.DIM))
 	var can_sell := not GameItems.shops_here(dynasty).is_empty()
+	var listed := {}
 	for id in h.inventory:
 		var iid: String = id
+		if listed.has(iid):
+			continue
+		listed[iid] = true
+		if GameItems.stack_max(iid) > 0:
+			rows.add_child(_consumable_row(iid, can_sell))
+			continue
 		var eb := Kit.button("Equip", func(): _act(GameItems.equip(dynasty, iid)), Vector2(80, 34))
 		eb.disabled = GameItems.slot_of(iid) not in GameItems.SLOTS
 		var sb := Kit.button("Sell", func(): _sell(iid), Vector2(80, 34))
@@ -246,6 +276,25 @@ func _build_gear() -> void:
 			sb.text = "Sure?"
 			sb.tooltip_text = "Click again to sell the %s. It cannot be bought back." % GameItems.item_name(iid)
 		rows.add_child(_item_row(iid, "sells %dg" % GameItems.sell_price(dynasty, iid), [eb, sb]))
+
+
+## A stack of remedies, toxins or vials: one row with the count. Remedies are taken here;
+## toxins and vials are for battle.
+func _consumable_row(id: String, can_sell: bool) -> PanelContainer:
+	var h := dynasty.heir
+	var ub := Kit.button("Use", func(): _act(GameDisease.use_remedy(dynasty, id)), Vector2(80, 34))
+	if GameDisease.remedy_power(id) > 0:
+		var cures: String = ", ".join(GameDisease.treatable_by(id).map(func(x): return GameDisease.disease_name(x)))
+		ub.disabled = GameDisease.remedy_target(h, id) == ""
+		ub.tooltip_text = ("Nothing it treats ails %s. " % h.name if ub.disabled else "") + "Treats %s." % cures
+	else:
+		ub.disabled = true
+		ub.tooltip_text = "Only in battle."
+	var sb := Kit.button("Sell", func(): _act(GameItems.sell(dynasty, id)), Vector2(80, 34))
+	sb.disabled = not can_sell
+	if not can_sell:
+		sb.tooltip_text = "No one in %s buys gear." % dynasty.world.here()["name"]
+	return _item_row(id, "sells %dg" % GameItems.sell_price(dynasty, id), [ub, sb])
 
 
 func _build_side() -> void:
@@ -266,6 +315,8 @@ func _build_side() -> void:
 	side.add_child(Kit.label("HP %d / %d" % [h.hp, h.max_hp()], 14))
 	side.add_child(Kit.label("MP %d / %d" % [h.mp, h.max_mp()], 14))
 	side.add_child(Kit.label("Potions %d    Pack %d item%s" % [h.potions, h.inventory.size(), "" if h.inventory.size() == 1 else "s"], 14))
+	if not h.diseases.is_empty():
+		side.add_child(_wrap(Kit.label("Sick: %s" % GameDisease.status_text(h), 14, Kit.BAD)))
 	side.add_child(HSeparator.new())
 	side.add_child(_wrap(Kit.label("Bought gear goes on at once if that slot is empty; otherwise it waits in the pack. Merchants buy back at a fraction of the price.", 12, Kit.DIM)))
 
@@ -302,8 +353,15 @@ func _item_row(id: String, price_text: String, buttons: Array, slot_title: Strin
 	var def := GameItems.item_def(id)
 	var tier := clampi(int(def.get("tier", 1)), 0, TIER_COLORS.size() - 1)
 	var title := "%s: %s" % [slot_title, def.get("name", id)] if slot_title != "" else str(def.get("name", id))
-	var sub := "Tier %d %s%s  -  %s" % [tier, def.get("slot", ""), ", unique" if def.get("unique", false) else "", def.get("description", "")]
+	var stack := GameItems.stack_max(id)
+	var have := GameItems.count(dynasty.heir, id)
+	if stack > 0 and have > 0:
+		title += "  x%d" % have
+	var kind := GameItems.kind_of(id) + (", carry %d" % stack if stack > 0 else "")
+	var sub := "Tier %d %s%s  -  %s" % [tier, kind, ", unique" if def.get("unique", false) else "", def.get("description", "")]
 	var effects := _effects_rich(def.get("effects", []))
+	if (def.get("effects", []) as Array).is_empty() and def.has("note"):
+		effects.text = str(def["note"])
 	return _row(title, Color(TIER_COLORS[tier]), sub, effects, price_text, buttons, "%s\n%s" % [def.get("name", id), def.get("description", "")], price_color)
 
 
