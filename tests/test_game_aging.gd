@@ -433,7 +433,7 @@ func test_tavern_lines() -> void:
 	mc.free()
 	p.dismiss(d, "bren_cask")
 	var lines: Array = t._records()
-	ok(lines.any(func(l): return str(l).begins_with("Bren Cask, %d (old): paid off" % int(p.age(d, "bren_cask")))), "a past hire's age in the records: %s" % str(lines))
+	ok(lines.any(func(l): return str(l).begins_with("Bren Cask, %d of ~%d (old): paid off" % [int(p.age(d, "bren_cask")), int(round(p.lifespan(d, "bren_cask")))])), "a past hire's age and lifespan in the records: %s" % str(lines))
 	d.world.visit("hearthmere")
 	var oc: Control = t._offer_card("bren_cask")
 	ok(_texts(oc).any(func(s): return s.contains("old: ")), "an old companion is offered as old")

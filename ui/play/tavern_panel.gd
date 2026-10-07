@@ -274,7 +274,7 @@ func _records() -> Array:
 			out.append("Before them, %d more served the house in this line." % earlier)
 		for e in past.slice(maxi(0, past.size() - shown)):
 			out.append(_past_line(id, e))
-		var who := "%s, %d%s" % [r["name"], int(p.age(d, id)), " (old)" if p.is_old(d, id) else ""]
+		var who := "%s, %d of ~%d%s" % [r["name"], int(p.age(d, id)), int(round(p.lifespan(d, id))), " (old)" if p.is_old(d, id) else ""]
 		match r["status"]:
 			"dismissed":
 				out.append("%s: paid off in generation %d%s. Will return without a fee." % [who, int(r["gen"]), fought])
