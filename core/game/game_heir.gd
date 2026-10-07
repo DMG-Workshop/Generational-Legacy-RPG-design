@@ -38,6 +38,9 @@ var equipment: Dictionary = {"weapon": "", "armor": "", "trinket": ""}   # slot 
 var inventory: Array = []    # item ids carried but not worn
 var spells: Array = []       # spell ids known (see GameCombat)
 var spell_news: Array = []   # spells learned since the dynasty last announced them
+var diseases: Array = []     # [{id, stage, years_in_stage, source}]: see GameDisease
+var tainted_gear: Array = [] # bargain gear still hiding a sickness until it is first worn
+var disease_level: int = 1   # level up to which the level-milestone sickness rolls are done
 
 
 func full_name() -> String:
@@ -73,7 +76,7 @@ func midlife_age() -> float:
 	return lifespan * float(GameData.bal("midlife_fraction"))
 
 
-## Sum of an effect stat across expressed traits, racial traits and equipped gear.
+## Sum of an effect stat across expressed traits, racial traits, equipped gear and sickness.
 func trait_total(stat: String) -> float:
 	var total := 0.0
 	for id in all_traits():
@@ -85,6 +88,8 @@ func trait_total(stat: String) -> float:
 			for e in GameItems.item_def(equipment[slot]).get("effects", []):
 				if e["stat"] == stat:
 					total += float(e["value"])
+	if not diseases.is_empty():
+		total += GameDisease.effect_total(self, stat)
 	return total
 
 
@@ -232,6 +237,7 @@ func to_dict() -> Dictionary:
 		"extra_life_used": extra_life_used, "battles_won": battles_won, "kills": kills,
 		"parent_names": parent_names, "heirloom_bonus": heirloom_bonus, "children": kids,
 		"equipment": equipment, "inventory": inventory, "spells": spells, "spell_news": spell_news,
+		"diseases": diseases, "tainted_gear": tainted_gear, "disease_level": disease_level,
 		"spouse": spouse.to_dict() if spouse != null else null,
 	}
 
@@ -258,6 +264,8 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.inventory = Array(d.get("inventory", []))
 	h.spells = Array(d["spells"]) if d.has("spells") else []
 	h.spell_news = Array(d.get("spell_news", []))
+	h.diseases = GameDisease.load_list(d.get("diseases", []))
+	h.tainted_gear = Array(d.get("tainted_gear", []))
 	h.lifespan = h.compute_lifespan()
 	# A save from an older, steeper XP curve can hold more XP than the next level now costs.
 	while h.level < int(GameData.bal("level_cap")) and h.xp >= h.xp_to_next():
@@ -265,6 +273,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 		h.level += 1
 	if not d.has("spells"):   # saves from before the spellbook: the heir knows what their level allows
 		h.learn_spells()
+	h.disease_level = int(d.get("disease_level", h.level))
 	for c in d["children"]:
 		h.children.append(GameHeir.from_dict(c))
 	if d["spouse"] != null:

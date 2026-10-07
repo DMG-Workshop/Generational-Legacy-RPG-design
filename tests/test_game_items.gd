@@ -58,7 +58,7 @@ func _test_stock() -> void:
 			if s == "forge":
 				_check(it["slot"] in ["weapon", "armor"], "forge sells weapons and armour")
 			else:
-				_check(it["slot"] == "trinket", "%s sells trinkets" % s)
+				_check(it["slot"] == "trinket" or it.get("kind", "") == "remedy", "%s sells trinkets and remedies" % s)
 	d.world.visit("kingshold")
 	var forge3 := GameItems.stock(d, "forge")
 	_check("mithril_blade" in forge3 and "plate_armor" in forge3, "kingshold forge sells tier 3")

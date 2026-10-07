@@ -91,10 +91,8 @@ func _ready() -> void:
 	call_deferred("_layout")
 	_say("A battle begins!")
 	if not b.allies.is_empty():
-		var party: PackedStringArray = []
-		for a in b.allies:
-			party.append(a.name)
-		_say("%s fight%s beside %s." % [" and ".join(party), "s" if party.size() == 1 else "", d.heir.name])
+		var party: Array = b.allies.map(func(a): return a.name)
+		_say("%s fight%s beside %s." % [GameParty.names_text(party), "s" if party.size() == 1 else "", d.heir.name])
 
 
 ## "Dire Wolf x3, Elite Dire Wolf" - the same foe is counted, not repeated.
