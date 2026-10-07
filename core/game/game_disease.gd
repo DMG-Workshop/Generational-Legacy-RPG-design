@@ -525,7 +525,9 @@ static func on_wear(d: GameDynasty, item_id: String) -> String:
 	if item_id not in h.tainted_gear:
 		return ""
 	h.tainted_gear.erase(item_id)
-	var id: String = str(GameItems.item_def(item_id)["taint"]["disease"])
+	if not is_bargain(item_id):   # a save made before the data dropped this taint
+		return ""
+	var id: String = str(GameItems.item_def(item_id)["taint"].get("disease", ""))
 	match _expose(d, h, id, 1.0):
 		"caught":
 			infect(h, id, "bargain")

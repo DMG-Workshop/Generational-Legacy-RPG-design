@@ -682,6 +682,13 @@ func _test_bargains() -> void:
 		GameItems.buy(t, "dead_mans_hauberk")
 		tainted += 1 if t.heir.tainted_gear.has("dead_mans_hauberk") else 0
 	_check(absf(float(tainted) / 200.0 - saved) < 0.1, "bargain taint rate near %.2f (%d of 200)" % [saved, tainted])
+	# A save can list gear whose taint the data has since dropped: wearing it is harmless.
+	var s := _fresh(91)
+	s.heir.inventory = ["steel_sword"]
+	s.heir.tainted_gear = ["steel_sword"]
+	var sick := s.heir.diseases.size()
+	msg = GameItems.equip(s, "steel_sword")
+	_check(s.heir.tainted_gear.is_empty() and s.heir.diseases.size() == sick and s.heir.equipment["weapon"] == "steel_sword" and not "reason" in msg and not "carried" in msg, "a stale taint is dropped quietly: %s" % msg)
 
 
 func _test_bot() -> void:
