@@ -15,6 +15,7 @@ var hero_node: Control
 var hero_hp: ProgressBar
 var hero_mp: ProgressBar
 var hero_label: Label
+var hero_info: Label           # the heir's HP and MP in numbers, as companions show theirs
 var hero_chips: HBoxContainer
 var enemy_nodes: Array = []    # [{root, body, hp, sel, mark, chips, w, h}]
 var ally_nodes: Array = []     # [{root, body, hp, mp, info, ko, down, chips}] - companions, same order as b.allies
@@ -128,7 +129,7 @@ func _chips() -> HBoxContainer:
 func _build_actors() -> void:
 	var cls := d.heir.cls()
 	hero_node = Control.new()
-	hero_node.size = Vector2(124, 192)
+	hero_node.size = Vector2(124, 208)
 	var hero_body := ColorRect.new()
 	hero_body.color = Color(cls["color"])
 	hero_body.size = Vector2(80, 110)
@@ -144,14 +145,17 @@ func _build_actors() -> void:
 	hero_label.size = Vector2(124, 20)
 	hero_label.clip_text = true
 	hero_node.add_child(hero_label)
+	hero_info = Kit.label("", 12, Kit.DIM)
+	hero_info.position = Vector2(0, 165)
+	hero_node.add_child(hero_info)
 	hero_hp = _thin_bar(Kit.GOOD, d.heir.max_hp(), d.heir.hp, Vector2(124, 9))
-	hero_hp.position = Vector2(0, 167)
+	hero_hp.position = Vector2(0, 184)
 	hero_node.add_child(hero_hp)
 	hero_mp = _thin_bar(Kit.MP_BLUE, maxf(1.0, d.heir.max_mp()), d.heir.mp, Vector2(124, 5))
-	hero_mp.position = Vector2(0, 178)
+	hero_mp.position = Vector2(0, 195)
 	hero_node.add_child(hero_mp)
 	hero_chips = _chips()
-	hero_chips.position = Vector2(0, 186)
+	hero_chips.position = Vector2(0, 203)
 	hero_node.add_child(hero_chips)
 	arena.add_child(hero_node)
 
@@ -680,14 +684,14 @@ func _play_one(ev: Dictionary) -> void:
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 				_float_text(hero_node.position + Vector2(40, 0), _hurt_text(ev), Kit.BAD)
 				_flash(hero_node.get_child(0))
-				hero_hp.value -= float(ev["amount"])
+				_step_heir_hp(-int(ev["amount"]))
 		"heal":
 			if ev["side"] == "ally":
 				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), GameText.signed(int(ev["amount"])), Kit.GOOD)
 				_step_ally_hp(ev["ally"], int(ev["amount"]))
 			else:
 				_float_text(hero_node.position + Vector2(40, 0), GameText.signed(int(ev["amount"])), Kit.GOOD)
-				hero_hp.value += float(ev["amount"])
+				_step_heir_hp(int(ev["amount"]))
 		"tick":
 			var def := GameCombat.status_def(str(ev["id"]))
 			var heal: bool = ev.get("heal", false)
@@ -780,7 +784,16 @@ func _step_ref_hp(ref: String, delta: int) -> void:
 			var bar: ProgressBar = enemy_nodes[i]["hp"]
 			bar.value = clampf(bar.value + float(delta), 0.0, bar.max_value)
 		_:
-			hero_hp.value += float(delta)
+			_step_heir_hp(delta)
+
+
+func _step_heir_hp(delta: int) -> void:
+	hero_hp.value = clampf(hero_hp.value + float(delta), 0.0, hero_hp.max_value)
+	_heir_info(int(hero_hp.value))
+
+
+func _heir_info(hp: int) -> void:
+	hero_info.text = "HP %s  MP %s" % [GameText.num(hp), GameText.num(d.heir.mp)]
 
 
 ## Bars follow the blows one by one; _update_view snaps them to the true values afterwards.
@@ -881,6 +894,7 @@ func _update_view() -> void:
 	hero_hp.value = d.heir.hp
 	hero_mp.max_value = maxf(1.0, d.heir.max_mp())
 	hero_mp.value = d.heir.mp
+	_heir_info(d.heir.hp)
 	_update_marks()
 	_refresh_chips()
 	for i in enemy_nodes.size():

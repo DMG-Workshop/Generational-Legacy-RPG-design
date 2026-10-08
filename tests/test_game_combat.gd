@@ -444,10 +444,18 @@ func test_shield_regen_haste() -> void:
 	b.enemies[0]["atk"] = float(cap) * 10.0 + d.heir.defense() * 0.6
 	b.weather = {"dodge": -1.0}
 	b.events = []
+	var log0 := b.log.size()
 	b._enemy_act(0)
 	var dmg: Array = b.events.filter(func(ev): return ev["type"] == "damage" and ev["side"] == "player")
 	ok(dmg.size() == 1 and int(dmg[0]["absorbed"]) == cap and d.heir.hp == hp - int(dmg[0]["amount"]), "the shield soaks its fill, the rest gets through")
 	ok(not b.has_status("heir", "shield"), "a spent shield is gone")
+	var told: Array = b.log.slice(log0)
+	ok(told.size() >= 2 and str(told[0]).find("(%d absorbed)" % cap) >= 0 and str(told[1]).find("fades") >= 0, "the blow is told with what the ward took, then the ward fades: %s" % str(told.slice(0, 2)))
+	b.apply_status("heir", "shield", 0.5, 3, "heir")
+	b.enemies[0]["atk"] = d.heir.defense() * 0.6 + 10.0
+	log0 = b.log.size()
+	b._enemy_act(0)
+	ok(str(b.log[log0]).find("and the ward absorbs all") >= 0, "a blow the ward takes whole is told so: %s" % str(b.log[log0]))
 	# Regeneration heals as the turn begins.
 	d.heir.hp = 10
 	b.statuses = {}
@@ -1001,6 +1009,7 @@ func _ui_tests() -> void:
 	await _frames(6)
 	var view: Control = app.current
 	ok(view.enemy_nodes.size() == 5 and view.ally_nodes.size() == 3, "five foes and three companions on screen")
+	ok(view.hero_info.text == "HP %s  MP %s" % [GameText.num(d.heir.hp), GameText.num(d.heir.mp)], "the heir's HP and MP in numbers: %s" % view.hero_info.text)
 	var figures: Array = [["the heir", view.hero_node]]
 	for i in 3:
 		figures.append(["companion %d" % i, view.ally_nodes[i]["root"]])

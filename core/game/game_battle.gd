@@ -470,8 +470,29 @@ func _tick_heal(ref: String, n: int, id: String) -> void:
 		_say(_status_text(GameCombat.status_def(id), "tick", ref, gained))
 
 
-## A shield soaks up damage before HP does; returns the amount it absorbed.
-func _absorb(ref: String, n: int) -> int:
+## What a unit's wards can still soak.
+func _ward(ref: String) -> int:
+	var t := 0
+	for inst in status_list(ref):
+		if GameCombat.status_def(inst["id"]).get("absorb", false):
+			t += int(floor(float(inst["amount"])))
+	return t
+
+
+## "Grimfang hits Tess for 50 (18 absorbed)." - told before a spent ward fades.
+func _say_blow(who: String, whom: String, lost: int, absorbed: int, crit: bool) -> void:
+	var tail := " (CRIT!)" if crit else ""
+	if absorbed <= 0:
+		_say("%s hits %s for %d%s." % [who, whom, lost, tail])
+	elif lost > 0:
+		_say("%s hits %s for %d (%d absorbed)%s." % [who, whom, lost, absorbed, tail])
+	else:
+		_say("%s hits %s, and the ward absorbs all %d." % [who, whom, absorbed])
+
+
+## A shield soaks up damage before HP does; returns the amount it absorbed. A blow tells the
+## absorbed share in its own line (`tell` false); a tick leaves it to the ward.
+func _absorb(ref: String, n: int, tell: bool = true) -> int:
 	var total := 0
 	for inst in status_list(ref).duplicate():
 		if n - total <= 0:
@@ -482,7 +503,7 @@ func _absorb(ref: String, n: int) -> int:
 		var take := mini(n - total, int(floor(float(inst["amount"]))))
 		inst["amount"] = float(inst["amount"]) - float(take)
 		total += take
-		if take > 0:
+		if take > 0 and tell:
 			_say(_status_text(def, "absorb", ref, take))
 		if float(inst["amount"]) < 1.0:
 			remove_status(ref, inst["id"], "end")
@@ -582,11 +603,12 @@ func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: 
 	var shatter := _shatter(ref)
 	if shatter > 0.0:
 		amount = int(round(float(amount) * (1.0 + shatter)))
-	var absorbed := _absorb(ref, amount)
+	var absorbed := mini(amount, _ward(ref))
 	var hp_before: int = e["hp"]
 	events.append({"type": "damage", "side": "enemy", "index": idx, "amount": amount - absorbed, "crit": r["crit"], "by": by,
 		"cast": cast, "element": element, "shatter": shatter > 0.0, "absorbed": absorbed})
-	_say("%s hits %s for %d%s." % [_unit(by).name, e["name"], amount - absorbed, " (CRIT!)" if r["crit"] else ""])
+	_say_blow(_unit(by).name, e["name"], amount - absorbed, absorbed, r["crit"])
+	_absorb(ref, amount, false)
 	_lose_hp(ref, amount - absorbed)
 	if e["hp"] > 0:
 		_after_blow(ref)
@@ -975,9 +997,10 @@ func _enemy_act(i: int) -> void:
 		dmg *= 0.5
 	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult("heir") * (1.0 + _shatter("heir"))
 	var amount := maxi(1, int(round(dmg)))
-	var absorbed := _absorb("heir", amount)
+	var absorbed := mini(amount, _ward("heir"))
 	events.append({"type": "damage", "side": "player", "index": i, "amount": amount - absorbed, "crit": false, "absorbed": absorbed})
-	_say("%s hits %s for %d%s." % [e["name"], heir.name, amount - absorbed, " (%d absorbed)" % absorbed if absorbed > 0 else ""])
+	_say_blow(e["name"], heir.name, amount - absorbed, absorbed, false)
+	_absorb("heir", amount, false)
 	_lose_hp("heir", amount - absorbed)
 	if heir.hp > 0:
 		_after_blow("heir")
@@ -998,9 +1021,10 @@ func _enemy_hit_ally(i: int, ai: int) -> void:
 		dmg *= 1.0 - clampf(a.trait_total("fire_resistance"), 0.0, 0.8)
 	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult(ref) * (1.0 + _shatter(ref))
 	var amount := maxi(1, int(round(dmg)))
-	var absorbed := _absorb(ref, amount)
+	var absorbed := mini(amount, _ward(ref))
 	events.append({"type": "damage", "side": "ally", "index": i, "ally": ai, "amount": amount - absorbed, "crit": false, "absorbed": absorbed})
-	_say("%s hits %s for %d%s." % [e["name"], a.name, amount - absorbed, " (%d absorbed)" % absorbed if absorbed > 0 else ""])
+	_say_blow(e["name"], a.name, amount - absorbed, absorbed, false)
+	_absorb(ref, amount, false)
 	_lose_hp(ref, amount - absorbed)
 	if a.hp > 0:
 		_after_blow(ref)
