@@ -435,6 +435,16 @@ func test_history_folding() -> void:
 	var e := _reload(d)
 	ok(JSON.stringify(e.to_dict()) == JSON.stringify(d.to_dict()), "a folded history round-trips exactly")
 	ok(e.ancestor_count() == 2300 and e.ages.hall == d.ages.hall, "the count and the hall survive a reload")
+	# An Age's legends are told in the order they fell, the founder's first.
+	_override("history_full_keep", 2)
+	var f := _new(17)
+	for i in 5:
+		f.heir.kills = {"vaerthax": 1} if i == 0 else ({"grimfang": 1} if i == 2 else {})
+		f._die("old age")
+		f.choose_heir(0)
+	var fell: Array = f.ages.age_rows(f)[0]["legends"].map(func(l): return [l["id"], int(l["gen"])])
+	ok(fell == [["vaerthax", 1], ["grimfang", 3]], "legends in the order they fell: %s" % str(fell))
+	_restore()
 
 
 ## Thousands of synthetic generations through the real path: the save stops growing with the

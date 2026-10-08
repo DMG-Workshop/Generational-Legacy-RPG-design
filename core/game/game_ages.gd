@@ -210,7 +210,11 @@ static func _add(rows: Array, rec: Dictionary) -> void:
 			var entry := {"id": str(id), "by": me["name"], "gen": g}
 			if int(kills[id]) > 1:
 				entry["times"] = int(kills[id])
-			row["legends"].append(entry)
+			# In the order they fell: the founder's record joins its Age's summary last.
+			var at_l: int = (row["legends"] as Array).size()
+			while at_l > 0 and int(row["legends"][at_l - 1]["gen"]) > g:
+				at_l -= 1
+			row["legends"].insert(at_l, entry)
 
 
 # ---------------------------------------------------------------- save / load & checks
