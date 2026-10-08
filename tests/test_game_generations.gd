@@ -169,6 +169,8 @@ func test_content_gates_use_era() -> void:
 		GameAges.jump_to(d, c[0])
 		var lock := d.party.locked_reason(d, "ysolde_marrow")
 		ok((lock == "") == c[1], "Ysolde at generation %d (era %d): '%s'" % [c[0], d.era_gen(), lock])
+		if not c[1]:
+			ok(lock == "Not yet in this Age.", "the lock says she comes later in this Age: '%s'" % lock)
 
 
 func test_scaling_uses_true_gen() -> void:
