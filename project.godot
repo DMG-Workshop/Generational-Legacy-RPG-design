@@ -2,7 +2,7 @@
 
 config_version=5
 name="Generational Legacy RPG"
-description="A 999-generation JRPG where you play an entire family saga across 25,000 years"
+description="A 999,999-generation JRPG where you play an entire family saga across millions of years"
 
 [application]
 

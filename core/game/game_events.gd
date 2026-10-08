@@ -4,8 +4,9 @@
 ##   {id, heir, place, source, stage: "choose"}                 while a choice is awaited
 ##   {..., stage: "result", result: {choice_text, roll, ...}}    after the choice, until dismissed
 ##
-## Event: id, title, text, where {types, biomes, places}, requires {min_gen, max_gen, min_level,
-## flags, not_flags, traits (any)}, weight, once, choices (2-4). Choice: text, requires {traits,
+## Event: id, title, text, where {types, biomes, places}, requires {min_gen, max_gen (generations
+## within the Age), min_level, flags, not_flags, traits (any)}, weight, once (once each Age),
+## lasting (with once: once for the house, ever), choices (2-4). Choice: text, requires {traits,
 ## race, class, item (one or a list), flag (+ reason), min_level, min_gold, any, reason},
 ## check {attr, dc, bonus_if [{race|class|trait, value}]}, outcomes {crit_success, success,
 ## failure, crit_failure} or {always}. Outcome: EFFECT_KEYS. Texts may use {heir} {house} {place}
@@ -26,7 +27,7 @@ const ATTR_LABELS := {
 	"craft_quality": "Craft",
 }
 const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight"]
-const SEEN := "event_seen_"   # once-per-dynasty events
+const SEEN := "event_seen_"   # once-only events: generation they were last seen
 const LAST := "event_last_"   # repeatable events: generation they last happened
 
 
@@ -83,7 +84,8 @@ static func is_eligible(d: GameDynasty, ev: Dictionary) -> bool:
 	if not place_matches(ev, d.world.here()):
 		return false
 	var r: Dictionary = ev.get("requires", {})
-	if d.gen < int(r.get("min_gen", 1)) or d.gen > int(r.get("max_gen", 1000000)):
+	var era := d.era_gen()
+	if era < int(r.get("min_gen", 1)) or era > int(r.get("max_gen", 1000000)):
 		return false
 	if d.heir.level < int(r.get("min_level", 1)):
 		return false
@@ -98,8 +100,16 @@ static func is_eligible(d: GameDynasty, ev: Dictionary) -> bool:
 		return false
 	var id: String = ev["id"]
 	if ev.get("once", false):
-		return not d.flags.has(SEEN + id)
+		return not seen(d, ev)
 	return int(d.flags.get(LAST + id, 0)) < d.gen   # repeatable events come at most once a generation
+
+
+## A once-only event has happened in this Age (or ever, when it is "lasting").
+static func seen(d: GameDynasty, ev: Dictionary) -> bool:
+	var key := SEEN + str(ev["id"])
+	if not d.flags.has(key):
+		return false
+	return ev.get("lasting", false) or GameAges.age_of(int(d.flags[key])) >= d.age_number()
 
 
 static func eligible(d: GameDynasty) -> Array:
@@ -131,7 +141,10 @@ static func begin(d: GameDynasty, id: String, source: String = "explore") -> boo
 	if JSON.stringify(ev).contains("{ancestor}"):
 		d.pending_event["ancestor"] = _ancestor_name(d)
 	if ev.get("once", false):
-		d.set_flag(SEEN + id)
+		if d.flags.has(SEEN + id):
+			d.flags[SEEN + id] = d.gen   # seen again in a later Age
+		else:
+			d.set_flag(SEEN + id)
 	else:
 		d.flags[LAST + id] = d.gen   # bookkeeping, not a story flag: no quest listens for it
 	return true
@@ -616,7 +629,8 @@ static func _build_foes(d: GameDynasty, f: Dictionary) -> Array:
 
 
 static func _in_era(d: GameDynasty, c: Dictionary) -> bool:
-	return not c.get("boss", false) and int(c["min_gen"]) <= d.gen and d.gen <= int(c["max_gen"])
+	var era := d.era_gen()
+	return not c.get("boss", false) and int(c["min_gen"]) <= era and era <= int(c["max_gen"])
 
 
 static func _creature_for(d: GameDynasty, id: String) -> Dictionary:
@@ -726,6 +740,8 @@ static func validate() -> Array:
 			errs.append("%s: weight must be positive" % id)
 		if ev.has("once") and not ev["once"] is bool:
 			errs.append("%s: once must be true or false" % id)
+		if ev.has("lasting") and not (ev["lasting"] is bool and ev.get("once", false)):
+			errs.append("%s: lasting must be true or false, on a once-only event" % id)
 		var er: Dictionary = ev.get("requires", {})
 		if int(er.get("min_gen", 1)) > int(er.get("max_gen", 1000000)):
 			errs.append("%s: min_gen above max_gen" % id)

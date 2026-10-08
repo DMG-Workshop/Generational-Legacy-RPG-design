@@ -157,7 +157,7 @@ func _active_card(list: VBoxContainer, e: Dictionary) -> void:
 		pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(pb)
 		row.add_child(Kit.label("%d / %d" % [int(e["progress"]), goal], 14))
-	var by := "Taken up by %s in generation %d, from the board in %s." % [e["by"], int(e["gen"]), GameQuests.place_name(q["giver"])]
+	var by := "Taken up by %s in generation %s, from the board in %s." % [e["by"], GameText.num(int(e["gen"])), GameQuests.place_name(q["giver"])]
 	v.add_child(_wrap(by, 13, Kit.DIM))
 	v.add_child(_wrap("Reward: %s" % GameQuests.reward_text(d, q), 14, Kit.GOOD))
 	var here: bool = d.world.location == q["giver"]

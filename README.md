@@ -1,6 +1,6 @@
 # Generational Legacy RPG
 
-A 999-generation JRPG/CRPG hybrid where you play an entire family saga across 25,000 years of fantasy history. Every choice, trait, and failure ripples through your bloodline forever.
+A 999,999-generation JRPG/CRPG hybrid where you play an entire family saga across millions of years of fantasy history. Every choice, trait, and failure ripples through your bloodline forever.
 
 ## Vision
 
@@ -8,7 +8,7 @@ Play one heir's full life, then continue as their child while your old character
 
 ## Features
 
-- **999 Generations:** ~25,000 years in one playthrough
+- **999,999 Generations:** the world turns through Ages of 1,100 generations, each stronger than the last; legends rise again with every Age, and the saga ends with the heir of generation 999,999
 - **Trait Inheritance:** Bloodline powers mutate, dormant traits resurface, conflicts create friction
 - **Fate & Failure:** Random failures shape heirs into Restorers, Rebels, Redeemers, or Successors
 - **Legacy Echoes:** Every ancestral act becomes a story that affects descendants
@@ -52,8 +52,7 @@ A self-contained playable slice (lineage, fate, echoes, heirlooms, turn-based ba
 
 Code: `core/game/` (logic, no rendering), `ui/play/` (screens), data in `data/classes`, `data/creatures`, `data/game`, `data/traits`.
 
-Tests (headless; includes a 999-generation run per class):
-`godot --headless -s tests/test_play_core.gd`. UI smoke test with screenshots (needs a display): `godot --path . -s tests/test_play_ui.gd`.
+Tests (headless): each `tests/test_game_*.gd`, e.g. `godot --headless --path . -s res://tests/test_game_generations.gd`, which also plays a house through to the end of generation 999,999.
 
 ## Development Roadmap
 
@@ -61,7 +60,7 @@ Tests (headless; includes a 999-generation run per class):
 - Family tree with trait inheritance and mutation
 - Fate Value rolls and milestone checks
 - Failure system with heir archetypes
-- Text-only simulation of 999 generations for testing
+- Text-only simulation of 999,999 generations for testing
 
 **Phase 2: Battle Prototype**
 - Side-view combat with front/back rows
@@ -92,7 +91,7 @@ Tests (headless; includes a 999-generation run per class):
 Read `docs/GDD.md` for the complete design. It covers:
 - Trait system with mutations and conflicts
 - Fate and failure mechanics
-- 999 generations across 8 ages
+- Generations and Ages (the playable game runs 999,999 generations, in Ages of 1,100)
 - Combat with layered mechanics
 - Nine worlds with time dilation
 - High-magic setting with 9 peoples and 12 schools

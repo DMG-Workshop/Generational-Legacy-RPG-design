@@ -46,10 +46,11 @@ static func _creature(id: String) -> Dictionary:
 	return {}
 
 
-## A creature can still be met in this generation: in its era, and a legend not yet slain.
+## A creature can still be met in this generation: in its era of the Age, and a legend not yet slain.
 static func roams(d: GameDynasty, creature_id: String) -> bool:
 	var c := _creature(creature_id)
-	if c.is_empty() or d.gen < int(c["min_gen"]) or d.gen > int(c["max_gen"]):
+	var era := d.era_gen()
+	if c.is_empty() or era < int(c["min_gen"]) or era > int(c["max_gen"]):
 		return false
 	return not (c.get("boss", false) and d.slain_bosses.has(creature_id))
 
@@ -93,9 +94,9 @@ static func reward_text(d: GameDynasty, q: Dictionary) -> String:
 	var g := reward_gold(d, q)
 	var x := reward_xp(d, q)
 	if g > 0:
-		parts.append("%d gold" % g)
+		parts.append("%s gold" % GameText.num(g))
 	if x > 0:
-		parts.append("%d XP" % x)
+		parts.append("%s XP" % GameText.num(x))
 	for it in q.get("reward", {}).get("items", []):
 		parts.append(str(GameItems.item_def(it).get("name", it)))
 	if q.get("reward", {}).has("echo"):
@@ -131,14 +132,16 @@ func total_done() -> int:
 	return n
 
 
-## Posted on its board this generation: era, story flags, cooldown, and quarry still about.
+## Posted on its board this generation: era of the Age, story flags, cooldown, and quarry still
+## about. A notice done once goes up again in a later Age, unless its deed is "lasting".
 ## Heir level is not checked here (the board shows those notices as out of reach).
 func is_posted(d: GameDynasty, q: Dictionary) -> bool:
 	var id: String = q["id"]
 	var req: Dictionary = q.get("requires", {})
-	if is_active(id) or d.gen < int(req.get("min_gen", 1)):
+	var era := d.era_gen()
+	if is_active(id) or era < int(req.get("min_gen", 1)):
 		return false
-	if req.has("max_gen") and d.gen > int(req["max_gen"]):
+	if req.has("max_gen") and era > int(req["max_gen"]):
 		return false
 	for f in req.get("flags", []):
 		if not d.flags.has(f):
@@ -147,9 +150,11 @@ func is_posted(d: GameDynasty, q: Dictionary) -> bool:
 		if d.flags.has(f):
 			return false
 	if record.has(id):
+		var last := int(record[id]["gen"])
 		if not q.get("repeatable", false):
-			return false
-		if d.gen < int(record[id]["gen"]) + int(q.get("cooldown", 1)):
+			if q.get("lasting", false) or GameAges.age_of(last) >= d.age_number():
+				return false
+		elif d.gen < last + int(q.get("cooldown", 1)):
 			return false
 	return achievable(d, q)
 
@@ -225,13 +230,13 @@ func turn_in(d: GameDynasty, id: String) -> Array:
 	var gold := reward_gold(d, q)
 	var xp := reward_xp(d, q)
 	d.heir.gold += gold
-	var msgs: Array = ["Quest complete: %s. +%d gold, +%d XP." % [q["name"], gold, xp]]
+	var msgs: Array = ["Quest complete: %s. +%s gold, +%s XP." % [q["name"], GameText.num(gold), GameText.num(xp)]]
 	if q.has("outcome"):
 		msgs.append(str(q["outcome"]))
 	if d.heir.gain_xp(xp) > 0:
-		msgs.append("Level up! %s is now level %d." % [d.heir.name, d.heir.level])
+		msgs.append("Level up! %s is now level %s." % [d.heir.name, GameText.num(d.heir.level)])
 	for it in r.get("items", []):
-		msgs.append(d.give_item(str(it)))
+		msgs.append(_reward_item(d, str(it)))
 	var echo: Dictionary = r.get("echo", {})
 	if not echo.is_empty():
 		var text := str(echo.get("text", "{heir} answered the board")).format({"heir": d.heir.name})
@@ -243,6 +248,19 @@ func turn_in(d: GameDynasty, id: String) -> Array:
 	for f in r.get("flags", []):
 		d.set_flag(str(f))
 	return msgs
+
+
+## A reward the heir cannot carry (gear already owned, a full stack) is paid in gold, as events do:
+## a notice taken again in a later Age must not fill the house's pack with copies.
+static func _reward_item(d: GameDynasty, id: String) -> String:
+	var h := d.heir
+	var stack := GameItems.stack_max(id)
+	var room: bool = GameItems.count(h, id) < stack if stack > 0 else not GameItems.owns(h, id)
+	if room:
+		return d.give_item(id)
+	var g := maxi(1, int(round(float(GameItems.item_def(id).get("price", 0)) * GameData.enemy_scale(d.gen) * float(GameData.bal("event_duplicate_item_gold")))))
+	h.gold += g
+	return "%s already has the %s; the board pays %s gold for it instead." % [h.name, GameItems.item_name(id), GameText.num(g)]
 
 
 ## The hooks below journal at once, or append to `out` when the caller journals its own lines

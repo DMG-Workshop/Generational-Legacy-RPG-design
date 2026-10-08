@@ -94,7 +94,7 @@ func _show(t: String) -> void:
 
 func _rebuild() -> void:
 	var h := dynasty.heir
-	gold_label.text = "Gold %d" % h.gold
+	gold_label.text = "Gold %s" % GameText.num(h.gold)
 	price_label.text = _price_text()
 	Kit.clear(tabs)
 	tabs.visible = not gear_only
@@ -187,8 +187,8 @@ func _build_wares(service: String) -> void:
 		var b := Kit.button(("Owned" if stack <= 0 else "Full") if owned else "Buy", func(): _act(GameItems.buy(dynasty, iid)), Vector2(96, 34))
 		b.disabled = owned or h.gold < cost
 		if not owned and h.gold < cost:
-			b.tooltip_text = "You need %d more gold." % (cost - h.gold)
-		rows.add_child(_item_row(iid, "%dg" % cost, [b], "", Kit.ACCENT if owned else _afford(cost)))
+			b.tooltip_text = "You need %s more gold." % GameText.num(cost - h.gold)
+		rows.add_child(_item_row(iid, "%sg" % GameText.num(cost), [b], "", Kit.ACCENT if owned else _afford(cost)))
 
 
 func _build_temple() -> void:
@@ -205,7 +205,7 @@ func _build_temple() -> void:
 		b.disabled = h.gold < cost
 		var title := "%s%s" % [GameData.trait_name(tid), "  (dormant)" if dormant else ""]
 		var what := "Gone for good; later children are spared."
-		rows.add_child(_service_row(title, str(GameData.trait_def(tid).get("description", "")), what, "%dg" % cost, Kit.BAD, Kit.trait_tooltip(tid), b, _afford(cost)))
+		rows.add_child(_service_row(title, str(GameData.trait_def(tid).get("description", "")), what, "%sg" % GameText.num(cost), Kit.BAD, Kit.trait_tooltip(tid), b, _afford(cost)))
 	var pcost := GameItems.prayer_price(dynasty)
 	var pb := Kit.button("Pray", func(): _act(GameItems.pray(dynasty)), Vector2(96, 34))
 	pb.disabled = not GameItems.can_pray(dynasty) or h.gold < pcost
@@ -217,7 +217,7 @@ func _build_temple() -> void:
 		effect = "No trials left to face"
 	elif not GameItems.can_pray(dynasty):
 		effect = "Fate is as light as it gets"
-	rows.add_child(_service_row("Prayer", fate_now, effect, "%dg" % pcost, Kit.TEXT, "A lower Fate Value makes failure at life's milestones less likely.", pb, _afford(pcost)))
+	rows.add_child(_service_row("Prayer", fate_now, effect, "%sg" % GameText.num(pcost), Kit.TEXT, "A lower Fate Value makes failure at life's milestones less likely.", pb, _afford(pcost)))
 	var c := GameItems.temple_uses(dynasty, "cleanse")
 	var p := GameItems.temple_uses(dynasty, "prayer")
 	rows.add_child(Kit.label("This life: %d cleansing%s, %d prayer%s. Each costs more than the last." % [c, "" if c == 1 else "s", p, "" if p == 1 else "s"], 13, Kit.DIM))
@@ -238,7 +238,7 @@ func _build_cures() -> void:
 		b.tooltip_text = "The priests cure it at once."
 		var title := "%s: %s (stage %d of %d)" % [info["name"], info["stage_name"], info["stage"], info["stages"]]
 		var outlook: String = info["outlook"]
-		rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%dg" % cost, Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
+		rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%sg" % GameText.num(cost), Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
 
 
 func _build_gear() -> void:
@@ -275,7 +275,7 @@ func _build_gear() -> void:
 		if confirm_sell == iid:
 			sb.text = "Sure?"
 			sb.tooltip_text = "Click again to sell the %s. It cannot be bought back." % GameItems.item_name(iid)
-		rows.add_child(_item_row(iid, "sells %dg" % GameItems.sell_price(dynasty, iid), [eb, sb]))
+		rows.add_child(_item_row(iid, "sells %sg" % GameText.num(GameItems.sell_price(dynasty, iid)), [eb, sb]))
 
 
 ## A stack of remedies, toxins or vials: one row with the count. Remedies are taken here;
@@ -294,7 +294,7 @@ func _consumable_row(id: String, can_sell: bool) -> PanelContainer:
 	sb.disabled = not can_sell
 	if not can_sell:
 		sb.tooltip_text = "No one in %s buys gear." % dynasty.world.here()["name"]
-	return _item_row(id, "sells %dg" % GameItems.sell_price(dynasty, id), [ub, sb])
+	return _item_row(id, "sells %sg" % GameText.num(GameItems.sell_price(dynasty, id)), [ub, sb])
 
 
 func _build_side() -> void:
@@ -309,11 +309,11 @@ func _build_side() -> void:
 			side.add_child(e)
 	side.add_child(HSeparator.new())
 	side.add_child(Kit.label("%s, %s fighter" % [h.name, "a spell" if GameItems.fighting_style(h) == "magic" else "a weapon"], 15, Kit.ACCENT))
-	side.add_child(Kit.label("Attack %d    Magic %d" % [int(h.attack_power()), int(h.magic_power())], 14))
-	side.add_child(Kit.label("Defense %d" % int(h.defense()), 14))
+	side.add_child(Kit.label("Attack %s    Magic %s" % [GameText.num(int(h.attack_power())), GameText.num(int(h.magic_power()))], 14))
+	side.add_child(Kit.label("Defense %s" % GameText.num(int(h.defense())), 14))
 	side.add_child(Kit.label("Dodge %d%%    Crit %d%%" % [int(round(h.dodge_chance() * 100.0)), int(round(h.crit_chance() * 100.0))], 14))
-	side.add_child(Kit.label("HP %d / %d" % [h.hp, h.max_hp()], 14))
-	side.add_child(Kit.label("MP %d / %d" % [h.mp, h.max_mp()], 14))
+	side.add_child(Kit.label("HP %s / %s" % [GameText.num(h.hp), GameText.num(h.max_hp())], 14))
+	side.add_child(Kit.label("MP %s / %s" % [GameText.num(h.mp), GameText.num(h.max_mp())], 14))
 	side.add_child(Kit.label("Potions %d    Pack %d item%s" % [h.potions, h.inventory.size(), "" if h.inventory.size() == 1 else "s"], 14))
 	if not h.diseases.is_empty():
 		side.add_child(_wrap(Kit.label("Sick: %s" % GameDisease.status_text(h), 14, Kit.BAD)))

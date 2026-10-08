@@ -135,7 +135,7 @@ func _build_actors() -> void:
 			eye.position = Vector2(w * ex, h * 0.22)
 			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(eye)
-		var lv := Kit.label("Lv %d" % int(e.get("level", 1)), 13, Kit.ACCENT if str(e["name"]).begins_with("Elite") else Kit.TEXT)
+		var lv := Kit.label("Lv %s" % GameText.num(int(e.get("level", 1))), 13, Kit.ACCENT if str(e["name"]).begins_with("Elite") else Kit.TEXT)
 		lv.add_theme_constant_override("outline_size", 4)
 		lv.add_theme_color_override("font_outline_color", Color.BLACK)
 		lv.position = Vector2(4, h - 22)
@@ -318,7 +318,7 @@ func _play_events(events: Array) -> void:
 func _step_ally_hp(i: int, delta: int) -> void:
 	var an: Dictionary = ally_nodes[i]
 	an["hp"].value = clampf(an["hp"].value + float(delta), 0.0, an["hp"].max_value)
-	an["info"].text = "Lv%d  HP %d" % [b.allies[i].level, int(an["hp"].value)]
+	an["info"].text = "Lv%s  HP %s" % [GameText.num(b.allies[i].level), GameText.num(int(an["hp"].value))]
 
 
 func _knock_out(i: int) -> void:
@@ -380,7 +380,7 @@ func _update_view() -> void:
 		an["hp"].value = a.hp
 		an["mp"].max_value = maxf(1.0, a.max_mp())
 		an["mp"].value = a.mp
-		an["info"].text = "Lv%d  HP %d" % [a.level, a.hp]
+		an["info"].text = "Lv%s  HP %s" % [GameText.num(a.level), GameText.num(a.hp)]
 
 
 func _show_result() -> void:

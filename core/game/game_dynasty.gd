@@ -11,8 +11,8 @@ var rng := RandomNumberGenerator.new()
 var dynasty_name: String = ""
 var gen: int = 1
 var heir: GameHeir
-var state: String = "life"
-var history: Array = []         # one dict per dead heir
+var state: String = "life"     # "life", "succession", or "ended" once the last generation's heir dies
+var history: Array = []         # the founder and the latest dead heirs in full; older ones live in `ages`
 var echoes: Array = []          # [{kind,key,text,strength,gen}]
 var heirlooms: Array = []       # [{name, boss, gen}]
 var slain_bosses: Dictionary = {}
@@ -30,6 +30,7 @@ var quests := GameQuests.new()
 var party := GameParty.new()
 var pending_event: Dictionary = {}   # an event waiting for the player's choice (see GameEvents)
 var shop_state: Dictionary = {}      # owned by GameItems: temple services used by the living heir
+var ages := GameAges.new()           # per-Age summaries of older heirs, and the saga's greatest
 
 
 static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
@@ -159,7 +160,7 @@ func _add_trait(h: GameHeir, id: String) -> bool:
 ## "A bad omen at Coming of Age: you lose 40 gold and are Cursed." - with no gold, the loss is left out.
 func _setback_text(what: String, label: String, loss: int, extra: String) -> String:
 	if loss > 0:
-		return "%s at %s: you lose %d gold%s." % [what, label, loss, " and " + extra if extra != "" else ""]
+		return "%s at %s: you lose %s gold%s." % [what, label, GameText.num(loss), " and " + extra if extra != "" else ""]
 	if extra != "":
 		return "%s at %s: you %s." % [what, label, extra]
 	return "%s at %s, but there was no gold to lose." % [what, label]
@@ -245,9 +246,24 @@ func potion_price() -> int:
 	return maxi(1, int(round(p)))
 
 
-## Legends stirring in this generation (not yet slain), wherever their lair is.
+## The generation within the current Age (1..age_length): what every content window is read against.
+func era_gen() -> int:
+	return GameAges.era_of(gen)
+
+
+func age_number() -> int:
+	return GameAges.age_of(gen)
+
+
+## Every heir who has died, kept in full or folded into an Age summary.
+func ancestor_count() -> int:
+	return history.size() + ages.folded_heirs()
+
+
+## Legends stirring in this generation (not yet slain this Age), wherever their lair is.
 func stirring_legends() -> Array:
-	return GameData.creatures.filter(func(c): return c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"] and not slain_bosses.has(c["id"]))
+	var era := era_gen()
+	return GameData.creatures.filter(func(c): return c.get("boss", false) and c["min_gen"] <= era and era <= c["max_gen"] and not slain_bosses.has(c["id"]))
 
 
 ## The legend that can be challenged here: it must be stirring and this must be its lair.
@@ -317,10 +333,10 @@ func buy_map(map_id: String) -> String:
 		if m["id"] == map_id:
 			var price := map_price(m)
 			if heir.gold < price:
-				return "Not enough gold (%d needed)." % price
+				return "Not enough gold (%s needed)." % GameText.num(price)
 			heir.gold -= price
 			var n := world.chart(m["reveals"])
-			return "Bought the %s for %d gold: %d new place%s charted." % [m["name"], price, n, "" if n == 1 else "s"]
+			return "Bought the %s for %s gold: %d new place%s charted." % [m["name"], GameText.num(price), n, "" if n == 1 else "s"]
 	return "That map is not sold here."
 
 
@@ -342,10 +358,10 @@ func can_retire() -> bool:
 func buy_potion() -> String:
 	var price := potion_price()
 	if heir.gold < price:
-		return "Not enough gold (%d needed)." % price
+		return "Not enough gold (%s needed)." % GameText.num(price)
 	heir.gold -= price
 	heir.potions += 1
-	return "Bought a potion for %d gold." % price
+	return "Bought a potion for %s gold." % GameText.num(price)
 
 
 func rest() -> Array:
@@ -361,7 +377,7 @@ func work() -> Array:
 	amount *= 1.0 + heir.trait_total("work_gold") + heir.trait_total("theft") * 0.5 + echo_total("glory")
 	var g := maxi(1, int(round(amount)))
 	heir.gold += g
-	return _finish_time("work", ["%s works odd jobs and earns %d gold." % [heir.name, g]])
+	return _finish_time("work", ["%s works odd jobs and earns %s gold." % [heir.name, GameText.num(g)]])
 
 
 func train(stat: String) -> Array:
@@ -369,7 +385,7 @@ func train(stat: String) -> Array:
 	var msgs: Array = ["%s trains %s (+1.5 base)." % [heir.name, stat.to_upper()]]
 	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level))))
 	if lv > 0:
-		msgs.append("Level up! Now level %d." % heir.level)
+		msgs.append("Level up! Now level %s." % GameText.num(heir.level))
 	return _finish_time("train", msgs)
 
 
@@ -446,7 +462,8 @@ func _child_race(a: String, b: String) -> String:
 ## Starts a hunt battle. kind: "hunt" or "hunt_hard".
 func start_hunt(kind: String) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")[kind]
-	var in_era := GameData.creatures.filter(func(c): return not c.get("boss", false) and c["min_gen"] <= gen and gen <= c["max_gen"])
+	var era := era_gen()
+	var in_era := GameData.creatures.filter(func(c): return not c.get("boss", false) and c["min_gen"] <= era and era <= c["max_gen"])
 	if in_era.is_empty():
 		in_era = GameData.creatures.filter(func(c): return not c.get("boss", false))
 	# Each place breeds its own monsters; if none of them roam in this era, anything in the era will do.
@@ -524,7 +541,10 @@ func finish_battle() -> Array:
 				quests.on_kill(self, e["id"], quest_msgs)
 				if e["boss"] and not slain_bosses.has(e["id"]):
 					slain_bosses[e["id"]] = gen
-					if e["heirloom"] != "":
+					# A legend risen again in a later Age leaves no second copy of its heirloom.
+					if heirlooms.any(func(x): return x["name"] == e["heirloom"]):
+						msgs.append(GameAges.text("heirloom_held", {"heirloom": e["heirloom"], "house": dynasty_name}))
+					elif e["heirloom"] != "":
 						heirlooms.append({"name": e["heirloom"], "boss": e["name"], "gen": gen})
 						heir.heirloom_bonus = heirloom_bonus()
 						msgs.append("Heirloom claimed: %s! (+%d%% power for all descendants)" % [e["heirloom"], int(float(GameData.bal("heirloom_bonus")) * 100.0)])
@@ -534,9 +554,9 @@ func finish_battle() -> Array:
 			heir.gold += gold
 			heir.battles_won += 1
 			total_hunts += 1
-			msgs.append("Victory! +%d XP, +%d gold." % [xp, gold])
+			msgs.append("Victory! +%s XP, +%s gold." % [GameText.num(xp), GameText.num(gold)])
 			if heir.gain_xp(xp) > 0:
-				msgs.append("Level up! %s is now level %d." % [heir.name, heir.level])
+				msgs.append("Level up! %s is now level %s." % [heir.name, GameText.num(heir.level)])
 			msgs.append_array(quest_msgs)
 			msgs.append_array(party_msgs)
 			for m in msgs:
@@ -575,7 +595,7 @@ func finish_battle() -> Array:
 				heir.hp = 1
 				heir.mp = 0
 				heir.age += float(GameData.bal("defeat_years"))
-				msgs.append("%s is dragged from the field, barely alive. Lost %d gold." % [heir.name, loss])
+				msgs.append("%s is dragged from the field, barely alive. Lost %s gold." % [heir.name, GameText.num(loss)])
 				msgs.append_array(party_msgs)
 				for m in msgs:
 					_say(m)
@@ -637,6 +657,7 @@ func _die(cause: String) -> Array:
 		"spouse": heir.spouse.name if heir.spouse != null else "",
 	}
 	history.append(rec)
+	ages.on_death(self, rec)
 	msgs.append("%s dies of %s at age %d." % [heir.name, cause, int(heir.age)] if cause == "old age" else "%s dies: %s, at age %d." % [heir.name, cause, int(heir.age)])
 	if cause == "slain in battle":
 		if killer_id != "":
@@ -644,6 +665,12 @@ func _die(cause: String) -> Array:
 	elif heir.level >= glory_level(heir):
 		var strength := 0.1 * float(heir.level) / glory_level(heir)
 		_add_echo("glory", "life", "%s lived a celebrated life" % heir.name, clampf(strength, 0.0, 0.2))
+	if gen >= GameAges.max_generations():
+		last_death = rec
+		GameAges.end_saga(self, msgs)
+		for m in msgs:
+			_say(m)
+		return msgs
 	var kids: Array = heir.children
 	if kids.is_empty():
 		msgs.append("%s left no children. Distant cousins step forward." % heir.name)
@@ -689,6 +716,8 @@ func choose_heir(index: int) -> Array:
 	var parent := heir
 	var c: GameHeir = candidates[index]
 	gen += 1
+	if era_gen() == 1:
+		GameAges.begin_age(self, msgs)
 	_decay_echoes()
 	c.archetype = pending_archetype
 	c.archetype_bonus = {}
@@ -727,12 +756,14 @@ func choose_heir(index: int) -> Array:
 	quests.on_succession(self, msgs)
 	candidates = []
 	state = "life"
-	_say("Generation %d: %s takes up the family name." % [gen, c.full_name()])
+	_say("Generation %s: %s takes up the family name." % [GameText.num(gen), c.full_name()])
+	if gen == GameAges.max_generations():
+		msgs.append(GameAges.text("last_heir", {"heir": c.name, "house": dynasty_name}))
 	for m in msgs:
 		_say(m)
 	# Re-roll nothing: fate value was rolled at birth. Run the first milestone.
 	_check_milestone("coming_of_age")
-	_say("Inherited %d gold." % c.gold)
+	_say("Inherited %s gold." % GameText.num(c.gold))
 	return msgs
 
 
@@ -747,7 +778,7 @@ func to_dict() -> Dictionary:
 		"journal": journal.slice(maxi(0, journal.size() - JOURNAL_SAVED)), "next_id": next_id, "total_hunts": total_hunts,
 		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
-		"shop_state": shop_state,
+		"shop_state": shop_state, "ages": ages.to_dict(),
 	}
 
 
@@ -762,6 +793,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.heir = GameHeir.from_dict(d["heir"])
 	g.state = d["state"]
 	g.history = _ints(Array(d["history"]))
+	g.ages = GameAges.from_dict(d.get("ages"), g)
 	g.echoes = Array(d["echoes"])
 	for e in g.echoes:
 		e["gen"] = int(e["gen"])
@@ -783,6 +815,8 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.party = GameParty.from_dict(d.get("party", {}), g)
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
+	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
+		GameAges.end_saga(g, [])
 	return g
 
 

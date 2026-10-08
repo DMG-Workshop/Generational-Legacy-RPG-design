@@ -73,7 +73,8 @@
       "objective": {"type": "flag", "flag": "rift_open", "label": "Bring word when the Highcrag seal breaks"},
       "reward": {"gold": 200, "xp": 80, "items": [], "flags": [], "echo": {"strength": 0.05, "text": "{heir} kept Hearthmere's long watch"}},
       "outcome": "The elders ring a bell no one alive has heard, and write your name beside the oath.",
-      "repeatable": false
+      "repeatable": false,
+      "lasting": true
     },
     {
       "id": "if_goblin_ears",
@@ -137,6 +138,7 @@
       "reward": {"gold": 320, "xp": 120, "items": [], "flags": ["rift_key_found"]},
       "outcome": "The key is black iron, cold enough to burn. The Hall sends it to Kingshold under guard.",
       "repeatable": false,
+      "lasting": true,
       "chain": "rift"
     },
     {
@@ -188,6 +190,7 @@
       "reward": {"gold": 220, "xp": 100, "items": [], "flags": ["rift_seal_seen"]},
       "outcome": "The glass is cracked from the inside. The wardens send riders to Brinehaven, where the old rite was kept.",
       "repeatable": false,
+      "lasting": true,
       "chain": "rift"
     },
     {
@@ -201,6 +204,7 @@
       "reward": {"gold": 800, "xp": 220, "items": ["sunblade"], "flags": ["rift_open"], "echo": {"strength": 0.12, "text": "{heir} opened the road to the Rift"}},
       "outcome": "At dawn the wardens turn the key. The black glass splits from top to bottom, and the road past Highcrag runs on into the Rift.",
       "repeatable": false,
+      "lasting": true,
       "chain": "rift"
     },
     {
@@ -289,6 +293,7 @@
       "reward": {"gold": 300, "xp": 120, "items": [], "flags": ["rift_rite_found"]},
       "outcome": "You come up with the rite copied on your arm in charcoal. It names a key cut in Deepstone, and the Chapter sends word to Ironford.",
       "repeatable": false,
+      "lasting": true,
       "chain": "rift"
     },
     {

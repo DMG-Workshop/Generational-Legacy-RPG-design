@@ -133,15 +133,24 @@ func stat(s: String) -> float:
 	return v
 
 
+## 1 in the first Age. Later, the share of a stat's heir_scale that counts where VIT feeds health
+## and MAG feeds mana: health is scaled by heir_scale again (VIT would count it twice over) and
+## skill costs follow only the level, so by the true generation alone a later Age's heir could
+## neither be hurt by its beasts nor run short of mana. Each Age plays as the first did, era by era.
+func era_measure() -> float:
+	var era := GameAges.era_of(gen)
+	return 1.0 if era == gen else GameData.heir_scale(era) / GameData.heir_scale(gen)
+
+
 func max_hp() -> int:
-	var v: float = base_of("hp") + growth_of("hp") * float(level - 1) + stat("vit") * 2.0
+	var v: float = base_of("hp") + growth_of("hp") * float(level - 1) + stat("vit") * era_measure() * 2.0
 	v *= GameData.heir_scale(gen)
 	v *= 1.0 + trait_total("max_hp") + float(archetype_bonus.get("hp", 0.0)) + heirloom_bonus
 	return maxi(10, int(round(v)))
 
 
 func max_mp() -> int:
-	var v: float = base_of("mp") + growth_of("mp") * float(level - 1) + stat("mag") * 0.5
+	var v: float = base_of("mp") + growth_of("mp") * float(level - 1) + stat("mag") * era_measure() * 0.5
 	v *= 1.0 + trait_total("max_mp")
 	return maxi(0, int(round(v)))
 

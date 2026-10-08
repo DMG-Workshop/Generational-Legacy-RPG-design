@@ -1540,7 +1540,7 @@
       "title": "The Bell Below",
       "text": "In the lowest hall of the temple hangs the bell you heard from the shore, green bronze as big as a cottage. A drowned priest in rotted vestments still holds its rope.",
       "where": {"places": ["sunken_temple"]},
-      "requires": {"flags": ["heard_drowned_bell"]},
+      "requires": {"flags": ["heard_drowned_bell"], "not_flags": ["drowned_priest_rests"]},
       "weight": 30,
       "once": true,
       "choices": [
@@ -1589,6 +1589,7 @@
       "requires": {"flags": ["smugglers_broken"]},
       "weight": 20,
       "once": true,
+      "lasting": true,
       "choices": [
         {
           "text": "Draw steel",
