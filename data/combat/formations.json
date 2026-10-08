@@ -4,11 +4,13 @@
     "bot_mp_floor": 0.25,
     "bot_cleanse_threat": 0.15,
     "bot_heal_below": 0.25,
-    "bot_party_heal_below": 0.4
+    "bot_party_heal_below": 0.4,
+    "foe_dodge_per_agi": 0.005,
+    "foe_dodge_max": 0.15
   },
   "field": {
     "heir": [0.0, 0.0],
-    "allies": [[-2.0, -3.5], [-2.0, 3.5]],
+    "allies": [[-2.5, -3.6], [-2.5, 3.6], [-5.0, 0.0]],
     "rows": {"front": 9.0, "back": 13.0},
     "row_max": {"front": 3, "back": 3},
     "spacing": 3.2

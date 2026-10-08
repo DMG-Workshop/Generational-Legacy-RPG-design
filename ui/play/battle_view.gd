@@ -272,14 +272,20 @@ func _thin_bar(color: Color, max_value: float, value: float, size: Vector2) -> P
 
 # ---------------------------------------------------------------- the field
 
-## Paces on the field to pixels in the arena: the party at the left, the back row near the right.
+## Paces on the field to pixels in the arena: the rearmost companion at the left edge, the back
+## row near the right, and every place in the formation inside the arena's height.
 func _px(p: Vector2) -> Vector2:
 	var f: Dictionary = GameCombat.formation()["field"]
-	var x0 := minf(GameCombat.heir_point().x, GameCombat.ally_point(0).x)
+	var x0 := GameCombat.heir_point().x
+	var reach := float(f["spacing"]) * float(maxi(int(f["row_max"]["front"]), int(f["row_max"]["back"])) - 1) * 0.5
+	for i in maxi(1, b.allies.size()):
+		var a := GameCombat.ally_point(i)
+		x0 = minf(x0, a.x)
+		reach = maxf(reach, absf(a.y))
+	reach += 1.3
 	var x1 := float(f["rows"]["back"])
-	var reach := maxf(absf(GameCombat.ally_point(0).y), float(f["spacing"]) * float(int(f["row_max"]["front"]) - 1) * 0.5) + 1.3
 	var sz := arena.size
-	return Vector2(sz.x * (0.08 + (p.x - x0) / maxf(1.0, x1 - x0) * 0.74), sz.y * (0.5 + p.y / (2.0 * reach)))
+	return Vector2(sz.x * (0.06 + (p.x - x0) / maxf(1.0, x1 - x0) * 0.8), sz.y * (0.5 + p.y / (2.0 * reach)))
 
 
 func _place(node: Control, center: Vector2, anchor_y: float) -> void:
@@ -621,13 +627,13 @@ func _do(action: Callable) -> void:
 ## Next event of the same area cast, past deaths and statuses: if there is one, they land together.
 func _lands_with_next(events: Array, i: int) -> bool:
 	var cast := int(events[i].get("cast", 0))
-	if cast == 0 or events[i]["type"] != "damage":
+	if cast == 0 or events[i]["type"] not in ["damage", "miss"]:
 		return false
 	for j in range(i + 1, events.size()):
 		var t: String = events[j]["type"]
 		if t in ["death", "status"]:
 			continue
-		return t == "damage" and int(events[j].get("cast", 0)) == cast
+		return t in ["damage", "miss"] and int(events[j].get("cast", 0)) == cast
 	return false
 
 
@@ -703,6 +709,12 @@ func _play_one(ev: Dictionary) -> void:
 		"mana":
 			_float_text(_unit_node(by).position + Vector2(30, 0), "+%d MP" % ev["amount"], Kit.MP_BLUE, 18)
 		"miss":
+			if ev["side"] == "enemy":   # a foe slipped the party's blow
+				if int(ev.get("cast", 0)) == 0:
+					_lunge(_unit_node(by), 22.0)
+				var en4: Dictionary = enemy_nodes[ev["index"]]
+				_float_text(en4["root"].position + Vector2(en4["w"] * 0.2, 6), "dodge", Kit.DIM)
+				return
 			_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 			if ev["side"] == "ally":
 				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.DIM)

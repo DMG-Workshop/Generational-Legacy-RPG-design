@@ -558,9 +558,25 @@ func _calc_damage(power: float, mult: float, idx: int, pierce: float, crit_bonus
 	return {"amount": maxi(1, int(round(dmg))), "crit": crit}
 
 
+## A foe's chance to slip a blow: nimble kinds more often, a slowed one less, a held one never.
+func foe_dodge(i: int) -> float:
+	var ref := enemy_ref(i)
+	if is_held(ref):
+		return 0.0
+	var chance := float(enemies[i].get("agi", 0)) * float(GameCombat.setting("foe_dodge_per_agi")) + status_mod(ref, "dodge")
+	return clampf(chance, 0.0, float(GameCombat.setting("foe_dodge_max")))
+
+
+## One blow on a foe, with its own dodge, crit and damage roll. Returns the HP it took, or -1
+## when the foe dodged.
 func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: float, by: int = -1, element: String = "", cast: int = 0) -> int:
 	var e: Dictionary = enemies[idx]
 	var ref := enemy_ref(idx)
+	var dodge := foe_dodge(idx)
+	if dodge > 0.0 and rng.randf() < dodge:
+		events.append({"type": "miss", "side": "enemy", "index": idx, "by": by, "cast": cast})
+		_say("%s dodges %s's attack." % [e["name"], _unit(by).name])
+		return -1
 	var r := _calc_damage(power, mult, idx, pierce, crit_bonus, by, element)
 	var amount: int = r["amount"]
 	var shatter := _shatter(ref)
@@ -700,6 +716,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 	var key := "%s/%s" % [src, name]
 	uses[key] = int(uses.get(key, 0)) + 1
 	var dealt := 0
+	var missed := {}   # foes that dodged every blow: what rides on the blow misses them too
 	var mult := float(ab.get("mult", 0.0))
 	if mult > 0.0 and not hits.is_empty():
 		var el := str(ab.get("element", ""))
@@ -708,16 +725,28 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 		var n := int(ab.get("hits", 1))
 		if not aoe and n > 1:
 			var t := target
+			var landed := {}
 			for h in n:
 				if enemies[t]["hp"] <= 0:
 					t = first_target()
 					if t < 0:
 						break
-				dealt += _hit_enemy(t, power, mult, pierce, cb, by, el, casts)
+				var took := _hit_enemy(t, power, mult, pierce, cb, by, el, casts)
+				if took >= 0:
+					dealt += took
+					landed[t] = true
+				else:
+					missed[t] = true
+			for t2 in landed:
+				missed.erase(t2)
 		else:
 			for h in hits:
 				if enemies[h[0]]["hp"] > 0:
-					dealt += _hit_enemy(h[0], power, mult * float(h[1]), pierce, cb, by, el, casts)
+					var took := _hit_enemy(h[0], power, mult * float(h[1]), pierce, cb, by, el, casts)
+					if took < 0:
+						missed[h[0]] = true
+					else:
+						dealt += took
 	for st in ab.get("statuses", []):
 		match str(st.get("on", "target")):
 			"party":
@@ -728,6 +757,8 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 			_:
 				var shrugged: Array = []
 				for h in hits:
+					if missed.has(h[0]):
+						continue
 					if enemies[h[0]]["hp"] > 0 and not try_status(enemy_ref(h[0]), st, src, power):
 						shrugged.append(enemies[h[0]]["name"])
 				if not shrugged.is_empty() and _tells_resist(st):
@@ -1023,7 +1054,7 @@ func expected_hits(by: int, ab: Dictionary, target: int, hits: Array = [], nums:
 		if i < 0:
 			continue
 		var e: Dictionary = enemies[i]
-		var dmg := maxf(1.0, power * mult * float(h[1]) - float(e["def"]) * (1.0 - pierce) * 0.5) * base
+		var dmg := maxf(1.0, power * mult * float(h[1]) - float(e["def"]) * (1.0 - pierce) * 0.5) * base * (1.0 - foe_dodge(i))
 		if by < 0:
 			dmg *= 1.0 + damage_bonus + float(slayer_bonus.get(e["id"], 0.0))
 		if el != "":

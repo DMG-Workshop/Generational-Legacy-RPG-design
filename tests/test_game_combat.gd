@@ -34,6 +34,10 @@ func _init() -> void:
 	test_creature_inflicts()
 	test_added_status()
 	test_elements()
+	test_party_of_three()
+	test_foe_dodge()
+	test_disease_saps_power()
+	test_disease_chances_low()
 	test_costs_and_learning()
 	test_spells_save_load()
 	test_companion_spells()
@@ -175,7 +179,12 @@ func test_formation() -> void:
 	var b3 := _battle(d, 4, "harpy")
 	ok(b3.enemies.filter(func(e): return e["row"] == "back").size() == 3, "a full back row spills forward")
 	d.battle = null
-	ok(GameCombat.ally_point(0) != GameCombat.ally_point(1) and GameCombat.ally_point(0).x <= GameCombat.heir_point().x, "companions stand beside and behind the heir")
+	var places := {}
+	for i in int(GameData.bal("party_max_size")):
+		var p := GameCombat.ally_point(i)
+		places[p] = true
+		ok(p.x < GameCombat.heir_point().x, "companion %d stands beside and behind the heir (%s)" % [i, str(p)])
+	ok(places.size() == int(GameData.bal("party_max_size")) and not places.has(GameCombat.heir_point()), "a full party has a place each: %s" % str(places.keys()))
 
 
 # ---------------------------------------------------------------- abilities
@@ -538,6 +547,130 @@ func test_elements() -> void:
 	ok(b._tick_resisted("heir", 100, "fire") == 40, "the heir's draconic scales (60%% fire resistance) cool a burn of 100 to %d" % b._tick_resisted("heir", 100, "fire"))
 
 
+# ---------------------------------------------------------------- party, dodging, sickness
+
+func _full_party(d: GameDynasty, ids: Array = ["bren_cask", "sister_oriel", "corwin_saltmere"]) -> void:
+	d.heir.gold = 1000000
+	for id in ids:
+		d.party.members.append({"id": id, "name": GameParty.def(id)["name"], "hp": 1, "mp": 0, "level": d.heir.level, "gen": d.gen, "due": 0.0, "battles": 0, "hired_gen": d.gen})
+	d.party.rest(d)
+
+
+## The heir and a full party of three against one to five foes: everyone has a place, every
+## companion can use all it knows from where it stands, and the autopilot sees each fight through.
+func test_party_of_three() -> void:
+	var results := {}
+	for n in range(1, 6):
+		var d := _dyn("druid", 30, 610 + n)
+		_full_party(d)
+		var b := _battle(d, n, "goblin")
+		ok(b.allies.size() == 3, "%d foes: three companions fight" % n)
+		ok(is_equal_approx(b.foe_hp_mult, 1.0 + 3.0 * float(GameData.bal("companion_foe_hp"))), "%d foes: toughened for a party of three" % n)
+		var spots := {b.unit_point(-1): true}
+		for i in 3:
+			spots[b.unit_point(i)] = true
+		ok(spots.size() == 4, "%d foes: the heir and three companions stand apart" % n)
+		ok(b.allies[1].spells == GameCombat.class_spells("cleric", 30) and b.allies[2].spells == GameCombat.class_spells("arcane_trickster", 30), "companions know their own class's spells")
+		_sturdy(b)
+		for i in 3:
+			for o in GameTactics.options(b, i):
+				b.events = []
+				b.allies[i].mp = 100000
+				b.resolve_ability(i, o["ab"], n - 1)
+				ok(b.events.any(func(ev): return ev["type"] == "cast" and int(ev["by"]) == i), "%s used by companion %d on %d foes" % [o["ab"]["name"], i, n])
+		for i in 3:
+			for ab in [GameCombat.spell("cone_of_frost"), GameCombat.spell("chain_lightning")]:
+				ok(n - 1 in b.aoe_targets(ab, i, n - 1), "%s from companion %d's place catches the aimed foe" % [ab["name"], i])
+		d.battle = null
+		d.party.rest(d)
+		d.heir.full_heal()
+		var fight := _battle(d, n, "goblin")
+		GameBot.fight(d)
+		results[fight.result] = int(results.get(fight.result, 0)) + 1
+		ok(fight.result in ["victory", "defeat", "fled"], "a party of four against %d ends (%s)" % [n, fight.result])
+	ok(int(results.get("victory", 0)) >= 4, "a party of four wins even fights: %s" % str(results))
+
+
+func test_foe_dodge() -> void:
+	var per := float(GameCombat.setting("foe_dodge_per_agi"))
+	var d := _dyn("warrior", 30)
+	var b := _battle(d, 3, "wolf")
+	_sturdy(b)
+	ok(is_equal_approx(b.foe_dodge(0), float(b.enemies[0]["agi"]) * per), "a foe dodges by its agility (%.3f)" % b.foe_dodge(0))
+	b.apply_status(GameBattle.enemy_ref(1), "slow", 0.2, 3, "heir")
+	ok(b.foe_dodge(1) == 0.0, "a slowed wolf cannot dodge")
+	b.apply_status(GameBattle.enemy_ref(2), "stun", 1.0, 1, "heir")
+	ok(b.foe_dodge(2) == 0.0, "nor can a stunned one")
+	b.statuses = {}
+	b.enemies[0]["agi"] = 20
+	var plain := b.estimate(-1, {}, 0)
+	b.enemies[0]["agi"] = 0
+	ok(absf(plain / b.estimate(-1, {}, 0) - (1.0 - 20.0 * per)) < 0.001, "expected damage counts the dodge")
+	b.enemies[0]["agi"] = 20
+	var missed := 0
+	for k in 1000:
+		b.events = []
+		if b._hit_enemy(0, 100.0, 1.0, 0.0, 0.0) < 0:
+			missed += 1
+			ok(b.events.size() == 1 and b.events[0]["type"] == "miss" and b.events[0]["side"] == "enemy", "a dodge is told as a miss on the foe")
+	var want := 1000.0 * 20.0 * per
+	ok(absf(float(missed) - want) < want * 0.4, "agility 20 dodges about %d of 1000 blows (%d)" % [int(want), missed])
+	# A foe that slips an area blow slips what rides on it; a spell with no blow cannot be dodged.
+	var s := GameCombat.settings()
+	var keep := [s["foe_dodge_per_agi"], s["foe_dodge_max"]]
+	s["foe_dodge_per_agi"] = 1.0
+	s["foe_dodge_max"] = 1.0
+	b.events = []
+	b.resolve_ability(-1, {"name": "Test Blast", "mult": 1.0, "target": {"shape": "all"}, "is_aoe": true, "statuses": [{"id": "burn", "chance": 1.0, "turns": 2, "potency": 0.1}]}, 0)
+	ok(b.events.filter(func(ev): return ev["type"] == "miss").size() == 3 and not b.events.any(func(ev): return ev["type"] == "damage"), "every foe dodged the blast")
+	ok(range(3).all(func(i): return not b.has_status(GameBattle.enemy_ref(i), "burn")), "and none caught fire")
+	b.resolve_ability(-1, {"name": "Test Hush", "mult": 0.0, "target": {"shape": "all"}, "is_aoe": true, "statuses": [{"id": "sleep", "chance": 1.0, "turns": 2}]}, 0)
+	ok(range(3).all(func(i): return b.has_status(GameBattle.enemy_ref(i), "sleep")), "a hush with no blow is not dodged")
+	s["foe_dodge_per_agi"] = keep[0]
+	s["foe_dodge_max"] = keep[1]
+
+
+## Sickness weakens what the heir and companions do with spells and skills.
+func test_disease_saps_power() -> void:
+	var d := _dyn("mage", 40)
+	var b := _battle(d, 1)
+	_sturdy(b)
+	var mag := float(b.unit_numbers(-1)["mag"])
+	var fireball := b.estimate(-1, GameCombat.spell("fireball"), 0)
+	var firebolt := b.estimate(-1, b.skill_info(0), 0)
+	d.battle = null
+	ok(GameDisease.infect(d.heir, "shaking_ague", "test", 2), "the heir has a shaking ague (element power -10%)")
+	var b2 := _battle(d, 1)
+	_sturdy(b2)
+	ok(float(b2.unit_numbers(-1)["mag"]) < mag and is_equal_approx(float(b2.unit_numbers(-1)["mag"]), d.heir.magic_power()), "spell power drops (%.1f -> %.1f)" % [mag, float(b2.unit_numbers(-1)["mag"])])
+	ok(b2.estimate(-1, GameCombat.spell("fireball"), 0) < fireball, "Fireball hits softer")
+	ok(b2.estimate(-1, b2.skill_info(0), 0) < firebolt, "so does the class skill")
+	d.battle = null
+	var w := _dyn("warrior", 40)
+	var wb := _battle(w, 1)
+	_sturdy(wb)
+	var strike := wb.estimate(-1, wb.skill_info(0), 0)
+	var mend := GameBattle.heal_amount(w.heir, w.heir, w.heir.cls()["skills"][1])
+	w.battle = null
+	GameDisease.infect(w.heir, "red_flux", "test", 2)
+	GameDisease.infect(w.heir, "grave_rot", "test", 2)
+	var wb2 := _battle(w, 1)
+	_sturdy(wb2)
+	ok(wb2.estimate(-1, wb2.skill_info(0), 0) < strike, "a flux weakens the warrior's strike")
+	ok(GameBattle.heal_amount(w.heir, w.heir, w.heir.cls()["skills"][1]) < mend, "grave rot weakens healing")
+	w.battle = null
+
+
+## The player asked for low odds of sickness: nothing a fight can hand out passes 2%.
+func test_disease_chances_low() -> void:
+	for id in GameData.items:
+		var it: Dictionary = GameData.items[id]
+		if it.has("vial"):
+			ok(float(it["vial"].get("splash", 0.0)) <= 0.02, "%s: a thrower catches it at most 2%% of the time" % id)
+		if it.has("toxin"):
+			ok(float(it["toxin"].get("backfire", {}).get("chance", 0.0)) <= 0.02, "%s: a toxin backfires at most 2%% of the time" % id)
+
+
 # ---------------------------------------------------------------- learning and costs
 
 func test_costs_and_learning() -> void:
@@ -839,6 +972,7 @@ func _ui_tests() -> void:
 	d.heir.spells = []
 	d.heir.learn_spells()
 	d.heir.full_heal()
+	_full_party(d)
 	var foes: Array = []
 	for i in 5:
 		foes.append(d._make_enemy(GameCombat.creature_def("goblin"), 1.0, 1.0, 40))
@@ -850,12 +984,18 @@ func _ui_tests() -> void:
 	app.show_state()
 	await _frames(6)
 	var view: Control = app.current
-	ok(view.enemy_nodes.size() == 5, "five foes on screen")
+	ok(view.enemy_nodes.size() == 5 and view.ally_nodes.size() == 3, "five foes and three companions on screen")
+	var figures: Array = [["the heir", view.hero_node]]
+	for i in 3:
+		figures.append(["companion %d" % i, view.ally_nodes[i]["root"]])
 	for i in 5:
-		var r: Rect2 = view.enemy_nodes[i]["root"].get_global_rect()
-		ok(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(r), "foe %d fits on screen (%s)" % [i, str(r)])
-		for j in range(i + 1, 5):
-			ok(not r.intersects(view.enemy_nodes[j]["root"].get_global_rect()), "foes %d and %d do not overlap" % [i, j])
+		figures.append(["foe %d" % i, view.enemy_nodes[i]["root"]])
+	var arena_rect: Rect2 = view.arena.get_global_rect()
+	for i in figures.size():
+		var r: Rect2 = figures[i][1].get_global_rect()
+		ok(arena_rect.grow(1.0).encloses(r), "%s fits in the arena (%s)" % [figures[i][0], str(r)])
+		for j in range(i + 1, figures.size()):
+			ok(not r.intersects(figures[j][1].get_global_rect()), "%s and %s do not overlap" % [figures[i][0], figures[j][0]])
 	var spells := _button(view, "Spells")
 	ok(spells != null, "a Spells command")
 	spells.pressed.emit()
