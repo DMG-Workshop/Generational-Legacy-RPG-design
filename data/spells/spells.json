@@ -19,7 +19,7 @@
     {
       "id": "cone_of_frost", "name": "Cone of Frost", "group": "elemental", "school": "evocation", "element": "frost", "type": "damage",
       "mp": 7, "stat": "mag", "mult": 0.95, "pierce": 0.3,
-      "target": {"shape": "cone", "angle": 60, "range": 16}, "is_aoe": true,
+      "target": {"shape": "cone", "angle": 60, "range": 12}, "is_aoe": true,
       "statuses": [{"id": "slow", "chance": 0.3, "turns": 2, "potency": 0.2}],
       "learn": {"classes": ["mage", "warlock", "shaman"], "min_level": 6, "levels": {"warlock": 12, "shaman": 20}},
       "text": "A fan of biting cold."
@@ -43,7 +43,7 @@
     {
       "id": "grave_tide", "name": "Grave Tide", "group": "elemental", "school": "necromancy", "element": "shadow", "type": "damage",
       "mp": 7, "stat": "mag", "mult": 0.9, "pierce": 0.3,
-      "target": {"shape": "cone", "angle": 70, "range": 16}, "is_aoe": true,
+      "target": {"shape": "cone", "angle": 70, "range": 12}, "is_aoe": true,
       "statuses": [{"id": "weaken", "chance": 0.35, "turns": 2, "potency": 0.2}],
       "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 4, "levels": {"warlock": 8, "dread_knight": 14}},
       "text": "A cold wave of grave-dust that saps the will to fight."
@@ -106,10 +106,10 @@
     {
       "id": "sleep", "name": "Sleep", "group": "control", "school": "enchantment", "element": "", "type": "control",
       "mp": 6, "stat": "mag", "mult": 0,
-      "target": {"shape": "burst", "radius": 3.0}, "is_aoe": true,
+      "target": {"shape": "single"}, "is_aoe": false,
       "statuses": [{"id": "sleep", "chance": 0.7, "turns": 2}],
       "learn": {"classes": ["mage", "arcane_trickster", "warlock", "druid"], "min_level": 4, "levels": {"arcane_trickster": 3, "warlock": 16, "druid": 20}},
-      "text": "A hush that drops foes where they stand. A blow wakes them."
+      "text": "A hush that drops one foe where it stands, out of the fight until a blow wakes it."
     },
     {
       "id": "entangle", "name": "Entangle", "group": "control", "school": "nature", "element": "nature", "type": "control",
@@ -138,7 +138,7 @@
     {
       "id": "fear", "name": "Fear", "group": "control", "school": "necromancy", "element": "shadow", "type": "control",
       "mp": 6, "stat": "mag", "mult": 0,
-      "target": {"shape": "cone", "angle": 70, "range": 16}, "is_aoe": true,
+      "target": {"shape": "cone", "angle": 70, "range": 12}, "is_aoe": true,
       "statuses": [{"id": "fear", "chance": 0.6, "turns": 2, "potency": 0.5}],
       "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 1, "levels": {"dread_knight": 8}},
       "text": "Whispers of the grave. The fearful often forget to strike."
