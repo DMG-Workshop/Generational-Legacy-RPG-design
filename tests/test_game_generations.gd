@@ -444,6 +444,22 @@ func test_history_folding() -> void:
 		f.choose_heir(0)
 	var fell: Array = f.ages.age_rows(f)[0]["legends"].map(func(l): return [l["id"], int(l["gen"])])
 	ok(fell == [["vaerthax", 1], ["grimfang", 3]], "legends in the order they fell: %s" % str(fell))
+	# Two legends slain by one heir fold the same way whether or not the game was reloaded.
+	var told: Array = []
+	for reload in [false, true]:
+		var t := _new(18)
+		t._die("old age")
+		t.choose_heir(0)
+		t.heir.kills = {}
+		t.heir.kills["vaerthax"] = 1
+		t.heir.kills["grimfang"] = 1
+		if reload:
+			t = _reload(t)
+		for i in 4:
+			t._die("old age")
+			t.choose_heir(0)
+		told.append(JSON.stringify(t.ages.summaries))
+	ok(told[0] == told[1], "summaries do not depend on a reload: %s vs %s" % told)
 	_restore()
 
 

@@ -198,7 +198,9 @@ static func _add(rows: Array, rec: Dictionary) -> void:
 	var cause := str(rec.get("cause", "old age"))
 	row["causes"][cause] = int(row["causes"].get(cause, 0)) + 1
 	var kills: Dictionary = rec.get("kills", {})
-	for id in kills:
+	var ids: Array = kills.keys()
+	ids.sort()   # a reloaded save lists kills in another order; the summary must not depend on it
+	for id in ids:
 		if not is_legend(str(id)):
 			continue
 		var seen := false
