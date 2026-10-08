@@ -161,6 +161,18 @@ func test_geometry() -> void:
 	ok(1 not in b.aoe_targets(fb, -1, 0), "the fallen are not in an area")
 	ok(b.aoe_targets(fb, -1, 1) == b.aoe_targets(fb, -1, b.first_target()), "aiming at a fallen foe aims at the first standing one")
 	ok(b.aoe_targets(GameCombat.spell("ward"), -1, 0).is_empty(), "a party spell catches no foes")
+	# On a full field (three in front, two behind) each shape keeps its own reach.
+	b.enemies[1]["hp"] = b.enemies[1]["max_hp"]
+	var best := func(ab: Dictionary) -> int:
+		var n := 0
+		for i in 5:
+			n = maxi(n, b.aoe_targets(ab, -1, i).size())
+		return n
+	ok(best.call(GameCombat.spell("earthshatter")) == 5, "a field-wide spell reaches all five")
+	ok(best.call(GameCombat.spell("cone_of_frost")) == 4, "a front-rank cone reaches the front and the foe aimed at")
+	ok(best.call(fb) == 3, "a fireball catches a row")
+	ok(best.call(GameCombat.spell("chain_lightning")) == 2, "a line runs from the front rank to the back")
+	ok(best.call(GameCombat.spell("sleep")) == 1, "sleep holds one foe")
 	var mend: Dictionary = GameData.classes["warrior"]["skills"][1]
 	ok(GameCombat.shape(mend) == "self" and GameCombat.shape_text(mend) == "Self" and b.aoe_targets(mend, -1, 0).is_empty(), "a class heal is its user's own and catches no foe")
 	ok(GameCombat.shape(GameData.classes["warrior"]["skills"][0]) == "single", "a class strike with no target block hits one foe")
