@@ -202,6 +202,18 @@ func test_scaling_uses_true_gen() -> void:
 		var mp1 := h.max_mp()
 		h.gen = era + 909 * GameAges.age_length()
 		ok(absi(h.max_mp() - mp1) <= 1, "era %d: MP in Age 910 matches Age 1 (%d vs %d)" % [era, h.max_mp(), mp1])
+	# AGI meets fixed odds: dodge and crit read the same at the same era of every Age, Age 1 untouched.
+	for g in [1, 300, 1100]:
+		h.gen = g
+		var agi := h.stat("agi")
+		ok(h.dodge_chance() == clampf(agi / (agi + 60.0) * 0.5, 0.0, 0.6) and h.crit_chance() == clampf(0.05 + agi / (agi + 100.0) * 0.2, 0.0, 0.6), "Age 1 dodge and crit unchanged at generation %d" % g)
+	for era in [1, 50, 1000]:
+		h.gen = era
+		var dodge1 := h.dodge_chance()
+		var crit1 := h.crit_chance()
+		for age in [2, 910]:
+			h.gen = era + (age - 1) * GameAges.age_length()
+			ok(is_equal_approx(h.dodge_chance(), dodge1) and is_equal_approx(h.crit_chance(), crit1), "era %d of Age %d dodges and crits as Age 1 did (%.3f/%.3f vs %.3f/%.3f)" % [era, age, h.dodge_chance(), h.crit_chance(), dodge1, crit1])
 	var drake := _creature("drake")
 	for era in [50, 400, 1000]:
 		var share := []

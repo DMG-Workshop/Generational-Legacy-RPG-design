@@ -133,10 +133,11 @@ func stat(s: String) -> float:
 	return v
 
 
-## 1 in the first Age. Later, the share of a stat's heir_scale that counts where VIT feeds health
-## and MAG feeds mana: health is scaled by heir_scale again (VIT would count it twice over) and
-## skill costs follow only the level, so by the true generation alone a later Age's heir could
-## neither be hurt by its beasts nor run short of mana. Each Age plays as the first did, era by era.
+## 1 in the first Age. Later, the share of a stat's heir_scale that counts where the stat meets a
+## fixed measure: VIT feeds health that heir_scale multiplies again, MAG feeds mana spent on skills
+## priced by level alone, AGI is weighed against fixed odds to dodge and crit. By the true
+## generation alone a later Age's heir could not be hurt by its beasts, never ran dry and dodged
+## half of every blow from birth. With it each Age plays as the first did, era by era.
 func era_measure() -> float:
 	var era := GameAges.era_of(gen)
 	return 1.0 if era == gen else GameData.heir_scale(era) / GameData.heir_scale(gen)
@@ -169,11 +170,13 @@ func defense() -> float:
 
 
 func dodge_chance() -> float:
-	return clampf(stat("agi") / (stat("agi") + 60.0) * 0.5 + trait_total("reflexes"), 0.0, 0.6)
+	var agi := stat("agi") * era_measure()
+	return clampf(agi / (agi + 60.0) * 0.5 + trait_total("reflexes"), 0.0, 0.6)
 
 
 func crit_chance() -> float:
-	return clampf(0.05 + trait_total("luck") + stat("agi") / (stat("agi") + 100.0) * 0.2, 0.0, 0.6)
+	var agi := stat("agi") * era_measure()
+	return clampf(0.05 + trait_total("luck") + agi / (agi + 100.0) * 0.2, 0.0, 0.6)
 
 
 func xp_to_next() -> int:
