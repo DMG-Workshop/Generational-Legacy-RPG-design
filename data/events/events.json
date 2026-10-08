@@ -1540,7 +1540,7 @@
       "title": "The Bell Below",
       "text": "In the lowest hall of the temple hangs the bell you heard from the shore, green bronze as big as a cottage. A drowned priest in rotted vestments still holds its rope.",
       "where": {"places": ["sunken_temple"]},
-      "requires": {"flags": ["heard_drowned_bell"]},
+      "requires": {"flags": ["heard_drowned_bell"], "not_flags": ["drowned_priest_rests"]},
       "weight": 30,
       "once": true,
       "choices": [
@@ -1589,6 +1589,7 @@
       "requires": {"flags": ["smugglers_broken"]},
       "weight": 20,
       "once": true,
+      "lasting": true,
       "choices": [
         {
           "text": "Draw steel",
@@ -1686,7 +1687,7 @@
     {
       "id": "founders_cairn",
       "title": "The Founder's Cairn",
-      "text": "The village has raised a cairn where {founder} set out from, ten generations and more ago. Children leave pebbles on it for luck. The headwoman asks if you will say a few words for your house.",
+      "text": "The village has raised a cairn where {founder} set out from, {generations} ago. Children leave pebbles on it for luck. The headwoman asks if you will say a few words for your house.",
       "where": {"places": ["hearthmere"]},
       "requires": {"min_gen": 11},
       "weight": 12,
@@ -1704,7 +1705,7 @@
         },
         {
           "text": "Leave a pebble like the children do",
-          "outcomes": {"always": {"text": "Your pebble clicks against ten generations of others.", "xp": 10, "fate": -0.01}}
+          "outcomes": {"always": {"text": "Your pebble clicks against {generations} of others.", "xp": 10, "fate": -0.01}}
         },
         {
           "text": "Thank her and go",

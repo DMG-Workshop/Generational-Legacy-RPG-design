@@ -87,7 +87,7 @@ func _column(cols: HBoxContainer) -> VBoxContainer:
 
 func _refresh() -> void:
 	var h := d.heir
-	header.text = "House %s  -  Generation %d  -  %s the %s %s" % [d.dynasty_name, d.gen, h.name, h.race()["name"], h.cls()["name"]]
+	header.text = "House %s  -  Generation %s  -  Age %s  -  %s the %s %s" % [d.dynasty_name, GameText.num(d.gen), GameText.num(d.age_number()), h.name, h.race()["name"], h.cls()["name"]]
 	var place := d.world.here()
 	where.text = "%s (%s)  -  %s  -  %s: %s" % [place["name"], place["type"], d.world.date_text(), d.world.weather()["name"], d.world.weather().get("text", "")]
 	header.tooltip_text = header.text
@@ -103,7 +103,7 @@ func _colorize(line: String) -> String:
 		return "[color=#6fcf6f]%s[/color]" % line
 	if "dies" in line or "slain" in line or "DISASTER" in line or "failure" in line or "Fate (" in line:
 		return "[color=#e0605a]%s[/color]" % line
-	if line.begins_with("Generation") or "dynasty begins" in line:
+	if line.begins_with("Generation") or line.begins_with("Age ") or "dynasty begins" in line:
 		return "[color=#e0b341][b]%s[/b][/color]" % line
 	return line
 
@@ -115,17 +115,17 @@ func _build_left() -> void:
 	var arch := ""
 	if h.archetype != "":
 		arch = "  -  %s" % GameFate.ARCHETYPES[h.archetype]["name"]
-	left.add_child(Kit.label("Level %d %s %s%s" % [h.level, h.race()["name"], h.cls()["name"], arch], 15, Kit.DIM))
+	left.add_child(Kit.label("Level %s %s %s%s" % [GameText.num(h.level), h.race()["name"], h.cls()["name"], arch], 15, Kit.DIM))
 	left.add_child(Kit.label("Age %d / ~%d%s" % [int(h.age), int(h.lifespan), "  (living on borrowed time)" if h.age > h.lifespan else ""], 15))
 	left.add_child(Kit.label("Fate Value: %d%%" % int(round(h.fate_value * 100.0)), 15, Kit.BAD if h.fate_value > 0.2 else Kit.TEXT))
-	left.add_child(Kit.label("HP %d / %d" % [h.hp, h.max_hp()], 14))
+	left.add_child(Kit.label("HP %s / %s" % [GameText.num(h.hp), GameText.num(h.max_hp())], 14))
 	left.add_child(Kit.bar(Kit.GOOD, h.max_hp(), h.hp))
-	left.add_child(Kit.label("MP %d / %d" % [h.mp, h.max_mp()], 14))
+	left.add_child(Kit.label("MP %s / %s" % [GameText.num(h.mp), GameText.num(h.max_mp())], 14))
 	left.add_child(Kit.bar(Kit.MP_BLUE, maxf(1.0, h.max_mp()), h.mp))
-	left.add_child(Kit.label("XP %d / %d" % [h.xp, h.xp_to_next()], 14))
+	left.add_child(Kit.label("XP %s / %s" % [GameText.num(h.xp), GameText.num(h.xp_to_next())], 14))
 	left.add_child(Kit.bar(Kit.ACCENT, h.xp_to_next(), h.xp, Vector2(200, 10)))
-	left.add_child(Kit.label("STR %d   MAG %d   AGI %d   VIT %d" % [int(h.stat("str")), int(h.stat("mag")), int(h.stat("agi")), int(h.stat("vit"))], 15))
-	left.add_child(Kit.label("Gold %d    Potions %d" % [h.gold, h.potions], 16, Kit.ACCENT))
+	left.add_child(Kit.label("STR\u00a0%s   MAG\u00a0%s   AGI\u00a0%s   VIT\u00a0%s" % [GameText.num(int(h.stat("str"))), GameText.num(int(h.stat("mag"))), GameText.num(int(h.stat("agi"))), GameText.num(int(h.stat("vit")))], 15))
+	left.add_child(Kit.label("Gold %s    Potions %d" % [GameText.num(h.gold), h.potions], 16, Kit.ACCENT))
 	_afflictions(h)
 	left.add_child(HSeparator.new())
 	left.add_child(Kit.label("Traits (hover for details)", 15, Kit.DIM))
@@ -187,7 +187,7 @@ func _build_right() -> void:
 	right.add_child(HSeparator.new())
 	right.add_child(Kit.label("Legacy", 20, Kit.ACCENT))
 	right.add_child(Kit.label("Heirlooms: %d  (+%d%% power)" % [d.heirlooms.size(), int(round(d.heirloom_bonus() * 100.0))], 14))
-	right.add_child(Kit.label("Ancestors: %d" % d.history.size(), 14))
+	right.add_child(Kit.label("Ancestors: %s" % GameText.num(d.ancestor_count()), 14))
 	if d.echoes.is_empty():
 		right.add_child(Kit.label("No legacy echoes yet.", 14, Kit.DIM))
 	for e in d.echoes:
@@ -238,8 +238,8 @@ func _build_actions() -> void:
 		_act("Train %s" % st.to_upper(), func(): _do(func(): return d.train(st)))
 	_act("Work", func(): _do(func(): return d.work()))
 	_act("Rest", func(): _do(func(): return d.rest()))
-	var buy := _act("Potion (%dg)" % d.potion_price(), _say_buy)
-	buy.tooltip_text = "Buy a healing potion for %d gold." % d.potion_price()
+	var buy := _act("Potion (%sg)" % GameText.num(d.potion_price()), _say_buy)
+	buy.tooltip_text = "Buy a healing potion for %s gold." % GameText.num(d.potion_price())
 	buy.disabled = h.gold < d.potion_price()
 	var fam := _act("Found family", func(): _do(func(): return d.found_family()))
 	fam.disabled = not d.can_found_family()

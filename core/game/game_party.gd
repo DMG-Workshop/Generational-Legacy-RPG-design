@@ -232,15 +232,15 @@ func locked_reason(d: GameDynasty, id: String) -> String:
 	if status == "fallen":
 		var back := int(history[id]["gen"]) + int(GameData.bal("companion_kin_gens"))
 		if d.gen < back:
-			return "In mourning until generation %d." % back
+			return "In mourning until generation %s." % GameText.num(back)
 	if status in ["dead", "retired"]:
 		if not c.has("successor"):
 			return "No one has come to take up the work."
 		var year := float(history[id].get("back_year", 0.0))
 		if d.world.year < year:
-			return "%s may take up the work from year %d." % [history[id]["name"], int(year) + 1]
-	if d.gen < int(req.get("min_gen", 1)):
-		return "Not in this age."
+			return "%s may take up the work from year %s." % [history[id]["name"], GameText.num(int(year) + 1)]
+	if d.era_gen() < int(req.get("min_gen", 1)):
+		return "Not yet in this Age."
 	for f in req.get("flags", []):
 		if not d.flags.has(f):
 			return "Waiting on a deed your house has not done."
@@ -281,7 +281,7 @@ func hire_block(d: GameDynasty, id: String) -> String:
 	if members.size() >= max_size():
 		return "The party is full (%d)." % max_size()
 	if d.heir.gold < fee(d, id):
-		return "Not enough gold (%d needed)." % fee(d, id)
+		return "Not enough gold (%s needed)." % GameText.num(fee(d, id))
 	return ""
 
 
@@ -313,7 +313,7 @@ func hire(d: GameDynasty, id: String) -> String:
 	elif returning:
 		text = "%s comes back to House %s's service and asks no fee." % [nm, d.dynasty_name]
 	else:
-		text = "%s, %s %s, joins %s for %d gold (upkeep %d a year)." % [nm, GameData.races[c["race"]]["name"], GameData.classes[c["class"]]["name"], d.heir.name, price, upkeep(d, id)]
+		text = "%s, %s %s, joins %s for %s gold (upkeep %s a year)." % [nm, GameData.races[c["race"]]["name"], GameData.classes[c["class"]]["name"], d.heir.name, GameText.num(price), GameText.num(upkeep(d, id))]
 	d._say(text)
 	return text
 
@@ -535,11 +535,16 @@ func _fall(d: GameDynasty, m: Dictionary) -> String:
 	var rec: Dictionary = history[id]
 	var fallen: Array = rec.get("fallen", [])
 	fallen.append(m["name"])
-	rec["fallen"] = fallen
+	rec["fallen"] = _recent_fallen(fallen)
 	_close_line(d, id, {"name": m["name"], "end": "fell", "age": years, "year": int(d.world.year) + 1, "gen": d.gen, "served": true})
 	var pattern: String = def(id).get("successor", "{given}")
 	rec["name"] = pattern.replace("{given}", GameInheritance.random_name(d.rng))
 	return "%s falls in the fighting and does not rise. House %s will remember." % [m["name"], d.dynasty_name]
+
+
+## The names of the last few who fell in a role; `line` still counts every holder.
+static func _recent_fallen(fallen: Array) -> Array:
+	return fallen.slice(maxi(0, fallen.size() - int(GameAges.setting("party_fallen_kept"))))
 
 
 # ---------------------------------------------------------------- autopilot
@@ -622,6 +627,7 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 			rec["fallen"] = [def(id)["name"]]
 		# Before ageing, only the fallen had come before whoever holds the role now.
 		rec["line"] = int(r.get("line", (rec["fallen"] as Array).size()))
+		rec["fallen"] = _recent_fallen(rec["fallen"])
 		rec["past"] = []
 		for e in r.get("past", []):
 			if typeof(e) == TYPE_DICTIONARY:

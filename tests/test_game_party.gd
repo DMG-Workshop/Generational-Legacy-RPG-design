@@ -129,7 +129,7 @@ func test_requirements() -> void:
 	ok(p.locked_reason(d, "varn_deepdelver") == "", "Varn talks once the house has been to Deepstone")
 	ok(p.hire_block(d, "varn_deepdelver") == "", "Varn hireable in Ironford")
 	d.world.visit("kingshold")
-	ok(p.locked_reason(d, "ysolde_marrow") == "Not in this age.", "Ysolde waits for her generation")
+	ok(p.locked_reason(d, "ysolde_marrow") == "Not yet in this Age.", "Ysolde waits for her generation")
 	d.gen = 300
 	d.heir.level = 50
 	ok(p.locked_reason(d, "pale_warden").find("deed") >= 0, "the Pale Warden waits for the Rift")

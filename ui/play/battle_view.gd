@@ -107,7 +107,7 @@ func _foe_list() -> String:
 
 
 func _say(text: String) -> void:
-	log_label.append_text(text + "\n")
+	log_label.append_text(GameText.group_numbers(text) + "\n")
 
 
 func _unhandled_input(ev: InputEvent) -> void:
@@ -139,7 +139,7 @@ func _build_actors() -> void:
 	head.size = Vector2(40, 40)
 	head.position = Vector2(42, 0)
 	hero_node.add_child(head)
-	hero_label = Kit.label("%s  Lv%d" % [d.heir.name, d.heir.level], 14)
+	hero_label = Kit.label("%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)], 14)
 	hero_label.position = Vector2(0, 146)
 	hero_label.size = Vector2(124, 20)
 	hero_label.clip_text = true
@@ -195,7 +195,7 @@ func _build_actors() -> void:
 			eye.position = Vector2(w * ex, h * 0.22)
 			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(eye)
-		var lv := Kit.label("Lv %d" % int(e.get("level", 1)), 13, Kit.ACCENT if str(e["name"]).begins_with("Elite") else Kit.TEXT)
+		var lv := Kit.label("Lv %s" % GameText.num(int(e.get("level", 1))), 13, Kit.ACCENT if str(e["name"]).begins_with("Elite") else Kit.TEXT)
 		lv.add_theme_constant_override("outline_size", 4)
 		lv.add_theme_color_override("font_outline_color", Color.BLACK)
 		lv.position = Vector2(4, h - 22)
@@ -441,7 +441,7 @@ func _build_commands() -> void:
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
-		var btn := _small_button("%s (%d MP)" % [s["name"], b.skill_cost(i)], func(): _use_skill(idx))
+		var btn := _small_button("%s (%s MP)" % [s["name"], GameText.num(b.skill_cost(i))], func(): _use_skill(idx))
 		btn.disabled = not b.can_use_skill(i)
 		btn.tooltip_text = "%s  -  %s\n%s" % [s["name"], GameCombat.shape_text(s), GameCombat.describe(s)]
 		btn.mouse_entered.connect(func(): _show_area(s, target))
@@ -452,7 +452,7 @@ func _build_commands() -> void:
 		sb.disabled = b.known_spells().is_empty()
 		sb.tooltip_text = "The spells %s knows." % d.heir.name if not b.known_spells().is_empty() else "%s has learned no spells yet." % d.heir.name
 		col3.add_child(sb)
-	var pot := Kit.button("Potion (%d)" % d.heir.potions, func(): _do(func(): b.use_potion()))
+	var pot := Kit.button("Potion (%s)" % GameText.num(d.heir.potions), func(): _do(func(): b.use_potion()))
 	pot.disabled = d.heir.potions <= 0
 	col3.add_child(pot)
 	col3.add_child(Kit.button("Flee", func(): _do(func(): b.flee())))
@@ -499,7 +499,7 @@ func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
 	var text := ("Over %s: would catch %s" if hovering else "Aimed at %s: catches %s") % [b.enemies[at]["name"], foes]
 	var dmg := b.estimate(-1, ab, at)
 	if dmg >= 1.0:
-		text += ", about %d damage%s" % [int(round(dmg)), " in all" if n > 1 else ""]
+		text += ", about %s damage%s" % [GameText.num(int(round(dmg))), " in all" if n > 1 else ""]
 	return text + "."
 
 
@@ -529,7 +529,7 @@ func _open_spells() -> void:
 	p.add_child(v)
 	var top := HBoxContainer.new()
 	v.add_child(top)
-	var t := Kit.label("Spells  -  %s has %d / %d MP" % [d.heir.name, d.heir.mp, d.heir.max_mp()], 20, Kit.ACCENT)
+	var t := Kit.label("Spells  -  %s has %s / %s MP" % [d.heir.name, GameText.num(d.heir.mp), GameText.num(d.heir.max_mp())], 20, Kit.ACCENT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
 	top.add_child(Kit.button("Close", func(): _close_spells(), Vector2(100, 34)))
@@ -558,7 +558,7 @@ func _spell_row(id: String) -> Control:
 	var sp := GameCombat.spell(id)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
-	var btn := Kit.button("%s  (%d MP)" % [sp["name"], b.spell_cost(id)], func(): _use_spell(id), Vector2(260, 34))
+	var btn := Kit.button("%s  (%s MP)" % [sp["name"], GameText.num(b.spell_cost(id))], func(): _use_spell(id), Vector2(260, 34))
 	btn.add_theme_font_size_override("font_size", 15)
 	btn.clip_text = true
 	btn.disabled = not b.can_cast(id)
@@ -584,7 +584,7 @@ func _spell_row(id: String) -> Control:
 func _next_spell() -> String:
 	for p in GameCombat.class_spell_plan(d.heir.class_id):
 		if p[0] not in b.known_spells():
-			return "Next: %s at level %d." % [GameCombat.spell(p[0])["name"], p[1]]
+			return "Next: %s at level %s." % [GameCombat.spell(p[0])["name"], GameText.num(int(p[1]))]
 	return ""
 
 
@@ -664,7 +664,7 @@ func _play_one(ev: Dictionary) -> void:
 				if int(ev.get("cast", 0)) == 0:
 					_lunge(_unit_node(by), 22.0)
 				var en: Dictionary = enemy_nodes[ev["index"]]
-				var txt := str(ev["amount"]) + ("!" if ev["crit"] else "")
+				var txt := GameText.num(int(ev["amount"])) + ("!" if ev["crit"] else "")
 				if ev.get("shatter", false):
 					txt += " shatter"
 				_float_text(en["root"].position + Vector2(en["w"] * 0.3, 6), txt, Color("#ffd24a") if ev["crit"] else Color.WHITE)
@@ -683,16 +683,16 @@ func _play_one(ev: Dictionary) -> void:
 				hero_hp.value -= float(ev["amount"])
 		"heal":
 			if ev["side"] == "ally":
-				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), "+%d" % ev["amount"], Kit.GOOD)
+				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), GameText.signed(int(ev["amount"])), Kit.GOOD)
 				_step_ally_hp(ev["ally"], int(ev["amount"]))
 			else:
-				_float_text(hero_node.position + Vector2(40, 0), "+%d" % ev["amount"], Kit.GOOD)
+				_float_text(hero_node.position + Vector2(40, 0), GameText.signed(int(ev["amount"])), Kit.GOOD)
 				hero_hp.value += float(ev["amount"])
 		"tick":
 			var def := GameCombat.status_def(str(ev["id"]))
 			var heal: bool = ev.get("heal", false)
 			var amt := int(ev["amount"])
-			var txt := ("+%d" if heal else "-%d") % amt
+			var txt := GameText.signed(amt) if heal else "-" + GameText.num(amt)
 			if amt == 0 and int(ev.get("absorbed", 0)) > 0:
 				txt = "absorbed"
 			_float_text(_ref_node(ev["ref"]).position + Vector2(30, 0), txt, Kit.GOOD if heal else Color(def.get("color", "#ff9a3c")))
@@ -707,7 +707,7 @@ func _play_one(ev: Dictionary) -> void:
 			var def := GameCombat.status_def(str(ev["id"]))
 			_float_text(_side_point(str(ev["ref"])), "%s - no turn" % def.get("name", ev["id"]), Color(def.get("color", "#ffffff")), 16)
 		"mana":
-			_float_text(_unit_node(by).position + Vector2(30, 0), "+%d MP" % ev["amount"], Kit.MP_BLUE, 18)
+			_float_text(_unit_node(by).position + Vector2(30, 0), "+%s MP" % GameText.num(int(ev["amount"])), Kit.MP_BLUE, 18)
 		"miss":
 			if ev["side"] == "enemy":   # a foe slipped the party's blow
 				if int(ev.get("cast", 0)) == 0:
@@ -737,7 +737,7 @@ func _play_one(ev: Dictionary) -> void:
 func _hurt_text(ev: Dictionary) -> String:
 	if int(ev["amount"]) == 0 and int(ev.get("absorbed", 0)) > 0:
 		return "absorbed"
-	return str(ev["amount"])
+	return GameText.num(int(ev["amount"]))
 
 
 func _unit_node(by: int) -> Control:
@@ -787,7 +787,7 @@ func _step_ref_hp(ref: String, delta: int) -> void:
 func _step_ally_hp(i: int, delta: int) -> void:
 	var an: Dictionary = ally_nodes[i]
 	an["hp"].value = clampf(an["hp"].value + float(delta), 0.0, an["hp"].max_value)
-	an["info"].text = "Lv%d  HP %d" % [b.allies[i].level, int(an["hp"].value)]
+	an["info"].text = "Lv%s  HP %s" % [GameText.num(b.allies[i].level), GameText.num(int(an["hp"].value))]
 
 
 func _knock_out(i: int) -> void:
@@ -893,7 +893,7 @@ func _update_view() -> void:
 		an["hp"].value = a.hp
 		an["mp"].max_value = maxf(1.0, a.max_mp())
 		an["mp"].value = a.mp
-		an["info"].text = "Lv%d  HP %d" % [a.level, a.hp]
+		an["info"].text = "Lv%s  HP %s" % [GameText.num(a.level), GameText.num(a.hp)]
 
 
 func _show_result() -> void:
@@ -903,7 +903,7 @@ func _show_result() -> void:
 	aiming = {}
 	_close_spells()
 	var msgs: Array = d.finish_battle()
-	hero_label.text = "%s  Lv%d" % [d.heir.name, d.heir.level]
+	hero_label.text = "%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)]
 	app.autosave()
 	var overlay := ColorRect.new()
 	overlay.z_index = 10   # above the enemy name labels, which sit at z 1

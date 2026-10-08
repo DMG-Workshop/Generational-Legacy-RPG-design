@@ -449,10 +449,10 @@ static func temple_cure(d: GameDynasty, id: String) -> String:
 		return "%s is not sick with %s." % [h.name, disease_name(id)]
 	var cost := cure_price(d, id)
 	if h.gold < cost:
-		return "The priests ask %d gold to cure %s." % [cost, disease_name(id)]
+		return "The priests ask %s gold to cure %s." % [GameText.num(cost), disease_name(id)]
 	h.gold -= cost
 	cure(h, id)
-	return "The priests of %s cure %s of %s for %d gold." % [place, h.name, disease_name(id), cost]
+	return "The priests of %s cure %s of %s for %s gold." % [place, h.name, disease_name(id), GameText.num(cost)]
 
 
 ## Stages a remedy item takes off (0 = not a remedy).
