@@ -115,6 +115,9 @@ func test_age_math() -> void:
 	_restore()
 	ok(GameText.num(0) == "0" and GameText.num(999) == "999" and GameText.num(1000) == "1,000", "thousands separators from 1,000")
 	ok(GameText.num(999999) == "999,999" and GameText.num(-1234567) == "-1,234,567" and GameText.num(123456789012345) == "123,456,789,012,345", "long and negative numbers group in threes")
+	ok(GameText.signed(25) == "+25" and GameText.signed(-40) == "-40" and GameText.signed(1234567) == "+1,234,567", "signed amounts keep their sign")
+	var line := GameText.group_numbers("Tess hits Elder Dragon for 13620509978 (CRIT!). Wolf hits Tess for 999. Heals 1000.")
+	ok(line == "Tess hits Elder Dragon for 13,620,509,978 (CRIT!). Wolf hits Tess for 999. Heals 1,000.", "log lines group their long numbers: %s" % line)
 
 
 # ---------------------------------------------------------------- gates and scaling
@@ -550,8 +553,17 @@ func test_numbers_at_the_cap() -> void:
 	for k in nums:
 		ok(int(nums[k]) > 0 and int(nums[k]) < EXACT_INT, "%s at the cap is %s" % [k, GameText.num(int(nums[k]))])
 	print("  at the cap: HP %s, attack %s, foe HP %s, foe attack %s, sword %s gold" % [GameText.num(nums["max HP"]), GameText.num(nums["attack"]), GameText.num(nums["foe HP"]), GameText.num(nums["foe attack"]), GameText.num(nums["sword"])])
-	# A fight at those numbers runs to its end, and the save keeps every value.
+	# The messages a player reads group those numbers in thousands.
 	d.world.visit("hearthmere")
+	var cost := GameItems.price(d, "iron_sword")
+	var bought := GameItems.buy(d, "iron_sword")
+	ok(cost >= 1000000 and bought.contains(" for %s gold" % GameText.num(cost)), "a forge price reads in thousands: %s" % bought)
+	var g := GameEvents.gold_amount(d, 120.0)
+	var fx := GameEvents._apply(d, {"id": "probe"}, {"text": "A purse.", "gold": 120}, [])
+	ok(str(fx[0]["t"]) == "+%s gold" % GameText.num(g) and g >= 1000000, "an event's purse reads %s" % str(fx[0]["t"]))
+	var label: String = GameEvents.check_parts(d, {"attr": "agi", "dc": 12})[0][0]
+	ok(label == "Proficiency (level 99,999)", "a check's proficiency names the level in thousands: %s" % label)
+	# A fight at those numbers runs to its end, and the save keeps every value.
 	ok(d.party.hire(d, "bren_cask").contains("joins"), "a companion hired at the cap")
 	d.world.visit("whisperwood")
 	d.start_hunt("hunt")

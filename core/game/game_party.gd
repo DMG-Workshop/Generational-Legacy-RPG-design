@@ -238,7 +238,7 @@ func locked_reason(d: GameDynasty, id: String) -> String:
 			return "No one has come to take up the work."
 		var year := float(history[id].get("back_year", 0.0))
 		if d.world.year < year:
-			return "%s may take up the work from year %d." % [history[id]["name"], int(year) + 1]
+			return "%s may take up the work from year %s." % [history[id]["name"], GameText.num(int(year) + 1)]
 	if d.era_gen() < int(req.get("min_gen", 1)):
 		return "Not in this age."
 	for f in req.get("flags", []):

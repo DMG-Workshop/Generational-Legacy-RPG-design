@@ -74,7 +74,7 @@ func _ready() -> void:
 
 
 func _say(text: String) -> void:
-	log_label.append_text(text + "\n")
+	log_label.append_text(GameText.group_numbers(text) + "\n")
 
 
 func _build_actors() -> void:
@@ -91,7 +91,7 @@ func _build_actors() -> void:
 	head.size = Vector2(46, 46)
 	head.position = Vector2(37, -10)
 	hero_node.add_child(head)
-	hero_label = Kit.label("%s  Lv%d" % [d.heir.name, d.heir.level], 14)
+	hero_label = Kit.label("%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)], 14)
 	hero_label.position = Vector2(0, 166)
 	hero_node.add_child(hero_label)
 	hero_hp = Kit.bar(Kit.GOOD, d.heir.max_hp(), d.heir.hp, Vector2(120, 10))
@@ -234,7 +234,7 @@ func _build_commands() -> void:
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
-		var btn := Kit.button("%s (%d MP)" % [s["name"], b.skill_cost(i)], func(): _do(func(): b.use_skill(idx, target)))
+		var btn := Kit.button("%s (%s MP)" % [s["name"], GameText.num(b.skill_cost(i))], func(): _do(func(): b.use_skill(idx, target)))
 		btn.disabled = not b.can_use_skill(i)
 		col2.add_child(btn)
 	var pot := Kit.button("Potion (%d)" % d.heir.potions, func(): _do(func(): b.use_potion()))
@@ -272,26 +272,26 @@ func _play_events(events: Array) -> void:
 			"damage":
 				if ev["side"] == "enemy":
 					var en: Dictionary = enemy_nodes[ev["index"]]
-					_float_text(en["root"].position + Vector2(en["w"] * 0.4, 10), str(ev["amount"]) + ("!" if ev["crit"] else ""), Color("#ffd24a") if ev["crit"] else Color.WHITE)
+					_float_text(en["root"].position + Vector2(en["w"] * 0.4, 10), GameText.num(ev["amount"]) + ("!" if ev["crit"] else ""), Color("#ffd24a") if ev["crit"] else Color.WHITE)
 					_flash(en["body"])
 					en["hp"].value = maxf(float(b.enemies[ev["index"]]["hp"]), en["hp"].value - float(ev["amount"]))
 				elif ev["side"] == "ally":
 					_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 					var an: Dictionary = ally_nodes[ev["ally"]]
-					_float_text(an["root"].position + Vector2(34, -6), str(ev["amount"]), Kit.BAD)
+					_float_text(an["root"].position + Vector2(34, -6), GameText.num(ev["amount"]), Kit.BAD)
 					_flash(an["body"])
 					_step_ally_hp(ev["ally"], -int(ev["amount"]))
 				else:
 					_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
-					_float_text(hero_node.position + Vector2(40, 0), str(ev["amount"]), Kit.BAD)
+					_float_text(hero_node.position + Vector2(40, 0), GameText.num(ev["amount"]), Kit.BAD)
 					_flash(hero_node.get_child(0))
 					hero_hp.value -= float(ev["amount"])
 			"heal":
 				if ev["side"] == "ally":
-					_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), "+%d" % ev["amount"], Kit.GOOD)
+					_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), GameText.signed(ev["amount"]), Kit.GOOD)
 					_step_ally_hp(ev["ally"], int(ev["amount"]))
 				else:
-					_float_text(hero_node.position + Vector2(40, 0), "+%d" % ev["amount"], Kit.GOOD)
+					_float_text(hero_node.position + Vector2(40, 0), GameText.signed(ev["amount"]), Kit.GOOD)
 					hero_hp.value += float(ev["amount"])
 			"miss":
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
@@ -388,7 +388,7 @@ func _show_result() -> void:
 		return
 	result_shown = true
 	var msgs: Array = d.finish_battle()
-	hero_label.text = "%s  Lv%d" % [d.heir.name, d.heir.level]
+	hero_label.text = "%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)]
 	app.autosave()
 	var overlay := ColorRect.new()
 	overlay.z_index = 10   # above the enemy name labels, which sit at z 1

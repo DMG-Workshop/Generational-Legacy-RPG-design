@@ -300,11 +300,11 @@ func _past_line(id: String, e: Dictionary) -> String:
 	var fought := "" if nb == 0 else (" (1 battle)" if nb == 1 else " (%d battles)" % nb)
 	match e["end"]:
 		"fell":
-			return "%s fell in battle at %d, in year %d%s." % [e["name"], int(e["age"]), int(e["year"]), fought]
+			return "%s fell in battle at %d, in year %s%s." % [e["name"], int(e["age"]), GameText.num(int(e["year"])), fought]
 		"retired":
-			return "%s retired to %s at %d, in year %d%s." % [e["name"], dynasty.party._place_name(id), int(e["age"]), int(e["year"]), fought]
+			return "%s retired to %s at %d, in year %s%s." % [e["name"], dynasty.party._place_name(id), int(e["age"]), GameText.num(int(e["year"])), fought]
 	var where := "in the house's service" if bool(e.get("served", true)) else "after leaving the house's service"
-	return "%s died of old age at %d in year %d, %s%s." % [e["name"], int(e["age"]), int(e["year"]), where, fought]
+	return "%s died of old age at %d in year %s, %s%s." % [e["name"], int(e["age"]), GameText.num(int(e["year"])), where, fought]
 
 
 func _hire(id: String) -> void:

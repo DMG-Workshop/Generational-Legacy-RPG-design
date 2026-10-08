@@ -191,9 +191,9 @@ static func explore(d: GameDynasty) -> Array:
 		ev = pick_event(d)
 	if ev.is_empty():
 		var xp := int(round(float(GameData.bal("event_quiet_xp")) * GameData.xp_level_scale(h.level)))
-		var msgs: Array = ["%s explores %s. Nothing stirs, but the land is better known for it (+%d XP)." % [h.name, place["name"], xp]]
+		var msgs: Array = ["%s explores %s. Nothing stirs, but the land is better known for it (+%s XP)." % [h.name, place["name"], GameText.num(xp)]]
 		if h.gain_xp(xp) > 0:
-			msgs.append("Level up! %s is now level %d." % [h.name, h.level])
+			msgs.append("Level up! %s is now level %s." % [h.name, GameText.num(h.level)])
 		return d._finish_time("explore", msgs)
 	var span := d.years_for("explore")
 	var out := d._finish_time("explore", ["%s spends %s exploring %s." % [h.name, "a year" if span == 1 else "%d years" % span, place["name"]]])
@@ -302,7 +302,7 @@ static func choice_status(d: GameDynasty, c: Dictionary) -> Dictionary:
 		if h.gold >= cost:
 			passed.append("")
 		else:
-			failed.append("%d gold" % cost)
+			failed.append("%s gold" % GameText.num(cost))
 	var ok: bool = failed.is_empty() or (r.get("any", false) and not passed.is_empty())
 	var tags: Array = passed.filter(func(t): return t != "")
 	var tag: String = tags[0] if not tags.is_empty() else ""
@@ -323,7 +323,7 @@ static func choice_label(d: GameDynasty, i: int) -> String:
 		text = "[%s] %s" % [st["tag"], text]
 	var extra: Array = []
 	if c.get("requires", {}).has("min_gold"):
-		extra.append("%d gold" % gold_amount(d, float(c["requires"]["min_gold"])))
+		extra.append("%s gold" % GameText.num(gold_amount(d, float(c["requires"]["min_gold"]))))
 	if c.has("check"):
 		extra.append(check_text(d, c["check"]))
 	else:
@@ -392,7 +392,7 @@ static func _bonus_applies(h: GameHeir, b: Dictionary) -> String:
 static func check_parts(d: GameDynasty, check: Dictionary) -> Array:
 	var h := d.heir
 	var attr: String = check["attr"]
-	var parts: Array = [["Proficiency (level %d)" % h.level, proficiency(h.level)], [ATTR_LABELS.get(attr, attr), attr_bonus(h, attr)]]
+	var parts: Array = [["Proficiency (level %s)" % GameText.num(h.level), proficiency(h.level)], [ATTR_LABELS.get(attr, attr), attr_bonus(h, attr)]]
 	for b in check.get("bonus_if", []):
 		var who := _bonus_applies(h, b)
 		if who != "":
@@ -550,20 +550,20 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 			g = -mini(-g, h.gold)
 		h.gold += g
 		if g != 0:
-			fx.append({"t": "%+d gold" % g, "k": "good" if g > 0 else "bad"})
+			fx.append({"t": "%s gold" % GameText.signed(g), "k": "good" if g > 0 else "bad"})
 	if o.has("xp"):
 		var xp := int(round(float(o["xp"]) * GameData.xp_level_scale(h.level)))
-		fx.append({"t": "+%d XP" % xp, "k": "good"})
+		fx.append({"t": "%s XP" % GameText.signed(xp), "k": "good"})
 		if h.gain_xp(xp) > 0:
-			fx.append({"t": "Level up! Now level %d" % h.level, "k": "good"})
-			level_up = "Level up! %s is now level %d." % [h.name, h.level]
+			fx.append({"t": "Level up! Now level %s" % GameText.num(h.level), "k": "good"})
+			level_up = "Level up! %s is now level %s." % [h.name, GameText.num(h.level)]
 	if o.has("hp_pct"):
 		var before := h.hp
 		h.hp = clampi(h.hp + int(round(float(h.max_hp()) * float(o["hp_pct"]))), 1, h.max_hp())   # events wound, never kill
 		if h.hp > before:
-			fx.append({"t": "Recovered %d HP" % (h.hp - before), "k": "good"})
+			fx.append({"t": "Recovered %s HP" % GameText.num(h.hp - before), "k": "good"})
 		elif h.hp < before:
-			fx.append({"t": "Lost %d HP" % (before - h.hp), "k": "bad"})
+			fx.append({"t": "Lost %s HP" % GameText.num(before - h.hp), "k": "bad"})
 	if o.has("potions"):
 		h.potions += int(o["potions"])
 		fx.append({"t": "+%d potion%s" % [int(o["potions"]), "" if int(o["potions"]) == 1 else "s"], "k": "good"})
@@ -586,7 +586,7 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		if _owns(h, item):
 			var g := maxi(1, int(round(float(GameItems.item_def(item).get("price", 0)) * GameData.enemy_scale(d.gen) * float(GameData.bal("event_duplicate_item_gold")))))
 			h.gold += g
-			fx.append({"t": "Already owned %s: sold for %d gold" % [_item_name(item), g], "k": "good"})
+			fx.append({"t": "Already owned %s: sold for %s gold" % [_item_name(item), GameText.num(g)], "k": "good"})
 		else:
 			d.give_item(item)
 			fx.append({"t": "Received %s" % _item_name(item), "k": "good"})
