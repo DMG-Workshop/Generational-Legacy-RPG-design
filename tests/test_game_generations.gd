@@ -323,6 +323,7 @@ func test_once_per_age_events() -> void:
 	GameAges.jump_to(d, 20)
 	ok(GameEvents.is_eligible(d, cairn), "the Founder's Cairn waits at generation 20")
 	GameEvents.begin(d, "founders_cairn")
+	ok(GameEvents.event_text(d).contains("set out from, 19 generations ago."), "the cairn counts the generations since the founder: %s" % GameEvents.event_text(d))
 	d.pending_event = {}
 	ok(int(d.flags[GameEvents.SEEN + "founders_cairn"]) == 20, "seen in generation 20")
 	GameAges.jump_to(d, 900)
@@ -332,6 +333,8 @@ func test_once_per_age_events() -> void:
 	GameAges.jump_to(d, 1111)
 	ok(GameEvents.is_eligible(d, cairn), "once again in Age 2")
 	GameEvents.begin(d, "founders_cairn")
+	ok(GameEvents.event_text(d).contains("set out from, 1,110 generations ago."), "in Age 2 the cairn reads 1,110 generations: %s" % GameEvents.event_text(d))
+	ok(GameEvents.resolve(d, 1).any(func(m): return str(m) == "Your pebble clicks against 1,110 generations of others."), "and so does the pebble")
 	d.pending_event = {}
 	ok(int(d.flags[GameEvents.SEEN + "founders_cairn"]) == 1111, "the seen mark moves to Age 2")
 	GameAges.jump_to(d, 1500)

@@ -10,7 +10,7 @@
 ## race, class, item (one or a list), flag (+ reason), min_level, min_gold, any, reason},
 ## check {attr, dc, bonus_if [{race|class|trait, value}]}, outcomes {crit_success, success,
 ## failure, crit_failure} or {always}. Outcome: EFFECT_KEYS. Texts may use {heir} {house} {place}
-## {founder} {ancestor}. validate() lists anything wrong with the data.
+## {founder} {generations} (since the founder) {ancestor}. validate() lists anything wrong with the data.
 class_name GameEvents
 extends RefCounted
 
@@ -47,11 +47,13 @@ static func current(d: GameDynasty) -> Dictionary:
 	return event_def(str(d.pending_event.get("id", "")))
 
 
-## Replaces {heir}, {house}, {place}, {founder} and {ancestor} in event text.
+## Replaces {heir}, {house}, {place}, {founder}, {generations} ("1,110 generations" since the
+## founder) and {ancestor} in event text.
 static func fill(d: GameDynasty, text: String) -> String:
 	var place: Dictionary = GameWorld.place(str(d.pending_event.get("place", d.world.location)))
 	var founder: String = str(d.history[0]["name"]) if not d.history.is_empty() else d.heir.full_name()
 	return text.replace("{heir}", d.heir.name).replace("{house}", d.dynasty_name).replace("{founder}", founder) \
+		.replace("{generations}", GameAges.count(d.gen - 1, "generation")) \
 		.replace("{place}", str(place.get("name", ""))).replace("{ancestor}", str(d.pending_event.get("ancestor", "your forebears")))
 
 
