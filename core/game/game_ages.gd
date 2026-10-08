@@ -64,8 +64,16 @@ static func is_legend(creature_id: String) -> bool:
 ## heirlooms, echoes and companion lines carry on; once-only events and story quests look at
 ## the Age they were last seen in (GameEvents.seen, GameQuests.is_posted).
 static func begin_age(d: GameDynasty, msgs: Array) -> void:
-	d.slain_bosses.clear()
+	wake_legends(d)
 	msgs.append(text("age_begins", {"age": GameText.num(d.age_number()), "house": d.dynasty_name}))
+
+
+## Legends slain in an earlier Age are back in their lairs. A save from before the Ages may
+## already be past the turn of one, so loading wakes them too.
+static func wake_legends(d: GameDynasty) -> void:
+	for id in d.slain_bosses.keys():
+		if age_of(int(d.slain_bosses[id])) < d.age_number():
+			d.slain_bosses.erase(id)
 
 
 ## The heir of the last generation has died: no one succeeds, and the save is marked finished.

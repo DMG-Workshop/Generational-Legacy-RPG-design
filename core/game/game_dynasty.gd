@@ -800,6 +800,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 		e["strength"] = snappedf(float(e["strength"]), GameFate.STEP)
 	g.heirlooms = _ints(Array(d["heirlooms"]))
 	g.slain_bosses = _ints(d["slain_bosses"])
+	GameAges.wake_legends(g)
 	g.heir.heirloom_bonus = g.heirloom_bonus()
 	g.pending_archetype = d["pending_archetype"]
 	for c in d["candidates"]:

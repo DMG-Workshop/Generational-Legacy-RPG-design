@@ -74,6 +74,7 @@ func _init() -> void:
 	test_history_folding()
 	test_save_size_bounded()
 	test_old_save_long_history()
+	test_old_save_past_an_age()
 	test_real_lives_bounded()
 	test_party_records_bounded()
 	test_numbers_at_the_cap()
@@ -501,6 +502,23 @@ func test_old_save_long_history() -> void:
 			GameBot.step(e)
 	var dead := e.gen - 1 if e.state == "life" else e.gen
 	ok(e.gen > 901 and e.history.size() == keep + 1 and e.ancestor_count() == dead, "it plays on, still folding (gen %d, %d ancestors)" % [e.gen, e.ancestor_count()])
+
+
+## A save from before the Ages that had already played past generation 1,100: the legends its
+## heirs slew in the first Age are back in their lairs, and the ones slain this Age stay dead.
+func test_old_save_past_an_age() -> void:
+	var d := _new(16)
+	d.heir.level = 30
+	GameAges.jump_to(d, 1150)
+	d.slain_bosses = {"grimfang": 40, "hollow_king": 1120}
+	var raw: Dictionary = JSON.parse_string(JSON.stringify(d.to_dict()))
+	raw.erase("ages")
+	var e := GameDynasty.from_dict(raw)
+	ok(e.slain_bosses == {"hollow_king": 1120}, "only the legend slain in this Age stays slain: %s" % str(e.slain_bosses))
+	ok(e.stirring_legends().any(func(c): return c["id"] == "grimfang"), "Grimfang, slain in Age 1, stirs in Age 2")
+	e.world.visit("hearthmere")
+	ok(e.quests.postings(e, "hearthmere").any(func(q): return q["id"] == "hm_grimfang"), "and his notice can go up again")
+	ok(JSON.stringify(_reload(e).to_dict()) == JSON.stringify(e.to_dict()), "the woken save round-trips")
 
 
 ## The save without its Age summaries, which grow by one entry an Age.
