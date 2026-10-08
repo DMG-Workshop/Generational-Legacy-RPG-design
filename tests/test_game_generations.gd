@@ -613,6 +613,9 @@ func test_numbers_at_the_cap() -> void:
 	ok(str(fx[0]["t"]) == "+%s gold" % GameText.num(g) and g >= 1000000, "an event's purse reads %s" % str(fx[0]["t"]))
 	var label: String = GameEvents.check_parts(d, {"attr": "agi", "dc": 12})[0][0]
 	ok(label == "Proficiency (level 99,999)", "a check's proficiency names the level in thousands: %s" % label)
+	var w := GameWorld.new()
+	w.year = 151234567.25
+	ok(w.date_text() == "%s of year 151,234,568" % w.season()["name"], "the calendar groups the year: %s" % w.date_text())
 	# A fight at those numbers runs to its end, and the save keeps every value.
 	ok(d.party.hire(d, "bren_cask").contains("joins"), "a companion hired at the cap")
 	d.world.visit("whisperwood")
