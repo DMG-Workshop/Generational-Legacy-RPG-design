@@ -24,7 +24,7 @@
     "young_years": 8,
     "cure_cost": 40,
     "cure_stage_step": 0.5,
-    "bargain_taint_chance": 0.5,
+    "bargain_taint_chance": 0.2,
     "black_market_infamy": 0.02,
     "corpse_chance": 0.02
   },
