@@ -74,6 +74,7 @@ func _init() -> void:
 	test_history_folding()
 	test_save_size_bounded()
 	test_old_save_long_history()
+	test_real_lives_bounded()
 	test_party_records_bounded()
 	test_numbers_at_the_cap()
 	test_ending_at_the_cap()
@@ -498,6 +499,53 @@ func test_old_save_long_history() -> void:
 			GameBot.step(e)
 	var dead := e.gen - 1 if e.state == "life" else e.gen
 	ok(e.gen > 901 and e.history.size() == keep + 1 and e.ancestor_count() == dead, "it plays on, still folding (gen %d, %d ancestors)" % [e.gen, e.ancestor_count()])
+
+
+## The save without its Age summaries, which grow by one entry an Age.
+func _rest_of_save(d: GameDynasty) -> int:
+	var raw := d.to_dict()
+	raw["ages"] = {}
+	return JSON.stringify(raw).length()
+
+
+## Real autopilot lives in short Ages (companions hired and lost, notices, events, sickness,
+## legends rising again): every list a save keeps stays within what the data allows.
+func test_real_lives_bounded() -> void:
+	_override("age_length", 25)
+	_override("history_full_keep", 12)
+	var d := _new(31, "ranger", "human")
+	var rest := {}
+	var guard := 0
+	while d.gen < 120 and guard < 1000:
+		guard += 1
+		if d.state == "succession":
+			if d.gen in [60, 119]:
+				rest[d.gen] = _rest_of_save(d)
+			GameBot.choose_best(d)
+		elif d.state == "life":
+			GameBot.live_life(d)
+		else:
+			break
+	var keep := int(GameAges.setting("history_full_keep"))
+	ok(d.gen == 120 and d.ancestor_count() == 119 and d.history.size() == keep + 1, "119 lives lived by the autopilot, %d in full (gen %d, %d records)" % [keep + 1, d.gen, d.history.size()])
+	ok(d.ages.summaries.size() == GameAges.age_of(int(d.history[1]["gen"]) - 1), "one summary for each Age folded away (%d)" % d.ages.summaries.size())
+	var legends := GameData.creatures.filter(func(c): return c.get("boss", false))
+	for s in d.ages.summaries:
+		ok((s["legends"] as Array).size() <= legends.size() and (s["causes"] as Dictionary).size() <= 8, "Age %d's summary stays small" % int(s["age"]))
+	var names: Array = d.heirlooms.map(func(x): return x["name"])
+	ok(names.size() <= legends.size() and names.all(func(n): return names.count(n) == 1), "no heirloom twice, however often its legend rises (%s)" % str(names))
+	var echo_keys := GameData.creatures.size() + GameData.quests.size() + GameData.events.size() + 3
+	ok(d.echoes.size() <= echo_keys, "echoes are bounded by the content that makes them (%d)" % d.echoes.size())
+	ok(d.flags.size() <= GameEvents.content_flags().size() + GameData.events.size(), "flags are bounded by the content that sets them (%d)" % d.flags.size())
+	for id in d.party.history:
+		var r: Dictionary = d.party.history[id]
+		ok((r["fallen"] as Array).size() <= int(GameAges.setting("party_fallen_kept")) and (r["past"] as Array).size() <= int(GameParty.setting("past_kept")), "%s's record is capped" % id)
+	ok(d.quests.active.size() <= int(GameData.bal("quest_max_active")) and d.quests.record.size() <= GameData.quests.size(), "the quest log is bounded")
+	print("  real lives: save without summaries %s bytes at gen 60, %s at gen 119; %d summaries, %d echoes, %d flags, %d party records" % [GameText.num(rest.get(60, 0)), GameText.num(rest.get(119, 0)), d.ages.summaries.size(), d.echoes.size(), d.flags.size(), d.party.history.size()])
+	ok(rest.has(60) and rest.has(119) and float(rest[119]) < float(rest[60]) * 1.5 and int(rest[119]) < 150000, "sixty more lives do not grow the rest of the save (%s)" % str(rest))
+	var e := _reload(d)
+	ok(JSON.stringify(e.to_dict()) == JSON.stringify(d.to_dict()), "the long run round-trips exactly")
+	_restore()
 
 
 func test_party_records_bounded() -> void:
