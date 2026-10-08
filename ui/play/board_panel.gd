@@ -28,7 +28,7 @@ func _build(news: Array) -> void:
 	var qs := d.quests
 	var town := d.world.location
 	var max_active := int(GameData.bal("quest_max_active"))
-	body.add_child(Kit.label("Obligations %d / %d    Notices completed: %d (%d different)" % [qs.active.size(), max_active, qs.total_done(), qs.done.size()], 15, Kit.DIM))
+	body.add_child(Kit.label("Obligations %d / %d    Notices completed: %s (%d different)" % [qs.active.size(), max_active, GameText.num(qs.total_done()), qs.done.size()], 15, Kit.DIM))
 	if not news.is_empty():
 		var n := Kit.label("\n".join(news), 14, Kit.GOOD)
 		n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -58,7 +58,7 @@ func _build(news: Array) -> void:
 		_active_card(mine, e)
 	if not qs.done.is_empty():
 		mine.add_child(Kit.label("Completed", 16, Kit.ACCENT))
-		var names: Array = qs.done.map(func(id): return GameQuests.def(id).get("name", id) + (" x%d" % qs.times_done(id) if qs.times_done(id) > 1 else ""))
+		var names: Array = qs.done.map(func(id): return GameQuests.def(id).get("name", id) + (" x%s" % GameText.num(qs.times_done(id)) if qs.times_done(id) > 1 else ""))
 		mine.add_child(_wrap(", ".join(names), 13, Kit.DIM))
 	_restore_scroll.call_deferred(keep)
 
@@ -157,7 +157,7 @@ func _active_card(list: VBoxContainer, e: Dictionary) -> void:
 		pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(pb)
 		row.add_child(Kit.label("%d / %d" % [int(e["progress"]), goal], 14))
-	var by := "Taken up by %s in generation %d, from the board in %s." % [e["by"], int(e["gen"]), GameQuests.place_name(q["giver"])]
+	var by := "Taken up by %s in generation %s, from the board in %s." % [e["by"], GameText.num(int(e["gen"])), GameQuests.place_name(q["giver"])]
 	v.add_child(_wrap(by, 13, Kit.DIM))
 	v.add_child(_wrap("Reward: %s" % GameQuests.reward_text(d, q), 14, Kit.GOOD))
 	var here: bool = d.world.location == q["giver"]

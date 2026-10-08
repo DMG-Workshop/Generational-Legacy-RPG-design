@@ -22,11 +22,16 @@ func _ready() -> void:
 	var dead := d.last_death
 	root.add_child(Kit.label("%s has passed." % dead["name"], 34, Kit.ACCENT))
 	var cname: String = "%s %s" % [GameData.races[dead.get("race_id", "human")]["name"], GameData.classes[dead["class_id"]]["name"]]
-	root.add_child(Kit.label("Generation %d  -  %s, level %d  -  died aged %d (%s)  -  %d victories, %d gold left" % [dead["gen"], cname, dead["level"], dead["age"], dead["cause"], dead["battles_won"], dead["gold"]], 16, Kit.DIM))
+	root.add_child(_wrapped(Kit.label("Generation %s  -  %s, level %s  -  died aged %d (%s)  -  %s, %s gold left" % [GameText.num(dead["gen"]), cname, GameText.num(dead["level"]), dead["age"], dead["cause"], "1 victory" if int(dead["battles_won"]) == 1 else "%s victories" % GameText.num(dead["battles_won"]), GameText.num(dead["gold"])], 16, Kit.DIM)))
 	if d.pending_archetype != "":
 		var a: Dictionary = GameFate.ARCHETYPES[d.pending_archetype]
 		root.add_child(Kit.label("Fate has left its mark. The next heir will be a %s: %s" % [a["name"], a["desc"]], 16, Kit.BAD))
-	root.add_child(Kit.label("Choose who carries the family name into generation %d. They inherit %d%% of the gold left and every potion; legacy echoes fade by 15%%." % [d.gen + 1, int(round(float(GameData.bal("gold_inherit_fraction")) * 100.0))], 16))
+	var into := "generation %s" % GameText.num(d.gen + 1)
+	if d.gen + 1 == GameAges.max_generations():
+		into += ", the last of the saga"
+	elif GameAges.era_of(d.gen + 1) == 1:
+		into += ", the first of Age %s" % GameText.num(GameAges.age_of(d.gen + 1))
+	root.add_child(_wrapped(Kit.label("Choose who carries the family name into %s. They inherit %d%% of the gold left and every potion; legacy echoes fade by 15%%." % [into, int(round(float(GameData.bal("gold_inherit_fraction")) * 100.0))], 16)))
 
 	var row := HBoxContainer.new()
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL

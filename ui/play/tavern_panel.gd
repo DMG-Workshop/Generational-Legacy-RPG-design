@@ -33,7 +33,7 @@ func _build() -> void:
 	var intro := Kit.label(str(t.get("text", "")), 14, Kit.DIM)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(intro)
-	body.add_child(Kit.label("Gold %d    Party %d / %d    Upkeep %d gold a year" % [d.heir.gold, p.members.size(), GameParty.max_size(), p.upkeep_total(d)], 15, Kit.ACCENT))
+	body.add_child(Kit.label("Gold %s    Party %d / %d    Upkeep %s gold a year" % [GameText.num(d.heir.gold), p.members.size(), GameParty.max_size(), GameText.num(p.upkeep_total(d))], 15, Kit.ACCENT))
 	if note != "":
 		var n := Kit.label(note, 14, Kit.GOOD)
 		n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -78,7 +78,7 @@ func _rumour(id: String) -> String:
 	if r.get("status", "") == "fallen":
 		var back := int(r["gen"]) + int(GameData.bal("companion_kin_gens"))
 		if d.gen < back:
-			return "The barkeep keeps a cup turned down for %s. %s may take up the work from generation %d." % [(r["fallen"] as Array).back(), r["name"], back]
+			return "The barkeep keeps a cup turned down for %s. %s may take up the work from generation %s." % [(r["fallen"] as Array).back(), r["name"], GameText.num(back)]
 	if r.get("status", "") in ["dead", "retired"] and not (r.get("past", []) as Array).is_empty():
 		var e: Dictionary = (r["past"] as Array).back()
 		var gone := "The barkeep keeps a cup turned down for %s, who died of old age at %d." % [e["name"], int(e["age"])]
@@ -141,12 +141,12 @@ func _card_shell(id: String) -> Array:
 func _preview(u: GameHeir) -> String:
 	var dmg := GameBattle.unit_skill_of(u, "damage")
 	var stat: String = str(u.cls()["skills"][dmg].get("stat", "str")) if dmg >= 0 else "str"
-	var power := "Attack %d" % int(u.attack_power())
+	var power := "Attack %s" % GameText.num(int(u.attack_power()))
 	if stat == "mag":
-		power = "Magic %d" % int(u.magic_power())
+		power = "Magic %s" % GameText.num(int(u.magic_power()))
 	elif stat == "both":
-		power = "Attack %d  Magic %d" % [int(u.attack_power()), int(u.magic_power())]
-	return "Lv%d   HP %d   MP %d   %s   Defense %d   Dodge %d%%" % [u.level, u.max_hp(), u.max_mp(), power, int(u.defense()), int(round(u.dodge_chance() * 100.0))]
+		power = "Attack %s  Magic %s" % [GameText.num(int(u.attack_power())), GameText.num(int(u.magic_power()))]
+	return "Lv%s   HP %s   MP %s   %s   Defense %s   Dodge %d%%" % [GameText.num(u.level), GameText.num(u.max_hp()), GameText.num(u.max_mp()), power, GameText.num(int(u.defense())), int(round(u.dodge_chance() * 100.0))]
 
 
 func _skills(u: GameHeir) -> String:
@@ -161,7 +161,7 @@ func _skills(u: GameHeir) -> String:
 			what = "x%.1f" % float(s["mult"])
 			if int(s.get("hits", 1)) > 1:
 				what = "%d hits x%.1f" % [int(s["hits"]), float(s["mult"])]
-		parts.append("%s (%s, %d MP)" % [s["name"], what, GameBattle.unit_skill_cost(u, i)])
+		parts.append("%s (%s, %s MP)" % [s["name"], what, GameText.num(GameBattle.unit_skill_cost(u, i))])
 	return "Skills: " + ", ".join(parts)
 
 
@@ -200,8 +200,8 @@ func _offer_card(id: String) -> Control:
 	v.add_child(_wrap(_preview(u), 14))
 	v.add_child(_wrap(_skills(u), 13, Kit.DIM))
 	var fee := p.fee(d, id)
-	side.add_child(Kit.label("Fee: %s" % ("waived" if fee == 0 else "%d gold" % fee), 14, Kit.GOOD if fee == 0 else Kit.TEXT))
-	side.add_child(Kit.label("Upkeep: %d a year" % p.upkeep(d, id), 14))
+	side.add_child(Kit.label("Fee: %s" % ("waived" if fee == 0 else "%s gold" % GameText.num(fee)), 14, Kit.GOOD if fee == 0 else Kit.TEXT))
+	side.add_child(Kit.label("Upkeep: %s a year" % GameText.num(p.upkeep(d, id)), 14))
 	var block := p.hire_block(d, id)
 	var btn := Kit.button("Hire", func(): _hire(id), Vector2(150, 34))
 	btn.disabled = block != ""
@@ -228,14 +228,14 @@ func _member_card(m: Dictionary) -> Control:
 	side.custom_minimum_size = Vector2(120, 0)
 	var u := p.unit(d, m)
 	v.add_child(Kit.label(u.name, 17, Kit.ACCENT))
-	v.add_child(Kit.label("%s %s  Lv%d" % [u.race()["name"], u.cls()["name"], u.level], 14, Kit.DIM))
+	v.add_child(Kit.label("%s %s  Lv%s" % [u.race()["name"], u.cls()["name"], GameText.num(u.level)], 14, Kit.DIM))
 	v.add_child(_wrap(p.age_text(d, id), 13, OLD if p.is_old(d, id) else Kit.DIM))
 	# Health and mana side by side keep a full party of three on screen.
 	var gauges := HBoxContainer.new()
 	gauges.add_theme_constant_override("separation", 12)
 	v.add_child(gauges)
-	gauges.add_child(_gauge("HP %d / %d" % [u.hp, u.max_hp()], Kit.GOOD, u.max_hp(), u.hp))
-	gauges.add_child(_gauge("MP %d / %d" % [u.mp, u.max_mp()], Kit.MP_BLUE, maxf(1.0, u.max_mp()), u.mp))
+	gauges.add_child(_gauge("HP %s / %s" % [GameText.num(u.hp), GameText.num(u.max_hp())], Kit.GOOD, u.max_hp(), u.hp))
+	gauges.add_child(_gauge("MP %s / %s" % [GameText.num(u.mp), GameText.num(u.max_mp())], Kit.MP_BLUE, maxf(1.0, u.max_mp()), u.mp))
 	var label := "Confirm" if confirm_id == id else "Dismiss"
 	var btn := Kit.button(label, func(): _dismiss(id), Vector2(120, 34))
 	btn.tooltip_text = "Pay off %s. They go home and will come back without a fee." % u.name
@@ -245,7 +245,7 @@ func _member_card(m: Dictionary) -> Control:
 		side.add_child(_wrap("Back to %s?" % GameWorld.place(home[0]).get("name", "home"), 12, Kit.DIM))
 	else:
 		var fought := int(m["battles"]) + int(p.history.get(id, {}).get("battles", 0))
-		side.add_child(Kit.label("Upkeep %d a year" % p.upkeep(d, id), 12, Kit.DIM))
+		side.add_child(Kit.label("Upkeep %s a year" % GameText.num(p.upkeep(d, id)), 12, Kit.DIM))
 		side.add_child(Kit.label("Battles %d" % fought, 12, Kit.DIM))
 	return shell[0]
 
@@ -277,15 +277,15 @@ func _records() -> Array:
 		var who := "%s, %d of ~%d%s" % [r["name"], int(p.age(d, id)), int(round(p.lifespan(d, id))), " (old)" if p.is_old(d, id) else ""]
 		match r["status"]:
 			"dismissed":
-				out.append("%s: paid off in generation %d%s. Will return without a fee." % [who, int(r["gen"]), fought])
+				out.append("%s: paid off in generation %s%s. Will return without a fee." % [who, GameText.num(int(r["gen"])), fought])
 			"left":
-				out.append("%s: walked out unpaid in generation %d%s. Wants the full fee." % [who, int(r["gen"]), fought])
+				out.append("%s: walked out unpaid in generation %s%s. Wants the full fee." % [who, GameText.num(int(r["gen"])), fought])
 			"fallen":
 				var fallen: Array = r["fallen"]
 				var back := int(r["gen"]) + int(GameData.bal("companion_kin_gens"))
-				var kin: String = "%s may take up the work from generation %d." % [r["name"], back] if d.gen < back else "%s is ready to take up the work." % r["name"]
+				var kin: String = "%s may take up the work from generation %s." % [r["name"], GameText.num(back)] if d.gen < back else "%s is ready to take up the work." % r["name"]
 				if past.is_empty():
-					out.append("%s: fell in generation %d%s. %s" % [fallen.back(), int(r["gen"]), fought, kin])
+					out.append("%s: fell in generation %s%s. %s" % [fallen.back(), GameText.num(int(r["gen"])), fought, kin])
 				else:
 					out.append(kin)
 			"dead", "retired":
@@ -300,11 +300,11 @@ func _past_line(id: String, e: Dictionary) -> String:
 	var fought := "" if nb == 0 else (" (1 battle)" if nb == 1 else " (%d battles)" % nb)
 	match e["end"]:
 		"fell":
-			return "%s fell in battle at %d, in year %d%s." % [e["name"], int(e["age"]), int(e["year"]), fought]
+			return "%s fell in battle at %d, in year %s%s." % [e["name"], int(e["age"]), GameText.num(int(e["year"])), fought]
 		"retired":
-			return "%s retired to %s at %d, in year %d%s." % [e["name"], dynasty.party._place_name(id), int(e["age"]), int(e["year"]), fought]
+			return "%s retired to %s at %d, in year %s%s." % [e["name"], dynasty.party._place_name(id), int(e["age"]), GameText.num(int(e["year"])), fought]
 	var where := "in the house's service" if bool(e.get("served", true)) else "after leaving the house's service"
-	return "%s died of old age at %d in year %d, %s%s." % [e["name"], int(e["age"]), int(e["year"]), where, fought]
+	return "%s died of old age at %d in year %s, %s%s." % [e["name"], int(e["age"]), GameText.num(int(e["year"])), where, fought]
 
 
 func _hire(id: String) -> void:
@@ -338,5 +338,5 @@ static func summary_lines(d: GameDynasty) -> Array:
 		if d.party.is_old(d, m["id"]):
 			years += ", " + d.party.old_text(d, m["id"])
 		# A no-break space keeps "HP" with its numbers when the line wraps.
-		out.append("%s (%s), %s %s Lv%d  HP\u00a0%d/%d" % [u.name, years, u.race()["name"], u.cls()["name"], u.level, u.hp, u.max_hp()])
+		out.append("%s (%s), %s %s Lv%s  HP\u00a0%s/%s" % [u.name, years, u.race()["name"], u.cls()["name"], GameText.num(u.level), GameText.num(u.hp), GameText.num(u.max_hp())])
 	return out

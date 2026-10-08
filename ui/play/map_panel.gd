@@ -139,7 +139,7 @@ func _ready() -> void:
 		side.add_child(Kit.label("Maps for sale", 16, Kit.ACCENT))
 		for m in maps:
 			var mid: String = m["id"]
-			var b2 := Kit.button("%s (%dg)" % [m["name"], dynasty.map_price(m)], func(): _buy(mid), Vector2(0, 34))
+			var b2 := Kit.button("%s (%sg)" % [m["name"], GameText.num(dynasty.map_price(m))], func(): _buy(mid), Vector2(0, 34))
 			b2.clip_text = true
 			b2.tooltip_text = b2.text
 			b2.disabled = dynasty.heir.gold < dynasty.map_price(m) or (m["reveals"] as Array).all(func(id): return w.knowledge(id) in ["visited", "charted"])

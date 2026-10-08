@@ -1,0 +1,16 @@
+{
+  "settings": {
+    "max_generations": 999999,
+    "age_length": 1100,
+    "history_full_keep": 200,
+    "hall_of_fame": 5,
+    "party_fallen_kept": 6
+  },
+  "text": {
+    "age_begins": "Age {age} begins. The world has turned, and the old legends stir again in their lairs.",
+    "heirloom_held": "{heirloom} already hangs in the hall of House {house}.",
+    "saga_ends": "With {heir} the chronicle of House {house} closes, after {generations} and {ages}.",
+    "last_heir": "{heir} is the last heir of the saga: the chronicle of House {house} closes with them.",
+    "folded": "Generations {from}-{to}: {heirs} heirs, told by Age in the Ages tab."
+  }
+}
