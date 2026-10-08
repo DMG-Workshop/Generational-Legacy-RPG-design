@@ -103,7 +103,7 @@ func _colorize(line: String) -> String:
 		return "[color=#6fcf6f]%s[/color]" % line
 	if "dies" in line or "slain" in line or "DISASTER" in line or "failure" in line or "Fate (" in line:
 		return "[color=#e0605a]%s[/color]" % line
-	if line.begins_with("Generation") or "dynasty begins" in line:
+	if line.begins_with("Generation") or line.begins_with("Age ") or "dynasty begins" in line:
 		return "[color=#e0b341][b]%s[/b][/color]" % line
 	return line
 
