@@ -83,44 +83,47 @@ func _sturdy(b: GameBattle) -> void:
 # ---------------------------------------------------------------- data
 
 func test_data() -> void:
+	var errs := GameCombat.validate()
+	ok(errs.is_empty(), "the combat data validates: %s" % str(errs))
 	var ids := GameCombat.spell_ids()
 	ok(ids.size() >= 22 and ids.size() <= 28, "about two dozen spells (%d)" % ids.size())
 	var groups := {}
 	for id in ids:
 		var sp := GameCombat.spell(id)
-		for key in ["id", "name", "group", "school", "element", "type", "mp", "target", "learn"]:
-			ok(sp.has(key), "%s has %s" % [id, key])
 		groups[sp["group"]] = int(groups.get(sp["group"], 0)) + 1
-		var shape := GameCombat.shape(sp)
-		ok(shape in ["single", "burst", "cone", "line", "all", "party"], "%s shape %s" % [id, shape])
-		ok(bool(sp.get("is_aoe", false)) == (shape in ["burst", "cone", "line", "all"]), "%s is_aoe matches its shape" % id)
-		for st in sp.get("statuses", []):
-			ok(not GameCombat.status_def(str(st["id"])).is_empty(), "%s status %s defined" % [id, st["id"]])
-		for c in sp["learn"]["classes"]:
-			ok(GameData.classes.has(c), "%s learnable by a real class (%s)" % [id, c])
+		ok(GameCombat.shape(sp) != "self", "%s has a target block" % id)
 		ok(GameCombat.describe(sp) != "", "%s has a one-line effect" % id)
-		if sp.get("element", "") != "":
-			ok(GameData.combat["elements"]["elements"].has(sp["element"]), "%s element known" % id)
 	ok(int(groups.get("elemental", 0)) >= 8 and int(groups.get("control", 0)) >= 5 and int(groups.get("utility", 0)) >= 6, "three groups: %s" % str(groups))
 	for want in ["burn", "poison", "bleed", "stun", "freeze", "slow", "weaken", "vulnerable", "shield", "regen", "haste"]:
 		ok(not GameCombat.status_def(want).is_empty(), "status %s defined" % want)
-	for id in GameCombat.status_ids():
-		var def := GameCombat.status_def(id)
-		for key in ["name", "tag", "color", "stack", "basis", "default_turns", "default_potency", "text"]:
-			ok(def.has(key), "status %s has %s" % [id, key])
-	# Class skills: areas marked, everything else single.
 	var areas := 0
 	for cid in GameData.classes:
 		for s in GameData.classes[cid]["skills"]:
 			if GameCombat.is_aoe(s):
 				areas += 1
-				ok(s.has("target") and int(s.get("hits", 1)) == 1, "%s/%s: an area skill strikes each foe once" % [cid, s["id"]])
 	ok(areas >= 6, "several class skills are areas (%d)" % areas)
-	for c in GameData.creatures:
-		ok(str(c.get("row", "front")) in ["front", "back"], "%s row" % c["id"])
-		ok(c.get("element", "") == "" or GameData.combat["elements"]["elements"].has(c["element"]), "%s element known" % c["id"])
-		for st in c.get("inflicts", []):
-			ok(not GameCombat.status_def(str(st["id"])).is_empty(), "%s inflicts a known status" % c["id"])
+	# A broken spell is reported line by line, not skipped.
+	var broken := {"id": "test_broken", "name": "Broken", "group": "nowhere", "school": "x", "element": "plasma", "type": "damage", "mp": 1,
+		"mult": 1.0, "target": {"shape": "blob"}, "is_aoe": true, "hits": 2, "statuses": [{"id": "no_such_status"}],
+		"learn": {"classes": ["no_such_class"], "levels": {"mage": 3}}}
+	GameData.combat["spells"]["spells"].append(broken)
+	GameCombat.reindex()
+	errs = GameCombat.validate()
+	for want in ["unknown group", "unknown shape", "is_aoe does not match", "takes no hits", "unknown element", "unknown status", "unknown class", "not on its class list"]:
+		ok(errs.any(func(e): return str(e).begins_with("spell test_broken") and str(e).find(want) >= 0), "a broken spell is reported: %s" % want)
+	GameData.combat["spells"]["spells"].pop_back()
+	var wolf := GameCombat.creature_def("wolf")
+	wolf["row"] = "middle"
+	var cap = GameData.balance["party_max_size"]
+	GameData.balance["party_max_size"] = 4
+	GameCombat.reindex()
+	errs = GameCombat.validate()
+	ok(errs.has("creature wolf: row must be front or back"), "a creature in no row is reported")
+	ok(errs.any(func(e): return str(e).begins_with("formation: 3 companion places for a party of 4")), "a party larger than the formation is reported")
+	wolf.erase("row")
+	GameData.balance["party_max_size"] = cap
+	GameCombat.reindex()
+	ok(GameCombat.validate().is_empty() and GameCombat.spell("test_broken").is_empty(), "and the real data is back")
 
 
 # ---------------------------------------------------------------- geometry

@@ -52,6 +52,82 @@ static func settings() -> Dictionary:
 	return _settings
 
 
+## Reads the combat data again after it was changed in place (tools and tests).
+static func reindex() -> void:
+	_src = {}
+	_index()
+
+
+## Everything wrong with the combat data, one readable line each; empty when it is sound.
+static func validate() -> Array:
+	_index()
+	var out: Array = []
+	var groups: Dictionary = _src["spells"].get("groups", {})
+	for id in _spell_order:
+		var sp: Dictionary = _spells[id]
+		for key in ["name", "group", "school", "element", "type", "mp", "target", "learn"]:
+			if not sp.has(key):
+				out.append("spell %s has no %s" % [id, key])
+		if not groups.has(str(sp.get("group", ""))):
+			out.append("spell %s: unknown group '%s'" % [id, sp.get("group", "")])
+		out.append_array(_ability_problems("spell " + id, sp))
+		var learn: Dictionary = sp.get("learn", {})
+		for c in learn.get("classes", []):
+			if not GameData.classes.has(c):
+				out.append("spell %s: unknown class '%s'" % [id, c])
+		for c in learn.get("levels", {}):
+			if c not in learn.get("classes", []):
+				out.append("spell %s: a learning level for %s, who is not on its class list" % [id, c])
+	for cid in GameData.classes:
+		for s in GameData.classes[cid]["skills"]:
+			out.append_array(_ability_problems("%s skill %s" % [cid, s.get("id", "?")], s))
+	for id in _statuses:
+		var def: Dictionary = _statuses[id]
+		for key in ["name", "tag", "color", "stack", "basis", "default_turns", "default_potency", "text"]:
+			if not def.has(key):
+				out.append("status %s has no %s" % [id, key])
+		for rule in [["basis", ["flat", "power", "max_hp"]], ["stack", ["refresh", "stack", "extend"]], ["skip", ["always", "chance", "alternate"]], ["tick", ["damage", "heal"]]]:
+			if def.has(rule[0]) and str(def[rule[0]]) not in rule[1]:
+				out.append("status %s: unknown %s '%s'" % [id, rule[0], def[rule[0]]])
+		if str(def.get("element", "")) != "" and not _src["elements"]["elements"].has(def["element"]):
+			out.append("status %s: unknown element '%s'" % [id, def["element"]])
+	for c in GameData.creatures:
+		if str(c.get("row", "front")) not in ["front", "back"]:
+			out.append("creature %s: row must be front or back" % c["id"])
+		if str(c.get("element", "")) != "" and not _src["elements"]["elements"].has(c["element"]):
+			out.append("creature %s: unknown element '%s'" % [c["id"], c["element"]])
+		for st in c.get("inflicts", []):
+			if status_def(str(st.get("id", ""))).is_empty():
+				out.append("creature %s inflicts an unknown status '%s'" % [c["id"], st.get("id", "")])
+	var field: Dictionary = formation()["field"]
+	if (field["allies"] as Array).size() < int(GameData.bal("party_max_size")):
+		out.append("formation: %d companion places for a party of %d" % [(field["allies"] as Array).size(), int(GameData.bal("party_max_size"))])
+	var room := int(field["row_max"]["front"]) + int(field["row_max"]["back"])
+	for kind in formation()["packs"]["kinds"]:
+		var span: Array = formation()["packs"]["kinds"][kind]["size"]
+		if int(span[1]) > room or int(span[0]) > int(span[1]):
+			out.append("pack %s: size %s does not fit the %d places in the rows" % [kind, str(span), room])
+	return out
+
+
+static func _ability_problems(what: String, ab: Dictionary) -> Array:
+	var out: Array = []
+	var sh := shape(ab)
+	if sh not in ENEMY_SHAPES + ["party", "self"]:
+		out.append("%s: unknown shape '%s'" % [what, sh])
+	if ab.has("is_aoe") and bool(ab["is_aoe"]) != (sh in ["burst", "cone", "line", "all"]):
+		out.append("%s: is_aoe does not match its %s shape" % [what, sh])
+	if is_aoe(ab) and int(ab.get("hits", 1)) > 1:
+		out.append("%s: an area strikes each foe once, so it takes no hits" % what)
+	var el := str(ab.get("element", ""))
+	if el != "" and not _src["elements"]["elements"].has(el):
+		out.append("%s: unknown element '%s'" % [what, el])
+	for st in ab.get("statuses", []):
+		if status_def(str(st.get("id", ""))).is_empty():
+			out.append("%s: unknown status '%s'" % [what, st.get("id", "")])
+	return out
+
+
 # ---------------------------------------------------------------- content
 
 static func spell(id: String) -> Dictionary:
