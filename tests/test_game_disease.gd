@@ -91,7 +91,8 @@ func _finish() -> void:
 
 # ---------------------------------------------------------------- data
 
-## The player asked for low odds: every random way of catching a sickness is at most 2%.
+## The player asked for low odds: every random way of catching a sickness is at most 2%,
+## except black-market bargains, which the player set at 20%.
 func _test_catch_chances_are_low() -> void:
 	_check(float(GameDisease.setting("milestone_chance")) <= 0.02, "level milestone chance is at most 2%")
 	_check(float(GameDisease.setting("corpse_chance")) <= 0.02, "corpse chance is at most 2%")
@@ -101,6 +102,12 @@ func _test_catch_chances_are_low() -> void:
 		var corpse = dz.get("vectors", {}).get("corpse", null)
 		if corpse is Dictionary and corpse.has("chance"):
 			_check(float(corpse["chance"]) <= 0.02, "%s: corpse chance is at most 2%%" % dz["id"])
+	# The one exception, also the player's call: black-market bargains hide a sickness 20% of the time.
+	_check(is_equal_approx(float(GameDisease.setting("bargain_taint_chance")), 0.2), "a black-market bargain is tainted 20% of the time")
+	for id in GameData.items:
+		var taint = GameData.items[id].get("taint", null)
+		if taint is Dictionary and taint.has("chance"):
+			_check(float(taint["chance"]) <= 0.2, "%s: its own taint chance is at most 20%%" % id)
 
 
 func _test_data() -> void:
@@ -686,7 +693,7 @@ func _test_bargains() -> void:
 	GameItems.buy(d, "pawned_amulet")
 	_check(not h.tainted_gear.has("pawned_amulet") or float(GameItems.item_def("pawned_amulet")["taint"].get("chance", 0.0)) > 0.0, "an item's own taint chance wins over the default")
 	GameData.diseases["settings"]["bargain_taint_chance"] = saved
-	# About half of all bargains are tainted.
+	# About a fifth of all bargains are tainted.
 	var tainted := 0
 	for i in 200:
 		var t := _fresh(13000 + i)
