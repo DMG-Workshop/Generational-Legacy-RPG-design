@@ -119,6 +119,8 @@ func test_age_math() -> void:
 	ok(GameText.signed(25) == "+25" and GameText.signed(-40) == "-40" and GameText.signed(1234567) == "+1,234,567", "signed amounts keep their sign")
 	var line := GameText.group_numbers("Tess hits Elder Dragon for 13620509978 (CRIT!). Wolf hits Tess for 999. Heals 1000.")
 	ok(line == "Tess hits Elder Dragon for 13,620,509,978 (CRIT!). Wolf hits Tess for 999. Heals 1,000.", "log lines group their long numbers: %s" % line)
+	line = GameText.group_numbers("[color=#1a1828]Heir2024 restores 12345 HP.[/color] 12345678901234567890")
+	ok(line == "[color=#1a1828]Heir2024 restores 12,345 HP.[/color] 12345678901234567890", "colours, names and runs too long for a number are left alone: %s" % line)
 
 
 # ---------------------------------------------------------------- gates and scaling
@@ -778,6 +780,7 @@ func test_ui_ending(app: Control) -> void:
 	ok(labels.has("The saga of House %s is over" % app.dynasty.dynasty_name), "the ending names the house")
 	ok(labels.any(func(t): return str(t).begins_with("2 generations and 1 Age, ")), "it counts the generations and Ages")
 	ok(labels.has("Greatest heirs") and labels.has("Legends slain") and labels.has("How they died"), "greatest heirs, legends and deaths are summed up")
+	ok(labels.has("No legend fell to House %s." % app.dynasty.dynasty_name) and not labels.any(func(t): return str(t).begins_with("0 in all")), "a house that slew no legend is told so plainly")
 	ok(await _press(app.current, "Chronicle"), "the Chronicle opens from the ending")
 	await _press(app.current.get_children().back(), "Close")
 	ok(await _press(app.current, "Main menu"), "and the ending leads back to the menu")

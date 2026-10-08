@@ -95,12 +95,13 @@ func _greatest(col: VBoxContainer) -> void:
 
 func _legends(col: VBoxContainer) -> void:
 	var totals := d.ages.legend_totals(d)
+	if totals.is_empty():
+		col.add_child(_wrapped("No legend fell to House %s." % d.dynasty_name, 14, Kit.DIM))
+		return
 	var all := 0
 	for id in totals:
 		all += int(totals[id])
 	col.add_child(_wrapped("%s in all. Heirlooms kept: %d." % [GameText.num(all), d.heirlooms.size()], 14, Kit.DIM))
-	if totals.is_empty():
-		col.add_child(_wrapped("No legend fell to House %s." % d.dynasty_name, 14, Kit.DIM))
 	for c in GameData.creatures:
 		if totals.has(c["id"]):
 			_row(col, c["name"], int(totals[c["id"]]))

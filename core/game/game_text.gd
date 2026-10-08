@@ -22,11 +22,11 @@ static func signed(n: int) -> String:
 	return ("+" if n >= 0 else "") + num(n)
 
 
-## Groups every whole number of four digits or more in a finished line, for text built elsewhere
-## (the battle log): "hits the drake for 1234567." -> "hits the drake for 1,234,567."
+## Groups every standalone whole number of four digits or more in a finished line, for text built
+## elsewhere (the battle log): "hits the drake for 1234567." -> "hits the drake for 1,234,567."
 static func group_numbers(text: String) -> String:
 	if _long_number == null:
-		_long_number = RegEx.create_from_string("\\d{4,18}")
+		_long_number = RegEx.create_from_string("(?<![\\w#])\\d{4,18}(?!\\w)")
 	var out := ""
 	var at := 0
 	for m in _long_number.search_all(text):
