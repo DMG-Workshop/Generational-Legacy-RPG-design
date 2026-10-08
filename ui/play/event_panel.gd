@@ -46,7 +46,7 @@ func _wrapped(text: String, size: int, color: Color = Kit.TEXT) -> Label:
 
 func _build() -> void:
 	var place: Dictionary = GameWorld.place(str(dynasty.pending_event.get("place", dynasty.world.location)))
-	sub.text = "%s  -  %s  -  %s, level %d" % [place.get("name", ""), dynasty.world.date_text(), dynasty.heir.name, dynasty.heir.level]
+	sub.text = "%s  -  %s  -  %s, level %s" % [place.get("name", ""), dynasty.world.date_text(), dynasty.heir.name, GameText.num(dynasty.heir.level)]
 	Kit.clear(body)
 	body.add_child(_wrapped(GameEvents.event_text(dynasty), 18))
 	var spacer := Control.new()

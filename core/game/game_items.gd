@@ -167,14 +167,14 @@ static func buy(d: GameDynasty, id: String) -> String:
 		return "%s already has the %s." % [h.name, iname]
 	var cost := price(d, id)
 	if h.gold < cost:
-		return "Not enough gold for the %s (%d needed)." % [iname, cost]
+		return "Not enough gold for the %s (%s needed)." % [iname, GameText.num(cost)]
 	h.gold -= cost
 	h.inventory.append(id)
 	GameDisease.on_buy(d, id)
 	if slot_of(id) in SLOTS and equipped(h, slot_of(id)) == "":
 		_wear(h, id)
-		return _with(GameDisease.on_wear(d, id), "%s buys the %s for %d gold and puts it on." % [h.name, iname, cost])
-	return "%s buys the %s for %d gold. It goes in the pack." % [h.name, iname, cost]
+		return _with(GameDisease.on_wear(d, id), "%s buys the %s for %s gold and puts it on." % [h.name, iname, GameText.num(cost)])
+	return "%s buys the %s for %s gold. It goes in the pack." % [h.name, iname, GameText.num(cost)]
 
 
 static func _with(extra: String, msg: String) -> String:
@@ -218,7 +218,7 @@ static func sell(d: GameDynasty, id: String) -> String:
 	if not owns(h, id):
 		h.tainted_gear.erase(id)
 	h.gold += gold
-	return "%s sells the %s for %d gold." % [h.name, item_name(id), gold]
+	return "%s sells the %s for %s gold." % [h.name, item_name(id), GameText.num(gold)]
 
 
 ## Moves `id` from the pack into its slot. Returns the item it replaced ("" if none).
@@ -308,13 +308,13 @@ static func cleanse(d: GameDynasty, trait_id: String) -> String:
 		return "%s carries no %s to lift." % [h.name, GameData.trait_name(trait_id)]
 	var cost := cleanse_price(d)
 	if h.gold < cost:
-		return "The priests ask %d gold to lift %s." % [cost, GameData.trait_name(trait_id)]
+		return "The priests ask %s gold to lift %s." % [GameText.num(cost), GameData.trait_name(trait_id)]
 	h.gold -= cost
 	h.traits.erase(trait_id)
 	h.dormant.erase(trait_id)
 	h.refresh_derived()
 	_count_use(d, "cleanse")
-	return "The priests of %s lift %s from %s for %d gold. No child born after this will carry it." % [d.world.here()["name"], GameData.trait_name(trait_id), h.name, cost]
+	return "The priests of %s lift %s from %s for %s gold. No child born after this will carry it." % [d.world.here()["name"], GameData.trait_name(trait_id), h.name, GameText.num(cost)]
 
 
 ## Prayer lowers the heir's Fate Value, never below the floor.
@@ -328,12 +328,12 @@ static func pray(d: GameDynasty) -> String:
 		return "The priests say %s's fate is as light as prayer can make it." % h.name
 	var cost := prayer_price(d)
 	if h.gold < cost:
-		return "An offering of %d gold is needed to pray." % cost
+		return "An offering of %s gold is needed to pray." % GameText.num(cost)
 	h.gold -= cost
 	var before := h.fate_value
 	h.fate_value = snappedf(maxf(float(GameData.bal("fate_min")), h.fate_value - float(GameData.bal("prayer_fate_drop"))), GameFate.STEP)
 	_count_use(d, "prayer")
-	return "%s keeps a vigil at the temple and offers %d gold. Fate Value %d%% -> %d%%." % [h.name, cost, int(round(before * 100.0)), int(round(h.fate_value * 100.0))]
+	return "%s keeps a vigil at the temple and offers %s gold. Fate Value %d%% -> %d%%." % [h.name, GameText.num(cost), int(round(before * 100.0)), int(round(h.fate_value * 100.0))]
 
 
 # ---------------------------------------------------------------- autopilot

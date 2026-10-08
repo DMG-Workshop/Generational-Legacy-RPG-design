@@ -60,7 +60,7 @@ func advance(years: float, rng: RandomNumberGenerator) -> void:
 
 
 func date_text() -> String:
-	return "%s of year %d" % [season()["name"], int(year) + 1]
+	return "%s of year %s" % [season()["name"], GameText.num(int(year) + 1)]
 
 
 # ---------------------------------------------------------------- places & roads

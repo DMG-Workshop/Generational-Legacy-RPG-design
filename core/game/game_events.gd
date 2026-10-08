@@ -4,12 +4,13 @@
 ##   {id, heir, place, source, stage: "choose"}                 while a choice is awaited
 ##   {..., stage: "result", result: {choice_text, roll, ...}}    after the choice, until dismissed
 ##
-## Event: id, title, text, where {types, biomes, places}, requires {min_gen, max_gen, min_level,
-## flags, not_flags, traits (any)}, weight, once, choices (2-4). Choice: text, requires {traits,
+## Event: id, title, text, where {types, biomes, places}, requires {min_gen, max_gen (generations
+## within the Age), min_level, flags, not_flags, traits (any)}, weight, once (once each Age),
+## lasting (with once: once for the house, ever), choices (2-4). Choice: text, requires {traits,
 ## race, class, item (one or a list), flag (+ reason), min_level, min_gold, any, reason},
 ## check {attr, dc, bonus_if [{race|class|trait, value}]}, outcomes {crit_success, success,
 ## failure, crit_failure} or {always}. Outcome: EFFECT_KEYS. Texts may use {heir} {house} {place}
-## {founder} {ancestor}. validate() lists anything wrong with the data.
+## {founder} {generations} (since the founder) {ancestor}. validate() lists anything wrong with the data.
 class_name GameEvents
 extends RefCounted
 
@@ -26,7 +27,7 @@ const ATTR_LABELS := {
 	"craft_quality": "Craft",
 }
 const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight"]
-const SEEN := "event_seen_"   # once-per-dynasty events
+const SEEN := "event_seen_"   # once-only events: generation they were last seen
 const LAST := "event_last_"   # repeatable events: generation they last happened
 
 
@@ -46,11 +47,13 @@ static func current(d: GameDynasty) -> Dictionary:
 	return event_def(str(d.pending_event.get("id", "")))
 
 
-## Replaces {heir}, {house}, {place}, {founder} and {ancestor} in event text.
+## Replaces {heir}, {house}, {place}, {founder}, {generations} ("1,110 generations" since the
+## founder) and {ancestor} in event text.
 static func fill(d: GameDynasty, text: String) -> String:
 	var place: Dictionary = GameWorld.place(str(d.pending_event.get("place", d.world.location)))
 	var founder: String = str(d.history[0]["name"]) if not d.history.is_empty() else d.heir.full_name()
 	return text.replace("{heir}", d.heir.name).replace("{house}", d.dynasty_name).replace("{founder}", founder) \
+		.replace("{generations}", GameAges.count(d.gen - 1, "generation")) \
 		.replace("{place}", str(place.get("name", ""))).replace("{ancestor}", str(d.pending_event.get("ancestor", "your forebears")))
 
 
@@ -83,7 +86,8 @@ static func is_eligible(d: GameDynasty, ev: Dictionary) -> bool:
 	if not place_matches(ev, d.world.here()):
 		return false
 	var r: Dictionary = ev.get("requires", {})
-	if d.gen < int(r.get("min_gen", 1)) or d.gen > int(r.get("max_gen", 1000000)):
+	var era := d.era_gen()
+	if era < int(r.get("min_gen", 1)) or era > int(r.get("max_gen", 1000000)):
 		return false
 	if d.heir.level < int(r.get("min_level", 1)):
 		return false
@@ -98,8 +102,16 @@ static func is_eligible(d: GameDynasty, ev: Dictionary) -> bool:
 		return false
 	var id: String = ev["id"]
 	if ev.get("once", false):
-		return not d.flags.has(SEEN + id)
+		return not seen(d, ev)
 	return int(d.flags.get(LAST + id, 0)) < d.gen   # repeatable events come at most once a generation
+
+
+## A once-only event has happened in this Age (or ever, when it is "lasting").
+static func seen(d: GameDynasty, ev: Dictionary) -> bool:
+	var key := SEEN + str(ev["id"])
+	if not d.flags.has(key):
+		return false
+	return ev.get("lasting", false) or GameAges.age_of(int(d.flags[key])) >= d.age_number()
 
 
 static func eligible(d: GameDynasty) -> Array:
@@ -131,7 +143,10 @@ static func begin(d: GameDynasty, id: String, source: String = "explore") -> boo
 	if JSON.stringify(ev).contains("{ancestor}"):
 		d.pending_event["ancestor"] = _ancestor_name(d)
 	if ev.get("once", false):
-		d.set_flag(SEEN + id)
+		if d.flags.has(SEEN + id):
+			d.flags[SEEN + id] = d.gen   # seen again in a later Age
+		else:
+			d.set_flag(SEEN + id)
 	else:
 		d.flags[LAST + id] = d.gen   # bookkeeping, not a story flag: no quest listens for it
 	return true
@@ -178,9 +193,9 @@ static func explore(d: GameDynasty) -> Array:
 		ev = pick_event(d)
 	if ev.is_empty():
 		var xp := int(round(float(GameData.bal("event_quiet_xp")) * GameData.xp_level_scale(h.level)))
-		var msgs: Array = ["%s explores %s. Nothing stirs, but the land is better known for it (+%d XP)." % [h.name, place["name"], xp]]
+		var msgs: Array = ["%s explores %s. Nothing stirs, but the land is better known for it (+%s XP)." % [h.name, place["name"], GameText.num(xp)]]
 		if h.gain_xp(xp) > 0:
-			msgs.append("Level up! %s is now level %d." % [h.name, h.level])
+			msgs.append("Level up! %s is now level %s." % [h.name, GameText.num(h.level)])
 		return d._finish_time("explore", msgs)
 	var span := d.years_for("explore")
 	var out := d._finish_time("explore", ["%s spends %s exploring %s." % [h.name, "a year" if span == 1 else "%d years" % span, place["name"]]])
@@ -289,7 +304,7 @@ static func choice_status(d: GameDynasty, c: Dictionary) -> Dictionary:
 		if h.gold >= cost:
 			passed.append("")
 		else:
-			failed.append("%d gold" % cost)
+			failed.append("%s gold" % GameText.num(cost))
 	var ok: bool = failed.is_empty() or (r.get("any", false) and not passed.is_empty())
 	var tags: Array = passed.filter(func(t): return t != "")
 	var tag: String = tags[0] if not tags.is_empty() else ""
@@ -310,7 +325,7 @@ static func choice_label(d: GameDynasty, i: int) -> String:
 		text = "[%s] %s" % [st["tag"], text]
 	var extra: Array = []
 	if c.get("requires", {}).has("min_gold"):
-		extra.append("%d gold" % gold_amount(d, float(c["requires"]["min_gold"])))
+		extra.append("%s gold" % GameText.num(gold_amount(d, float(c["requires"]["min_gold"]))))
 	if c.has("check"):
 		extra.append(check_text(d, c["check"]))
 	else:
@@ -379,7 +394,7 @@ static func _bonus_applies(h: GameHeir, b: Dictionary) -> String:
 static func check_parts(d: GameDynasty, check: Dictionary) -> Array:
 	var h := d.heir
 	var attr: String = check["attr"]
-	var parts: Array = [["Proficiency (level %d)" % h.level, proficiency(h.level)], [ATTR_LABELS.get(attr, attr), attr_bonus(h, attr)]]
+	var parts: Array = [["Proficiency (level %s)" % GameText.num(h.level), proficiency(h.level)], [ATTR_LABELS.get(attr, attr), attr_bonus(h, attr)]]
 	for b in check.get("bonus_if", []):
 		var who := _bonus_applies(h, b)
 		if who != "":
@@ -537,20 +552,20 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 			g = -mini(-g, h.gold)
 		h.gold += g
 		if g != 0:
-			fx.append({"t": "%+d gold" % g, "k": "good" if g > 0 else "bad"})
+			fx.append({"t": "%s gold" % GameText.signed(g), "k": "good" if g > 0 else "bad"})
 	if o.has("xp"):
 		var xp := int(round(float(o["xp"]) * GameData.xp_level_scale(h.level)))
-		fx.append({"t": "+%d XP" % xp, "k": "good"})
+		fx.append({"t": "%s XP" % GameText.signed(xp), "k": "good"})
 		if h.gain_xp(xp) > 0:
-			fx.append({"t": "Level up! Now level %d" % h.level, "k": "good"})
-			level_up = "Level up! %s is now level %d." % [h.name, h.level]
+			fx.append({"t": "Level up! Now level %s" % GameText.num(h.level), "k": "good"})
+			level_up = "Level up! %s is now level %s." % [h.name, GameText.num(h.level)]
 	if o.has("hp_pct"):
 		var before := h.hp
 		h.hp = clampi(h.hp + int(round(float(h.max_hp()) * float(o["hp_pct"]))), 1, h.max_hp())   # events wound, never kill
 		if h.hp > before:
-			fx.append({"t": "Recovered %d HP" % (h.hp - before), "k": "good"})
+			fx.append({"t": "Recovered %s HP" % GameText.num(h.hp - before), "k": "good"})
 		elif h.hp < before:
-			fx.append({"t": "Lost %d HP" % (before - h.hp), "k": "bad"})
+			fx.append({"t": "Lost %s HP" % GameText.num(before - h.hp), "k": "bad"})
 	if o.has("potions"):
 		h.potions += int(o["potions"])
 		fx.append({"t": "+%d potion%s" % [int(o["potions"]), "" if int(o["potions"]) == 1 else "s"], "k": "good"})
@@ -573,7 +588,7 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		if _owns(h, item):
 			var g := maxi(1, int(round(float(GameItems.item_def(item).get("price", 0)) * GameData.enemy_scale(d.gen) * float(GameData.bal("event_duplicate_item_gold")))))
 			h.gold += g
-			fx.append({"t": "Already owned %s: sold for %d gold" % [_item_name(item), g], "k": "good"})
+			fx.append({"t": "Already owned %s: sold for %s gold" % [_item_name(item), GameText.num(g)], "k": "good"})
 		else:
 			d.give_item(item)
 			fx.append({"t": "Received %s" % _item_name(item), "k": "good"})
@@ -616,7 +631,8 @@ static func _build_foes(d: GameDynasty, f: Dictionary) -> Array:
 
 
 static func _in_era(d: GameDynasty, c: Dictionary) -> bool:
-	return not c.get("boss", false) and int(c["min_gen"]) <= d.gen and d.gen <= int(c["max_gen"])
+	var era := d.era_gen()
+	return not c.get("boss", false) and int(c["min_gen"]) <= era and era <= int(c["max_gen"])
 
 
 static func _creature_for(d: GameDynasty, id: String) -> Dictionary:
@@ -726,6 +742,8 @@ static func validate() -> Array:
 			errs.append("%s: weight must be positive" % id)
 		if ev.has("once") and not ev["once"] is bool:
 			errs.append("%s: once must be true or false" % id)
+		if ev.has("lasting") and not (ev["lasting"] is bool and ev.get("once", false)):
+			errs.append("%s: lasting must be true or false, on a once-only event" % id)
 		var er: Dictionary = ev.get("requires", {})
 		if int(er.get("min_gen", 1)) > int(er.get("max_gen", 1000000)):
 			errs.append("%s: min_gen above max_gen" % id)

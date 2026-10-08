@@ -542,7 +542,7 @@ func _test_high_level() -> void:
 	for f in fx:
 		if str(f["t"]).ends_with(" XP"):
 			xp_line = f["t"]
-	_check(xp_line == "+%d XP" % int(round(50.0 * GameData.xp_level_scale(5000))), "XP scales with level (%s)" % xp_line)
+	_check(xp_line == "+%s XP" % GameText.num(int(round(50.0 * GameData.xp_level_scale(5000)))), "XP scales with level (%s)" % xp_line)
 	_check(d.heir.level >= xp_before, "no level loss")
 	var g := _fresh()
 	g.gen = 999

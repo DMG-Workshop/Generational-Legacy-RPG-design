@@ -133,15 +133,25 @@ func stat(s: String) -> float:
 	return v
 
 
+## 1 in the first Age. Later, the share of a stat's heir_scale that counts where the stat meets a
+## fixed measure: VIT feeds health that heir_scale multiplies again, MAG feeds mana spent on skills
+## priced by level alone, AGI is weighed against fixed odds to dodge and crit. By the true
+## generation alone a later Age's heir could not be hurt by its beasts, never ran dry and dodged
+## half of every blow from birth. With it each Age plays as the first did, era by era.
+func era_measure() -> float:
+	var era := GameAges.era_of(gen)
+	return 1.0 if era == gen else GameData.heir_scale(era) / GameData.heir_scale(gen)
+
+
 func max_hp() -> int:
-	var v: float = base_of("hp") + growth_of("hp") * float(level - 1) + stat("vit") * 2.0
+	var v: float = base_of("hp") + growth_of("hp") * float(level - 1) + stat("vit") * era_measure() * 2.0
 	v *= GameData.heir_scale(gen)
 	v *= 1.0 + trait_total("max_hp") + float(archetype_bonus.get("hp", 0.0)) + heirloom_bonus
 	return maxi(10, int(round(v)))
 
 
 func max_mp() -> int:
-	var v: float = base_of("mp") + growth_of("mp") * float(level - 1) + stat("mag") * 0.5
+	var v: float = base_of("mp") + growth_of("mp") * float(level - 1) + stat("mag") * era_measure() * 0.5
 	v *= 1.0 + trait_total("max_mp")
 	return maxi(0, int(round(v)))
 
@@ -160,11 +170,13 @@ func defense() -> float:
 
 
 func dodge_chance() -> float:
-	return clampf(stat("agi") / (stat("agi") + 60.0) * 0.5 + trait_total("reflexes"), 0.0, 0.6)
+	var agi := stat("agi") * era_measure()
+	return clampf(agi / (agi + 60.0) * 0.5 + trait_total("reflexes"), 0.0, 0.6)
 
 
 func crit_chance() -> float:
-	return clampf(0.05 + trait_total("luck") + stat("agi") / (stat("agi") + 100.0) * 0.2, 0.0, 0.6)
+	var agi := stat("agi") * era_measure()
+	return clampf(0.05 + trait_total("luck") + agi / (agi + 100.0) * 0.2, 0.0, 0.6)
 
 
 func xp_to_next() -> int:

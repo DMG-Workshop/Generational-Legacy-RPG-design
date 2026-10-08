@@ -6,6 +6,7 @@ const TitleScreen := preload("res://ui/play/title_screen.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const SuccessionScreen := preload("res://ui/play/succession_screen.gd")
+const EndingScreen := preload("res://ui/play/ending_screen.gd")
 
 var dynasty: GameDynasty
 var current: Control
@@ -61,6 +62,10 @@ func show_state() -> void:
 		var s := SuccessionScreen.new()
 		s.app = self
 		_swap(s)
+	elif dynasty.state == "ended":
+		var e := EndingScreen.new()
+		e.app = self
+		_swap(e)
 	else:
 		var l := LifeScreen.new()
 		l.app = self
