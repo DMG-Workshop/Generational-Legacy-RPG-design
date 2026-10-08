@@ -14,6 +14,7 @@ Play one heir's full life, then continue as their child while your old character
 - **Legacy Echoes:** Every ancestral act becomes a story that affects descendants
 - **Multiple Worlds:** Nine realms with time dilation, teleportation networks, and persistent estates
 - **Layered Combat:** Final Fantasy side-view with class mechanics, skill trees, and ancestral arts
+- **Spells and Areas:** foes stand in front and back rows; bursts, cones, lines and field-wide spells strike every foe they reach, casters learn a spellbook as they level, and burns, poisons, stuns, wards and haste tick turn by turn
 - **Dig & Build:** Terraria-style exploration with persistent structures that decay across generations
 - **Data-Driven:** All content (traits, classes, jobs, creatures) in JSON; logic independent of rendering
 
@@ -50,7 +51,7 @@ A self-contained playable slice (lineage, fate, echoes, heirlooms, turn-based ba
 2. Found a dynasty (class + bloodline + optional seed), then each ~2-year action: hunt, train, work, rest, found a family.
 3. When an heir dies, choose which child carries the legacy. Traits pass on, go dormant, mutate and conflict; failures at Fate milestones shape the next heir.
 
-Code: `core/game/` (logic, no rendering), `ui/play/` (screens), data in `data/classes`, `data/creatures`, `data/game`, `data/traits`.
+Code: `core/game/` (logic, no rendering), `ui/play/` (screens), data in `data/classes`, `data/creatures`, `data/game`, `data/traits`, `data/spells` and `data/combat` (statuses, elements, formations and packs).
 
 Tests (headless): each `tests/test_game_*.gd`, e.g. `godot --headless --path . -s res://tests/test_game_generations.gd`, which also plays a house through to the end of generation 999,999.
 
