@@ -1,7 +1,7 @@
 {
   "settings": {
     "level_milestones": [5, 10, 20, 35, 50, 75, 100, 150, 250, 400, 650, 1000, 1600, 2500, 4000, 6500, 10000, 16000, 25000, 40000, 65000, 99999],
-    "milestone_chance": 0.07,
+    "milestone_chance": 0.02,
     "milestone_biome_mult": 3.0,
     "resist_cap": 0.9,
     "vit_resist": {"from": 0.7, "per": 0.3, "max": 0.2},
@@ -24,9 +24,9 @@
     "young_years": 8,
     "cure_cost": 40,
     "cure_stage_step": 0.5,
-    "bargain_taint_chance": 0.5,
+    "bargain_taint_chance": 0.2,
     "black_market_infamy": 0.02,
-    "corpse_chance": 0.04
+    "corpse_chance": 0.02
   },
   "diseases": [
     {
@@ -38,7 +38,7 @@
         {"name": "Rattling Chest", "effects": [{"stat": "max_hp", "value": -0.08}, {"stat": "reflexes", "value": -0.03}, {"stat": "max_mp", "value": -0.05}]}
       ],
       "end": {"kind": "chronic"},
-      "contagion": {"spouse": 0.15, "child": 0.12, "companion": 0.1, "birth": 0.0},
+      "contagion": {"spouse": 0.01, "child": 0.008, "companion": 0.0067, "birth": 0.0},
       "cures": {"temple": 0.6, "remedies": ["willowbark_tonic", "physicians_draught"], "natural": [0.45, 0.2, 0.04], "rest": 0.3},
       "vectors": {"milestone": 3.0}
     },
@@ -51,7 +51,7 @@
         {"name": "Wasting Flux", "effects": [{"stat": "melee_damage", "value": -0.1}, {"stat": "max_hp", "value": -0.08}, {"stat": "work_gold", "value": -0.1}]}
       ],
       "end": {"kind": "chronic"},
-      "contagion": {"spouse": 0.1, "child": 0.1, "companion": 0.12, "birth": 0.0},
+      "contagion": {"spouse": 0.0067, "child": 0.0067, "companion": 0.008, "birth": 0.0},
       "cures": {"temple": 0.6, "remedies": ["willowbark_tonic", "physicians_draught"], "natural": [0.5, 0.2, 0.03], "rest": 0.3},
       "vectors": {"milestone": 3.0}
     },
@@ -65,7 +65,7 @@
         {"name": "Recurring Ague", "effects": [{"stat": "element_power", "value": -0.1}, {"stat": "luck", "value": -0.03}, {"stat": "reflexes", "value": -0.03}]}
       ],
       "end": {"kind": "chronic"},
-      "contagion": {"spouse": 0.05, "child": 0.05, "companion": 0.05, "birth": 0.0},
+      "contagion": {"spouse": 0.0033, "child": 0.0033, "companion": 0.0033, "birth": 0.0},
       "cures": {"temple": 0.8, "remedies": ["willowbark_tonic", "physicians_draught"], "natural": [0.3, 0.1, 0.02], "rest": 0.25},
       "vectors": {"milestone": 1.5}
     },
@@ -78,7 +78,7 @@
         {"name": "Pox-Scarred", "effects": [{"stat": "persuasion", "value": -0.12}, {"stat": "max_hp", "value": -0.03}]}
       ],
       "end": {"kind": "chronic"},
-      "contagion": {"spouse": 0.1, "child": 0.25, "companion": 0.1, "birth": 0.05},
+      "contagion": {"spouse": 0.0067, "child": 0.0167, "companion": 0.0067, "birth": 0.0033},
       "cures": {"temple": 0.5, "remedies": ["willowbark_tonic", "physicians_draught"], "natural": [0.6, 0.35, 0.03], "rest": 0.3},
       "vectors": {"milestone": 2.0}
     },
@@ -92,7 +92,7 @@
         {"name": "Marsh Lung", "effects": [{"stat": "max_hp", "value": -0.1}, {"stat": "reflexes", "value": -0.05}, {"stat": "xp_gain", "value": -0.08}]}
       ],
       "end": {"kind": "chronic"},
-      "contagion": {"spouse": 0.08, "child": 0.06, "companion": 0.08, "birth": 0.0},
+      "contagion": {"spouse": 0.0053, "child": 0.004, "companion": 0.0053, "birth": 0.0},
       "resist": {"beastkin": 0.2, "druid": 0.1},
       "cures": {"temple": 1.0, "remedies": ["willowbark_tonic", "physicians_draught", "saints_salts"], "natural": [0.4, 0.15, 0.02], "rest": 0.25},
       "vectors": {"milestone": 0.5, "corpse": {"creatures": ["slime", "bog_troll"], "biomes": ["swamp"], "weight": 2.0}}
@@ -106,7 +106,7 @@
         {"name": "Black Rot", "effects": [{"stat": "max_hp", "value": -0.15}, {"stat": "defense", "value": -0.12}, {"stat": "healing_power", "value": -0.3}]}
       ],
       "end": {"kind": "lethal", "death_per_year": 0.05, "cause": "taken by Grave Rot"},
-      "contagion": {"spouse": 0.04, "child": 0.03, "companion": 0.05, "birth": 0.0},
+      "contagion": {"spouse": 0.0027, "child": 0.002, "companion": 0.0033, "birth": 0.0},
       "resist": {"necromancer": 0.3, "dread_knight": 0.3, "warlock": 0.2},
       "cures": {"temple": 1.5, "remedies": ["gravewort_poultice", "saints_salts"], "natural": [0.25, 0.0, 0.0], "rest": 0.2},
       "vectors": {"corpse": {"creatures": ["skeleton", "wraith", "lich_acolyte"], "biomes": ["crypt", "ruins"], "weight": 2.0}}
@@ -120,7 +120,7 @@
         {"name": "Black Swellings", "effects": [{"stat": "max_hp", "value": -0.2}, {"stat": "melee_damage", "value": -0.15}, {"stat": "element_power", "value": -0.15}]}
       ],
       "end": {"kind": "lethal", "death_per_year": 0.1, "cause": "taken by the Rat Plague"},
-      "contagion": {"spouse": 0.3, "child": 0.2, "companion": 0.2, "birth": 0.1},
+      "contagion": {"spouse": 0.02, "child": 0.0133, "companion": 0.0133, "birth": 0.0067},
       "cures": {"temple": 2.0, "remedies": ["gravewort_poultice", "physicians_draught", "saints_salts", "smugglers_theriac"], "natural": [0.15, 0.05, 0.0], "rest": 0.15},
       "vectors": {"corpse": {"creatures": ["goblin", "bandit"], "biomes": ["cave", "coast"], "weight": 1.0}, "vial": true, "bargain": true}
     },
@@ -133,7 +133,7 @@
         {"name": "Open Sores", "effects": [{"stat": "defense", "value": -0.1}, {"stat": "persuasion", "value": -0.15}, {"stat": "max_hp", "value": -0.06}]}
       ],
       "end": {"kind": "chronic"},
-      "contagion": {"spouse": 0.1, "child": 0.05, "companion": 0.08, "birth": 0.0},
+      "contagion": {"spouse": 0.0067, "child": 0.0033, "companion": 0.0053, "birth": 0.0},
       "cures": {"temple": 1.0, "remedies": ["gravewort_poultice", "saints_salts", "smugglers_theriac"], "natural": [0.3, 0.1, 0.02], "rest": 0.2},
       "vectors": {"bargain": true}
     },
@@ -146,7 +146,7 @@
         {"name": "The Grey Veil", "effects": [{"stat": "max_hp", "value": -0.2}, {"stat": "reflexes", "value": -0.1}, {"stat": "xp_gain", "value": -0.1}]}
       ],
       "end": {"kind": "lethal", "death_per_year": 0.08, "cause": "taken by the Grey Veil"},
-      "contagion": {"spouse": 0.25, "child": 0.15, "companion": 0.15, "birth": 0.05},
+      "contagion": {"spouse": 0.0167, "child": 0.01, "companion": 0.01, "birth": 0.0033},
       "cures": {"temple": 2.5, "remedies": ["saints_salts", "smugglers_theriac"], "natural": [0.1, 0.0, 0.0], "rest": 0.1},
       "vectors": {"vial": true, "bargain": true}
     },

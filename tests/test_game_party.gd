@@ -95,16 +95,21 @@ func test_hire_dismiss() -> void:
 	ok(p.hire_block(d, "bren_cask").find("already rides") >= 0, "cannot hire a member twice")
 	p.hire(d, "maddy_thorn")
 	ok(p.members.size() == 2, "two hired")
+	ok(GameParty.max_size() == 3, "a party holds three companions")
 	d.heir.level = 6
-	ok(p.hire_block(d, "sister_oriel").begins_with("The party is full"), "party cap enforced")
+	ok(p.hire(d, "sister_oriel").contains("joins") and p.members.size() == 3, "a third joins")
+	d.world.visit("brinehaven")
+	ok(p.hire_block(d, "grull_one_tusk") == "The party is full (3).", "party cap enforced: %s" % p.hire_block(d, "grull_one_tusk"))
+	ok(p.hire(d, "grull_one_tusk") != "" and p.members.size() == 3 and not p.has_member("grull_one_tusk"), "a fourth is refused")
+	d.world.visit("hearthmere")
 	ok("bren_cask" not in p.available_here(d), "members are not offered again")
 	text = p.dismiss(d, "bren_cask")
-	ok(p.members.size() == 1 and p.history["bren_cask"]["status"] == "dismissed", "dismissed goes home")
+	ok(p.members.size() == 2 and p.history["bren_cask"]["status"] == "dismissed", "dismissed goes home")
 	ok(text.find("paid off") >= 0, "dismissal is announced")
 	ok(p.fee(d, "bren_cask") == 0, "rehire is free")
 	var g := d.heir.gold
 	text = p.hire(d, "bren_cask")
-	ok(p.members.size() == 2 and d.heir.gold == g, "rehired for free")
+	ok(p.members.size() == 3 and d.heir.gold == g, "rehired for free")
 	ok(text.find("asks no fee") >= 0, "free rehire is announced")
 	ok(p.history["bren_cask"]["status"] == "serving", "status serving after rehire")
 	ok(p.hire_block(d, "hulda_stonebrow").find("does not drink here") >= 0, "Ironford companion not in Hearthmere")
@@ -327,6 +332,39 @@ func test_targeting() -> void:
 	var share := float(on_heir) / float(on_heir + on_allies)
 	var want := float(GameData.bal("companion_heir_target_chance"))
 	ok(absf(share - want) < 0.05, "heir takes about %d%% of the blows (%.1f%% of %d)" % [int(want * 100.0), share * 100.0, on_heir + on_allies])
+	# With three companions the rest of the blows spread over all of them, and none on the fallen.
+	var per := [0, 0, 0]
+	var heir_hits := 0
+	var on_fallen := 0
+	for k in 30:
+		var d := _new(340 + k)
+		d.heir.gold = 1000
+		d.heir.level = 5
+		for id in ["bren_cask", "maddy_thorn", "sister_oriel"]:
+			d.party.hire(d, id)
+		d.start_hunt("hunt_hard")
+		var b := d.battle
+		ok(b.allies.size() == 3, "three allies in battle")
+		for e in b.enemies:
+			e["hp"] = 100000
+			e["max_hp"] = 100000
+			e["atk"] = 0.0
+		if k % 2 == 1:
+			b.allies[1].hp = 0
+		for t in 10:
+			b.defend()
+			for ev in b.events:
+				if ev["type"] in ["damage", "miss"] and ev["side"] == "player":
+					heir_hits += 1
+				if ev["type"] in ["damage", "miss"] and ev["side"] == "ally":
+					per[int(ev["ally"])] += 1
+					if k % 2 == 1 and int(ev["ally"]) == 1:
+						on_fallen += 1
+		d.battle = null
+	var total: int = heir_hits + per[0] + per[1] + per[2]
+	ok(absf(float(heir_hits) / float(total) - want) < 0.05, "with three, the heir still takes about %d%% (%.1f%%)" % [int(want * 100.0), 100.0 * heir_hits / total])
+	ok(per[0] > 0 and per[1] > 0 and per[2] > 0 and absi(per[0] - per[2]) < (per[0] + per[2]) / 4, "every companion draws blows (%s)" % str(per))
+	ok(on_fallen == 0, "no blows on a companion already knocked out")
 
 
 func test_ko_outcomes() -> void:
@@ -529,17 +567,19 @@ func test_battle_rules() -> void:
 func test_fallen_ally_sheds_foe_hp() -> void:
 	var d := _new(99)
 	d.heir.gold = 5000
+	d.heir.level = 5
 	d.party.hire(d, "bren_cask")
 	d.party.hire(d, "maddy_thorn")
+	d.party.hire(d, "sister_oriel")
 	var foes := [d._make_enemy(GameData.creatures[1], 1.0, 1.0, 5), d._make_enemy(GameData.creatures[1], 1.0, 1.0, 5)]
 	var base: int = foes[0]["max_hp"]
 	d._begin_battle(foes, "hunt")
 	var b := d.battle
 	var k := float(GameData.bal("companion_foe_hp"))
-	ok(b.enemies[0]["max_hp"] == int(round(base * (1.0 + 2.0 * k))), "two companions: foes start with the party's share")
+	ok(b.enemies[0]["max_hp"] == int(round(base * (1.0 + 3.0 * k))), "three companions: foes start with the party's share")
 	b.enemies[0]["hp"] = int(b.enemies[0]["max_hp"] / 2)
 	b.enemies[1]["hp"] = 0
-	for i in 2:
+	for i in 3:
 		b.allies[i].hp = 1
 		b.enemies[0]["atk"] = 1000000.0
 		b.events = []
@@ -547,12 +587,12 @@ func test_fallen_ally_sheds_foe_hp() -> void:
 		while b.allies[i].hp > 0 and guard < 50:   # dodges are rolled; keep swinging until the blow lands
 			guard += 1
 			b._enemy_hit_ally(0, i)
-		var up := 1 - i
+		var up := 2 - i
 		var want := int(round(base * (1.0 + float(up) * k)))
 		var e0: Dictionary = b.enemies[0]
 		ok(absi(int(e0["max_hp"]) - want) <= 1, "%d standing: foe max HP back to %d (got %d)" % [up, want, e0["max_hp"]])
 		ok(absf(float(e0["hp"]) / float(e0["max_hp"]) - 0.5) < 0.01, "the foe keeps the share of HP it had (%d / %d)" % [e0["hp"], e0["max_hp"]])
-		ok(b.enemies[1]["hp"] == 0 and b.enemies[1]["max_hp"] == int(round(base * (1.0 + 2.0 * k))), "a slain foe is left alone")
+		ok(b.enemies[1]["hp"] == 0 and b.enemies[1]["max_hp"] == int(round(base * (1.0 + 3.0 * k))), "a slain foe is left alone")
 		var ko: Array = b.events.filter(func(ev): return ev["type"] == "ko")
 		ok(ko.size() == 1 and float(ko[0].get("foe_scale", 1.0)) < 1.0, "the knock-out tells the screen how far the foes shrank")
 	ok(is_equal_approx(b.foe_hp_mult, 1.0), "with the party down the foes are as tough as for a lone heir")
@@ -571,11 +611,12 @@ func test_fallen_ally_sheds_foe_hp() -> void:
 
 
 ## Hiring help never makes the heir likelier to lose: a legend at its level, and a fresh heir's first
-## hunts in a late era, fought by the autopilot alone and with two hirelings on the same seeds.
+## hunts in a late era, fought by the autopilot alone and with two or three hirelings on the same seeds.
 func test_party_never_riskier() -> void:
-	for spec in [["warrior", 300, 45, "deepstone_halls", "legend"], ["ranger", 1, 15, "whisperwood", "legend"], ["warrior", 150, 1, "hearthmere", "hunt"]]:
-		var lost := [0, 0]
-		for with_party in [0, 1]:
+	var band := ["maddy_thorn", "bren_cask", "sister_oriel"]
+	for spec in [["warrior", 300, 45, "deepstone_halls", "legend"], ["ranger", 1, 15, "whisperwood", "legend"], ["warrior", 150, 1, "hearthmere", "hunt"], ["mage", 1, 1, "hearthmere", "hunt"]]:
+		var lost := [0, 0, 0]
+		for size in [0, 2, 3]:
 			for t in 40:
 				var d := GameDynasty.new_game(7000 + t * 17, "T", spec[0], "faetouched", "human")
 				d.pending_event = {}
@@ -589,20 +630,22 @@ func test_party_never_riskier() -> void:
 					d.heir.equipment = {"weapon": "steel_sword", "armor": "chainmail", "trinket": "ring_of_vigor"}
 				d.world.visit(spec[3])
 				d.world.weather_id = "clear"
-				if with_party == 1:
-					for id in ["maddy_thorn", "bren_cask"]:
-						d.party.members.append({"id": id, "name": id, "hp": 1, "mp": 0, "level": spec[2], "gen": spec[1], "due": 0.0, "battles": 0, "hired_gen": spec[1]})
-					d.party.rest(d)
+				for id in band.slice(0, size):
+					d.party.members.append({"id": id, "name": id, "hp": 1, "mp": 0, "level": spec[2], "gen": spec[1], "due": 0.0, "battles": 0, "hired_gen": spec[1]})
+				d.party.rest(d)
 				d.heir.full_heal()
 				if spec[4] == "legend":
 					d.start_legend()
 				else:
 					d.start_hunt("hunt")
 				var b := d.battle
+				ok(b.allies.size() == size, "%d allies fight" % size)
 				GameBot.fight(d)
 				if b.result == "defeat":
-					lost[with_party] += 1
-		ok(lost[1] <= lost[0] + 2, "%s gen %d level %d %s: party lost %d of 40, alone %d" % [spec[0], spec[1], spec[2], spec[4], lost[1], lost[0]])
+					lost[[0, 2, 3].find(size)] += 1
+		ok(lost[1] <= lost[0] + 2, "%s gen %d level %d %s: two hirelings lost %d of 40, alone %d" % [spec[0], spec[1], spec[2], spec[4], lost[1], lost[0]])
+		ok(lost[2] <= lost[0] + 2, "%s gen %d level %d %s: three hirelings lost %d of 40, alone %d" % [spec[0], spec[1], spec[2], spec[4], lost[2], lost[0]])
+		print("  %s gen %d L%d %s: lost alone %d, with two %d, with three %d (of 40)" % [spec[0], spec[1], spec[2], spec[4], lost[0], lost[1], lost[2]])
 
 
 ## A companion's fate is told after the battle's own result, in the returned lines and the journal.
@@ -659,23 +702,36 @@ func test_succession() -> void:
 	d.heir.gain_xp(20000)
 	p.hire(d, "bren_cask")
 	p.hire(d, "maddy_thorn")
-	p.members[0]["hp"] = 1
 	var lv := d.heir.level
 	ok(lv > 10, "heir high level before death")
+	p.hire(d, "sister_oriel")
+	p.members[0]["hp"] = 1
 	d._die("test")
 	ok(d.state == "succession", "succession")
-	ok(p.hire_block(d, "sister_oriel") == "No one hires in mourning.", "no hiring during succession")
+	ok(p.hire_block(d, "grull_one_tusk") == "No one hires in mourning.", "no hiring during succession")
 	var msgs := d.choose_heir(0)
-	ok(p.members.size() == 2, "companions stay with the family")
+	ok(p.members.size() == 3, "companions stay with the family")
 	for m in p.members:
 		var u := p.unit(d, m)
 		ok(u.level == d.heir.level and u.level == 1 and int(m["gen"]) == d.gen, "rebuilt to the new heir's level and gen")
 		ok(u.hp == u.max_hp(), "fresh at succession")
-	ok(msgs.any(func(x): return str(x).find("stay with the family and swear to serve") >= 0), "succession message: %s" % str(msgs))
+	ok(msgs.has("Bren Cask, Maddy Thorn and Sister Oriel stay with the family and swear to serve %s." % d.heir.name), "succession message: %s" % str(msgs))
 	var lines: Array = Tavern.summary_lines(d)
-	ok(lines.size() == 2 and str(lines[0]).begins_with("Bren Cask, Human Warrior Lv1  HP\u00a0"), "summary line: %s" % str(lines))
+	var bren_age := int(p.age(d, "bren_cask"))
+	ok(lines.size() == 3 and str(lines[0]).begins_with("Bren Cask (%d), Human Warrior Lv1  HP\u00a0" % bren_age), "summary line: %s" % str(lines))
+	ok(str(lines[2]).begins_with("Sister Oriel (%d), Human Cleric Lv1" % int(p.age(d, "sister_oriel"))), "a third line for the third companion: %s" % str(lines))
 	var u0 := p.unit(d, p.members[0])
 	ok(str(lines[0]).ends_with("%d/%d" % [u0.hp, u0.max_hp()]), "summary line ends with HP now/max")
+	ok(GameParty.names_text(["A"]) == "A" and GameParty.names_text(["A", "B"]) == "A and B" and GameParty.names_text([]) == "", "names read naturally")
+	# One or two companions read the same as before.
+	p.dismiss(d, "sister_oriel")
+	var two: Array = []
+	p.on_succession(d, two)
+	ok(two == ["Bren Cask and Maddy Thorn stay with the family and swear to serve %s." % d.heir.name], "two names: %s" % str(two))
+	p.dismiss(d, "maddy_thorn")
+	var one: Array = []
+	p.on_succession(d, one)
+	ok(one == ["Bren Cask stays with the family and swears to serve %s." % d.heir.name], "one name: %s" % str(one))
 
 
 func test_save_load() -> void:
@@ -689,7 +745,7 @@ func test_save_load() -> void:
 	p.hire(d, "maddy_thorn")
 	p.on_years(d, 0.5, [])
 	p.members[1]["hp"] = 7
-	p.history["old_netta"] = {"name": "Young Wren", "status": "fallen", "gen": 1, "first_gen": 1, "battles": 3, "fallen": ["Old Netta"]}
+	p.history["old_netta"] = {"name": "Young Wren", "status": "fallen", "gen": 1, "first_gen": 1, "battles": 3, "fallen": ["Old Netta"], "line": 1, "past": []}
 	var text := JSON.stringify(d.to_dict())
 	var d2 := GameDynasty.from_dict(JSON.parse_string(text))
 	var p2 := d2.party
@@ -734,7 +790,7 @@ func test_save_load() -> void:
 		"history": {"grull_one_tusk": {"status": "fallen", "gen": 1}, "ghost": {"status": "left"}, "maddy_thorn": "junk"}}
 	var odd := GameDynasty.from_dict(raw)
 	ok(odd.party.members.size() == 1, "a duplicated member loads once")
-	ok(odd.party.history.keys() == ["grull_one_tusk"], "unknown and malformed history dropped (%s)" % str(odd.party.history.keys()))
+	ok(odd.party.history.keys() == ["grull_one_tusk", "bren_cask"], "unknown and malformed history dropped, members get a record (%s)" % str(odd.party.history.keys()))
 	ok(odd.party.history["grull_one_tusk"]["fallen"] == ["Grull One-Tusk"], "a fallen record always names the fallen")
 	odd.world.location = "brinehaven"
 	var t2 = Tavern.new()
@@ -754,9 +810,30 @@ func test_bot() -> void:
 	GameParty.bot_tick(d)
 	ok(p.members.size() == 1, "bot hires when gold covers fee and reserve")
 	GameParty.bot_tick(d)
-	ok(p.members.size() == 2, "bot fills the party")
+	ok(p.members.size() == 2, "bot hires a second")
 	GameParty.bot_tick(d)
-	ok(p.members.size() == 2, "bot respects the cap")
+	ok(p.members.size() == 2, "Hearthmere has no third for a level-1 heir")
+	d.heir.level = 5
+	GameParty.bot_tick(d)
+	ok(p.members.size() == 3, "bot fills the party with a third (%s)" % str(p.members.map(func(m): return m["id"])))
+	GameParty.bot_tick(d)
+	ok(p.members.size() == 3, "bot respects the cap")
+	# A third is hired only when its wages fit the reserve too.
+	var e := _new(193)
+	e.heir.level = 5
+	e.heir.gold = 2000
+	GameParty.bot_tick(e)
+	GameParty.bot_tick(e)
+	var third := ""
+	for id in e.party.available_here(e):
+		third = id
+	var reserve := e.potion_price() * 3 + int(float(e.party.upkeep_total(e) + e.party.upkeep(e, third)) * float(GameData.bal("companion_bot_reserve_years")))
+	e.heir.gold = e.party.fee(e, third) + reserve - 1
+	GameParty.bot_tick(e)
+	ok(e.party.members.size() == 2, "no third without the reserve (%d gold)" % e.heir.gold)
+	e.heir.gold += 1
+	GameParty.bot_tick(e)
+	ok(e.party.members.size() == 3, "a third once it can be paid for")
 	d.heir.gold = 1
 	GameParty.bot_tick(d)
 	ok(p.members.is_empty(), "bot dismisses when upkeep cannot be paid")

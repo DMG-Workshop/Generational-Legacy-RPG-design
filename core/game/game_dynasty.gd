@@ -780,7 +780,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.world = GameWorld.from_dict(d["world"]) if d.has("world") else GameWorld.create(g.rng)
 	g.flags = _ints(d.get("flags", {}))
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
-	g.party = GameParty.from_dict(d.get("party", {}))
+	g.party = GameParty.from_dict(d.get("party", {}), g)
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
 	return g

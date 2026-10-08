@@ -57,6 +57,7 @@ func _journal_has(d: GameDynasty, part: String) -> bool:
 func _init() -> void:
 	GameData.load_all()
 	_test_data()
+	_test_catch_chances_are_low()
 	_test_effects_on_stats()
 	_test_progression()
 	_test_lethal_stage()
@@ -89,6 +90,25 @@ func _finish() -> void:
 
 
 # ---------------------------------------------------------------- data
+
+## The player asked for low odds: every random way of catching a sickness is at most 2%,
+## except black-market bargains, which the player set at 20%.
+func _test_catch_chances_are_low() -> void:
+	_check(float(GameDisease.setting("milestone_chance")) <= 0.02, "level milestone chance is at most 2%")
+	_check(float(GameDisease.setting("corpse_chance")) <= 0.02, "corpse chance is at most 2%")
+	for dz in GameDisease.all():
+		for k in dz.get("contagion", {}):
+			_check(float(dz["contagion"][k]) <= 0.02, "%s: %s contagion is at most 2%% a year" % [dz["id"], k])
+		var corpse = dz.get("vectors", {}).get("corpse", null)
+		if corpse is Dictionary and corpse.has("chance"):
+			_check(float(corpse["chance"]) <= 0.02, "%s: corpse chance is at most 2%%" % dz["id"])
+	# The one exception, also the player's call: black-market bargains hide a sickness 20% of the time.
+	_check(is_equal_approx(float(GameDisease.setting("bargain_taint_chance")), 0.2), "a black-market bargain is tainted 20% of the time")
+	for id in GameData.items:
+		var taint = GameData.items[id].get("taint", null)
+		if taint is Dictionary and taint.has("chance"):
+			_check(float(taint["chance"]) <= 0.2, "%s: its own taint chance is at most 20%%" % id)
+
 
 func _test_data() -> void:
 	var bad := GameDisease.validate()
@@ -477,7 +497,7 @@ func _test_family_contagion() -> void:
 	_check(GameDisease.household(h).all(func(m): return m.diseases.is_empty()), "the family recovers at home")
 	_check(int(GameDisease.entry(h.spouse, "__rot").get("stage", 0)) == 0, "family sickness never worsened")
 	_drop_test_disease("__rot")
-	# Real numbers: rat plague reaches a spouse about 30% of the time in a year.
+	# Real numbers: rat plague reaches a spouse at its data rate (at most 2% a year), less resistance.
 	var got := 0
 	var n := 400
 	for i in n:
@@ -490,7 +510,8 @@ func _test_family_contagion() -> void:
 		if GameDisease.pass_on(t, t.heir, sp, "rat_plague", "spouse", 1.0) != "":
 			got += 1
 		_check(res < 1.0 or not GameDisease.has(sp, "rat_plague"), "an immune spouse never catches it")
-	_check(absf(float(got) / n - 0.3 * 0.85) < 0.08, "plague reaches a spouse about %.2f a year (%.3f)" % [0.3, float(got) / n])
+	var rate := GameDisease.contagion_chance("rat_plague", "spouse")
+	_check(absf(float(got) / n - rate * 0.85) < 0.02, "plague reaches a spouse about %.3f a year (%.3f)" % [rate, float(got) / n])
 	_check(GameDisease.pass_on(_fresh(), _fresh().heir, _fresh().heir, "lockjaw", "spouse", 5.0) == "", "lockjaw is not catching")
 
 
@@ -531,7 +552,7 @@ func _test_birth_and_succession() -> void:
 		t.found_family()
 		kids += t.heir.children.size()
 		born += t.heir.children.filter(func(c): return GameDisease.has(c, "blister_pox")).size()
-	_check(born > 0 and float(born) / kids < 0.12, "few are born sick (%d of %d)" % [born, kids])
+	_check(kids > 0 and float(born) / kids <= 0.02, "few are born sick, at most 2%% (%d of %d)" % [born, kids])
 
 
 # ---------------------------------------------------------------- treatment
@@ -672,7 +693,7 @@ func _test_bargains() -> void:
 	GameItems.buy(d, "pawned_amulet")
 	_check(not h.tainted_gear.has("pawned_amulet") or float(GameItems.item_def("pawned_amulet")["taint"].get("chance", 0.0)) > 0.0, "an item's own taint chance wins over the default")
 	GameData.diseases["settings"]["bargain_taint_chance"] = saved
-	# About half of all bargains are tainted.
+	# About a fifth of all bargains are tainted.
 	var tainted := 0
 	for i in 200:
 		var t := _fresh(13000 + i)
