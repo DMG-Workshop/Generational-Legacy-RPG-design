@@ -154,8 +154,12 @@ static func element_color(el: String) -> String:
 
 # ---------------------------------------------------------------- shapes
 
+## An ability with no target block strikes one foe if it deals damage, else it is the user's own
+## (a class heal).
 static func shape(ab: Dictionary) -> String:
-	return str(ab.get("target", {}).get("shape", "single"))
+	if ab.has("target"):
+		return str(ab["target"].get("shape", "single"))
+	return "single" if float(ab.get("mult", 0.0)) > 0.0 or ab.has("statuses") else "self"
 
 
 static func is_aoe(ab: Dictionary) -> bool:
@@ -342,7 +346,11 @@ static func describe(ab: Dictionary) -> String:
 		var who: String = {"party": " on the party", "self": " on self"}.get(str(st.get("on", "target")), "")
 		var turns := int(st.get("turns", def.get("default_turns", 1)))
 		var odds := "" if chance >= 0.999 else "%d%% " % int(round(chance * 100.0))
-		parts.append("%s%s%s (%d turn%s)" % [odds, str(def.get("name", st["id"])).to_lower(), who, turns, "" if turns == 1 else "s"])
+		var what := str(def.get("name", st["id"])).to_lower()
+		if str(def.get("basis", "")) == "max_hp" and not def.get("harmful", false):   # how much a ward holds or regrowth mends
+			var pct := int(round(float(st.get("potency", def.get("default_potency", 0.0))) * 100.0))
+			what += (" of %d%% max HP" if def.get("absorb", false) else " %d%% max HP a turn") % pct
+		parts.append("%s%s%s (%d turn%s)" % [odds, what, who, turns, "" if turns == 1 else "s"])
 	var s := ", ".join(parts)
 	if s == "":
 		return str(ab.get("text", ""))

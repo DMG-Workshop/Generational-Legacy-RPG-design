@@ -803,6 +803,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.dynasty_name = d["dynasty_name"]
 	g.gen = int(d["gen"])
 	g.heir = GameHeir.from_dict(d["heir"])
+	g.heir.spell_news.append_array(g.heir.learn_spells())   # a spell list grown since the save
 	g.state = d["state"]
 	g.history = _ints(Array(d["history"]))
 	g.ages = GameAges.from_dict(d.get("ages"), g)

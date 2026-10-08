@@ -274,8 +274,8 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.heirloom_bonus = float(d["heirloom_bonus"])
 	h.equipment = d.get("equipment", {"weapon": "", "armor": "", "trinket": ""})
 	h.inventory = Array(d.get("inventory", []))
-	h.spells = Array(d["spells"]) if d.has("spells") else []
-	h.spell_news = Array(d.get("spell_news", []))
+	h.spells = Array(d.get("spells", [])).filter(func(id): return not GameCombat.spell(str(id)).is_empty())
+	h.spell_news = Array(d.get("spell_news", [])).filter(func(id): return id in h.spells)
 	h.diseases = GameDisease.load_list(d.get("diseases", []))
 	h.tainted_gear = Array(d.get("tainted_gear", []))
 	h.lifespan = h.compute_lifespan()

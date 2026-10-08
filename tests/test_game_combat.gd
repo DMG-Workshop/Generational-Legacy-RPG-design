@@ -158,6 +158,9 @@ func test_geometry() -> void:
 	ok(1 not in b.aoe_targets(fb, -1, 0), "the fallen are not in an area")
 	ok(b.aoe_targets(fb, -1, 1) == b.aoe_targets(fb, -1, b.first_target()), "aiming at a fallen foe aims at the first standing one")
 	ok(b.aoe_targets(GameCombat.spell("ward"), -1, 0).is_empty(), "a party spell catches no foes")
+	var mend: Dictionary = GameData.classes["warrior"]["skills"][1]
+	ok(GameCombat.shape(mend) == "self" and GameCombat.shape_text(mend) == "Self" and b.aoe_targets(mend, -1, 0).is_empty(), "a class heal is its user's own and catches no foe")
+	ok(GameCombat.shape(GameData.classes["warrior"]["skills"][0]) == "single", "a class strike with no target block hits one foe")
 
 
 func test_formation() -> void:
@@ -747,6 +750,19 @@ func test_spells_save_load() -> void:
 	g.start_hunt("hunt")
 	GameBot.fight(g)
 	ok(g.state == "life" or g.state == "succession", "an old save fights on")
+	# A spell list that grew since the save teaches the heir at once and says so; a spell gone from
+	# the data is forgotten.
+	var grown: Dictionary = JSON.parse_string(text)
+	var dropped: String = known[known.size() - 1]
+	grown["heir"]["spells"] = known.slice(0, known.size() - 1) + ["no_such_spell"]
+	grown["heir"]["spell_news"] = ["no_such_spell"]
+	var k := GameDynasty.from_dict(grown)
+	ok(dropped in k.heir.spells and "no_such_spell" not in k.heir.spells, "a loaded heir knows every spell the level allows, and only real ones")
+	ok(k.heir.spell_news == [dropped], "the spell new to this save is announced: %s" % str(k.heir.spell_news))
+	var j0 := k.journal.size()
+	k.pending_event = {}
+	k.work()
+	ok(k.journal.slice(j0).any(func(l): return str(l).find("learns to cast %s" % GameCombat.spell(dropped)["name"]) >= 0), "in the journal")
 	# A fixture save from before this system loads and its heir can cast.
 	var fx := FileAccess.open("res://tests/fixtures/save_pr4_life.json", FileAccess.READ)
 	if fx != null:
@@ -1027,6 +1043,22 @@ func _ui_tests() -> void:
 			break
 		await create_timer(0.2).timeout
 	ok(view.aiming.is_empty() and _button(view, "Attack") != null, "the commands come back after the turn")
+	# Hovering a strike outlines the foe it would hit; hovering a heal outlines none.
+	var marks := func() -> int:
+		return view.enemy_nodes.filter(func(en): return en["mark"].visible).size()
+	d.heir.mp = d.heir.max_mp()
+	view._build_commands()
+	await _frames(2)
+	var bolt := _button(view, "Firebolt")
+	bolt.mouse_entered.emit()
+	await _frames(2)
+	ok(marks.call() == 1 and view.enemy_nodes[view.target]["mark"].visible, "hovering Firebolt outlines its target")
+	bolt.mouse_exited.emit()
+	var mend := _button(view, "Mend")
+	mend.mouse_entered.emit()
+	await _frames(2)
+	ok(marks.call() == 0, "hovering Mend outlines no foe")
+	mend.mouse_exited.emit()
 	var chip_texts: Array = []
 	d.battle.apply_status("heir", "haste", 0.4, 3, "heir")
 	view._refresh_chips()

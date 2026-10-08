@@ -76,7 +76,7 @@
       "mp": 15, "stat": "mag", "mult": 1.05, "pierce": 0.3,
       "target": {"shape": "all"}, "is_aoe": true,
       "statuses": [{"id": "freeze", "chance": 0.25, "turns": 1}, {"id": "slow", "chance": 0.4, "turns": 2, "potency": 0.2}],
-      "learn": {"classes": ["mage", "shaman", "warlock"], "min_level": 450, "levels": {"shaman": 700, "warlock": 900}},
+      "learn": {"classes": ["mage", "shaman", "warlock", "druid"], "min_level": 450, "levels": {"shaman": 700, "warlock": 900, "druid": 900}},
       "text": "A white storm over the whole field."
     },
     {
