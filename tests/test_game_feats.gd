@@ -893,6 +893,12 @@ func test_save_load() -> void:
 	var f := GameDynasty.from_dict(raw)
 	ok(f.heir.known_feats == ["cleave", "charge", "feint", "flurry", "rally"], "unknown and doubled feats are dropped: %s" % str(f.heir.known_feats))
 	ok(f.heir.equipped_feats.size() == GameFeats.slots(f.heir) and f.heir.equipped_feats.all(func(id): return id in f.heir.known_feats), "only known feats are readied, no more than the slots: %s" % str(f.heir.equipped_feats))
+	# Readied feats the heir's level or class no longer allows (the data changed) stay known, set aside.
+	raw["heir"]["known_feats"] = ["thousand_cuts", "shield_bash", "cleave"]
+	raw["heir"]["equipped_feats"] = ["thousand_cuts", "shield_bash", "cleave"]
+	raw["heir"]["class_id"] = "mage"
+	var m := GameDynasty.from_dict(raw)
+	ok(m.heir.known_feats == ["thousand_cuts", "shield_bash", "cleave"] and m.heir.equipped_feats == ["cleave"], "a readied feat beyond the heir's level or class is set aside on load: %s" % str(m.heir.equipped_feats))
 	# A save from before feats.
 	var old: Dictionary = JSON.parse_string(j)
 	for key in ["known_feats", "equipped_feats", "feat_points", "feat_level", "feat_news", "downtime"]:

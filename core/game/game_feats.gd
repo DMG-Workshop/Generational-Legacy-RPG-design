@@ -311,15 +311,23 @@ static func classes_text(classes: Array) -> String:
 
 ## Level, class and weapon: what a feat asks of whoever learns or readies it ("" when met).
 static func requirement_block(h: GameHeir, id: String) -> String:
+	var why := rank_block(h, id)
+	if why != "":
+		return why
+	var kinds: Array = requires(id).get("weapon", [])
+	if not kinds.is_empty() and weapon_kind(held_weapon(h)) not in kinds:
+		return "Needs %s in hand." % weapon_text(kinds)
+	return ""
+
+
+## The part of requirement_block that only the heir's own making decides: level and class.
+static func rank_block(h: GameHeir, id: String) -> String:
 	var req := requires(id)
 	if h.level < int(req.get("min_level", 1)):
 		return "Needs level %s." % GameText.num(int(req.get("min_level", 1)))
 	var classes: Array = req.get("classes", [])
 	if not classes.is_empty() and h.class_id not in classes:
 		return "Taught only to a %s." % classes_text(classes)
-	var kinds: Array = req.get("weapon", [])
-	if not kinds.is_empty() and weapon_kind(held_weapon(h)) not in kinds:
-		return "Needs %s in hand." % weapon_text(kinds)
 	return ""
 
 
@@ -456,8 +464,9 @@ static func unequip(d: GameDynasty, id: String) -> String:
 	return text
 
 
-## A saved loadout read back into `h`: feats that still exist, readied ones among those known and
-## no more than the slots allow. A save from before feats grants the points of the heir's level.
+## A saved loadout read back into `h`: feats that still exist, readied ones among those known, of
+## the heir's level and class (the data may have changed since), and no more than the slots allow.
+## A save from before feats grants the points of the heir's level.
 static func load_into(h: GameHeir, v: Dictionary) -> void:
 	if not v.has("feat_points"):
 		start(h)
@@ -468,7 +477,7 @@ static func load_into(h: GameHeir, v: Dictionary) -> void:
 			h.known_feats.append(str(id))
 	h.equipped_feats = []
 	for id in v.get("equipped_feats", []):
-		if str(id) in h.known_feats and str(id) not in h.equipped_feats and h.equipped_feats.size() < slots(h):
+		if str(id) in h.known_feats and str(id) not in h.equipped_feats and h.equipped_feats.size() < slots(h) and rank_block(h, str(id)) == "":
 			h.equipped_feats.append(str(id))
 	h.feat_points = int(v.get("feat_points", 0))
 	h.feat_level = int(v.get("feat_level", h.level))
