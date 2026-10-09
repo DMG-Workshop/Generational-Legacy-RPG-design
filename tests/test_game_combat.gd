@@ -601,6 +601,19 @@ func test_creature_inflicts() -> void:
 		d.battle = null
 		d.heir.full_heal()
 	ok(burned > 3 and burned < 30, "fire imps sometimes set the heir alight (%d of %d blows)" % [burned, hits])
+	# What creatures inflict stays light: none of it ever costs the heir a turn.
+	for c in GameData.creatures:
+		for entry in c.get("inflicts", []):
+			var b2 := _battle(d, 1)
+			_sturdy(b2)
+			b2.apply_status("heir", str(entry["id"]), float(entry.get("potency", 1.0)), int(entry.get("turns", 1)), "enemy:0", 10.0)
+			var lost := 0
+			for k in 4:
+				b2._start_heir_turn()
+				if b2.heir_skip:
+					lost += 1
+			ok(lost == 0, "%s's %s never costs the heir a turn (%d lost)" % [c["id"], entry["id"], lost])
+			d.battle = null
 
 
 func test_added_status() -> void:

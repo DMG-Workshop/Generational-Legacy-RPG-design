@@ -192,7 +192,7 @@
    "color": "#9fd0ef",
    "element": "frost",
    "swarm": true,
-   "inflicts": [{"id": "slow", "chance": 0.15, "turns": 2, "potency": 0.15}]
+   "inflicts": [{"id": "slow", "chance": 0.15, "turns": 1, "potency": 0.15}]
   },
   {
    "id": "stone_golem",
@@ -336,7 +336,7 @@
    "color": "#5fbfcf",
    "element": "shadow",
    "row": "back",
-   "inflicts": [{"id": "slow", "chance": 0.15, "turns": 2, "potency": 0.15}]
+   "inflicts": [{"id": "slow", "chance": 0.15, "turns": 1, "potency": 0.15}]
   },
   {
    "id": "elder_dragon",
