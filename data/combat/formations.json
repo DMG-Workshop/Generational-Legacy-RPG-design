@@ -18,8 +18,8 @@
   },
   "packs": {
     "kinds": {
-      "hunt": {"chance": 0.12, "size": [3, 4], "power": 1.6, "reward": 1.6, "elite": 0.4},
-      "hunt_hard": {"chance": 0.4, "size": [4, 5], "power": 2.4, "reward": 2.6, "elite": 0.4}
+      "hunt": {"chance": 0.12, "size": [3, 4], "power": 2.2, "reward": 1.6, "elite": 0.4},
+      "hunt_hard": {"chance": 0.4, "size": [4, 5], "power": 3.4, "reward": 2.7, "elite": 0.4}
     },
     "swarm_bonus": 0.08,
     "biomes": {"swamp": 0.05, "cave": 0.05, "plains": 0.03, "rift": 0.06, "crypt": 0.05}

@@ -43,6 +43,7 @@ func _init() -> void:
 	test_spells_save_load()
 	test_companion_spells()
 	test_packs()
+	test_pack_threat()
 	test_tactics()
 	test_bot_all_classes()
 	test_determinism()
@@ -928,6 +929,49 @@ func test_packs() -> void:
 	ok(ratio > 0.75 and ratio < 1.35, "a pack is worth about a usual hunt's XP (%.2f)" % ratio)
 
 
+## A pack hurts about as much as the usual foes of the same hunt, though armour blunts each of its
+## smaller blows: the same heirs (fixed seeds, the autopilot, alone or with three companions) lose
+## about as much HP to either, a defeat counting as all of it.
+func test_pack_threat() -> void:
+	var packs: Dictionary = GameCombat.formation()["packs"]
+	var keep := {"swarm_bonus": packs["swarm_bonus"], "biomes": packs["biomes"].duplicate(), "chance": {}}
+	packs["swarm_bonus"] = 0.0
+	for k in packs["biomes"]:
+		packs["biomes"][k] = 0.0
+	for k in packs["kinds"]:
+		keep["chance"][k] = packs["kinds"][k]["chance"]
+	for kind in ["hunt", "hunt_hard"]:
+		var lost := {"usual": 0.0, "pack": 0.0}
+		for mode in lost:
+			for k in packs["kinds"]:
+				packs["kinds"][k]["chance"] = 1.0 if mode == "pack" else 0.0
+			for cls in ["warrior", "mage", "ranger", "cleric", "rogue", "druid"]:
+				for spec in [[8, 1], [60, 1], [1200, 100]]:
+					for k in 4:
+						var d := _dyn(cls, spec[0], 500 + k * 31 + spec[0] + cls.length())
+						d.gen = spec[1]
+						d.heir.gen = spec[1]
+						d.heir.full_heal()
+						d.heir.potions = 2
+						d.world.visit(["whisperwood", "goblin_warrens", "mirefen", "the_rift"][k])
+						if k % 2 == 1:
+							_full_party(d)
+						d.rng.seed = 900 + k * 7 + spec[0]
+						var b := d.start_hunt(kind)
+						var guard := 0
+						while not b.is_over() and guard < 300:
+							guard += 1
+							GameTactics.act(b, GameTactics.choose(b, -1))
+						lost[mode] += 1.0 if b.result == "defeat" else 1.0 - float(d.heir.hp) / float(d.heir.max_hp())
+						d.battle = null
+		var ratio := float(lost["pack"]) / maxf(0.001, float(lost["usual"]))
+		ok(ratio > 0.8 and ratio < 1.35, "%s: a pack costs about the HP the usual foes do (x%.2f)" % [kind, ratio])
+	packs["swarm_bonus"] = keep["swarm_bonus"]
+	packs["biomes"] = keep["biomes"]
+	for k in packs["kinds"]:
+		packs["kinds"][k]["chance"] = keep["chance"][k]
+
+
 # ---------------------------------------------------------------- tactics
 
 func test_tactics() -> void:
@@ -1171,3 +1215,4 @@ func _ui_tests() -> void:
 	app.queue_free()
 	GameDynasty.save_path = real
 	_done()
+

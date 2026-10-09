@@ -366,8 +366,10 @@ static func close_ranks(enemies: Array) -> Array:
 
 ## Whether a hunt meets a pack instead of the usual one or two foes: {} or
 ## {creature, size, power, reward, elite}: multipliers on each member's power, rewards and elite
-## chance. The data gives the whole pack's power and reward, shared among its members, so a pack
-## weighs about what the usual foes would. Swarm creatures and some places make packs likelier.
+## chance. The data gives the whole pack's power and reward, shared among its members. Armour
+## blunts every blow, so many small blows do less than a few big ones of the same total: a pack
+## shares more power than the usual foes have in all, so that it hurts about as much as they do.
+## Swarm creatures and some places make packs likelier.
 static func roll_pack(d: GameDynasty, kind: String, pool: Array) -> Dictionary:
 	var packs: Dictionary = formation()["packs"]
 	var cfg: Dictionary = packs["kinds"].get(kind, {})
