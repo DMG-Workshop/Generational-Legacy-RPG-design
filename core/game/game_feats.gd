@@ -9,15 +9,18 @@
 ##
 ## State on a GameHeir: known_feats, equipped_feats (slot order), feat_points (unspent),
 ## feat_level (milestones granted through this level), feat_news (milestone levels the journal has
-## yet to tell), downtime (from a rest until the next action that takes time). Companions carry a
-## loadout picked for their class and level at the start of each battle; it is never saved.
+## yet to tell), downtime (from a rest until the next action that takes time). Feats are personal:
+## a new heir starts over with the points of their own level. Companions carry a loadout picked
+## for their class and level at the start of each battle; it is never saved.
 class_name GameFeats
 extends RefCounted
 
 const SCALING_KEYS := ["str", "agi", "weapon_tier"]
 const KEYS := ["name", "kind", "description", "scaling", "mult", "target", "cooldown", "cost", "requires"]
-const NEVER := ["mp", "mana", "pct_max_hp", "cleanse", "drain", "group", "learn"]   # spell and healing keys
+const NEVER := ["mp", "mana", "pct_max_hp", "party", "cleanse", "drain", "group", "learn"]   # spell and healing keys
 const STATUS_KEYS := ["name", "tag", "color", "stack", "basis", "default_turns", "default_potency", "text"]
+const SETTING_KEYS := ["start_points", "point_levels", "slot_levels", "companion_slots", "recovery_turns", "bot_targets",
+	"bot_status_worth", "bot_party_worth", "bot_min_score", "bot_hp_cost_worth", "bot_taunt_min_hp"]
 
 static var _src: Dictionary = {}
 static var _defs: Dictionary = {}
@@ -35,7 +38,7 @@ static func _index() -> void:
 	_defs.clear()
 	_order.clear()
 	for f in _src.get("feats", []):
-		# A feat's own definition is the ability the battle resolves; its power is read under this stat.
+		# The definition is the ability the battle resolves; its power is read under this stat.
 		f["stat"] = "feat:" + str(f["id"])
 		f["feat"] = str(f["id"])
 		_defs[str(f["id"])] = f
@@ -54,6 +57,7 @@ static func reindex() -> void:
 	_index()
 
 
+## The live settings table (tests and harnesses may override values in it).
 static func settings() -> Dictionary:
 	_index()
 	return _src.get("settings", {})
@@ -123,7 +127,7 @@ static func weapon_text(kinds: Array) -> String:
 
 
 ## What one unit brings to every feat, worked out once: a plain blow's power, that power per point
-## of STR (so AGI can be weighed the same way), AGI, and the weapon's tier.
+## of STR (so AGI is weighed the same way), AGI, the weapon's tier, and the unit's best blow.
 static func numbers(u: GameHeir) -> Dictionary:
 	var atk := u.attack_power()
 	return {"atk": atk, "per": atk / maxf(0.0001, u.stat("str")), "agi": u.stat("agi"), "tier": weapon_tier(u),
@@ -186,6 +190,22 @@ static func slots(h: GameHeir) -> int:
 	return slots_at(h.level)
 
 
+## The next level after `level` that brings a feat point, or -1 past the last.
+static func next_point_level(level: int) -> int:
+	for lv in setting("point_levels"):
+		if int(lv) > level:
+			return int(lv)
+	return -1
+
+
+## The next [level, slots] after `level` that opens a slot, or [] past the last.
+static func next_slot(level: int) -> Array:
+	for s in setting("slot_levels"):
+		if int(s[0]) > level:
+			return [int(s[0]), int(s[1])]
+	return []
+
+
 static func _is_point_level(lv: int) -> bool:
 	for p in setting("point_levels"):
 		if int(p) == lv:
@@ -193,16 +213,19 @@ static func _is_point_level(lv: int) -> bool:
 	return false
 
 
-static func _is_slot_level(lv: int) -> bool:
-	for s in setting("slot_levels"):
-		if int(s[0]) == lv:
-			return true
-	return false
+## A new heir: nothing learned, the points of their own level. Feats are not inherited.
+static func start(h: GameHeir) -> void:
+	h.known_feats = []
+	h.equipped_feats = []
+	h.feat_points = points_at(h.level)
+	h.feat_level = h.level
+	h.feat_news = []
+	h.downtime = false
 
 
 ## Grants the points of every milestone between the last one granted and the heir's level, and
-## keeps the milestones passed for the journal (a new heir's starting points are no news).
-## Returns the points granted.
+## keeps the milestones passed for the journal (an heir's first points are no news). Returns the
+## points granted.
 static func sync(h: GameHeir) -> int:
 	if h.feat_level >= h.level:
 		return 0
@@ -236,8 +259,7 @@ static func news_text(h: GameHeir, news: Array) -> String:
 	for lv in news:
 		if _is_point_level(int(lv)):
 			pts += 1
-		if _is_slot_level(int(lv)):
-			slot = maxi(slot, slots_at(int(lv)))
+		slot = maxi(slot, slots_at(int(lv)) if slots_at(int(lv)) > slots_at(int(lv) - 1) else 0)
 	var parts: Array = []
 	if pts > 0:
 		parts.append("earns %s" % ("a feat point" if pts == 1 else "%d feat points" % pts))
@@ -286,7 +308,7 @@ static func requirement_block(h: GameHeir, id: String) -> String:
 	return ""
 
 
-## Every requirement in short: ["Level 12", "A bow in hand", "Warrior or Paladin", ...].
+## Every requirement in short: ["Level 12", "A bow in hand", "Warrior or Paladin", "Only on ..."].
 static func requirement_parts(id: String) -> Array:
 	var req := requires(id)
 	var out: Array = ["Level %s" % GameText.num(int(req.get("min_level", 1)))]
@@ -328,7 +350,7 @@ static func manage_block(d: GameDynasty) -> String:
 		return "Not in the middle of a fight."
 	if d.world.is_town() or d.heir.downtime:
 		return ""
-	return "%s is no place to drill feats. Change them in a town or right after resting." % d.world.here().get("name", "This")
+	return "%s is no place to drill feats. Change them in a town or right after a rest." % d.world.here().get("name", "This")
 
 
 ## Why the heir cannot learn a feat, wherever they stand ("" if they can).
@@ -342,7 +364,7 @@ static func learn_block(h: GameHeir, id: String) -> String:
 	if why != "":
 		return why
 	if points(h) < cost(id):
-		return "%s costs %d feat point%s; %s has %d." % [f["name"], cost(id), "" if cost(id) == 1 else "s", h.name, h.feat_points]
+		return "%s costs %d feat point%s; %s has %s." % [f["name"], cost(id), "" if cost(id) == 1 else "s", h.name, GameText.num(h.feat_points)]
 	return ""
 
 
@@ -361,7 +383,7 @@ static func equip_block(h: GameHeir, id: String) -> String:
 
 
 ## Learns a feat for its points and readies it if a slot is free. Returns the journal line, or
-## why it could not be done.
+## why it could not be done (nothing changes then).
 static func learn(d: GameDynasty, id: String) -> String:
 	var h := d.heir
 	var why := manage_block(d)
@@ -380,6 +402,7 @@ static func learn(d: GameDynasty, id: String) -> String:
 	return text
 
 
+## Readies a known feat in the next free slot. Returns the journal line or why not.
 static func equip(d: GameDynasty, id: String) -> String:
 	var why := manage_block(d)
 	if why == "":
@@ -387,29 +410,31 @@ static func equip(d: GameDynasty, id: String) -> String:
 	if why != "":
 		return why
 	d.heir.equipped_feats.append(id)
-	return "%s readies %s." % [d.heir.name, feat_name(id)]
+	var text := "%s readies %s." % [d.heir.name, feat_name(id)]
+	d._say(text)
+	return text
 
 
+## Sets a readied feat aside; it stays learned. Returns the journal line or why not.
 static func unequip(d: GameDynasty, id: String) -> String:
 	var why := manage_block(d)
 	if why != "":
 		return why
+	if def(id).is_empty():
+		return "No such feat."
 	if id not in d.heir.equipped_feats:
 		return "%s is not readied." % feat_name(id)
 	d.heir.equipped_feats.erase(id)
-	return "%s sets %s aside." % [d.heir.name, feat_name(id)]
+	var text := "%s sets %s aside." % [d.heir.name, feat_name(id)]
+	d._say(text)
+	return text
 
 
 ## A saved loadout read back into `h`: feats that still exist, readied ones among those known and
 ## no more than the slots allow. A save from before feats grants the points of the heir's level.
 static func load_into(h: GameHeir, v: Dictionary) -> void:
 	if not v.has("feat_points"):
-		h.known_feats = []
-		h.equipped_feats = []
-		h.feat_points = points_at(h.level)
-		h.feat_level = h.level
-		h.feat_news = []
-		h.downtime = false
+		start(h)
 		return
 	h.known_feats = []
 	for id in v.get("known_feats", []):
@@ -447,7 +472,7 @@ static func scaling_text(id: String) -> String:
 	return ", ".join(PackedStringArray(parts))
 
 
-## What a party or self effect does, from its status: "+25% damage dealt", "foes come for you".
+## What a party or self effect does, from its status: "the party: +25% damage (3 turns)".
 static func _boon_text(st: Dictionary) -> String:
 	var sd := GameCombat.status_def(str(st["id"]))
 	var pot := float(st.get("potency", sd.get("default_potency", 0.0)))
@@ -455,12 +480,13 @@ static func _boon_text(st: Dictionary) -> String:
 	if sd.get("draws", false):
 		parts.append("every foe comes for you")
 	if sd.get("absorb", false):
-		parts.append("a guard of %s max HP" % _pct(pot))
+		parts.append("a ward of %s max HP" % _pct(pot))
 	var mods: Dictionary = sd.get("mods", {})
-	for key in ["damage_dealt", "damage_taken", "dodge", "crit"]:
+	var words := {"damage_dealt": "damage", "damage_taken": "damage taken", "dodge": "dodge", "crit": "crit"}
+	for key in words:
 		if mods.has(key):
 			var v := float(mods[key]) * pot
-			parts.append("%s%s %s" % ["+" if v >= 0.0 else "-", _pct(absf(v)), {"damage_dealt": "damage", "damage_taken": "damage taken", "dodge": "dodge", "crit": "crit"}[key]])
+			parts.append("%s%s %s" % ["+" if v >= 0.0 else "-", _pct(absf(v)), words[key]])
 	var turns := int(st.get("turns", sd.get("default_turns", 1)))
 	var who := "the party: " if str(st.get("on", "")) == "party" else ""
 	return "%s%s (%d turn%s)" % [who, ", ".join(PackedStringArray(parts)), turns, "" if turns == 1 else "s"]
@@ -487,16 +513,16 @@ static func describe(id: String) -> String:
 		else:
 			parts.append(_boon_text(st))
 	if not foes.is_empty():
-		var hold := {"statuses": foes}
-		parts.append(GameCombat.describe(hold).to_lower())
+		var who := " on every foe" if GameCombat.shape(f) == "all" and float(f.get("mult", 0.0)) <= 0.0 else ""
+		parts.append(GameCombat.describe({"statuses": foes}).to_lower() + who)
 	parts.append("ready again after %d turn%s" % [cooldown(id), "" if cooldown(id) == 1 else "s"] if cooldown(id) > 0 else "no wait")
 	if float(f.get("hp_cost", 0.0)) > 0.0:
 		parts.append("costs %s of max HP" % _pct(float(f["hp_cost"])))
 	var s := ", ".join(PackedStringArray(parts))
-	return s.left(1).to_upper() + s.substr(1)
+	return s if s.begins_with("x") else s.left(1).to_upper() + s.substr(1)
 
 
-## "Burst 4.5", "Around you", "Party" for a feat's area.
+## "Burst 4.5", "Around 10.5", "Party" for a feat's area.
 static func shape_text(id: String) -> String:
 	return GameCombat.shape_text(def(id))
 
@@ -506,15 +532,15 @@ static func shape_text(id: String) -> String:
 ## What a feat is worth to a unit for each turn of its cooldown, measured in the unit's own best
 ## blow (STR or MAG, whichever hits harder): one use is its damage over the foes its shape usually
 ## catches plus flat worths for its statuses, less the blow it takes the place of and the HP it
-## costs. Below zero, a plain blow does better. A feat for other ground is worth nothing. `party`
-## counts the heir and companions; only a companion gains by drawing the foes off the heir.
+## costs. Below zero, a plain blow does better. A feat for other ground is worth nothing, and so is
+## one companions never carry (a taunt: hirelings are not paid to stand in front of the heir).
+## `party` counts the heir and companions.
 static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, companion: bool = false) -> float:
 	var f := def(id)
-	if f.is_empty() or not terrain_ok(id, biomes):
+	if f.is_empty() or not terrain_ok(id, biomes) or (companion and not bool(f.get("companion", true))):
 		return 0.0
 	var targets: Dictionary = setting("bot_targets")
-	var shape := "around" if GameCombat.around_self(f) else GameCombat.shape(f)
-	var reach := float(targets.get(shape, 1.0))
+	var reach := float(targets.get("around" if GameCombat.around_self(f) else GameCombat.shape(f), 1.0))
 	var use := 0.0
 	var mult := float(f.get("mult", 0.0))
 	if mult > 0.0:
@@ -530,9 +556,9 @@ static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, comp
 		if on == "party":
 			who = 1.0 + float(party - 1) * float(setting("bot_party_worth"))
 		elif on == "self":
-			who = 0.0 if GameCombat.status_def(str(st["id"])).get("draws", false) and not companion else 1.0
+			who = 1.0
 		use += float(worth.get(str(st["id"]), 0.1)) * float(st.get("chance", 1.0)) * who
-	use -= 1.0 + float(f.get("hp_cost", 0.0)) * 4.0
+	use -= 1.0 + float(f.get("hp_cost", 0.0)) * float(setting("bot_hp_cost_worth"))
 	return use / float(1 + cooldown(id))
 
 
@@ -540,30 +566,32 @@ static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, comp
 ## meets the requirements for. Ties keep the data's order.
 static func ranked(u: GameHeir, biomes: Array, party: int, companion: bool, known_only: bool) -> Array:
 	var n := numbers(u)
-	var pairs: Array = []
-	for id in ids():
+	var picks: Array = []
+	var order := ids()
+	for k in order.size():
+		var id: String = order[k]
 		if known_only and id not in u.known_feats:
 			continue
 		if requirement_block(u, id) != "":
 			continue
 		var s := score(n, id, biomes, party, companion)
 		if s >= float(setting("bot_min_score")):
-			pairs.append([id, s])
-	pairs.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
-	return pairs.map(func(p): return p[0])
+			picks.append([id, s, k])
+	picks.sort_custom(func(a, b): return float(a[1]) > float(b[1]) or (float(a[1]) == float(b[1]) and int(a[2]) < int(b[2])))
+	return picks.map(func(p): return p[0])
 
 
-## A companion's loadout for one battle: what a fighter of its class and level would carry there,
-## as many feats as its level has slots for. Companions bring no gear of the house, so they fight
-## as if bare-handed and take no feat that asks for a weapon.
+## A companion's loadout for one battle: what a fighter of its class and level would carry on this
+## ground, as many feats as its level has slots for (at most companion_slots). Companions bring no
+## gear of the house, so they fight bare-handed and take no feat that asks for a weapon.
 static func ready_companion(u: GameHeir, biomes: Array, party: int) -> void:
-	var picks := ranked(u, biomes, party, true, false).slice(0, slots_at(u.level))
+	var picks := ranked(u, biomes, party, true, false).slice(0, mini(slots_at(u.level), int(setting("companion_slots"))))
 	u.known_feats = picks.duplicate()
 	u.equipped_feats = picks
 
 
-## The autopilot's feat errands whenever loadouts may change: learn the feats that would make its
-## best few for where it stands (its own STR, AGI and weapon decide), then ready the best it knows.
+## The autopilot's feat errands whenever loadouts may change: learn the feats that would be its
+## best few where it stands (its own STR, AGI and weapon decide), then ready the best it knows.
 static func bot_tick(d: GameDynasty) -> void:
 	if manage_block(d) != "":
 		return
@@ -571,9 +599,6 @@ static func bot_tick(d: GameDynasty) -> void:
 	sync(h)
 	var biomes: Array = d.world.here().get("biomes", [])
 	var party := 1 + d.party.members.size()
-	var sig := "%d|%s|%s|%d|%d|%d" % [h.level, held_weapon(h), d.world.location, party, h.feat_points, h.known_feats.size()]
-	if h.get_meta("feat_bot", "") == sig:
-		return
 	var n := slots(h)
 	for id in ranked(h, biomes, party, false, false).slice(0, n):
 		if id not in h.known_feats and learn_block(h, id) == "":
@@ -581,7 +606,6 @@ static func bot_tick(d: GameDynasty) -> void:
 	var best: Array = ranked(h, biomes, party, false, true).slice(0, n)
 	if best != h.equipped_feats:
 		h.equipped_feats = best
-	h.set_meta("feat_bot", "%d|%s|%s|%d|%d|%d" % [h.level, held_weapon(h), d.world.location, party, h.feat_points, h.known_feats.size()])
 
 
 # ---------------------------------------------------------------- checks
@@ -591,13 +615,13 @@ static func validate() -> Array:
 	_index()
 	var out: Array = []
 	var s := settings()
-	for key in ["start_points", "point_levels", "slot_levels", "bot_targets", "bot_status_worth", "bot_party_worth", "bot_min_score", "taunt_ally_hp_worth"]:
+	for key in SETTING_KEYS:
 		if not s.has(key):
 			out.append("settings has no %s" % key)
 	if not out.is_empty():
 		return out
 	var cap := int(GameData.bal("level_cap"))
-	var last := 0
+	var last := 1
 	for lv in s["point_levels"]:
 		if int(lv) <= last or int(lv) > cap:
 			out.append("settings.point_levels must rise from 2 to the level cap (%s after %d)" % [str(lv), last])
@@ -610,8 +634,10 @@ static func validate() -> Array:
 		else:
 			last = int(sl[0])
 			most = int(sl[1])
-	if s["slot_levels"].is_empty() or int(s["slot_levels"][0][0]) != 1:
+	if (s["slot_levels"] as Array).is_empty() or typeof(s["slot_levels"][0]) != TYPE_ARRAY or int(s["slot_levels"][0][0]) != 1:
 		out.append("settings.slot_levels must open the first slots at level 1")
+	if int(s["start_points"]) < 1:
+		out.append("settings.start_points must give a new heir at least one point")
 	var kinds: Dictionary = _src.get("kinds", {})
 	var wk: Dictionary = _src.get("weapon_kinds", {})
 	var biomes := {}
@@ -630,20 +656,27 @@ static func validate() -> Array:
 		for key in NEVER:
 			if f.has(key):
 				out.append("feat %s: a feat never uses '%s'" % [id, key])
+		if str(f.get("name", "")) == "" or str(f.get("description", "")) == "":
+			out.append("feat %s needs a name and a description" % id)
 		if not kinds.has(str(f.get("kind", ""))):
 			out.append("feat %s: unknown kind '%s'" % [id, f.get("kind", "")])
 		var sc: Dictionary = f.get("scaling", {})
 		for k in sc:
 			if k not in SCALING_KEYS or float(sc[k]) < 0.0:
 				out.append("feat %s: scaling '%s' must be one of str, agi, weapon_tier and not negative" % [id, k])
-		if float(f.get("mult", 0.0)) > 0.0 and float(sc.get("str", 0.0)) + float(sc.get("agi", 0.0)) <= 0.0:
+		var mult := float(f.get("mult", 0.0))
+		if mult > 0.0 and float(sc.get("str", 0.0)) + float(sc.get("agi", 0.0)) <= 0.0:
 			out.append("feat %s deals damage but scales with neither STR nor AGI" % id)
-		if float(f.get("mult", 0.0)) <= 0.0 and (f.get("statuses", []) as Array).is_empty():
+		if mult <= 0.0 and (f.get("statuses", []) as Array).is_empty():
 			out.append("feat %s does nothing: no damage and no statuses" % id)
+		if mult > 0.0 and not GameCombat.aims_at_foe(f):
+			out.append("feat %s deals damage but is not aimed at a foe" % id)
 		if int(f.get("cost", 0)) < 1 or int(f.get("cooldown", -1)) < 0:
 			out.append("feat %s: cost must be at least 1 point and cooldown at least 0 turns" % id)
 		if float(f.get("hp_cost", 0.0)) < 0.0 or float(f.get("hp_cost", 0.0)) > 0.5:
 			out.append("feat %s: hp_cost is a share of max HP from 0 to 0.5" % id)
+		if f.has("companion") and typeof(f["companion"]) != TYPE_BOOL:
+			out.append("feat %s: companion is true or false" % id)
 		out.append_array(GameCombat._ability_problems("feat " + id, f))
 		var t: Dictionary = f.get("target", {})
 		if t.has("center") and (str(t["center"]) != "self" or GameCombat.shape(f) != "burst"):

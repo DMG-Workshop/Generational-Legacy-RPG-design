@@ -25,10 +25,11 @@ var command_box: HBoxContainer
 var target: int = 0
 var busy: bool = false
 var result_shown: bool = false
-var aiming: Dictionary = {}    # {ab, skill, spell} while the player picks where an ability lands
+var aiming: Dictionary = {}    # {ab, skill, spell, feat (slot or -1)} while the player picks where an ability lands
 var aim_at: int = -1
 var shown: Dictionary = {}     # {ab, at}: the area drawn on the field
 var spell_list: Control = null
+var feat_list: Control = null
 var aim_info: Label = null      # the aim panel's "catches N foes" line
 var floats: Dictionary = {}     # ref -> status words floated this action, so they stack instead of overlap
 
@@ -331,8 +332,9 @@ func _draw_field() -> void:
 	match GameCombat.shape(ab):
 		"burst":
 			var r := float(t.get("radius", 3.0))
+			var centre := origin if GameCombat.around_self(ab) else aim
 			for k in 40:
-				pts.append(_px(aim + Vector2.from_angle(TAU * float(k) / 40.0) * r))
+				pts.append(_px(centre + Vector2.from_angle(TAU * float(k) / 40.0) * r))
 		"cone":
 			var reach := float(t.get("range", 16.0))
 			var half := deg_to_rad(float(t.get("angle", 60.0)) * 0.5)
@@ -385,8 +387,8 @@ func _on_foe_hover(idx: int, inside: bool) -> void:
 
 ## An area ability waits for the player to pick where it lands; single strikes go to the target.
 ## Aiming starts on the target if the area reaches it, else on the first foe it does reach.
-func _begin_aim(ab: Dictionary, skill: int, spell: String) -> void:
-	aiming = {"ab": ab, "skill": skill, "spell": spell}
+func _begin_aim(ab: Dictionary, skill: int, spell: String, feat: int = -1) -> void:
+	aiming = {"ab": ab, "skill": skill, "spell": spell, "feat": feat}
 	aim_at = b._valid_target(target)
 	if aim_at not in b.aoe_targets(ab, -1, aim_at):
 		for i in b.living_enemies():
@@ -412,7 +414,9 @@ func _confirm_aim() -> void:
 	_show_area({}, -1)
 	if float(plan["ab"].get("mult", 0.0)) > 0.0:
 		target = at
-	if int(plan["skill"]) >= 0:
+	if int(plan.get("feat", -1)) >= 0:
+		_do(func(): b.use_feat(int(plan["feat"]), at))
+	elif int(plan["skill"]) >= 0:
 		_do(func(): b.use_skill(int(plan["skill"]), at))
 	else:
 		_do(func(): b.cast_spell(str(plan["spell"]), at))
@@ -435,6 +439,15 @@ func _use_spell(id: String) -> void:
 		_do(func(): b.cast_spell(id, target))
 
 
+func _use_feat(slot: int) -> void:
+	_close_feats()
+	var ab := GameFeats.def(b.feat_in_slot(slot))
+	if GameCombat.is_aoe(ab):
+		_begin_aim(ab, -1, "", slot)
+	else:
+		_do(func(): b.use_feat(slot, target))
+
+
 # ---------------------------------------------------------------- commands
 
 func _build_commands() -> void:
@@ -453,6 +466,12 @@ func _build_commands() -> void:
 		command_box.add_child(c)
 	col1.add_child(Kit.button("Attack", func(): _do(func(): b.attack(target))))
 	col1.add_child(Kit.button("Defend", func(): _do(func(): b.defend())))
+	var readied: Array = b.unit_feats(-1)
+	var ready := range(readied.size()).filter(func(k): return b.can_use_feat(k)).size()
+	var fb := Kit.button("Feats (%d ready)" % ready if not readied.is_empty() else "Feats", func(): _open_feats())
+	fb.disabled = readied.is_empty()
+	fb.tooltip_text = "%s's readied feats: no MP, a cooldown each." % d.heir.name if not readied.is_empty() else "%s has no feats readied." % d.heir.name
+	col1.add_child(fb)
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
@@ -514,10 +533,14 @@ func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
 	var caught := b.aoe_targets(ab, -1, at)
 	var n := caught.size()
 	if n == 0:
+		if GameCombat.around_self(ab):
+			return "No foe stands within reach of %s." % d.heir.name
 		return "Toward %s it reaches no foe." % b.enemies[at]["name"]
 	var foes := "%d foe%s" % [n, "" if n == 1 else "s"]
 	var whom := str(b.enemies[at]["name"]) + ("" if at in caught else " (beyond reach)")
 	var text := ("Over %s: would catch %s" if hovering else "Aimed at %s: catches %s") % [whom, foes]
+	if GameCombat.around_self(ab):
+		text = "Around %s: catches %s" % [d.heir.name, foes]
 	var dmg := b.estimate(-1, ab, at)
 	if dmg >= 1.0:
 		text += ", about %s damage%s" % [GameText.num(int(round(dmg))), " in all" if n > 1 else ""]
@@ -526,34 +549,34 @@ func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
 
 # ---------------------------------------------------------------- spell list
 
-func _open_spells() -> void:
-	if busy or spell_list != null:
-		return
-	spell_list = Control.new()
-	spell_list.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	spell_list.z_index = 5
-	add_child(spell_list)
+## A list over the field (the spellbook, the readied feats): a click outside it or on Close shuts
+## it. Returns [the list's root, the box its rows go in].
+func _list_panel(title: String, close: Callable) -> Array:
+	var root := Control.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.z_index = 5
+	add_child(root)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.45)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventMouseButton and ev.pressed:
-			_close_spells())
-	spell_list.add_child(dim)
+			close.call())
+	root.add_child(dim)
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
 	p.position = Vector2(150, 48)
 	p.size = Vector2(980, 470)
-	spell_list.add_child(p)
+	root.add_child(p)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
 	var top := HBoxContainer.new()
 	v.add_child(top)
-	var t := Kit.label("Spells  -  %s has %s / %s MP" % [d.heir.name, GameText.num(d.heir.mp), GameText.num(d.heir.max_mp())], 20, Kit.ACCENT)
+	var t := Kit.label(title, 20, Kit.ACCENT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
-	top.add_child(Kit.button("Close", func(): _close_spells(), Vector2(100, 34)))
+	top.add_child(Kit.button("Close", close, Vector2(100, 34)))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -562,6 +585,15 @@ func _open_spells() -> void:
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override("separation", 4)
 	scroll.add_child(rows)
+	return [root, rows]
+
+
+func _open_spells() -> void:
+	if busy or spell_list != null:
+		return
+	var made := _list_panel("Spells  -  %s has %s / %s MP" % [d.heir.name, GameText.num(d.heir.mp), GameText.num(d.heir.max_mp())], _close_spells)
+	spell_list = made[0]
+	var rows: VBoxContainer = made[1]
 	var groups: Dictionary = GameData.combat["spells"].get("groups", {})
 	for g in groups:
 		var ids: Array = b.known_spells().filter(func(id): return GameCombat.spell(id).get("group", "") == g)
@@ -616,6 +648,59 @@ func _close_spells() -> void:
 	_show_area({}, -1)
 
 
+# ---------------------------------------------------------------- feat list
+
+func _open_feats() -> void:
+	if busy or feat_list != null or b.unit_feats(-1).is_empty():
+		return
+	var made := _list_panel("Feats  -  no MP, each waits out its cooldown", _close_feats)
+	feat_list = made[0]
+	var rows: VBoxContainer = made[1]
+	for k in b.unit_feats(-1).size():
+		rows.add_child(_feat_row(k))
+	rows.add_child(Kit.label("Feats are learned and readied in a town or right after a rest.", 13, Kit.DIM))
+
+
+## A readied feat: its button, whether it is ready (or why not), its area and what it does.
+func _feat_row(slot: int) -> Control:
+	var id := b.feat_in_slot(slot)
+	var ab := GameFeats.def(id)
+	var kind := GameFeats.kind_info(str(ab.get("kind", "")))
+	var block := b.feat_block(-1, id)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var btn := Kit.button(str(ab["name"]), func(): _use_feat(slot), Vector2(200, 34))
+	btn.add_theme_font_size_override("font_size", 15)
+	btn.clip_text = true
+	btn.disabled = not b.can_use_feat(slot)
+	btn.tooltip_text = str(ab.get("description", ""))
+	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	btn.mouse_entered.connect(func(): _show_area(ab, target))
+	btn.mouse_exited.connect(func(): _show_area({}, -1))
+	row.add_child(btn)
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 0)
+	row.add_child(v)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 12)
+	v.add_child(top)
+	top.add_child(Kit.label(GameFeats.shape_text(id), 14, Color(kind.get("color", "#ffffff"))))
+	top.add_child(Kit.label("Ready" if block == "" else block, 14, Kit.GOOD if block == "" else Kit.BAD))
+	var what := Kit.label(GameFeats.describe(id), 13, Kit.TEXT if block == "" else Kit.DIM)
+	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	what.custom_minimum_size = Vector2(700, 0)
+	v.add_child(what)
+	return row
+
+
+func _close_feats() -> void:
+	if feat_list != null:
+		feat_list.queue_free()
+		feat_list = null
+	_show_area({}, -1)
+
+
 # ---------------------------------------------------------------- playing a turn
 
 func _do(action: Callable) -> void:
@@ -623,6 +708,7 @@ func _do(action: Callable) -> void:
 		return
 	busy = true
 	_close_spells()
+	_close_feats()
 	Kit.clear(command_box)
 	hint.text = ""
 	var log_start := b.log.size()
@@ -729,6 +815,12 @@ func _play_one(ev: Dictionary) -> void:
 			_float_text(_side_point(str(ev["ref"])), "%s - no turn" % def.get("name", ev["id"]), Color(def.get("color", "#ffffff")), 16)
 		"mana":
 			_float_text(_unit_node(by).position + Vector2(30, 0), "+%s MP" % GameText.num(int(ev["amount"])), Kit.MP_BLUE, 18)
+		"hp_cost":   # a feat paid for in the user's own blood
+			_float_text(_unit_node(by).position + Vector2(30, 10), "-%s HP" % GameText.num(int(ev["amount"])), Kit.BAD, 18)
+			if by < 0:
+				_step_heir_hp(-int(ev["amount"]))
+			else:
+				_step_ally_hp(by, -int(ev["amount"]))
 		"miss":
 			if ev["side"] == "enemy":   # a foe slipped the party's blow
 				if int(ev.get("cast", 0)) == 0:
@@ -976,6 +1068,7 @@ func _show_result() -> void:
 	result_shown = true
 	aiming = {}
 	_close_spells()
+	_close_feats()
 	var msgs: Array = d.finish_battle()
 	hero_label.text = "%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)]
 	app.autosave()

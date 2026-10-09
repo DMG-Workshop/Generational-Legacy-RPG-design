@@ -120,7 +120,8 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 			var v := _value(b, by, ab, t, ctx, hits)
 			if int(o["skill"]) == main and main >= 0:
 				main_v = maxf(main_v, v)
-			cands.append({"plan": _plan(o, t), "value": v, "cost": int(o["cost"]), "other": float(ab.get("mult", 0.0)) <= 0.0, "mp_back": mp_back})
+			cands.append({"plan": _plan(o, t), "value": v, "cost": int(o["cost"]), "other": float(ab.get("mult", 0.0)) <= 0.0,
+				"mp_back": mp_back, "hp": float(o.get("hp", 0))})
 	if main >= 0:
 		ctx["mp_price"] = maxf(0.0, main_v - blow) / float(maxi(1, GameBattle.unit_skill_cost(me, main)))
 	var price := float(ctx["mp_price"]) * float(ctx["scarcity"])
@@ -133,7 +134,7 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 			if floor_price < 0.0:
 				floor_price = maxf(price, _heal_worth(b, by) * float(GameCombat.setting("bot_mp_floor")))
 			cost_price = floor_price
-		var score := float(c["value"]) + (float(c["mp_back"]) - float(c["cost"])) * cost_price
+		var score := float(c["value"]) + (float(c["mp_back"]) - float(c["cost"])) * cost_price - float(c.get("hp", 0.0))
 		if c["other"] and score > 0.0:
 			score /= margin
 		c["score"] = score
@@ -408,7 +409,7 @@ static func _blessing_value(b: GameBattle, by: int, ab: Dictionary, ctx: Diction
 	var members: Array = [-1] + b.conscious_allies()
 	var strike := float(ctx["total"]) / float(members.size())   # what one member's turn of blows spares
 	for st in ab.get("statuses", []):
-		if b.has_status("heir", str(st["id"])):
+		if b.has_status("heir" if str(st.get("on", "party")) == "party" else GameBattle.ref_of(by), str(st["id"])):
 			return -INF
 		var def := GameCombat.status_def(str(st["id"]))
 		var turns := minf(float(st.get("turns", def.get("default_turns", 1))), float(ctx["turns"]))
@@ -431,20 +432,16 @@ static func _blessing_value(b: GameBattle, by: int, ab: Dictionary, ctx: Diction
 	return v
 
 
-## Drawing every foe onto oneself for `turns`. A companion spares the heir the blows meant for them,
-## paying in its own hide (counted at taunt_ally_hp_worth, less the guard), and only bothers while
-## the heir is hurt and it is not. The heir gains just the guard, and only with no one beside them.
+## Drawing every foe onto oneself for `turns`: every blow then lands on the one braced for it, so
+## the party is spared the guard's share of them all. With anyone else standing, that pulls their
+## blows onto the taunter too, which is only worth it while the taunter is hale.
 static func _taunt_value(b: GameBattle, by: int, ctx: Dictionary, turns: float, pot: float) -> float:
 	if b._taunting() > -2:
 		return -INF
-	var total := float(ctx["total"])
-	if by < 0:
-		return pot * total * turns if b.conscious_allies().is_empty() else -INF
-	var k := float(GameFeats.setting("taunt_ally_hp_worth"))
-	var heir_frac := _frac(b.heir.hp, int(b.unit_numbers(-1)["max_hp"]))
-	var own := _frac(b.unit(by).hp, int(b.unit_numbers(by)["max_hp"]))
-	var need := clampf(1.5 * (1.0 - heir_frac), 0.0, 1.0) * own
-	return turns * total * float(GameData.bal("companion_heir_target_chance")) * (1.0 - k * (1.0 - pot)) * need
+	var alone := by < 0 and b.conscious_allies().is_empty()
+	if not alone and _frac(b.unit(by).hp, int(b.unit_numbers(by)["max_hp"])) < float(GameFeats.setting("bot_taunt_min_hp")):
+		return -INF
+	return pot * float(ctx["total"]) * turns
 
 
 ## Carries out a plan for the heir through the battle's own actions.

@@ -8,6 +8,7 @@ const ShopPanel := preload("res://ui/play/shop_panel.gd")
 const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const EventPanel := preload("res://ui/play/event_panel.gd")
+const FeatsPanel := preload("res://ui/play/feats_panel.gd")
 
 const COLUMN_W := 300
 const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
@@ -101,7 +102,7 @@ func _refresh() -> void:
 func _colorize(line: String) -> String:
 	if line.begins_with("Victory") or line.begins_with("Level up") or line.begins_with("Milestone") or line.begins_with("Heirloom") or line.begins_with("Legend"):
 		return "[color=#6fcf6f]%s[/color]" % line
-	if "dies" in line or "slain" in line or "DISASTER" in line or "failure" in line or "Fate (" in line:
+	if " dies" in line or "slain" in line or "DISASTER" in line or "failure" in line or "Fate (" in line:
 		return "[color=#e0605a]%s[/color]" % line
 	if line.begins_with("Generation") or line.begins_with("Age ") or "dynasty begins" in line:
 		return "[color=#e0b341][b]%s[/b][/color]" % line
@@ -182,6 +183,7 @@ func _build_right() -> void:
 	else:
 		right.add_child(Kit.label("Unmarried. Without children, distant cousins inherit with weaker blood.", 14, Kit.DIM))
 	_section("Gear", ShopPanel.summary_lines(d))
+	_section("Feats", FeatsPanel.summary_lines(d))
 	_section("Companions", TavernPanel.summary_lines(d))
 	_section("Quests", BoardPanel.summary_lines(d))
 	right.add_child(HSeparator.new())
@@ -233,6 +235,9 @@ func _build_actions() -> void:
 		_act("Notice board", func(): _open(BoardPanel))
 	var gear := _act("Gear", func(): _gear())
 	gear.tooltip_text = "What %s wears and carries. Swap gear anywhere; selling needs a town shop." % h.name
+	var feats := _act("Feats", func(): _open(FeatsPanel))
+	var pts := GameFeats.points(h)
+	feats.tooltip_text = "Learn and ready feats%s. Only in a town or right after a rest." % ("" if pts == 0 else " (%s point%s to spend)" % [GameText.num(pts), "" if pts == 1 else "s"])
 	for s in ["str", "mag", "agi", "vit"]:
 		var st: String = s
 		_act("Train %s" % st.to_upper(), func(): _do(func(): return d.train(st)))

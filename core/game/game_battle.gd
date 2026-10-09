@@ -726,20 +726,23 @@ func feat_in_slot(slot: int) -> String:
 	return str(list[slot]) if slot >= 0 and slot < list.size() else ""
 
 
-## Turns a unit must wait before using a feat again; 0 when it is ready.
+## Turns a unit must wait before using a feat again; 0 when it is ready. After any feat the user
+## catches breath before the next (recovery_turns in feats.json), whatever their cooldowns.
 func feat_wait(by: int, id: String) -> int:
-	return maxi(0, int(feat_ready.get("%s/%s" % [ref_of(by), id], 0)) - turn)
+	var ref := ref_of(by)
+	return maxi(0, maxi(int(feat_ready.get("%s/%s" % [ref, id], 0)), int(feat_ready.get(ref + "/*", 0))) - turn)
 
 
-## Why a unit cannot use a feat now ("" if it can): not readied, cooling down, the wrong weapon or
-## ground, or too hurt to pay its HP.
+## Why a unit cannot use a feat now ("" if it can): not readied, cooling down or catching breath,
+## the wrong weapon or ground, or too hurt to pay its HP.
 func feat_block(by: int, id: String) -> String:
 	var u := _unit(by)
 	if id not in u.equipped_feats:
 		return "Not readied."
 	var wait := feat_wait(by, id)
 	if wait > 0:
-		return "Ready in %d turn%s." % [wait, "" if wait == 1 else "s"]
+		var own := maxi(0, int(feat_ready.get("%s/%s" % [ref_of(by), id], 0)) - turn)
+		return "%s in %d turn%s." % ["Ready" if own >= wait else "Catching breath: ready", wait, "" if wait == 1 else "s"]
 	return GameFeats.use_block(u, id, biomes, int(unit_numbers(by)["max_hp"]))
 
 
@@ -765,10 +768,11 @@ func use_feat(slot: int, target: int) -> void:
 	_end_player_turn()
 
 
-## What a feat's use costs its user: the cooldown starts, and any HP it takes is paid (it never
-## takes the last).
+## What a feat's use costs its user: its cooldown and the user's breath start, and any HP it takes
+## is paid (it never takes the last).
 func _spend_feat(by: int, id: String) -> void:
 	feat_ready["%s/%s" % [ref_of(by), id]] = turn + GameFeats.cooldown(id) + 1
+	feat_ready[ref_of(by) + "/*"] = turn + int(GameFeats.setting("recovery_turns")) + 1
 	var u := _unit(by)
 	var cost := mini(GameFeats.hp_cost(u, id, int(unit_numbers(by)["max_hp"])), u.hp - 1)
 	if cost <= 0:

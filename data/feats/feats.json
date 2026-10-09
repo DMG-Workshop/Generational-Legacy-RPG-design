@@ -3,11 +3,14 @@
     "start_points": 2,
     "point_levels": [3, 5, 7, 10, 13, 16, 20, 25, 30, 36, 43, 50, 60, 70, 85, 100, 120, 150, 180, 220, 270, 330, 400, 500, 620, 750, 900, 1100, 1350, 1650, 2000, 2500, 3000, 3700, 4500, 5500, 7000, 8500, 10000, 12500, 15000, 19000, 24000, 30000, 37000, 46000, 57000, 70000, 85000, 99999],
     "slot_levels": [[1, 2], [10, 3], [40, 4], [250, 5], [2000, 6]],
+    "companion_slots": 6,
+    "recovery_turns": 0,
     "bot_targets": {"single": 1.0, "cone": 1.6, "burst": 1.7, "line": 1.3, "all": 2.0, "around": 1.9, "party": 1.0, "self": 1.0},
-    "bot_status_worth": {"stun": 0.6, "fear": 0.35, "slow": 0.25, "weaken": 0.2, "vulnerable": 0.25, "bleed": 0.15, "burn": 0.15, "rallied": 0.6, "shield": 0.45, "taunt": 1.6},
+    "bot_status_worth": {"stun": 0.6, "fear": 0.35, "slow": 0.25, "weaken": 0.2, "vulnerable": 0.25, "bleed": 0.15, "burn": 0.15, "rallied": 0.6, "shield": 0.45, "taunt": 0.4},
     "bot_party_worth": 0.8,
     "bot_min_score": 0.02,
-    "taunt_ally_hp_worth": 0.5
+    "bot_hp_cost_worth": 4.0,
+    "bot_taunt_min_hp": 0.6
   },
   "kinds": {
     "physical": {"name": "Physical", "color": "#e8a05a", "text": "Weapon work: power from STR, AGI and the weapon in hand."},
@@ -72,7 +75,7 @@
       "requires": {"min_level": 3, "classes": ["warrior", "paladin", "templar", "warden", "dread_knight", "cleric"]}
     },
     {
-      "id": "taunt", "name": "Taunt", "kind": "tactical", "cost": 1, "cooldown": 4,
+      "id": "taunt", "name": "Taunt", "kind": "tactical", "cost": 1, "cooldown": 4, "companion": false,
       "description": "Bang steel on steel and call them out. Every foe comes for you, and you are ready for it.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
@@ -187,9 +190,9 @@
       "requires": {"min_level": 14, "biomes": ["crypt", "ruins"]}
     },
     {
-      "id": "whirlwind", "name": "Whirlwind", "kind": "physical", "cost": 2, "cooldown": 3, "hp_cost": 0.03,
+      "id": "whirlwind", "name": "Whirlwind", "kind": "physical", "cost": 2, "cooldown": 3, "hp_cost": 0.04,
       "description": "Spin with the weapon held out. Everything within reach is cut, and the turn leaves you open.",
-      "scaling": {"str": 0.9, "agi": 0.2, "weapon_tier": 0.08}, "mult": 0.95,
+      "scaling": {"str": 0.9, "agi": 0.2, "weapon_tier": 0.08}, "mult": 1.35,
       "target": {"shape": "burst", "radius": 10.5, "center": "self"},
       "requires": {"min_level": 18, "weapon": ["blade", "blunt"]}
     },
