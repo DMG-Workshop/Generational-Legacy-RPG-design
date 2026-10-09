@@ -113,8 +113,13 @@ func _say(text: String) -> void:
 
 
 func _unhandled_input(ev: InputEvent) -> void:
-	if ev.is_action_pressed("ui_cancel") and not aiming.is_empty():
+	if not ev.is_action_pressed("ui_cancel"):
+		return
+	if not aiming.is_empty():
 		_cancel_aim()
+		get_viewport().set_input_as_handled()
+	elif feat_list != null:
+		_close_feats()
 		get_viewport().set_input_as_handled()
 
 
@@ -503,11 +508,14 @@ func _small_button(text: String, cb: Callable) -> Button:
 func _build_aim_commands() -> void:
 	var ab: Dictionary = aiming["ab"]
 	hint.text = "%s: click a foe to aim, click it again to %s." % [ab["name"], "cast" if str(aiming["spell"]) != "" else "strike"]
+	if GameCombat.around_self(ab):
+		hint.text = "%s strikes all around %s, wherever it is aimed." % [ab["name"], d.heir.name]
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 4)
 	command_box.add_child(v)
-	var what := Kit.label("%s  -  %s" % [GameCombat.shape_text(ab), GameCombat.describe(ab)], 13, Kit.TEXT)
+	var effect := GameFeats.describe(str(ab["feat"])) if ab.has("feat") else GameCombat.describe(ab)
+	var what := Kit.label("%s  -  %s" % [GameCombat.shape_text(ab), effect], 13, Kit.TEXT)
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	what.custom_minimum_size = Vector2(380, 0)
 	v.add_child(what)
@@ -650,26 +658,62 @@ func _close_spells() -> void:
 
 # ---------------------------------------------------------------- feat list
 
+## The readied feats in a panel over the party's side of the field, so the foes stay in sight:
+## hovering a feat outlines the foes it would catch. The rest of the screen keeps working.
 func _open_feats() -> void:
-	if busy or feat_list != null or b.unit_feats(-1).is_empty():
+	if busy or b.unit_feats(-1).is_empty():
 		return
-	var made := _list_panel("Feats  -  no MP, each waits out its cooldown", _close_feats)
-	feat_list = made[0]
-	var rows: VBoxContainer = made[1]
+	if feat_list != null:
+		_close_feats()
+		return
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
+	p.z_index = 5
+	var room := _feat_list_room()
+	p.position = room.position
+	p.custom_minimum_size = Vector2(room.size.x, 0)
+	add_child(p)
+	feat_list = p
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	p.add_child(v)
+	var top := HBoxContainer.new()
+	v.add_child(top)
+	var t := Kit.label("Feats  -  no MP, each waits out its cooldown", 18, Kit.ACCENT)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(t)
+	top.add_child(Kit.button("Close", _close_feats, Vector2(90, 32)))
 	for k in b.unit_feats(-1).size():
-		rows.add_child(_feat_row(k))
-	rows.add_child(Kit.label("Feats are learned and readied in a town or right after a rest.", 13, Kit.DIM))
+		v.add_child(_feat_row(k, room.size.x))
+	var rec := int(GameFeats.setting("recovery_turns"))
+	var note := "Feats are learned and readied in a town or right after a rest."
+	if rec > 0:
+		note = "After any feat %s catches breath for %s before the next. %s" % [d.heir.name, "a turn" if rec == 1 else "%d turns" % rec, note]
+	var foot := Kit.label(note, 13, Kit.DIM)
+	foot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	foot.custom_minimum_size = Vector2(room.size.x - 24.0, 0)
+	v.add_child(foot)
+
+
+## Where the feat list goes: the top left of the field, up to the nearest foe still standing.
+func _feat_list_room() -> Rect2:
+	var area := Rect2(arena.get_global_position() - get_global_position(), arena.size)
+	var right := area.end.x - 8.0
+	for i in b.living_enemies():
+		right = minf(right, enemy_nodes[i]["root"].position.x + area.position.x - 14.0)
+	var w := clampf(right - area.position.x - 8.0, 520.0, 780.0)
+	return Rect2(area.position + Vector2(8, 8), Vector2(w, area.size.y - 16.0))
 
 
 ## A readied feat: its button, whether it is ready (or why not), its area and what it does.
-func _feat_row(slot: int) -> Control:
+func _feat_row(slot: int, width: float) -> Control:
 	var id := b.feat_in_slot(slot)
 	var ab := GameFeats.def(id)
 	var kind := GameFeats.kind_info(str(ab.get("kind", "")))
 	var block := b.feat_block(-1, id)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	var btn := Kit.button(str(ab["name"]), func(): _use_feat(slot), Vector2(200, 34))
+	row.add_theme_constant_override("separation", 10)
+	var btn := Kit.button(str(ab["name"]), func(): _use_feat(slot), Vector2(170, 34))
 	btn.add_theme_font_size_override("font_size", 15)
 	btn.clip_text = true
 	btn.disabled = not b.can_use_feat(slot)
@@ -689,7 +733,7 @@ func _feat_row(slot: int) -> Control:
 	top.add_child(Kit.label("Ready" if block == "" else block, 14, Kit.GOOD if block == "" else Kit.BAD))
 	var what := Kit.label(GameFeats.describe(id), 13, Kit.TEXT if block == "" else Kit.DIM)
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	what.custom_minimum_size = Vector2(700, 0)
+	what.custom_minimum_size = Vector2(width - 214.0, 0)
 	v.add_child(what)
 	return row
 
