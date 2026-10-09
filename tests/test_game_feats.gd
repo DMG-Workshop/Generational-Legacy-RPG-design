@@ -39,6 +39,7 @@ func _init() -> void:
 	test_loadout_rules()
 	test_validation()
 	test_companions()
+	test_companion_choices()
 	test_tactics()
 	test_bot()
 	test_save_load()
@@ -92,6 +93,12 @@ func _full_party(d: GameDynasty, ids: Array = ["bren_cask", "sister_oriel", "cor
 	for id in ids:
 		d.party.members.append({"id": id, "name": GameParty.def(id)["name"], "hp": 1, "mp": 0, "level": d.heir.level, "gen": d.gen, "due": 0.0, "battles": 0, "hired_gen": d.gen})
 	d.party.rest(d)
+
+
+## Lets the turns pass in which the heir catches breath after a feat.
+func _catch_breath(b: GameBattle) -> void:
+	for k in int(GameFeats.setting("recovery_turns")):
+		b.defend()
 
 
 func _feat_casts(b: GameBattle, by: int = -2) -> Array:
@@ -284,10 +291,13 @@ func test_battle_pipeline() -> void:
 	ok(hits.size() == b.aoe_targets(GameFeats.def("cleave"), -1, 1).size() and hits.size() == 3, "Cleave rolls a blow on each foe it catches (%d)" % hits.size())
 	var regen := maxf(0.0, float(GameData.bal("mp_regen_per_turn_pct")) + float(b.weather.get("mp_regen", 0.0)))
 	ok(d.heir.mp == mini(d.heir.max_mp(), int(ceil(float(d.heir.max_mp()) * regen))), "no MP was spent, only the turn's regen came back (%d)" % d.heir.mp)
-	# Several hits on one foe; a feat for the party.
+	# Several hits on one foe once the heir has caught breath; then a feat for the party.
+	_catch_breath(b)
 	b.use_feat(1, 0)
-	var flurry := b.events.filter(func(ev): return ev["type"] in ["damage", "miss"] and ev["side"] == "enemy" and int(ev.get("cast", 0)) == int(_feat_casts(b, -1)[0]["cast"]))
-	ok(flurry.size() == 3, "Flurry strikes three times (%d)" % flurry.size())
+	var cast: Dictionary = _feat_casts(b, -1)[0] if _feat_casts(b, -1).size() == 1 else {}
+	var flurry := b.events.filter(func(ev): return ev["type"] in ["damage", "miss"] and ev["side"] == "enemy" and int(ev.get("cast", 0)) == int(cast.get("cast", -1)))
+	ok(str(cast.get("name", "")) == "Flurry" and flurry.size() == 3, "Flurry strikes three times (%d)" % flurry.size())
+	_catch_breath(b)
 	b.use_feat(2, -1)
 	ok(b.has_status("heir", "rallied"), "Rally takes heart in the heir")
 	ok(b.feat_in_slot(5) == "" and b.feat_block(-1, "sunder") != "", "an empty slot or an unreadied feat is no feat")
@@ -331,9 +341,11 @@ func test_cooldowns() -> void:
 	ok(b2.feat_ready.has("heir/cleave") and not b2.feat_ready.has("ally:0/cleave"), "the heir's Cleave cools only the heir")
 	if ally_feat != "":
 		b2.feat_ready.erase("ally:0/" + ally_feat)
+		b2.feat_ready.erase("ally:0/*")
+		ok(b2.feat_wait(0, ally_feat) == 0, "the heir catching breath does not hold the companion back")
 		b2._spend_feat(0, ally_feat)
 		ok(b2.feat_wait(0, ally_feat) == GameFeats.cooldown(ally_feat) + 1 and b2.feat_block(0, ally_feat).begins_with("Ready in"), "the companion's %s cools on its own" % ally_feat)
-		ok(b2.feat_wait(-1, ally_feat) == 0, "and not the heir's")
+		ok(not b2.feat_ready.has("heir/" + ally_feat), "and not the heir's")
 	d.battle = null
 
 
@@ -429,7 +441,8 @@ func test_taunt_and_rally() -> void:
 	b.use_feat(1, -1)
 	var rallied := ["heir"] + b.conscious_allies().map(func(ai): return GameBattle.ref_of(ai))
 	ok(rallied.all(func(r): return b.has_status(r, "rallied")), "Rally reaches the whole party")
-	ok(is_equal_approx(b._dealt_mult("heir"), 1.25), "rallied, the heir hits 25%% harder (%.2f)" % b._dealt_mult("heir"))
+	var lift := float(GameFeats.def("rally")["statuses"][0]["potency"])
+	ok(lift > 0.0 and is_equal_approx(b._dealt_mult("heir"), 1.0 + lift), "rallied, the heir hits %d%% harder (%.2f)" % [int(round(lift * 100.0)), b._dealt_mult("heir")])
 	d.battle = null
 
 
@@ -627,6 +640,7 @@ func test_companions() -> void:
 				ok(GameFeats.requirement_block(a, id) == "", "%s meets what %s asks" % [a.name, id])
 				ok((GameFeats.requires(id).get("weapon", []) as Array).is_empty(), "%s takes no feat that needs a weapon (%s)" % [a.name, id])
 				ok(GameFeats.def(id).get("companion", true), "%s never readies %s" % [a.name, id])
+				ok(float(GameFeats.def(id)["mult"]) > 0.0, "%s's feats are blows, not calls to the party (%s)" % [a.name, id])
 		var guard := 0
 		while not b.is_over() and guard < 200:
 			guard += 1
@@ -636,13 +650,51 @@ func test_companions() -> void:
 		d.battle = null
 	ok(not seen.is_empty(), "companions carry feats: %s" % str(seen.keys()))
 	ok(uses > 0, "and use them (%d times)" % uses)
-	ok("taunt" not in seen, "no hireling taunts")
+	ok("taunt" not in seen and "rally" not in seen, "no hireling taunts or rallies")
 	# What they carry is never saved.
 	var d := _dyn("warrior", 40, 99)
 	_full_party(d)
 	_battle(d, 2, "goblin")
 	GameBot.fight(d)
 	ok(JSON.stringify(d.party.to_dict()).find("feat") < 0, "companions' loadouts are not saved")
+
+
+## A companion with nothing else to weigh keeps to the simple way of fighting: its feat when it
+## lands harder than its other blows, else the class strike or a plain blow, never waking a sleeper.
+func test_companion_choices() -> void:
+	var d := _dyn("mage", 40, 98)
+	d.world.visit("highcrag")
+	_full_party(d, ["bren_cask"])
+	var b := _battle(d, 3, "goblin")
+	_sturdy(b)
+	var bren: GameHeir = b.allies[0]
+	ok(GameTactics._plain(bren) and not bren.equipped_feats.is_empty(), "Bren carries feats and still fights the simple way: %s" % str(bren.equipped_feats))
+	bren.known_feats = ["rockslide"]
+	bren.equipped_feats = ["rockslide"]
+	b._nums.erase(0)
+	b.focus = 1
+	var plan := GameTactics.choose(b, 0)
+	var caught := b.aoe_targets(GameFeats.def("rockslide"), 0, 1)
+	ok(str(plan.get("feat", "")) == "rockslide" and caught.size() == 3, "Rockslide on the heir's target catches all three, so Bren uses it: %s" % str(plan.get("ab", {}).get("name", plan["act"])))
+	var strike := b.estimate(0, bren.cls()["skills"][0], 1)
+	ok(b.estimate(0, GameFeats.def("rockslide"), 1) > strike, "it lands harder than his class strike")
+	b._spend_feat(0, "rockslide")
+	plan = GameTactics.choose(b, 0)
+	ok(str(plan.get("feat", "")) == "" and int(plan.get("target", -1)) == 1, "cooling, it gives way to his strike on the heir's target")
+	b.feat_ready.clear()
+	b.apply_status(GameBattle.enemy_ref(0), "sleep", 1.0, 2, "heir")
+	plan = GameTactics.choose(b, 0)
+	ok(str(plan.get("feat", "")) == "", "Bren will not bring the slope down on a sleeping foe")
+	b.remove_status(GameBattle.enemy_ref(0), "sleep")
+	# Execute is kept for a foe that is already staggering.
+	bren.known_feats = ["execute"]
+	bren.equipped_feats = ["execute"]
+	b._nums.erase(0)
+	b.immune.clear()
+	ok(str(GameTactics.choose(b, 0).get("feat", "")) == "", "Bren keeps Execute while the foe is fresh")
+	b.enemies[1]["hp"] = int(float(b.enemies[1]["max_hp"]) * 0.2)
+	ok(str(GameTactics.choose(b, 0).get("feat", "")) == "execute", "and uses it on a staggering one")
+	d.battle = null
 
 
 # ---------------------------------------------------------------- tactics

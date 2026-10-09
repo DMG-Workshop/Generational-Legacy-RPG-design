@@ -532,12 +532,14 @@ static func shape_text(id: String) -> String:
 ## What a feat is worth to a unit for each turn of its cooldown, measured in the unit's own best
 ## blow (STR or MAG, whichever hits harder): one use is its damage over the foes its shape usually
 ## catches plus flat worths for its statuses, less the blow it takes the place of and the HP it
-## costs. Below zero, a plain blow does better. A feat for other ground is worth nothing, and so is
-## one companions never carry (a taunt: hirelings are not paid to stand in front of the heir).
-## `party` counts the heir and companions.
+## costs. Below zero, a plain blow does better. A feat for other ground is worth nothing. So is,
+## to a companion, a feat that strikes no one (rallies and taunts are the heir's to call) or one
+## the data keeps from hirelings. `party` counts the heir and companions.
 static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, companion: bool = false) -> float:
 	var f := def(id)
-	if f.is_empty() or not terrain_ok(id, biomes) or (companion and not bool(f.get("companion", true))):
+	if f.is_empty() or not terrain_ok(id, biomes):
+		return 0.0
+	if companion and (not bool(f.get("companion", true)) or float(f.get("mult", 0.0)) <= 0.0):
 		return 0.0
 	var targets: Dictionary = setting("bot_targets")
 	var reach := float(targets.get("around" if GameCombat.around_self(f) else GameCombat.shape(f), 1.0))
@@ -581,9 +583,9 @@ static func ranked(u: GameHeir, biomes: Array, party: int, companion: bool, know
 	return picks.map(func(p): return p[0])
 
 
-## A companion's loadout for one battle: what a fighter of its class and level would carry on this
-## ground, as many feats as its level has slots for (at most companion_slots). Companions bring no
-## gear of the house, so they fight bare-handed and take no feat that asks for a weapon.
+## A companion's loadout for one battle: the blows a fighter of its class and level would carry on
+## this ground, as many as its level has slots for but at most companion_slots. Companions bring
+## no gear of the house, so they fight bare-handed and take no feat that asks for a weapon.
 static func ready_companion(u: GameHeir, biomes: Array, party: int) -> void:
 	var picks := ranked(u, biomes, party, true, false).slice(0, mini(slots_at(u.level), int(setting("companion_slots"))))
 	u.known_feats = picks.duplicate()

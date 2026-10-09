@@ -179,10 +179,11 @@ static func _heal_worth(b: GameBattle, by: int) -> float:
 	return float(nums["heal_worth"])
 
 
-## A companion with no spells, feats or area skill has nothing to weigh: the class strike on the
-## heir's focus while MP lasts, else a plain blow.
+## A companion with no spells and no area or status skill has little to weigh: its feat when one
+## is ready and lands harder than its other blows, else the class strike on the heir's focus while
+## MP lasts, else a plain blow.
 static func _plain(u: GameHeir) -> bool:
-	if not u.spells.is_empty() or not u.equipped_feats.is_empty():
+	if not u.spells.is_empty():
 		return false
 	for s in u.cls()["skills"]:
 		if GameCombat.is_aoe(s) or s.has("statuses"):
@@ -195,10 +196,26 @@ static func _plain_blow(b: GameBattle, by: int, opts: Array) -> Dictionary:
 	var t := b._valid_target(b.focus)
 	if t not in awake and not awake.is_empty():
 		t = awake[0]
+	var plan := {"act": "attack", "target": t}
+	var feats: Array = []
 	for o in opts:
-		if o["ab"].get("type", "") == "damage":
-			return _plan(o, t)
-	return {"act": "attack", "target": t}
+		if str(o.get("feat", "")) != "":
+			feats.append(o)
+		elif plan["act"] == "attack" and o["ab"].get("type", "") == "damage":
+			plan = _plan(o, t)
+	if feats.is_empty():
+		return plan
+	# A feat is aimed at the focus, and never where it would wake a sleeper.
+	var best := b.estimate(by, plan.get("ab", {}), t)
+	for o in feats:
+		var caught := b.aoe_targets(o["ab"], by, t)
+		if caught.is_empty() or caught.any(func(i): return i not in awake):
+			continue
+		var v := b.estimate(by, o["ab"], t) - float(o["hp"])
+		if v > best:
+			best = v
+			plan = _plan(o, t)
+	return plan
 
 
 static func _keep_better(cur: Dictionary, cand: Dictionary) -> Dictionary:
