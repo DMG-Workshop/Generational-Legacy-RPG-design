@@ -347,14 +347,13 @@ func test_cooldowns() -> void:
 	var ally_feat: String = b2.unit_feats(0)[0] if not b2.unit_feats(0).is_empty() else ""
 	ok(ally_feat != "", "the companion carries feats")
 	b2.use_feat(0, 0)
-	ok(b2.feat_ready.has("heir/cleave") and not b2.feat_ready.has("ally:0/cleave"), "the heir's Cleave cools only the heir")
+	ok(b2.feat_ready.get("heir", {}).has("cleave") and not b2.feat_ready.get("ally:0", {}).has("cleave"), "the heir's Cleave cools only the heir")
 	if ally_feat != "":
-		b2.feat_ready.erase("ally:0/" + ally_feat)
-		b2.feat_ready.erase("ally:0/*")
+		b2.feat_ready.erase("ally:0")
 		ok(b2.feat_wait(0, ally_feat) == 0, "the heir catching breath does not hold the companion back")
 		b2._spend_feat(0, ally_feat)
 		ok(b2.feat_wait(0, ally_feat) == GameFeats.cooldown(ally_feat) + 1 and b2.feat_block(0, ally_feat).begins_with("Ready in"), "the companion's %s cools on its own" % ally_feat)
-		ok(not b2.feat_ready.has("heir/" + ally_feat), "and not the heir's")
+		ok(not b2.feat_ready.get("heir", {}).has(ally_feat), "and not the heir's")
 	d.battle = null
 
 
@@ -699,6 +698,15 @@ func test_companions() -> void:
 	ok(not seen.is_empty(), "companions carry feats: %s" % str(seen.keys()))
 	ok(uses > 0, "and use them (%d times)" % uses)
 	ok("taunt" not in seen and "rally" not in seen, "no hireling taunts or rallies")
+	# A loadout is worked out once for each make of companion and ground, and the same afresh.
+	for spec in [["bren_cask", 47, ["plains"]], ["grull_one_tusk", 300, ["mountains"]], ["maddy_thorn", 5, ["swamp"]]]:
+		var u := GameParty.build_unit(spec[0], spec[1], 1)
+		GameFeats.ready_companion(u, spec[2], 3)
+		var kept: Array = u.equipped_feats.duplicate()
+		GameFeats.reindex()
+		var fresh := GameParty.build_unit(spec[0], spec[1], 1)
+		GameFeats.ready_companion(fresh, spec[2], 3)
+		ok(fresh.equipped_feats == kept and kept == GameFeats.ranked(fresh, spec[2], 3, true, false).slice(0, kept.size()), "%s at level %d carries the same feats worked out again: %s" % [spec[0], spec[1], str(kept)])
 	# What they carry is never saved.
 	var d := _dyn("warrior", 40, 99)
 	_full_party(d)
@@ -795,6 +803,11 @@ func test_bot() -> void:
 		var d := _dyn(cls, 30, 111, styles[cls])
 		GameFeats.bot_tick(d)
 		var h := d.heir
+		var once := JSON.stringify(h.to_dict())
+		GameFeats.bot_tick(d)
+		h.remove_meta("feat_bot")
+		GameFeats.bot_tick(d)
+		ok(JSON.stringify(h.to_dict()) == once, "%s: a second look, remembered or afresh, changes nothing" % cls)
 		ok(h.equipped_feats.size() <= GameFeats.slots(h) and h.equipped_feats.all(func(id): return id in h.known_feats), "%s: readied feats are known and fit the slots" % cls)
 		ok(h.feat_points >= 0 and h.feat_points == GameFeats.points_at(h.level) - h.known_feats.reduce(func(t, id): return t + GameFeats.cost(id), 0), "%s: points spent add up" % cls)
 		var dmg := h.equipped_feats.filter(func(id): return float(GameFeats.def(id)["mult"]) > 0.0)

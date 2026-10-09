@@ -26,6 +26,8 @@ static var _src: Dictionary = {}
 static var _defs: Dictionary = {}
 static var _order: Array = []
 static var _item_kind: Dictionary = {}   # weapon item id -> weapon kind
+static var _worth: Dictionary = {}       # feat id -> what score() needs that no unit changes (see _worth_of)
+static var _hirelings: Dictionary = {}   # what a companion of a given make carries on given ground
 
 
 static func _index() -> void:
@@ -49,9 +51,14 @@ static func _index() -> void:
 		for item in kinds[k].get("items", []):
 			_item_kind[str(item)] = str(k)
 	GameCombat.add_statuses(_src.get("statuses", []))
+	_worth.clear()
+	_hirelings.clear()
+	for id in _order:
+		_worth[id] = _worth_of(_defs[id])
 
 
-## Reads the feat data again after it was changed in place (tools and tests).
+## Reads the feat data again after it was changed in place (tools and tests), and the autopilot's
+## weights (bot_* in the settings) after they were.
 static func reindex() -> void:
 	_src = {}
 	_index()
@@ -159,8 +166,16 @@ static func hp_cost(u: GameHeir, id: String, max_hp: int = -1) -> int:
 
 
 static func terrain_ok(id: String, biomes: Array) -> bool:
-	var need: Array = requires(id).get("biomes", [])
-	return need.is_empty() or need.any(func(b): return b in biomes)
+	return _on_ground(requires(id).get("biomes", []), biomes)
+
+
+static func _on_ground(need: Array, biomes: Array) -> bool:
+	if need.is_empty():
+		return true
+	for b in need:
+		if b in biomes:
+			return true
+	return false
 
 
 # ---------------------------------------------------------------- points and slots
@@ -325,6 +340,12 @@ static func requirement_parts(id: String) -> Array:
 ## Why a unit cannot use a readied feat in a battle fought on `biomes` ("" if it can): the weapon
 ## in hand, the ground, and the HP a costly feat takes, which must leave the user standing.
 static func use_block(u: GameHeir, id: String, biomes: Array, max_hp: int = -1) -> String:
+	var why := gear_block(u, id, biomes)
+	return why if why != "" else hurt_block(u, id, max_hp)
+
+
+## The part of use_block that holds for a whole battle: the weapon in hand and the ground.
+static func gear_block(u: GameHeir, id: String, biomes: Array) -> String:
 	var f := def(id)
 	if f.is_empty():
 		return "No such feat."
@@ -333,6 +354,11 @@ static func use_block(u: GameHeir, id: String, biomes: Array, max_hp: int = -1) 
 		return "Needs %s in hand." % weapon_text(kinds)
 	if not terrain_ok(id, biomes):
 		return "Needs %s." % str(f.get("terrain", "other ground"))
+	return ""
+
+
+## The part that changes blow by blow: too hurt to pay the HP a feat takes.
+static func hurt_block(u: GameHeir, id: String, max_hp: int = -1) -> String:
 	var hp := hp_cost(u, id, max_hp)
 	if hp > 0 and u.hp <= hp:
 		return "Too hurt: it costs %s HP." % GameText.num(hp)
@@ -543,48 +569,51 @@ static func shape_text(id: String) -> String:
 ## to a companion, a feat that strikes no one (rallies and taunts are the heir's to call) or one
 ## the data keeps from hirelings. `party` counts the heir and companions.
 static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, companion: bool = false) -> float:
-	var f := def(id)
-	if f.is_empty() or not terrain_ok(id, biomes):
+	_index()
+	var r: Dictionary = _worth.get(id, {})
+	if r.is_empty() or (companion and not r["hireling"]) or not _on_ground(r["biomes"], biomes):
 		return 0.0
-	if companion and (not bool(f.get("companion", true)) or float(f.get("mult", 0.0)) <= 0.0):
-		return 0.0
-	var targets: Dictionary = setting("bot_targets")
-	var reach := float(targets.get("around" if GameCombat.around_self(f) else GameCombat.shape(f), 1.0))
-	var use := 0.0
-	var mult := float(f.get("mult", 0.0))
-	if mult > 0.0:
-		var hit := _power(n, f) * mult * float(f.get("hits", 1)) * (1.0 + float(f.get("crit_bonus", 0.0)) * 0.75)
-		var w: Dictionary = f.get("vs_wounded", {})
-		if not w.is_empty():
-			hit *= 1.0 + (float(w["mult"]) - 1.0) * float(w["below"])   # a foe spends about that share of its life wounded
-		use += hit / maxf(1.0, float(n["best"])) * reach
-	var worth: Dictionary = setting("bot_status_worth")
+	var use := float(r["foes"]) * float(r["reach"]) + float(r["self"])
+	if float(r["party"]) > 0.0:
+		use += float(r["party"]) * (1.0 + float(party - 1) * float(setting("bot_party_worth")))
+	if float(r["hit"]) > 0.0:
+		use += _power(n, _defs[id]) * float(r["hit"]) / maxf(1.0, float(n["best"])) * float(r["reach"])
+	return (use - float(r["price"])) / float(r["wait"])
+
+
+## What score() needs of a feat that no unit changes: the foes its shape usually catches, its blow
+## per point of power (a foe spends about `below` of its life wounded, for Execute), the worth of
+## its statuses by whom they land on, its HP price and the turns of its cycle.
+static func _worth_of(f: Dictionary) -> Dictionary:
+	var s: Dictionary = _src.get("settings", {})
+	var worth: Dictionary = s.get("bot_status_worth", {})
+	var hit := float(f.get("mult", 0.0)) * float(f.get("hits", 1)) * (1.0 + float(f.get("crit_bonus", 0.0)) * 0.75)
+	var w: Dictionary = f.get("vs_wounded", {})
+	if not w.is_empty():
+		hit *= 1.0 + (float(w.get("mult", 1.0)) - 1.0) * float(w.get("below", 0.0))
+	var on := {"target": 0.0, "party": 0.0, "self": 0.0}
 	for st in f.get("statuses", []):
-		var on := str(st.get("on", "target"))
-		var who := reach
-		if on == "party":
-			who = 1.0 + float(party - 1) * float(setting("bot_party_worth"))
-		elif on == "self":
-			who = 1.0
-		use += float(worth.get(str(st["id"]), 0.1)) * float(st.get("chance", 1.0)) * who
-	use -= 1.0 + float(f.get("hp_cost", 0.0)) * float(setting("bot_hp_cost_worth"))
-	return use / float(1 + cooldown(id))
+		var who := str(st.get("on", "target"))
+		on[who] = float(on.get(who, 0.0)) + float(worth.get(str(st.get("id", "")), 0.1)) * float(st.get("chance", 1.0))
+	return {"reach": float(s.get("bot_targets", {}).get("around" if GameCombat.around_self(f) else GameCombat.shape(f), 1.0)),
+		"hit": hit, "foes": on["target"], "party": on["party"], "self": on["self"],
+		"price": 1.0 + float(f.get("hp_cost", 0.0)) * float(s.get("bot_hp_cost_worth", 0.0)),
+		"wait": float(1 + int(f.get("cooldown", 0))), "biomes": f.get("requires", {}).get("biomes", []),
+		"hireling": f.get("companion", true) is bool and f.get("companion", true) and float(f.get("mult", 0.0)) > 0.0}
 
 
 ## The best feats a unit can use here, best first: known ones only if `known_only`, else any it
 ## meets the requirements for. Ties keep the data's order.
 static func ranked(u: GameHeir, biomes: Array, party: int, companion: bool, known_only: bool) -> Array:
 	var n := numbers(u)
+	var least := float(setting("bot_min_score"))
 	var picks: Array = []
-	var order := ids()
-	for k in order.size():
-		var id: String = order[k]
+	for k in _order.size():
+		var id: String = _order[k]
 		if known_only and id not in u.known_feats:
 			continue
-		if requirement_block(u, id) != "":
-			continue
 		var s := score(n, id, biomes, party, companion)
-		if s >= float(setting("bot_min_score")):
+		if s >= least and requirement_block(u, id) == "":
 			picks.append([id, s, k])
 	picks.sort_custom(func(a, b): return float(a[1]) > float(b[1]) or (float(a[1]) == float(b[1]) and int(a[2]) < int(b[2])))
 	return picks.map(func(p): return p[0])
@@ -592,15 +621,26 @@ static func ranked(u: GameHeir, biomes: Array, party: int, companion: bool, know
 
 ## A companion's loadout for one battle: the blows a fighter of its class and level would carry on
 ## this ground, as many as its level has slots for but at most companion_slots. Companions bring
-## no gear of the house, so they fight bare-handed and take no feat that asks for a weapon.
+## no gear of the house, so they fight bare-handed and take no feat that asks for a weapon. Their
+## make (class, race, level, generation, power) and the ground decide it, so it is worked out once.
 static func ready_companion(u: GameHeir, biomes: Array, party: int) -> void:
-	var picks := ranked(u, biomes, party, true, false).slice(0, mini(slots_at(u.level), int(setting("companion_slots"))))
+	_index()
+	var room := mini(slots_at(u.level), int(setting("companion_slots")))
+	var picks: Array = []
+	if room > 0:
+		var key := [u.class_id, u.race_id, u.level, u.gen, u.archetype_bonus, biomes, party, room, setting("bot_min_score")].duplicate(true)
+		if not _hirelings.has(key):
+			if _hirelings.size() > 512:
+				_hirelings.clear()
+			_hirelings[key] = ranked(u, biomes, party, true, false).slice(0, room)
+		picks = _hirelings[key]
 	u.known_feats = picks.duplicate()
-	u.equipped_feats = picks
+	u.equipped_feats = picks.duplicate()
 
 
 ## The autopilot's feat errands whenever loadouts may change: learn the feats that would be its
 ## best few where it stands (its own STR, AGI and weapon decide), then ready the best it knows.
+## Nothing changes while nothing they depend on does, so an unchanged heir is not weighed again.
 static func bot_tick(d: GameDynasty) -> void:
 	if manage_block(d) != "":
 		return
@@ -608,6 +648,8 @@ static func bot_tick(d: GameDynasty) -> void:
 	sync(h)
 	var biomes: Array = d.world.here().get("biomes", [])
 	var party := 1 + d.party.members.size()
+	if h.has_meta("feat_bot") and h.get_meta("feat_bot") == _bot_key(h, biomes, party):
+		return
 	var n := slots(h)
 	for id in ranked(h, biomes, party, false, false).slice(0, n):
 		if id not in h.known_feats and learn_block(h, id) == "":
@@ -615,6 +657,12 @@ static func bot_tick(d: GameDynasty) -> void:
 	var best: Array = ranked(h, biomes, party, false, true).slice(0, n)
 	if best != h.equipped_feats:
 		h.equipped_feats = best
+	h.set_meta("feat_bot", _bot_key(h, biomes, party).duplicate(true))
+
+
+## Everything the autopilot's choice of feats depends on (live; duplicate it to keep it).
+static func _bot_key(h: GameHeir, biomes: Array, party: int) -> Array:
+	return [h.level, h.feat_points, h.equipment, h.training, h.traits, h.diseases, h.heirloom_bonus, h.known_feats, h.equipped_feats, biomes, party]
 
 
 # ---------------------------------------------------------------- checks

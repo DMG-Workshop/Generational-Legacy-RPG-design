@@ -25,9 +25,10 @@ var immune: Dictionary = {}    # ref -> the unit's own turns left of immunity to
 var heir_skip: bool = false    # a status cost the heir this turn; any action just lets it pass
 var casts: int = 0             # numbers each ability use; the events it causes share the number
 var uses: Dictionary = {}      # "<ref>/<ability name>" -> times used this battle
-var feat_ready: Dictionary = {}   # "<ref>/<feat id>" -> the round from which that unit may use it again
+var feat_ready: Dictionary = {}   # ref -> {feat id -> the round from which that unit may use it again, "*" -> after any feat}
 var fields: Array = []         # ground an ability fouled: [{name, x, y, radius, from, until, statuses, source, power, color, end}]
 var _nums: Dictionary = {}     # unit index -> unit_numbers, worked out once a battle
+var _gear: Dictionary = {}     # unit index -> {feat id -> why its weapon or this ground rules it out}
 
 
 func _init(p_heir: GameHeir, p_enemies: Array, p_rng: RandomNumberGenerator) -> void:
@@ -730,8 +731,10 @@ func feat_in_slot(slot: int) -> String:
 ## Turns a unit must wait before using a feat again; 0 when it is ready. After any feat the user
 ## catches breath before the next (recovery_turns in feats.json), whatever their cooldowns.
 func feat_wait(by: int, id: String) -> int:
-	var ref := ref_of(by)
-	return maxi(0, maxi(int(feat_ready.get("%s/%s" % [ref, id], 0)), int(feat_ready.get(ref + "/*", 0))) - turn)
+	var r: Dictionary = feat_ready.get(ref_of(by), {})
+	if r.is_empty():
+		return 0
+	return maxi(0, maxi(int(r.get(id, 0)), int(r.get("*", 0))) - turn)
 
 
 ## Why a unit cannot use a feat now ("" if it can): not readied, cooling down or catching breath,
@@ -742,9 +745,15 @@ func feat_block(by: int, id: String) -> String:
 		return "Not readied."
 	var wait := feat_wait(by, id)
 	if wait > 0:
-		var own := maxi(0, int(feat_ready.get("%s/%s" % [ref_of(by), id], 0)) - turn)
+		var own := maxi(0, int(feat_ready.get(ref_of(by), {}).get(id, 0)) - turn)
 		return "%s in %d turn%s." % ["Ready" if own >= wait else "Catching breath: ready", wait, "" if wait == 1 else "s"]
-	return GameFeats.use_block(u, id, biomes, int(unit_numbers(by)["max_hp"]))
+	var gear: Dictionary = _gear.get(by, {})   # the weapon in hand and the ground hold for the battle
+	if not gear.has(id):
+		gear[id] = GameFeats.gear_block(u, id, biomes)
+		_gear[by] = gear
+	if str(gear[id]) != "":
+		return gear[id]
+	return GameFeats.hurt_block(u, id, int(unit_numbers(by)["max_hp"]))
 
 
 func can_use_feat(slot: int) -> bool:
@@ -772,8 +781,10 @@ func use_feat(slot: int, target: int) -> void:
 ## What a feat's use costs its user: its cooldown and the user's breath start, and any HP it takes
 ## is paid (it never takes the last).
 func _spend_feat(by: int, id: String) -> void:
-	feat_ready["%s/%s" % [ref_of(by), id]] = turn + GameFeats.cooldown(id) + 1
-	feat_ready[ref_of(by) + "/*"] = turn + int(GameFeats.setting("recovery_turns")) + 1
+	var r: Dictionary = feat_ready.get(ref_of(by), {})
+	r[id] = turn + GameFeats.cooldown(id) + 1
+	r["*"] = turn + int(GameFeats.setting("recovery_turns")) + 1
+	feat_ready[ref_of(by)] = r
 	var u := _unit(by)
 	var cost := mini(GameFeats.hp_cost(u, id, int(unit_numbers(by)["max_hp"])), u.hp - 1)
 	if cost <= 0:
@@ -833,13 +844,15 @@ func _wear_fields() -> void:
 
 ## The party member every foe goes for while a taunt holds (-1 the heir, else the ally), or -2.
 func _taunting() -> int:
-	if statuses.is_empty():
-		return -2
-	for r in party_refs():
-		for inst in status_list(r):
-			if GameCombat.status_def(inst["id"]).get("draws", false):
-				return -1 if r == "heir" else _index(r)
-	return -2
+	var found := -2
+	for r in statuses:
+		if r == "heir" or str(r).begins_with("ally"):
+			for inst in statuses[r]:
+				if GameCombat.status_def(inst["id"]).get("draws", false):
+					if r == "heir":
+						return -1
+					found = _index(r) if found == -2 else mini(found, _index(r))
+	return found
 
 
 ## The heir's turn with any ability (a class skill, a spell, or anything shaped like one): pay

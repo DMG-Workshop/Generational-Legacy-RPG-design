@@ -100,7 +100,7 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 				"single":
 					aims = [aim, ctx["worst"]] if ab.has("statuses") and ctx["worst"] != aim else [aim]
 				_:
-					aims = _area_aims(ab, ctx, aim, prints)
+					aims = [aim] if GameCombat.around_self(ab) else _area_aims(ab, ctx, aim, prints)
 		var seen := {}
 		var mp_back := 0.0
 		if ab.get("mana", false):
@@ -206,12 +206,15 @@ static func _plain_blow(b: GameBattle, by: int, opts: Array) -> Dictionary:
 	if feats.is_empty():
 		return plan
 	# A feat is aimed at the focus, and never where it would wake a sleeper.
-	var best := b.estimate(by, plan.get("ab", {}), t)
+	var nums := b.unit_numbers(by)
+	var best := b.estimate(by, plan.get("ab", {}), t, nums)
 	for o in feats:
-		var caught := b.aoe_targets(o["ab"], by, t)
-		if caught.is_empty() or caught.any(func(i): return i not in awake):
+		var hits := b.aoe_hits(o["ab"], by, t)
+		if hits.is_empty() or hits.any(func(h): return h[0] not in awake):
 			continue
-		var v := b.estimate(by, o["ab"], t) - float(o["hp"])
+		var v := -float(o["hp"])
+		for h in b.expected_hits(by, o["ab"], t, hits, nums):
+			v += minf(float(h[1]), float(b.enemies[h[0]]["hp"]))
 		if v > best:
 			best = v
 			plan = _plan(o, t)
