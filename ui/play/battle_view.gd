@@ -543,7 +543,13 @@ func set_auto(on: bool) -> void:
 	auto = on
 	d.auto_battle = on
 	_show_auto()
-	if result_shown or busy:
+	if result_shown:
+		return
+	if busy:
+		Kit.clear(command_box)
+		hint.text = ""
+		if auto:
+			_auto_panel()
 		return
 	aiming = {}
 	_show_area({}, -1)
@@ -558,6 +564,15 @@ func _show_auto() -> void:
 
 
 func _build_auto_commands() -> void:
+	_auto_panel()
+	if not _auto_waiting:
+		_auto_waiting = true
+		get_tree().create_timer(AUTO_PACE).timeout.connect(_auto_step)
+
+
+## What the command panel shows while the heir fights on their own.
+func _auto_panel() -> void:
+	Kit.clear(command_box)
 	_close_spells()
 	_close_feats()
 	hint.text = "Auto-battle: %s fights on their own." % d.heir.name
@@ -570,9 +585,6 @@ func _build_auto_commands() -> void:
 	l.custom_minimum_size = Vector2(560, 0)
 	v.add_child(l)
 	v.add_child(Kit.button("Take over", func(): set_auto(false), Vector2(180, 38)))
-	if not _auto_waiting:
-		_auto_waiting = true
-		get_tree().create_timer(AUTO_PACE).timeout.connect(_auto_step)
 
 
 func _auto_step() -> void:
@@ -840,6 +852,8 @@ func _do(action: Callable) -> void:
 	_close_feats()
 	Kit.clear(command_box)
 	hint.text = ""
+	if auto:
+		_auto_panel()
 	var log_start := b.log.size()
 	action.call()
 	for i in range(log_start, b.log.size()):
@@ -1201,6 +1215,8 @@ func _show_result() -> void:
 	aiming = {}
 	_close_spells()
 	_close_feats()
+	Kit.clear(command_box)
+	hint.text = ""
 	var msgs: Array = d.finish_battle()
 	hero_label.text = "%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)]
 	app.autosave()
