@@ -280,7 +280,11 @@ func test_battle_allies() -> void:
 			break
 	ok(tot["ally_hits"] > 0, "allies strike enemies (%d)" % tot["ally_hits"])
 	ok(tot["on_ally"] > 0, "enemies go for allies (%d)" % tot["on_ally"])
-	ok(int(p.history.get("bren_cask", {}).get("battles", 0)) + int(p.member("bren_cask").get("battles", 0)) > 0, "battles counted")
+	# A companion who fell has their battles on the closed line in "past".
+	var past_battles := 0
+	for line in p.history.get("bren_cask", {}).get("past", []):
+		past_battles += int(line.get("battles", 0))
+	ok(int(p.history.get("bren_cask", {}).get("battles", 0)) + int(p.member("bren_cask").get("battles", 0)) + past_battles > 0, "battles counted")
 	# Allies press the heir's target.
 	var d3 := _new(83)
 	d3.heir.gold = 5000

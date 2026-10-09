@@ -1,0 +1,460 @@
+## Combat content and the rules that need no battle in progress: spells and who learns them,
+## statuses, elements, the battlefield formation, area shapes and packs. GameBattle runs fights.
+## Abilities are plain dictionaries (class skills, spells, later feats) read through here.
+class_name GameCombat
+extends RefCounted
+
+const ENEMY_SHAPES := ["single", "burst", "cone", "line", "all"]
+
+static var _src: Dictionary = {}
+static var _spells: Dictionary = {}
+static var _spell_order: Array = []
+static var _statuses: Dictionary = {}
+static var _creatures: Dictionary = {}
+static var _settings: Dictionary = {}
+static var _added: Dictionary = {}   # statuses other systems register from their own data files
+static var _plans: Dictionary = {}   # class id -> [[spell id, level], ...], earliest first
+
+
+static func _index() -> void:
+	if not _src.is_empty() and is_same(_src, GameData.combat):
+		return
+	GameData.load_all()
+	if is_same(_src, GameData.combat):
+		return
+	_src = GameData.combat
+	_plans.clear()
+	_spells.clear()
+	_spell_order.clear()
+	for s in _src["spells"]["spells"]:
+		_spells[s["id"]] = s
+		_spell_order.append(s["id"])
+	_statuses.clear()
+	for s in _src["statuses"]["statuses"]:
+		_statuses[s["id"]] = s
+	_statuses.merge(_added)
+	_creatures.clear()
+	for c in GameData.creatures:
+		_creatures[c["id"]] = c
+	_settings = {}
+	for key in ["spells", "statuses", "formations"]:
+		_settings.merge(_src[key].get("settings", {}))
+
+
+static func setting(key: String) -> Variant:
+	_index()
+	return _settings[key]
+
+
+## The live settings table (tests and harnesses may override values in it).
+static func settings() -> Dictionary:
+	_index()
+	return _settings
+
+
+## Reads the combat data again after it was changed in place (tools and tests).
+static func reindex() -> void:
+	_src = {}
+	_index()
+
+
+## Everything wrong with the combat data, one readable line each; empty when it is sound.
+static func validate() -> Array:
+	_index()
+	var out: Array = []
+	var groups: Dictionary = _src["spells"].get("groups", {})
+	for id in _spell_order:
+		var sp: Dictionary = _spells[id]
+		for key in ["name", "group", "school", "element", "type", "mp", "target", "learn"]:
+			if not sp.has(key):
+				out.append("spell %s has no %s" % [id, key])
+		if not groups.has(str(sp.get("group", ""))):
+			out.append("spell %s: unknown group '%s'" % [id, sp.get("group", "")])
+		out.append_array(_ability_problems("spell " + id, sp))
+		var learn: Dictionary = sp.get("learn", {})
+		for c in learn.get("classes", []):
+			if not GameData.classes.has(c):
+				out.append("spell %s: unknown class '%s'" % [id, c])
+		for c in learn.get("levels", {}):
+			if c not in learn.get("classes", []):
+				out.append("spell %s: a learning level for %s, who is not on its class list" % [id, c])
+	for cid in GameData.classes:
+		for s in GameData.classes[cid]["skills"]:
+			out.append_array(_ability_problems("%s skill %s" % [cid, s.get("id", "?")], s))
+	for id in _statuses:
+		var def: Dictionary = _statuses[id]
+		for key in ["name", "tag", "color", "stack", "basis", "default_turns", "default_potency", "text"]:
+			if not def.has(key):
+				out.append("status %s has no %s" % [id, key])
+		for rule in [["basis", ["flat", "power", "max_hp"]], ["stack", ["refresh", "stack", "extend"]], ["skip", ["always", "chance", "alternate"]], ["tick", ["damage", "heal"]]]:
+			if def.has(rule[0]) and str(def[rule[0]]) not in rule[1]:
+				out.append("status %s: unknown %s '%s'" % [id, rule[0], def[rule[0]]])
+		if str(def.get("element", "")) != "" and not _src["elements"]["elements"].has(def["element"]):
+			out.append("status %s: unknown element '%s'" % [id, def["element"]])
+	for c in GameData.creatures:
+		if str(c.get("row", "front")) not in ["front", "back"]:
+			out.append("creature %s: row must be front or back" % c["id"])
+		if str(c.get("element", "")) != "" and not _src["elements"]["elements"].has(c["element"]):
+			out.append("creature %s: unknown element '%s'" % [c["id"], c["element"]])
+		for st in c.get("inflicts", []):
+			if status_def(str(st.get("id", ""))).is_empty():
+				out.append("creature %s inflicts an unknown status '%s'" % [c["id"], st.get("id", "")])
+	var field: Dictionary = formation()["field"]
+	if (field["allies"] as Array).size() < int(GameData.bal("party_max_size")):
+		out.append("formation: %d companion places for a party of %d" % [(field["allies"] as Array).size(), int(GameData.bal("party_max_size"))])
+	var room := int(field["row_max"]["front"]) + int(field["row_max"]["back"])
+	for kind in formation()["packs"]["kinds"]:
+		var span: Array = formation()["packs"]["kinds"][kind]["size"]
+		if int(span[1]) > room or int(span[0]) > int(span[1]):
+			out.append("pack %s: size %s does not fit the %d places in the rows" % [kind, str(span), room])
+	return out
+
+
+static func _ability_problems(what: String, ab: Dictionary) -> Array:
+	var out: Array = []
+	var sh := shape(ab)
+	if sh not in ENEMY_SHAPES + ["party", "self"]:
+		out.append("%s: unknown shape '%s'" % [what, sh])
+	if ab.has("is_aoe") and bool(ab["is_aoe"]) != (sh in ["burst", "cone", "line", "all"]):
+		out.append("%s: is_aoe does not match its %s shape" % [what, sh])
+	if is_aoe(ab) and int(ab.get("hits", 1)) > 1:
+		out.append("%s: an area strikes each foe once, so it takes no hits" % what)
+	var el := str(ab.get("element", ""))
+	if el != "" and not _src["elements"]["elements"].has(el):
+		out.append("%s: unknown element '%s'" % [what, el])
+	for st in ab.get("statuses", []):
+		if status_def(str(st.get("id", ""))).is_empty():
+			out.append("%s: unknown status '%s'" % [what, st.get("id", "")])
+	return out
+
+
+# ---------------------------------------------------------------- content
+
+static func spell(id: String) -> Dictionary:
+	_index()
+	return _spells.get(id, {})
+
+
+static func spell_ids() -> Array:
+	_index()
+	return _spell_order.duplicate()
+
+
+static func status_def(id: String) -> Dictionary:
+	_index()
+	return _statuses.get(id, {})
+
+
+static func status_ids() -> Array:
+	_index()
+	return _statuses.keys()
+
+
+## Lets another system bring its own statuses (a disease, a toxin) from its own data file; they
+## work everywhere a status from data/combat/statuses.json does.
+static func add_statuses(defs: Array) -> void:
+	_index()
+	for def in defs:
+		_added[def["id"]] = def
+		_statuses[def["id"]] = def
+
+
+static func creature_def(id: String) -> Dictionary:
+	_index()
+	return _creatures.get(id, {})
+
+
+static func formation() -> Dictionary:
+	_index()
+	return _src["formations"]
+
+
+## Level at which a class learns a spell, or -1 if it never does.
+static func learn_level(sp: Dictionary, class_id: String) -> int:
+	var learn: Dictionary = sp.get("learn", {})
+	if class_id not in learn.get("classes", []):
+		return -1
+	return int(learn.get("levels", {}).get(class_id, learn.get("min_level", 1)))
+
+
+## Spells a class knows by `level`, earliest first.
+static func class_spells(class_id: String, level: int) -> Array:
+	var out: Array = []
+	for p in _plan_of(class_id):
+		if int(p[1]) > level:
+			break
+		out.append(p[0])
+	return out
+
+
+## Every spell on a class's list with its learning level, earliest first: [[id, level], ...].
+static func class_spell_plan(class_id: String) -> Array:
+	return _plan_of(class_id).duplicate(true)
+
+
+static func _plan_of(class_id: String) -> Array:
+	_index()
+	if not _plans.has(class_id):
+		var out: Array = []
+		for id in _spell_order:
+			var lv := learn_level(_spells[id], class_id)
+			if lv >= 1:
+				out.append([id, lv])
+		out.sort_custom(func(a, b): return a[1] < b[1])
+		_plans[class_id] = out
+	return _plans[class_id]
+
+
+## Costs grow with level like class skills do, so a level-5000 caster still has to choose.
+static func ability_cost(ab: Dictionary, level: int) -> int:
+	var growth := float(GameData.bal("skill_cost_growth_per_level"))
+	return int(round(float(ab.get("mp", 0)) * (1.0 + growth * float(level - 1))))
+
+
+static func element_mult(attack: String, defend: String) -> float:
+	_index()
+	if attack == "" or defend == "":
+		return 1.0
+	return float(_src["elements"]["matchups"].get(defend, {}).get(attack, 1.0))
+
+
+static func element_name(el: String) -> String:
+	_index()
+	return str(_src["elements"]["elements"].get(el, {}).get("name", el.capitalize()))
+
+
+static func element_color(el: String) -> String:
+	_index()
+	return str(_src["elements"]["elements"].get(el, {}).get("color", "#ffffff"))
+
+
+# ---------------------------------------------------------------- shapes
+
+## An ability with no target block strikes one foe if it deals damage, else it is the user's own
+## (a class heal).
+static func shape(ab: Dictionary) -> String:
+	if ab.has("target"):
+		return str(ab["target"].get("shape", "single"))
+	return "single" if float(ab.get("mult", 0.0)) > 0.0 or ab.has("statuses") else "self"
+
+
+static func is_aoe(ab: Dictionary) -> bool:
+	return bool(ab.get("is_aoe", shape(ab) in ["burst", "cone", "line", "all"]))
+
+
+## True when the ability is aimed at a foe (single or an area around/through one).
+static func aims_at_foe(ab: Dictionary) -> bool:
+	return shape(ab) in ENEMY_SHAPES
+
+
+static func is_control_status(id: String) -> bool:
+	return bool(status_def(id).get("control", false))
+
+
+## Which foes an area covers. `points` maps enemy index -> Vector2 (living foes only); the aimed
+## foe is the centre of a burst and the direction of a cone or line, which catch it only if it is
+## within their reach. Returns [[index, damage factor], ...] in index order; the factor is below 1
+## only for shapes with an edge falloff.
+static func footprint(ab: Dictionary, origin: Vector2, aim_index: int, points: Dictionary) -> Array:
+	var t: Dictionary = ab.get("target", {})
+	var sh := shape(ab)
+	var aim: Vector2 = points.get(aim_index, origin)
+	var falloff := float(t.get("falloff", 0.0))
+	var out: Array = []
+	var keys: Array = points.keys()
+	keys.sort()
+	for i in keys:
+		var p: Vector2 = points[i]
+		var edge := -1.0   # 0 at the centre/axis, 1 at the edge; -1 = outside
+		match sh:
+			"single":
+				edge = 0.0 if i == aim_index else -1.0
+			"all":
+				edge = 0.0
+			"burst":
+				var r := float(t.get("radius", 3.0))
+				var dist := p.distance_to(aim)
+				edge = dist / r if dist <= r + 0.0001 else -1.0
+			"cone":
+				var reach := float(t.get("range", 16.0))
+				var half := deg_to_rad(float(t.get("angle", 60.0)) * 0.5)
+				var dir := aim - origin
+				var to := p - origin
+				if to.length() <= reach + 0.0001 and dir.length() > 0.0:
+					var ang := absf(dir.angle_to(to))
+					edge = ang / half if ang <= half + 0.0001 else -1.0
+			"line":
+				var length := float(t.get("length", 18.0))
+				var half_w := float(t.get("width", 3.0)) * 0.5
+				var d := (aim - origin).normalized()
+				var to := p - origin
+				var along := to.dot(d)
+				var off := absf(to.cross(d))
+				if along >= -0.0001 and along <= length + 0.0001 and off <= half_w + 0.0001:
+					edge = off / half_w if half_w > 0.0 else 0.0
+		if edge >= 0.0:
+			out.append([i, 1.0 - falloff * clampf(edge, 0.0, 1.0)])
+	return out
+
+
+# ---------------------------------------------------------------- formation
+
+static func heir_point() -> Vector2:
+	var f: Array = formation()["field"]["heir"]
+	return Vector2(float(f[0]), float(f[1]))
+
+
+static func ally_point(i: int) -> Vector2:
+	var slots: Array = formation()["field"]["allies"]
+	var s: Array = slots[mini(i, slots.size() - 1)]
+	var extra := float(maxi(0, i - slots.size() + 1)) * -2.0   # more allies than slots stand further back
+	return Vector2(float(s[0]) + extra, float(s[1]))
+
+
+## Where a unit standing at `p` strikes or casts from: everyone acts from the party's front line,
+## so a companion standing behind it steps up to it first. Areas are measured from here.
+static func cast_point(p: Vector2) -> Vector2:
+	return Vector2(maxf(p.x, float(formation()["field"].get("front_line", heir_point().x))), p.y)
+
+
+## Puts every foe on the field: front row first, creatures that keep back in the back row, and any
+## row that is full spills into the other. No one keeps back behind an empty front rank. Writes
+## "row", "x" and "y" (paces) into each foe.
+static func place_enemies(enemies: Array) -> void:
+	var field: Dictionary = formation()["field"]
+	var cap: Dictionary = field["row_max"]
+	var rows := {"front": [], "back": []}
+	for i in enemies.size():
+		var e: Dictionary = enemies[i]
+		var want: String = str(e.get("row", creature_def(str(e.get("id", ""))).get("row", "front")))
+		if want != "back":
+			want = "front"
+		var other := "back" if want == "front" else "front"
+		if (rows[want] as Array).size() >= int(cap[want]) and (rows[other] as Array).size() < int(cap[other]):
+			want = other
+		rows[want].append(i)
+	if (rows["front"] as Array).is_empty():
+		rows = {"front": rows["back"], "back": []}
+	var spacing := float(field["spacing"])
+	for row in rows:
+		var ids: Array = rows[row]
+		for k in ids.size():
+			var e: Dictionary = enemies[ids[k]]
+			e["row"] = row
+			e["x"] = float(field["rows"][row])
+			e["y"] = (float(k) - float(ids.size() - 1) * 0.5) * spacing
+
+
+## When the last foe of the front rank falls, the back rank steps up into its place (keeping their
+## spread). Returns the indices of the foes that moved.
+static func close_ranks(enemies: Array) -> Array:
+	var moved: Array = []
+	for e in enemies:
+		if int(e["hp"]) > 0 and str(e.get("row", "front")) == "front":
+			return moved
+	var front := float(formation()["field"]["rows"]["front"])
+	for i in enemies.size():
+		var e: Dictionary = enemies[i]
+		if int(e["hp"]) > 0 and str(e.get("row", "")) == "back":
+			e["row"] = "front"
+			e["x"] = front
+			moved.append(i)
+	return moved
+
+
+# ---------------------------------------------------------------- packs
+
+## Whether a hunt meets a pack instead of the usual one or two foes: {} or
+## {creature, size, power, reward, elite}: multipliers on each member's power, rewards and elite
+## chance. The data gives the whole pack's power and reward, shared among its members. Armour
+## blunts every blow, so many small blows do less than a few big ones of the same total: a pack
+## shares more power than the usual foes have in all, so that it hurts about as much as they do.
+## Swarm creatures and some places make packs likelier.
+static func roll_pack(d: GameDynasty, kind: String, pool: Array) -> Dictionary:
+	var packs: Dictionary = formation()["packs"]
+	var cfg: Dictionary = packs["kinds"].get(kind, {})
+	if cfg.is_empty() or pool.is_empty():
+		return {}
+	var swarms := pool.filter(func(c): return c.get("swarm", false))
+	var chance := float(cfg["chance"])
+	if not swarms.is_empty():
+		chance += float(packs.get("swarm_bonus", 0.0))
+	var bonus := 0.0
+	for b in d.world.here().get("biomes", []):
+		bonus = maxf(bonus, float(packs.get("biomes", {}).get(b, 0.0)))
+	if d.rng.randf() >= chance + bonus:
+		return {}
+	var from: Array = swarms if not swarms.is_empty() else pool
+	var span: Array = cfg["size"]
+	var kin: Dictionary = from[d.rng.randi() % from.size()]
+	var size := d.rng.randi_range(int(span[0]), int(span[1]))
+	return {"creature": kin, "size": size, "power": float(cfg["power"]) / float(size), "reward": float(cfg["reward"]) / float(size),
+		"elite": float(cfg.get("elite", 1.0))}
+
+
+# ---------------------------------------------------------------- text
+
+static func shape_text(ab: Dictionary) -> String:
+	var t: Dictionary = ab.get("target", {})
+	match shape(ab):
+		"burst":
+			return "Burst %s" % _num(float(t.get("radius", 3.0)))
+		"cone":
+			return "Cone %d°" % int(t.get("angle", 60))
+		"line":
+			return "Line"
+		"all":
+			return "All foes"
+		"party":
+			return "Party"
+		"self":
+			return "Self"
+	return "Single"
+
+
+static func _num(v: float) -> String:
+	return str(int(v)) if v == floorf(v) else String.num(v, 2)
+
+
+## One line on what an ability does, from its data.
+static func describe(ab: Dictionary) -> String:
+	var parts: Array = []
+	var mult := float(ab.get("mult", 0.0))
+	if mult > 0.0:
+		var el := str(ab.get("element", ""))
+		var dmg := "x%s %sdamage" % [_num(mult), (element_name(el) + " ").to_lower() if el != "" else ""]
+		if int(ab.get("hits", 1)) > 1:
+			dmg = "%d hits of x%s" % [int(ab["hits"]), _num(mult)]
+		match shape(ab):
+			"burst":
+				dmg += " to foes within %s paces of the target" % _num(float(ab["target"].get("radius", 3.0)))
+			"cone":
+				dmg += " in a %d° cone" % int(ab["target"].get("angle", 60))
+			"line":
+				dmg += " down a line"
+			"all":
+				dmg += " to every foe"
+		parts.append(dmg)
+	if ab.has("pct_max_hp"):
+		parts.append("heals %s%d%% of max HP" % ["the party " if ab.get("party", false) else "", int(round(float(ab["pct_max_hp"]) * 100.0))])
+	if ab.get("cleanse", false):
+		parts.append("removes harmful effects")
+	if ab.get("mana", false):
+		parts.append("restores %d%% MP" % int(round(float(setting("mana_tap_pct")) * 100.0)))
+	if float(ab.get("drain", 0.0)) > 0.0:
+		parts.append("drains %d%%" % int(round(float(ab["drain"]) * 100.0)))
+	for st in ab.get("statuses", []):
+		var def := status_def(str(st["id"]))
+		var chance := float(st.get("chance", 1.0))
+		var who: String = {"party": " on the party", "self": " on self"}.get(str(st.get("on", "target")), "")
+		var turns := int(st.get("turns", def.get("default_turns", 1)))
+		var odds := "" if chance >= 0.999 else "%d%% " % int(round(chance * 100.0))
+		var what := str(def.get("name", st["id"])).to_lower()
+		if str(def.get("basis", "")) == "max_hp" and not def.get("harmful", false):   # how much a ward holds or regrowth mends
+			var pct := int(round(float(st.get("potency", def.get("default_potency", 0.0))) * 100.0))
+			what += (" of %d%% max HP" if def.get("absorb", false) else " %d%% max HP a turn") % pct
+		parts.append("%s%s%s (%d turn%s)" % [odds, what, who, turns, "" if turns == 1 else "s"])
+	var s := ", ".join(parts)
+	if s == "":
+		return str(ab.get("text", ""))
+	return s if s.begins_with("x") else s.left(1).to_upper() + s.substr(1)

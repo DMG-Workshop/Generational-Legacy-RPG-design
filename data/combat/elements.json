@@ -1,0 +1,20 @@
+{
+  "elements": {
+    "fire": {"name": "Fire", "color": "#ff7a3a"},
+    "frost": {"name": "Frost", "color": "#8fd3ff"},
+    "lightning": {"name": "Lightning", "color": "#f2e65a"},
+    "earth": {"name": "Earth", "color": "#c49a6c"},
+    "nature": {"name": "Nature", "color": "#8fd14f"},
+    "holy": {"name": "Holy", "color": "#ffe9a0"},
+    "shadow": {"name": "Shadow", "color": "#a07fd0"}
+  },
+  "matchups": {
+    "fire": {"frost": 1.5, "fire": 0.5},
+    "frost": {"fire": 1.5, "frost": 0.5},
+    "lightning": {"earth": 1.5, "lightning": 0.5},
+    "earth": {"nature": 1.5, "frost": 1.25, "lightning": 0.5},
+    "nature": {"fire": 1.5, "nature": 0.5},
+    "shadow": {"holy": 1.5, "fire": 1.25, "shadow": 0.5, "nature": 0.5},
+    "holy": {"shadow": 1.5, "holy": 0.5}
+  }
+}

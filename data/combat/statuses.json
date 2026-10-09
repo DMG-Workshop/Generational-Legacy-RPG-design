@@ -1,0 +1,80 @@
+{
+  "settings": {
+    "level_resist": 0.9,
+    "resist_floor": 0.2,
+    "resist_ceiling": 1.0,
+    "boss_control_chance": 0.3,
+    "boss_control_max_turns": 1,
+    "boss_max_hp_tick_mult": 0.35,
+    "control_immunity_turns": 1,
+    "status_turns_max": 9,
+    "tell_resist_from": 0.5
+  },
+  "statuses": [
+    {
+      "id": "burn", "name": "Burn", "tag": "BRN", "color": "#ff7a3a", "harmful": true, "element": "fire",
+      "tick": "damage", "basis": "power", "stack": "refresh", "default_turns": 3, "default_potency": 0.15,
+      "text": {"apply": "{t} catches fire.", "tick": "{t} burns for {n}.", "end": "The flames on {t} gutter out."}
+    },
+    {
+      "id": "poison", "name": "Poison", "tag": "PSN", "color": "#8fd14f", "harmful": true, "element": "nature",
+      "tick": "damage", "basis": "max_hp", "stack": "refresh", "default_turns": 3, "default_potency": 0.03,
+      "text": {"apply": "{t} is poisoned.", "tick": "Poison eats at {t} for {n}.", "end": "The poison runs out of {t}."}
+    },
+    {
+      "id": "bleed", "name": "Bleed", "tag": "BLD", "color": "#d04050", "harmful": true,
+      "tick": "damage", "basis": "power", "stack": "stack", "max_stacks": 3, "default_turns": 3, "default_potency": 0.08,
+      "text": {"apply": "{t} starts to bleed.", "tick": "{t} bleeds for {n}.", "end": "{t}'s wounds close."}
+    },
+    {
+      "id": "stun", "name": "Stun", "tag": "STN", "color": "#f2e65a", "harmful": true, "control": true,
+      "skip": "always", "basis": "flat", "stack": "refresh", "default_turns": 1, "default_potency": 1.0,
+      "text": {"apply": "{t} is stunned.", "skip": "{t} is stunned and loses the turn.", "end": "{t} shakes off the daze."}
+    },
+    {
+      "id": "freeze", "name": "Freeze", "tag": "FRZ", "color": "#8fd3ff", "harmful": true, "control": true,
+      "skip": "always", "shatter": 0.6, "basis": "flat", "stack": "refresh", "default_turns": 1, "default_potency": 1.0,
+      "text": {"apply": "{t} is frozen solid.", "skip": "{t} is frozen and cannot move.", "shatter": "The ice on {t} shatters!", "end": "{t} thaws."}
+    },
+    {
+      "id": "sleep", "name": "Sleep", "tag": "SLP", "color": "#b49aff", "harmful": true, "control": true,
+      "skip": "always", "wake_on_hit": true, "basis": "flat", "stack": "refresh", "default_turns": 2, "default_potency": 1.0,
+      "text": {"apply": "{t} falls asleep.", "skip": "{t} sleeps on.", "wake": "{t} wakes with a start.", "end": "{t} wakes."}
+    },
+    {
+      "id": "fear", "name": "Fear", "tag": "FEAR", "color": "#a07fd0", "harmful": true, "control": true,
+      "skip": "chance", "basis": "flat", "stack": "refresh", "default_turns": 2, "default_potency": 0.5,
+      "text": {"apply": "{t} is gripped by fear.", "skip": "{t} cowers and does nothing.", "end": "{t} steadies."}
+    },
+    {
+      "id": "slow", "name": "Slow", "tag": "SLW", "color": "#6fa8dc", "harmful": true,
+      "skip": "alternate", "mods": {"dodge": -1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.2,
+      "text": {"apply": "{t} slows to a crawl.", "skip": "{t} is too slow to act.", "end": "{t} moves freely again."}
+    },
+    {
+      "id": "weaken", "name": "Weaken", "tag": "WEAK", "color": "#c0a080", "harmful": true,
+      "mods": {"damage_dealt": -1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.25,
+      "text": {"apply": "{t} is weakened.", "end": "{t} regains strength."}
+    },
+    {
+      "id": "vulnerable", "name": "Vulnerable", "tag": "VULN", "color": "#ff9fbf", "harmful": true,
+      "mods": {"damage_taken": 1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.25,
+      "text": {"apply": "{t} is exposed.", "end": "{t} covers up again."}
+    },
+    {
+      "id": "shield", "name": "Shield", "tag": "SHLD", "color": "#7fc8ff", "harmful": false,
+      "absorb": true, "basis": "max_hp", "stack": "refresh", "default_turns": 3, "default_potency": 0.2,
+      "text": {"apply": "A ward settles over {t}.", "absorb": "{t}'s ward absorbs {n}.", "end": "The ward around {t} fades."}
+    },
+    {
+      "id": "regen", "name": "Regen", "tag": "RGN", "color": "#6fcf6f", "harmful": false,
+      "tick": "heal", "basis": "max_hp", "stack": "refresh", "default_turns": 4, "default_potency": 0.06,
+      "text": {"apply": "{t} is wrapped in green light.", "tick": "{t} recovers {n} HP.", "end": "The green light leaves {t}."}
+    },
+    {
+      "id": "haste", "name": "Haste", "tag": "HST", "color": "#ffd24a", "harmful": false,
+      "mods": {"extra_action": 1.0, "dodge": 0.25}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.4,
+      "text": {"apply": "{t} quickens.", "extra": "{t} moves again!", "end": "{t} slows to normal."}
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "settings": {
+    "mana_tap_pct": 0.2
+  },
+  "groups": {
+    "elemental": "Elemental",
+    "control": "Control",
+    "utility": "Utility"
+  },
+  "spells": [
+    {
+      "id": "fireball", "name": "Fireball", "group": "elemental", "school": "evocation", "element": "fire", "type": "damage",
+      "mp": 7, "stat": "mag", "mult": 1.05, "pierce": 0.3,
+      "target": {"shape": "burst", "radius": 3.5, "falloff": 0.25}, "is_aoe": true,
+      "statuses": [{"id": "burn", "chance": 0.35, "turns": 3, "potency": 0.12}],
+      "learn": {"classes": ["mage", "warlock", "spellblade", "arcane_trickster"], "min_level": 1, "levels": {"warlock": 3, "spellblade": 10, "arcane_trickster": 16}},
+      "text": "A bead of fire that bursts among the foes."
+    },
+    {
+      "id": "cone_of_frost", "name": "Cone of Frost", "group": "elemental", "school": "evocation", "element": "frost", "type": "damage",
+      "mp": 7, "stat": "mag", "mult": 0.95, "pierce": 0.3,
+      "target": {"shape": "cone", "angle": 60, "range": 12}, "is_aoe": true,
+      "statuses": [{"id": "slow", "chance": 0.3, "turns": 2, "potency": 0.2}],
+      "learn": {"classes": ["mage", "warlock", "shaman"], "min_level": 6, "levels": {"warlock": 12, "shaman": 20}},
+      "text": "A fan of biting cold."
+    },
+    {
+      "id": "chain_lightning", "name": "Chain Lightning", "group": "elemental", "school": "evocation", "element": "lightning", "type": "damage",
+      "mp": 8, "stat": "mag", "mult": 1.2, "pierce": 0.2,
+      "target": {"shape": "line", "width": 3, "length": 18}, "is_aoe": true,
+      "statuses": [{"id": "stun", "chance": 0.12, "turns": 1}],
+      "learn": {"classes": ["mage", "shaman", "druid", "spellblade"], "min_level": 12, "levels": {"shaman": 2, "druid": 16, "spellblade": 30}},
+      "text": "A bolt that leaps down a line of foes."
+    },
+    {
+      "id": "acid_rain", "name": "Acid Rain", "group": "elemental", "school": "nature", "element": "nature", "type": "damage",
+      "mp": 8, "stat": "mag", "mult": 0.55, "pierce": 0.5,
+      "target": {"shape": "burst", "radius": 4.5}, "is_aoe": true,
+      "statuses": [{"id": "poison", "chance": 0.65, "turns": 3, "potency": 0.03}, {"id": "vulnerable", "chance": 0.25, "turns": 2, "potency": 0.15}],
+      "learn": {"classes": ["druid", "necromancer", "warlock", "shaman", "beastmaster"], "min_level": 8, "levels": {"necromancer": 18, "warlock": 20, "shaman": 24, "beastmaster": 22}},
+      "text": "A stinging rain that eats armor and flesh."
+    },
+    {
+      "id": "grave_tide", "name": "Grave Tide", "group": "elemental", "school": "necromancy", "element": "shadow", "type": "damage",
+      "mp": 7, "stat": "mag", "mult": 0.9, "pierce": 0.3,
+      "target": {"shape": "cone", "angle": 70, "range": 12}, "is_aoe": true,
+      "statuses": [{"id": "weaken", "chance": 0.35, "turns": 2, "potency": 0.2}],
+      "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 4, "levels": {"warlock": 8, "dread_knight": 14}},
+      "text": "A cold wave of grave-dust that saps the will to fight."
+    },
+    {
+      "id": "radiant_burst", "name": "Radiant Burst", "group": "elemental", "school": "divine", "element": "holy", "type": "damage",
+      "mp": 8, "stat": "mag", "mult": 1.0, "pierce": 0.3,
+      "target": {"shape": "burst", "radius": 4.0}, "is_aoe": true,
+      "learn": {"classes": ["cleric", "paladin", "templar", "shaman"], "min_level": 10, "levels": {"paladin": 18, "templar": 20, "shaman": 30}},
+      "text": "Holy light flares around the target. The dead hate it most."
+    },
+    {
+      "id": "earthshatter", "name": "Earthshatter", "group": "elemental", "school": "nature", "element": "earth", "type": "damage",
+      "mp": 12, "stat": "mag", "mult": 0.8, "pierce": 0.2,
+      "target": {"shape": "all"}, "is_aoe": true,
+      "statuses": [{"id": "stun", "chance": 0.15, "turns": 1}],
+      "learn": {"classes": ["druid", "shaman", "mage", "templar"], "min_level": 35, "levels": {"shaman": 45, "mage": 70, "templar": 60}},
+      "text": "The ground heaves under every foe."
+    },
+    {
+      "id": "meteor", "name": "Meteor", "group": "elemental", "school": "evocation", "element": "fire", "type": "damage",
+      "mp": 16, "stat": "mag", "mult": 1.7, "pierce": 0.4,
+      "target": {"shape": "burst", "radius": 5.0, "falloff": 0.4}, "is_aoe": true,
+      "statuses": [{"id": "burn", "chance": 0.6, "turns": 3, "potency": 0.15}],
+      "learn": {"classes": ["mage", "warlock", "spellblade"], "min_level": 140, "levels": {"warlock": 180, "spellblade": 600}},
+      "text": "A falling star. Hardest at the point of impact."
+    },
+    {
+      "id": "blizzard", "name": "Blizzard", "group": "elemental", "school": "evocation", "element": "frost", "type": "damage",
+      "mp": 15, "stat": "mag", "mult": 1.05, "pierce": 0.3,
+      "target": {"shape": "all"}, "is_aoe": true,
+      "statuses": [{"id": "freeze", "chance": 0.25, "turns": 1}, {"id": "slow", "chance": 0.4, "turns": 2, "potency": 0.2}],
+      "learn": {"classes": ["mage", "shaman", "warlock", "druid"], "min_level": 450, "levels": {"shaman": 700, "warlock": 900, "druid": 900}},
+      "text": "A white storm over the whole field."
+    },
+    {
+      "id": "storm_of_ages", "name": "Storm of Ages", "group": "elemental", "school": "evocation", "element": "lightning", "type": "damage",
+      "mp": 20, "stat": "mag", "mult": 1.4, "pierce": 0.3,
+      "target": {"shape": "all"}, "is_aoe": true,
+      "statuses": [{"id": "stun", "chance": 0.2, "turns": 1}],
+      "learn": {"classes": ["mage", "shaman", "druid"], "min_level": 2500, "levels": {"shaman": 3000, "druid": 4000}},
+      "text": "The sky remembers every storm and lets them all fall at once."
+    },
+    {
+      "id": "bone_storm", "name": "Bone Storm", "group": "elemental", "school": "necromancy", "element": "shadow", "type": "damage",
+      "mp": 13, "stat": "mag", "mult": 1.15, "pierce": 0.3,
+      "target": {"shape": "burst", "radius": 5.5, "falloff": 0.2}, "is_aoe": true,
+      "statuses": [{"id": "bleed", "chance": 0.45, "turns": 3, "potency": 0.08}],
+      "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 60, "levels": {"warlock": 120, "dread_knight": 250}},
+      "text": "Shards of old bone whirl through the enemy ranks."
+    },
+    {
+      "id": "wrath_of_heaven", "name": "Wrath of Heaven", "group": "elemental", "school": "divine", "element": "holy", "type": "damage",
+      "mp": 16, "stat": "mag", "mult": 1.25, "pierce": 0.4,
+      "target": {"shape": "all"}, "is_aoe": true,
+      "statuses": [{"id": "stun", "chance": 0.1, "turns": 1}],
+      "learn": {"classes": ["cleric", "templar", "paladin"], "min_level": 220, "levels": {"templar": 600, "paladin": 1100}},
+      "text": "Pillars of light fall on every foe. The dead burn brightest."
+    },
+    {
+      "id": "sleep", "name": "Sleep", "group": "control", "school": "enchantment", "element": "", "type": "control",
+      "mp": 6, "stat": "mag", "mult": 0,
+      "target": {"shape": "single"}, "is_aoe": false,
+      "statuses": [{"id": "sleep", "chance": 0.7, "turns": 2}],
+      "learn": {"classes": ["mage", "arcane_trickster", "warlock", "druid"], "min_level": 4, "levels": {"arcane_trickster": 3, "warlock": 16, "druid": 20}},
+      "text": "A hush that drops one foe where it stands, out of the fight until a blow wakes it."
+    },
+    {
+      "id": "entangle", "name": "Entangle", "group": "control", "school": "nature", "element": "nature", "type": "control",
+      "mp": 6, "stat": "mag", "mult": 0.35, "pierce": 0.5,
+      "target": {"shape": "line", "width": 3.5, "length": 18}, "is_aoe": true,
+      "statuses": [{"id": "slow", "chance": 0.7, "turns": 3, "potency": 0.2}, {"id": "bleed", "chance": 0.4, "turns": 3, "potency": 0.08}],
+      "learn": {"classes": ["druid", "beastmaster", "shaman"], "min_level": 1, "levels": {"beastmaster": 5, "shaman": 12}},
+      "text": "Thorned roots burst up along a line and hold fast."
+    },
+    {
+      "id": "frost_nova", "name": "Frost Nova", "group": "control", "school": "evocation", "element": "frost", "type": "control",
+      "mp": 9, "stat": "mag", "mult": 0.45, "pierce": 0.3,
+      "target": {"shape": "cone", "angle": 120, "range": 11}, "is_aoe": true,
+      "statuses": [{"id": "freeze", "chance": 0.55, "turns": 1}],
+      "learn": {"classes": ["mage", "shaman", "spellblade"], "min_level": 24, "levels": {"shaman": 36, "spellblade": 50}},
+      "text": "A ring of ice that locks the front rank in place."
+    },
+    {
+      "id": "slow_field", "name": "Slow Field", "group": "control", "school": "enchantment", "element": "", "type": "control",
+      "mp": 8, "stat": "mag", "mult": 0,
+      "target": {"shape": "burst", "radius": 5.0}, "is_aoe": true,
+      "statuses": [{"id": "slow", "chance": 0.75, "turns": 3, "potency": 0.25}],
+      "learn": {"classes": ["mage", "druid", "arcane_trickster", "cleric"], "min_level": 50, "levels": {"druid": 55, "arcane_trickster": 28, "cleric": 60}},
+      "text": "Time thickens over a wide patch of ground."
+    },
+    {
+      "id": "fear", "name": "Fear", "group": "control", "school": "necromancy", "element": "shadow", "type": "control",
+      "mp": 6, "stat": "mag", "mult": 0,
+      "target": {"shape": "cone", "angle": 70, "range": 12}, "is_aoe": true,
+      "statuses": [{"id": "fear", "chance": 0.6, "turns": 2, "potency": 0.5}],
+      "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 1, "levels": {"dread_knight": 8}},
+      "text": "Whispers of the grave. The fearful often forget to strike."
+    },
+    {
+      "id": "hammer_of_judgement", "name": "Hammer of Judgement", "group": "control", "school": "divine", "element": "holy", "type": "damage",
+      "mp": 7, "stat": "mag", "mult": 1.3, "pierce": 0.3,
+      "target": {"shape": "single"}, "is_aoe": false,
+      "statuses": [{"id": "stun", "chance": 0.75, "turns": 1}],
+      "learn": {"classes": ["cleric", "paladin", "templar"], "min_level": 5, "levels": {"paladin": 8, "templar": 6}},
+      "text": "A blow of holy force that leaves one foe reeling."
+    },
+    {
+      "id": "curse_of_weakness", "name": "Curse of Weakness", "group": "control", "school": "necromancy", "element": "shadow", "type": "control",
+      "mp": 7, "stat": "mag", "mult": 0,
+      "target": {"shape": "burst", "radius": 4.0}, "is_aoe": true,
+      "statuses": [{"id": "weaken", "chance": 0.8, "turns": 3, "potency": 0.25}],
+      "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 10, "levels": {"warlock": 14, "dread_knight": 24}},
+      "text": "Arms grow heavy and blows fall soft."
+    },
+    {
+      "id": "requiem", "name": "Requiem", "group": "control", "school": "necromancy", "element": "shadow", "type": "control",
+      "mp": 14, "stat": "mag", "mult": 0.5, "pierce": 0.3,
+      "target": {"shape": "all"}, "is_aoe": true,
+      "statuses": [{"id": "fear", "chance": 0.5, "turns": 2, "potency": 0.5}, {"id": "weaken", "chance": 0.6, "turns": 3, "potency": 0.25}],
+      "learn": {"classes": ["necromancer", "warlock", "dread_knight"], "min_level": 600, "levels": {"warlock": 1500, "dread_knight": 3000}},
+      "text": "A dirge for the living. Those who hear it falter."
+    },
+    {
+      "id": "mass_heal", "name": "Mass Heal", "group": "utility", "school": "divine", "element": "holy", "type": "heal",
+      "mp": 12, "pct_max_hp": 0.3, "party": true,
+      "target": {"shape": "party"}, "is_aoe": false,
+      "learn": {"classes": ["cleric", "shaman", "druid", "paladin", "templar"], "min_level": 14, "levels": {"shaman": 16, "druid": 24, "paladin": 26, "templar": 34}},
+      "text": "Mends the heir and every companion still standing."
+    },
+    {
+      "id": "ward", "name": "Ward", "group": "utility", "school": "abjuration", "element": "", "type": "buff",
+      "mp": 10,
+      "target": {"shape": "party"}, "is_aoe": false,
+      "statuses": [{"id": "shield", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "party"}],
+      "learn": {"classes": ["cleric", "paladin", "templar", "mage", "spellblade", "necromancer"], "min_level": 1, "levels": {"paladin": 4, "templar": 4, "mage": 9, "spellblade": 6, "necromancer": 30}},
+      "text": "A shimmering ward on the whole party that soaks up blows."
+    },
+    {
+      "id": "haste", "name": "Haste", "group": "utility", "school": "enchantment", "element": "", "type": "buff",
+      "mp": 10,
+      "target": {"shape": "party"}, "is_aoe": false,
+      "statuses": [{"id": "haste", "chance": 1.0, "turns": 3, "potency": 0.4, "on": "party"}],
+      "learn": {"classes": ["mage", "arcane_trickster", "shaman", "spellblade"], "min_level": 32, "levels": {"arcane_trickster": 10, "shaman": 22, "spellblade": 24}},
+      "text": "Quickens the party: a chance to act twice, and harder to hit."
+    },
+    {
+      "id": "cleanse", "name": "Cleanse", "group": "utility", "school": "divine", "element": "holy", "type": "cleanse",
+      "mp": 6, "pct_max_hp": 0.1, "party": true, "cleanse": true,
+      "target": {"shape": "party"}, "is_aoe": false,
+      "learn": {"classes": ["cleric", "paladin", "druid", "shaman", "templar"], "min_level": 7, "levels": {"paladin": 12, "druid": 12, "shaman": 6, "templar": 10}},
+      "text": "Washes burns, poison, fear and every other harm from the party."
+    },
+    {
+      "id": "mana_tap", "name": "Mana Tap", "group": "utility", "school": "arcane", "element": "", "type": "damage",
+      "mp": 0, "stat": "mag", "mult": 0.5, "pierce": 0.5, "mana": true,
+      "target": {"shape": "single"}, "is_aoe": false,
+      "learn": {"classes": ["mage", "warlock", "necromancer", "arcane_trickster", "spellblade", "druid", "shaman", "cleric"], "min_level": 16, "levels": {"warlock": 10, "necromancer": 13, "arcane_trickster": 18, "spellblade": 20, "druid": 30, "shaman": 40, "cleric": 40}},
+      "text": "Draws a thread of power from a foe and restores your mana."
+    },
+    {
+      "id": "expose_weakness", "name": "Expose Weakness", "group": "utility", "school": "arcane", "element": "", "type": "control",
+      "mp": 5, "stat": "mag", "mult": 0,
+      "target": {"shape": "single"}, "is_aoe": false,
+      "statuses": [{"id": "vulnerable", "chance": 0.9, "turns": 3, "potency": 0.3}],
+      "learn": {"classes": ["arcane_trickster", "mage", "necromancer", "warlock", "dread_knight"], "min_level": 20, "levels": {"arcane_trickster": 6, "necromancer": 7, "warlock": 6, "dread_knight": 18}},
+      "text": "Marks one foe's weak points so every blow lands harder."
+    },
+    {
+      "id": "rejuvenation", "name": "Rejuvenation", "group": "utility", "school": "nature", "element": "nature", "type": "buff",
+      "mp": 9,
+      "target": {"shape": "party"}, "is_aoe": false,
+      "statuses": [{"id": "regen", "chance": 1.0, "turns": 4, "potency": 0.06, "on": "party"}],
+      "learn": {"classes": ["druid", "shaman", "cleric", "beastmaster"], "min_level": 4, "levels": {"shaman": 9, "cleric": 22, "beastmaster": 12}},
+      "text": "Slow green healing on the whole party for several turns."
+    }
+  ]
+}
