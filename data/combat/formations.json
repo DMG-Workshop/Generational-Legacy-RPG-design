@@ -1,0 +1,27 @@
+{
+  "settings": {
+    "bot_other_margin": 1.15,
+    "bot_mp_floor": 0.25,
+    "bot_cleanse_threat": 0.15,
+    "bot_heal_below": 0.25,
+    "bot_party_heal_below": 0.4,
+    "foe_dodge_per_agi": 0.005,
+    "foe_dodge_max": 0.15
+  },
+  "field": {
+    "heir": [0.0, 0.0],
+    "allies": [[-2.5, -3.6], [-2.5, 3.6], [-5.0, 0.0]],
+    "front_line": 0.0,
+    "rows": {"front": 9.0, "back": 13.0},
+    "row_max": {"front": 3, "back": 3},
+    "spacing": 3.2
+  },
+  "packs": {
+    "kinds": {
+      "hunt": {"chance": 0.12, "size": [3, 4], "power": 2.2, "reward": 1.6, "elite": 0.4},
+      "hunt_hard": {"chance": 0.4, "size": [4, 5], "power": 3.4, "reward": 2.7, "elite": 0.4}
+    },
+    "swarm_bonus": 0.08,
+    "biomes": {"swamp": 0.05, "cave": 0.05, "plains": 0.03, "rift": 0.06, "crypt": 0.05}
+  }
+}

@@ -74,6 +74,9 @@ func _setup_new_heir(h: GameHeir) -> void:
 	h.hazard_age = h.age
 	h.level = 1
 	h.xp = 0
+	h.spells = []
+	h.spell_news = []
+	h.learn_spells()
 	h.training = {"str": 0.0, "mag": 0.0, "agi": 0.0, "vit": 0.0}
 	h.milestones_done = []
 	h.battles_won = 0
@@ -473,14 +476,18 @@ func start_hunt(kind: String) -> GameBattle:
 		pool = in_era
 	var danger := float(world.here().get("danger", 1.0))
 	var n := rng.randi_range(int(cfg["min"]), int(cfg["max"]))
+	var pack := GameCombat.roll_pack(self, kind, pool)   # sometimes a pack of weaker foes instead
+	if not pack.is_empty():
+		n = int(pack["size"])
 	var foes: Array = []
 	for i in n:
 		# Monsters come in around the heir's level: usually a fair fight, sometimes a dangerous one.
 		var lv_mult := rng.randf_range(float(cfg["level_min"]), float(cfg["level_max"])) * danger
-		var elite := rng.randf() < float(cfg["elite_chance"])
+		var elite := rng.randf() < float(cfg["elite_chance"]) * float(pack.get("elite", 1.0))
 		if elite:
 			lv_mult *= float(GameData.bal("elite_level_mult"))
-		var foe := _make_enemy(pool[rng.randi() % pool.size()], float(cfg["scale"]), float(cfg["reward"]), maxi(1, int(round(float(heir.level) * lv_mult))))
+		var kin: Dictionary = pack["creature"] if not pack.is_empty() else pool[rng.randi() % pool.size()]
+		var foe := _make_enemy(kin, float(cfg["scale"]) * float(pack.get("power", 1.0)), float(cfg["reward"]) * float(pack.get("reward", 1.0)), maxi(1, int(round(float(heir.level) * lv_mult))))
 		if elite:
 			foe["name"] = "Elite " + foe["name"]
 		foes.append(foe)
@@ -617,6 +624,11 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		_say(m)
 	if state != "life":
 		return msgs
+	if not heir.spell_news.is_empty():
+		var learned := "%s learns to cast %s." % [heir.name, " and ".join(heir.spell_news.map(func(id): return GameCombat.spell(id).get("name", id)))]
+		heir.spell_news = []
+		msgs.append(learned)
+		_say(learned)
 	heir.age += years
 	world.advance(years, rng)
 	party.on_years(self, years, msgs)
@@ -791,6 +803,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.dynasty_name = d["dynasty_name"]
 	g.gen = int(d["gen"])
 	g.heir = GameHeir.from_dict(d["heir"])
+	g.heir.spell_news.append_array(g.heir.learn_spells())   # a spell list grown since the save
 	g.state = d["state"]
 	g.history = _ints(Array(d["history"]))
 	g.ages = GameAges.from_dict(d.get("ages"), g)

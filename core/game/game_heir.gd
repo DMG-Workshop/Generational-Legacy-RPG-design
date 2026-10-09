@@ -36,6 +36,8 @@ var spouse: GameHeir = null
 var heirloom_bonus: float = 0.0
 var equipment: Dictionary = {"weapon": "", "armor": "", "trinket": ""}   # slot -> item id
 var inventory: Array = []    # item ids carried but not worn
+var spells: Array = []       # spell ids known (see GameCombat)
+var spell_news: Array = []   # spells learned since the dynasty last announced them
 var diseases: Array = []     # [{id, stage, years_in_stage, source}]: see GameDisease
 var tainted_gear: Array = [] # bargain gear still hiding a sickness until it is first worn
 var disease_level: int = 1   # level up to which the level-milestone sickness rolls are done
@@ -205,7 +207,19 @@ func gain_xp(amount: int) -> int:
 		mp = mini(max_mp(), mp + int(float(max_mp()) * 0.25))
 	if level >= cap:
 		xp = 0
+	if gained > 0:
+		spell_news.append_array(learn_spells())
 	return gained
+
+
+## Learns every spell the class list allows at this level; returns the new ids.
+func learn_spells() -> Array:
+	var fresh: Array = []
+	for id in GameCombat.class_spells(class_id, level):
+		if id not in spells:
+			spells.append(id)
+			fresh.append(id)
+	return fresh
 
 
 ## Chance of dying of old age while ageing from `from_age` to `to_age`. The lifespan is the
@@ -234,8 +248,8 @@ func to_dict() -> Dictionary:
 		"archetype_bonus": archetype_bonus, "training": training, "family_founded": family_founded,
 		"extra_life_used": extra_life_used, "battles_won": battles_won, "kills": kills,
 		"parent_names": parent_names, "heirloom_bonus": heirloom_bonus, "children": kids,
-		"equipment": equipment, "inventory": inventory, "diseases": diseases, "tainted_gear": tainted_gear,
-		"disease_level": disease_level,
+		"equipment": equipment, "inventory": inventory, "spells": spells, "spell_news": spell_news,
+		"diseases": diseases, "tainted_gear": tainted_gear, "disease_level": disease_level,
 		"spouse": spouse.to_dict() if spouse != null else null,
 	}
 
@@ -260,6 +274,8 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.heirloom_bonus = float(d["heirloom_bonus"])
 	h.equipment = d.get("equipment", {"weapon": "", "armor": "", "trinket": ""})
 	h.inventory = Array(d.get("inventory", []))
+	h.spells = Array(d.get("spells", [])).filter(func(id): return not GameCombat.spell(str(id)).is_empty())
+	h.spell_news = Array(d.get("spell_news", [])).filter(func(id): return id in h.spells)
 	h.diseases = GameDisease.load_list(d.get("diseases", []))
 	h.tainted_gear = Array(d.get("tainted_gear", []))
 	h.lifespan = h.compute_lifespan()
@@ -267,6 +283,8 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	while h.level < int(GameData.bal("level_cap")) and h.xp >= h.xp_to_next():
 		h.xp -= h.xp_to_next()
 		h.level += 1
+	if not d.has("spells"):   # saves from before the spellbook: the heir knows what their level allows
+		h.learn_spells()
 	h.disease_level = int(d.get("disease_level", h.level))
 	for c in d["children"]:
 		h.children.append(GameHeir.from_dict(c))

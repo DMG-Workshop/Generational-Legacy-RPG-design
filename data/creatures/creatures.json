@@ -13,7 +13,9 @@
    "xp": 10,
    "gold": 6,
    "color": "#6abf4b",
-   "element": ""
+   "element": "nature",
+   "swarm": true,
+   "inflicts": [{"id": "poison", "chance": 0.15, "turns": 3, "potency": 0.02}]
   },
   {
    "id": "wolf",
@@ -28,7 +30,8 @@
    "xp": 13,
    "gold": 8,
    "color": "#8a8a8a",
-   "element": ""
+   "element": "",
+   "swarm": true
   },
   {
    "id": "goblin",
@@ -43,7 +46,8 @@
    "xp": 15,
    "gold": 12,
    "color": "#5e8c3a",
-   "element": ""
+   "element": "",
+   "swarm": true
   },
   {
    "id": "bandit",
@@ -73,7 +77,8 @@
    "xp": 19,
    "gold": 15,
    "color": "#d8d8c8",
-   "element": ""
+   "element": "shadow",
+   "swarm": true
   },
   {
    "id": "harpy",
@@ -88,7 +93,9 @@
    "xp": 19,
    "gold": 16,
    "color": "#b07fbf",
-   "element": ""
+   "element": "lightning",
+   "row": "back",
+   "swarm": true
   },
   {
    "id": "bog_troll",
@@ -103,7 +110,7 @@
    "xp": 24,
    "gold": 20,
    "color": "#4e6b3a",
-   "element": ""
+   "element": "nature"
   },
   {
    "id": "fire_imp",
@@ -118,7 +125,10 @@
    "xp": 21,
    "gold": 18,
    "color": "#e0502a",
-   "element": "fire"
+   "element": "fire",
+   "row": "back",
+   "swarm": true,
+   "inflicts": [{"id": "burn", "chance": 0.25, "turns": 2, "potency": 0.2}]
   },
   {
    "id": "ogre",
@@ -148,7 +158,8 @@
    "xp": 26,
    "gold": 26,
    "color": "#7f8fbf",
-   "element": ""
+   "element": "shadow",
+   "row": "back"
   },
   {
    "id": "drake",
@@ -163,7 +174,8 @@
    "xp": 28,
    "gold": 30,
    "color": "#d0401f",
-   "element": "fire"
+   "element": "fire",
+   "inflicts": [{"id": "burn", "chance": 0.2, "turns": 2, "potency": 0.2}]
   },
   {
    "id": "frost_wolf",
@@ -178,7 +190,9 @@
    "xp": 25,
    "gold": 22,
    "color": "#9fd0ef",
-   "element": ""
+   "element": "frost",
+   "swarm": true,
+   "inflicts": [{"id": "slow", "chance": 0.15, "turns": 1, "potency": 0.15}]
   },
   {
    "id": "stone_golem",
@@ -193,7 +207,7 @@
    "xp": 30,
    "gold": 30,
    "color": "#7a7a6a",
-   "element": ""
+   "element": "earth"
   },
   {
    "id": "ash_wyrm",
@@ -208,7 +222,8 @@
    "xp": 31,
    "gold": 34,
    "color": "#8a3a2a",
-   "element": "fire"
+   "element": "fire",
+   "inflicts": [{"id": "burn", "chance": 0.2, "turns": 2, "potency": 0.2}]
   },
   {
    "id": "rift_shade",
@@ -223,7 +238,9 @@
    "xp": 24,
    "gold": 22,
    "color": "#4a3a6f",
-   "element": ""
+   "element": "shadow",
+   "row": "back",
+   "swarm": true
   },
   {
    "id": "shard_crawler",
@@ -238,7 +255,8 @@
    "xp": 24,
    "gold": 24,
    "color": "#8f7fbf",
-   "element": ""
+   "element": "earth",
+   "swarm": true
   },
   {
    "id": "void_stalker",
@@ -253,7 +271,8 @@
    "xp": 31,
    "gold": 34,
    "color": "#3a2a5f",
-   "element": ""
+   "element": "shadow",
+   "inflicts": [{"id": "bleed", "chance": 0.2, "turns": 3, "potency": 0.1}]
   },
   {
    "id": "lich_acolyte",
@@ -268,7 +287,9 @@
    "xp": 31,
    "gold": 32,
    "color": "#6f3a7f",
-   "element": ""
+   "element": "shadow",
+   "row": "back",
+   "inflicts": [{"id": "weaken", "chance": 0.2, "turns": 2, "potency": 0.2}]
   },
   {
    "id": "abyssal_knight",
@@ -283,7 +304,7 @@
    "xp": 34,
    "gold": 38,
    "color": "#2f2f4f",
-   "element": ""
+   "element": "shadow"
   },
   {
    "id": "star_eater",
@@ -313,7 +334,9 @@
    "xp": 35,
    "gold": 40,
    "color": "#5fbfcf",
-   "element": ""
+   "element": "shadow",
+   "row": "back",
+   "inflicts": [{"id": "slow", "chance": 0.15, "turns": 1, "potency": 0.15}]
   },
   {
    "id": "elder_dragon",
@@ -328,7 +351,8 @@
    "xp": 38,
    "gold": 48,
    "color": "#b01f2f",
-   "element": "fire"
+   "element": "fire",
+   "inflicts": [{"id": "burn", "chance": 0.25, "turns": 2, "potency": 0.2}]
   },
   {
    "id": "grimfang",
@@ -364,7 +388,7 @@
    "xp": 80,
    "gold": 90,
    "color": "#bfbfa0",
-   "element": "",
+   "element": "shadow",
    "boss": true,
    "min_level": 25,
    "heirloom": "Crown of the Hollow King",
@@ -388,7 +412,8 @@
    "boss": true,
    "min_level": 35,
    "heirloom": "Vaerthax's Scale",
-   "bonus": 0.03
+   "bonus": 0.03,
+   "inflicts": [{"id": "burn", "chance": 0.3, "turns": 2, "potency": 0.2}]
   },
   {
    "id": "stonefather",
@@ -404,7 +429,7 @@
    "xp": 120,
    "gold": 150,
    "color": "#6a6a5a",
-   "element": "",
+   "element": "earth",
    "boss": true,
    "min_level": 45,
    "heirloom": "Heart of Stone",
@@ -424,7 +449,7 @@
    "xp": 150,
    "gold": 200,
    "color": "#1f1f2f",
-   "element": "",
+   "element": "shadow",
    "boss": true,
    "min_level": 60,
    "heirloom": "Shard of the Unmade",
