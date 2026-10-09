@@ -372,7 +372,9 @@ func rest() -> Array:
 	party.rest(self)
 	var msgs: Array = ["%s rests and recovers fully." % heir.name]
 	GameDisease.on_rest(self, msgs)
-	return _finish_time("rest", msgs)
+	msgs = _finish_time("rest", msgs)
+	heir.downtime = state == "life"   # until the next action that takes time (see GameFeats)
+	return msgs
 
 
 func work() -> Array:
@@ -508,6 +510,7 @@ func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle = GameBattle.new(heir, foes, rng)
 	battle.slayer_bonus = slayer_map()
 	battle.weather = world.weather().get("combat", {})
+	battle.biomes = world.here().get("biomes", [])
 	battle.add_allies(party.battle_allies(self))
 	battle_kind = kind
 	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
@@ -629,6 +632,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		heir.spell_news = []
 		msgs.append(learned)
 		_say(learned)
+	GameFeats.on_years(self, msgs)
 	heir.age += years
 	world.advance(years, rng)
 	party.on_years(self, years, msgs)

@@ -41,6 +41,12 @@ var spell_news: Array = []   # spells learned since the dynasty last announced t
 var diseases: Array = []     # [{id, stage, years_in_stage, source}]: see GameDisease
 var tainted_gear: Array = [] # bargain gear still hiding a sickness until it is first worn
 var disease_level: int = 1   # level up to which the level-milestone sickness rolls are done
+var known_feats: Array = []     # feat ids learned (see GameFeats)
+var equipped_feats: Array = []  # feat ids readied for battle, in slot order
+var feat_points: int = 0        # feat points not yet spent
+var feat_level: int = 0         # level up to which the milestone feat points are granted
+var feat_news: Array = []       # feat milestones reached that the journal has yet to tell
+var downtime: bool = false      # rested, and nothing has taken time since: feats may be changed
 
 
 func full_name() -> String:
@@ -209,6 +215,7 @@ func gain_xp(amount: int) -> int:
 		xp = 0
 	if gained > 0:
 		spell_news.append_array(learn_spells())
+		GameFeats.sync(self)
 	return gained
 
 
@@ -250,6 +257,8 @@ func to_dict() -> Dictionary:
 		"parent_names": parent_names, "heirloom_bonus": heirloom_bonus, "children": kids,
 		"equipment": equipment, "inventory": inventory, "spells": spells, "spell_news": spell_news,
 		"diseases": diseases, "tainted_gear": tainted_gear, "disease_level": disease_level,
+		"known_feats": known_feats, "equipped_feats": equipped_feats, "feat_points": feat_points,
+		"feat_level": feat_level, "feat_news": feat_news, "downtime": downtime,
 		"spouse": spouse.to_dict() if spouse != null else null,
 	}
 
@@ -286,6 +295,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	if not d.has("spells"):   # saves from before the spellbook: the heir knows what their level allows
 		h.learn_spells()
 	h.disease_level = int(d.get("disease_level", h.level))
+	GameFeats.load_into(h, d)
 	for c in d["children"]:
 		h.children.append(GameHeir.from_dict(c))
 	if d["spouse"] != null:
