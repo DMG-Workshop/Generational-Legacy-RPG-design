@@ -1212,7 +1212,72 @@ func _ui_tests() -> void:
 			break
 		await create_timer(0.2).timeout
 	ok(d.battle.turn >= turn + 2, "a stunned heir's turn passes without a click (turn %d -> %d)" % [turn, d.battle.turn])
+	await _ui_reach_and_ranks(view, d, ev)
 	app.queue_free()
 	GameDynasty.save_path = real
 	_done()
 
+
+## A cone aimed past its reach outlines only the foes it reaches and says so; an area that reaches
+## no one cannot be cast; a long row of statuses folds into "+N"; the back rank's figures step up.
+func _ui_reach_and_ranks(view: Control, d: GameDynasty, ev: InputEventMouseButton) -> void:
+	var b: GameBattle = d.battle
+	b.statuses = {}
+	b.immune = {}
+	for e in b.enemies:
+		e["agi"] = 0
+	var back := -1
+	for i in b.enemies.size():
+		if b.enemies[i]["row"] == "back" and b.enemies[i]["hp"] > 0:
+			back = i
+	d.heir.mp = d.heir.max_mp()
+	view._build_commands()
+	await _frames(2)
+	_button(view, "Spells").pressed.emit()
+	await _frames(3)
+	_button(view.spell_list, "Cone of Frost").pressed.emit()
+	await _frames(3)
+	view.enemy_nodes[back]["body"].gui_input.emit(ev)
+	await _frames(2)
+	var caught := b.aoe_targets(GameCombat.spell("cone_of_frost"), -1, back)
+	var outlined: Array = []
+	for i in view.enemy_nodes.size():
+		if view.enemy_nodes[i]["mark"].visible:
+			outlined.append(i)
+	ok(view.aim_at == back and back not in caught and not caught.is_empty() and outlined == caught, "a cone aimed at the back row outlines the front foes it reaches (%s), not the one beyond (%d)" % [str(outlined), back])
+	ok(view.aim_info.text.find("beyond reach") >= 0, "and the panel says so: %s" % view.aim_info.text)
+	_button(view, "Cancel").pressed.emit()
+	await _frames(2)
+	var pinhole := {"name": "Pinhole", "mult": 1.0, "target": {"shape": "cone", "angle": 2, "range": 3}, "is_aoe": true}
+	view._begin_aim(pinhole, -1, "test")
+	await _frames(2)
+	var go: Button = null
+	for btn in view.command_box.find_children("*", "Button", true, false):
+		if btn.text == "Cast":
+			go = btn
+	var mp := d.heir.mp
+	var turn := b.turn
+	view._confirm_aim()
+	await _frames(2)
+	ok(go != null and go.disabled and view.aim_info.text.find("reaches no foe") >= 0 and d.heir.mp == mp and b.turn == turn, "an area that reaches no one cannot be cast: %s" % view.aim_info.text)
+	view._cancel_aim()
+	await _frames(2)
+	for id in ["burn", "poison", "bleed", "weaken", "vulnerable", "slow", "fear"]:
+		b.apply_status(GameBattle.enemy_ref(0), id, 0.1, 3, "heir", 50.0)
+	view._refresh_chips()
+	await _frames(2)
+	var box: HBoxContainer = view.enemy_nodes[0]["chips"]
+	var last: Label = box.get_child(box.get_child_count() - 1)
+	ok(last.text.begins_with("+") and box.get_combined_minimum_size().x <= float(view.enemy_nodes[0]["w"]) + 52.0 + 1.0, "seven statuses fold into a +N chip beside the figure (%s, %.0f px)" % [last.text, box.get_combined_minimum_size().x])
+	b.statuses = {}
+	for i in b.enemies.size():
+		if b.enemies[i]["row"] == "front":
+			b.enemies[i]["hp"] = 1
+	var was: float = view.enemy_nodes[back]["root"].position.x
+	view._do(func(): b.use_ability({"name": "Test Quake", "mult": 1.0, "target": {"shape": "all"}, "is_aoe": true}, 0, 0))
+	for k in 60:
+		if not view.busy:
+			break
+		await create_timer(0.2).timeout
+	await _frames(4)
+	ok(b.enemies[back]["row"] == "front" and view.enemy_nodes[back]["root"].position.x < was - 20.0, "the back rank steps up on the screen too (%.0f -> %.0f)" % [was, view.enemy_nodes[back]["root"].position.x])

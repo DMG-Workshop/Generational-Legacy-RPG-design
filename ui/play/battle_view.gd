@@ -820,7 +820,16 @@ func _heir_info(hp: int) -> void:
 func _step_ally_hp(i: int, delta: int) -> void:
 	var an: Dictionary = ally_nodes[i]
 	an["hp"].value = clampf(an["hp"].value + float(delta), 0.0, an["hp"].max_value)
-	an["info"].text = "Lv%s  HP %s" % [GameText.num(b.allies[i].level), GameText.num(int(an["hp"].value))]
+	_ally_info(i, int(an["hp"].value))
+
+
+## "Lv5,000  HP 1,888,159" under a companion; the eleven-digit HP of the last generations is set
+## smaller so it stays clear of the next companion.
+func _ally_info(i: int, hp: int) -> void:
+	var l: Label = ally_nodes[i]["info"]
+	l.text = "Lv%s  HP %s" % [GameText.num(b.allies[i].level), GameText.num(hp)]
+	var wide := get_theme_font("font", "Label").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > 140.0
+	l.add_theme_font_size_override("font_size", 10 if wide else 12)
 
 
 func _knock_out(i: int) -> void:
@@ -912,18 +921,18 @@ func _fill_chips(box: HBoxContainer, ref: String, room: float) -> void:
 		texts.append("%s%s %d" % [def.get("tag", inst["id"]), "x%d" % stacks if stacks > 1 else "", int(inst["turns"])])
 		widths.append(font.get_string_size(texts[-1], HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + gap)
 		total += float(widths[-1])
-	var shown := list.size()
+	var fit := list.size()
 	if total > room:
 		var used := font.get_string_size("+%d" % list.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + gap
-		shown = 0
-		while shown < list.size() and used + float(widths[shown]) <= room:
-			used += float(widths[shown])
-			shown += 1
-	for k in shown:
+		fit = 0
+		while fit < list.size() and used + float(widths[fit]) <= room:
+			used += float(widths[fit])
+			fit += 1
+	for k in fit:
 		var def := GameCombat.status_def(list[k]["id"])
 		box.add_child(_chip(texts[k], Color(def.get("color", "#ffffff")), _chip_tip(list[k])))
-	if shown < list.size():
-		box.add_child(_chip("+%d" % (list.size() - shown), Kit.DIM, "\n".join(PackedStringArray(list.slice(shown).map(func(inst): return _chip_tip(inst))))))
+	if fit < list.size():
+		box.add_child(_chip("+%d" % (list.size() - fit), Kit.DIM, "\n".join(PackedStringArray(list.slice(fit).map(func(inst): return _chip_tip(inst))))))
 
 
 func _chip(text: String, color: Color, tip: String) -> Label:
@@ -958,7 +967,7 @@ func _update_view() -> void:
 		an["hp"].value = a.hp
 		an["mp"].max_value = maxf(1.0, a.max_mp())
 		an["mp"].value = a.mp
-		an["info"].text = "Lv%s  HP %s" % [GameText.num(a.level), GameText.num(a.hp)]
+		_ally_info(i, a.hp)
 
 
 func _show_result() -> void:
