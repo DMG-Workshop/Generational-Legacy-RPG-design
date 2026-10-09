@@ -26,6 +26,7 @@ var heir_skip: bool = false    # a status cost the heir this turn; any action ju
 var casts: int = 0             # numbers each ability use; the events it causes share the number
 var uses: Dictionary = {}      # "<ref>/<ability name>" -> times used this battle
 var feat_ready: Dictionary = {}   # "<ref>/<feat id>" -> the round from which that unit may use it again
+var fields: Array = []         # ground an ability fouled: [{name, x, y, radius, from, until, statuses, source, power, color, end}]
 var _nums: Dictionary = {}     # unit index -> unit_numbers, worked out once a battle
 
 
@@ -791,6 +792,45 @@ func _wound_mult(ab: Dictionary, i: int) -> float:
 	return float(w["mult"]) if float(e["hp"]) < float(e["max_hp"]) * float(w["below"]) else 1.0
 
 
+## Ground an area leaves fouled (caltrops, a mire): from the next round, for the turns its "field"
+## gives, every foe that starts its turn inside takes the ability's statuses on foes again.
+func _lay_field(by: int, ab: Dictionary, target: int, power: float) -> void:
+	var f: Dictionary = ab["field"]
+	var at := cast_point(by) if GameCombat.around_self(ab) else enemy_point(target)
+	var name := str(ab.get("name", "?"))
+	var radius := float(ab.get("target", {}).get("radius", 3.0))
+	fields.append({"name": name, "x": at.x, "y": at.y, "radius": radius, "from": turn + 1, "until": turn + int(f.get("turns", 1)),
+		"statuses": ab.get("statuses", []).filter(func(st): return str(st.get("on", "target")) == "target"),
+		"source": ref_of(by), "power": power, "color": str(f.get("color", "#c8a060")), "end": str(f.get("text", {}).get("end", ""))})
+	events.append({"type": "field", "name": name, "x": at.x, "y": at.y, "radius": radius})
+	var lay := str(f.get("text", {}).get("lay", ""))
+	if lay != "":
+		_say(lay)
+
+
+## Rounds a field still holds, counting the one under way.
+func field_turns_left(f: Dictionary) -> int:
+	return int(f["until"]) - maxi(turn, int(f["from"])) + 1
+
+
+func _tread(i: int) -> void:
+	var p := enemy_point(i)
+	for f in fields:
+		if turn >= int(f["from"]) and p.distance_to(Vector2(float(f["x"]), float(f["y"]))) <= float(f["radius"]) + 0.0001:
+			for st in f["statuses"]:
+				try_status(enemy_ref(i), st, str(f["source"]), float(f["power"]))
+
+
+## A round ends: fields whose last round it was are gone.
+func _wear_fields() -> void:
+	for f in fields.duplicate():
+		if int(f["until"]) <= turn:
+			fields.erase(f)
+			events.append({"type": "field_end", "name": f["name"]})
+			if str(f["end"]) != "":
+				_say(str(f["end"]))
+
+
 ## The party member every foe goes for while a taunt holds (-1 the heir, else the ally), or -2.
 func _taunting() -> int:
 	if statuses.is_empty():
@@ -891,6 +931,8 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 				if not shrugged.is_empty() and _tells_resist(st):
 					var what := str(GameCombat.status_def(str(st["id"])).get("name", st["id"]))
 					_say("%s resist%s %s." % [shrugged[0] if shrugged.size() == 1 else "%d foes" % shrugged.size(), "s" if shrugged.size() == 1 else "", what])
+	if ab.has("field") and not hits.is_empty():
+		_lay_field(by, ab, target, power)
 	var drain := float(ab.get("drain", 0.0))
 	if drain > 0.0 and dealt > 0:
 		if by < 0:
@@ -1024,6 +1066,8 @@ func _end_player_turn() -> void:
 		if _won():
 			return
 	defending = false
+	if not fields.is_empty():
+		_wear_fields()
 	turn += 1
 	var regen := maxf(0.0, float(GameData.bal("mp_regen_per_turn_pct")) + float(weather.get("mp_regen", 0.0)))
 	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * regen)))
@@ -1083,6 +1127,8 @@ func _enemy_target() -> int:
 
 func _enemy_turn(i: int) -> void:
 	var ref := enemy_ref(i)
+	if not fields.is_empty():
+		_tread(i)
 	if not _start_turn(ref):
 		return
 	_enemy_act(i)

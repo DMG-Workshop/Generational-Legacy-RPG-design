@@ -33,6 +33,7 @@ func _init() -> void:
 	test_statuses_and_wounds()
 	test_taunt_and_rally()
 	test_areas()
+	test_fields()
 	test_ground()
 	test_points_and_slots()
 	test_new_heir_starts_over()
@@ -185,15 +186,23 @@ func test_broken_data() -> void:
 		"scaling": {"mag": 1.0}, "mult": 1.0, "hp_cost": 0.9, "companion": "no",
 		"target": {"shape": "party", "center": "self"},
 		"statuses": [{"id": "no_such_status"}, {"id": "stun", "on": "everyone"}],
-		"vs_wounded": {"below": 1.5, "mult": 0.5},
+		"vs_wounded": {"below": 1.5, "mult": 0.5}, "field": {"turns": 2},
 		"requires": {"min_level": 0, "classes": ["no_such_class"], "weapon": ["spoon"], "biomes": ["moon"]}}
 	GameData.feats["feats"].append(broken)
 	GameFeats.reindex()
 	var errs := GameFeats.validate()
 	for want in ["unknown kind", "never uses 'mp'", "scaling 'mag'", "neither STR nor AGI", "not aimed at a foe", "cost must be",
 			"hp_cost", "companion is true or false", "unknown status", "only a burst can be centred", "vs_wounded", "is on 'everyone'",
-			"min_level", "unknown class", "unknown weapon kind", "biome 'moon'", "environmental feats, and only they"]:
+			"min_level", "unknown class", "unknown weapon kind", "biome 'moon'", "environmental feats, and only they",
+			"a field is left by a burst"]:
 		ok(errs.any(func(e): return str(e).begins_with("feat test_broken") and str(e).find(want) >= 0), "a broken feat is reported: %s" % want)
+	GameData.feats["feats"].pop_back()
+	var long_field: Dictionary = GameFeats.def("caltrops").duplicate(true)
+	long_field["id"] = "test_long_field"
+	long_field["field"] = {"turns": 99}
+	GameData.feats["feats"].append(long_field)
+	GameFeats.reindex()
+	ok(GameFeats.validate().any(func(e): return str(e).begins_with("feat test_long_field") and str(e).find("a field lasts from 1 to") >= 0), "a field that never clears is reported")
 	GameData.feats["feats"].pop_back()
 	var dup: Dictionary = GameData.feats["feats"][0].duplicate(true)
 	GameData.feats["feats"].append(dup)
@@ -476,6 +485,45 @@ func test_areas() -> void:
 	var turn := b.turn
 	b.use_feat(0, mid)
 	ok(b.turn == turn and b.can_use_feat(0) and b.log.all(func(l): return str(l) != "Tess uses Cleave."), "a Cleave that reaches no foe is not used")
+	d.battle = null
+
+
+## Caltrops leave a field: from the next round, for as long as it holds, every foe that starts its
+## turn inside takes the bleed and slow again; a foe outside never does; then it is gone.
+func test_fields() -> void:
+	var d := _dyn("rogue", 20, 78, "steel_sword")
+	_ready_feats(d, ["caltrops"])
+	var b := _battle(d, 3, "goblin")
+	_sturdy(b)
+	b.enemies[2]["y"] = 40.0   # well clear of anything aimed at the others
+	var aim := 0
+	var ab := GameFeats.def("caltrops")
+	ok(b.aoe_targets(ab, -1, aim) == [0, 1], "the spikes reach the two foes together, not the one apart: %s" % str(b.aoe_targets(ab, -1, aim)))
+	var laid_turn := b.turn
+	b.use_feat(0, aim)
+	ok(b.fields.size() == 1 and is_equal_approx(float(b.fields[0]["x"]), b.enemy_point(aim).x) and is_equal_approx(float(b.fields[0]["radius"]), float(ab["target"]["radius"])), "the field lies where the spikes were thrown: %s" % str(b.fields))
+	ok(b.log.has(str(ab["field"]["text"]["lay"])), "and the journal of the fight says so")
+	var thrown := b.events.filter(func(ev): return ev["type"] == "status" and ev.get("applied", false) and str(ev["ref"]).begins_with("enemy"))
+	var by_foe := {}
+	for ev in thrown:
+		by_foe[ev["ref"]] = int(by_foe.get(ev["ref"], 0)) + 1
+	ok(by_foe.values().all(func(n): return n <= 2), "in the round it is thrown no foe is struck twice by it: %s" % str(by_foe))
+	var rounds := int(ab["field"]["turns"])
+	var again := 0
+	for k in rounds:
+		ok(b.fields.size() == 1 and b.field_turns_left(b.fields[0]) == rounds - k, "round %d: the field holds %d more" % [k + 1, rounds - k])
+		b.defend()
+		for ev in b.events:
+			if ev["type"] == "status" and ev.get("applied", false) and str(ev["id"]) in ["bleed", "slow"]:
+				ok(ev["ref"] != GameBattle.enemy_ref(2), "the foe standing apart is never caught")
+				if ev["ref"] in [GameBattle.enemy_ref(0), GameBattle.enemy_ref(1)]:
+					again += 1
+	ok(again >= 2, "foes starting their turns on the spikes take them again (%d times)" % again)
+	ok(b.fields.is_empty() and b.log.has(str(ab["field"]["text"]["end"])), "after %d rounds the field is gone" % rounds)
+	ok(b.turn == laid_turn + rounds + 1, "the field lasted the rounds the data gives")
+	b.defend()
+	ok(not b.events.any(func(ev): return ev["type"] == "status" and ev.get("applied", false) and str(ev["id"]) in ["bleed", "slow"]), "and strikes no more")
+	ok(GameFeats.describe("caltrops").find("the ground holds it %d more turns" % rounds) >= 0, "the feat's text tells the field: %s" % GameFeats.describe("caltrops"))
 	d.battle = null
 
 

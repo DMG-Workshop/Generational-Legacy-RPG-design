@@ -104,6 +104,7 @@
       "scaling": {"agi": 0.8}, "mult": 0.3,
       "target": {"shape": "burst", "radius": 4.5},
       "statuses": [{"id": "slow", "chance": 0.9, "turns": 3, "potency": 0.25}, {"id": "weaken", "chance": 0.5, "turns": 2, "potency": 0.2}],
+      "field": {"turns": 2, "color": "#6f8f4a", "text": {"lay": "The ground under the foes turns to sucking mud.", "end": "The mire settles."}},
       "requires": {"min_level": 5, "biomes": ["swamp"]}
     },
     {
@@ -162,6 +163,7 @@
       "scaling": {"agi": 0.6, "str": 0.2}, "mult": 0.2,
       "target": {"shape": "burst", "radius": 5.0},
       "statuses": [{"id": "bleed", "chance": 0.75, "turns": 3, "potency": 0.1}, {"id": "slow", "chance": 0.35, "turns": 2, "potency": 0.2}],
+      "field": {"turns": 2, "color": "#9aa4b0", "text": {"lay": "Iron spikes litter the ground under the foes.", "end": "The caltrops are trodden into the dirt."}},
       "requires": {"min_level": 10}
     },
     {

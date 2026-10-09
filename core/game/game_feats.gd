@@ -506,6 +506,10 @@ static func describe(id: String) -> String:
 	var w: Dictionary = f.get("vs_wounded", {})
 	if not w.is_empty():
 		parts.append("x%s on a foe under %s HP" % [_num(float(w["mult"]) * float(f.get("mult", 1.0))), _pct(float(w["below"]))])
+	if float(f.get("crit_bonus", 0.0)) > 0.0:
+		parts.append("+%s crit chance" % _pct(float(f["crit_bonus"])))
+	if float(f.get("pierce", 0.0)) > 0.0:
+		parts.append("ignores %s of armour" % _pct(float(f["pierce"])))
 	var foes: Array = []
 	for st in f.get("statuses", []):
 		if str(st.get("on", "target")) == "target":
@@ -515,6 +519,9 @@ static func describe(id: String) -> String:
 	if not foes.is_empty():
 		var who := " on every foe" if GameCombat.shape(f) == "all" and float(f.get("mult", 0.0)) <= 0.0 else ""
 		parts.append(GameCombat.describe({"statuses": foes}).to_lower() + who)
+	if f.has("field"):
+		var stay := int(f["field"].get("turns", 1))
+		parts.append("the ground holds it %d more turn%s" % [stay, "" if stay == 1 else "s"])
 	parts.append("ready again after %d turn%s" % [cooldown(id), "" if cooldown(id) == 1 else "s"] if cooldown(id) > 0 else "no wait")
 	if float(f.get("hp_cost", 0.0)) > 0.0:
 		parts.append("costs %s of max HP" % _pct(float(f["hp_cost"])))
@@ -693,6 +700,13 @@ static func validate() -> Array:
 				out.append("feat %s: status %s is on '%s' (target, party or self)" % [id, st.get("id", ""), on])
 			elif (on == "target") != aimed:
 				out.append("feat %s: status %s on %s does not fit its %s shape" % [id, st.get("id", ""), on, GameCombat.shape(f)])
+		if f.has("field"):
+			var field = f["field"]
+			var foe_statuses := (f.get("statuses", []) as Array).filter(func(st): return str(st.get("on", "target")) == "target")
+			if typeof(field) != TYPE_DICTIONARY or GameCombat.shape(f) != "burst" or foe_statuses.is_empty():
+				out.append("feat %s: a field is left by a burst with statuses on foes" % id)
+			elif int(field.get("turns", 0)) < 1 or int(field.get("turns", 0)) > int(GameCombat.setting("status_turns_max")):
+				out.append("feat %s: a field lasts from 1 to %d turns" % [id, int(GameCombat.setting("status_turns_max"))])
 		var req: Dictionary = f.get("requires", {})
 		if int(req.get("min_level", 0)) < 1 or int(req.get("min_level", 0)) > cap:
 			out.append("feat %s: min_level must be from 1 to the level cap" % id)

@@ -322,8 +322,11 @@ func _layout() -> void:
 	field.queue_redraw()
 
 
-## The area being aimed, drawn on the ground in paces mapped to the screen.
+## The area being aimed, drawn on the ground in paces mapped to the screen, over any ground a feat
+## has fouled.
 func _draw_field() -> void:
+	if not b.is_over():
+		_draw_ground()
 	if shown.is_empty() or b.is_over():
 		return
 	var ab: Dictionary = shown["ab"]
@@ -357,6 +360,24 @@ func _draw_field() -> void:
 		var ring := pts.duplicate()
 		ring.append(pts[0])
 		field.draw_polyline(ring, Color(AREA, 0.7), 2.0)
+
+
+## Caltrops, a mire: each field's reach, with its name and the rounds it still holds at its near edge.
+func _draw_ground() -> void:
+	var font := field.get_theme_default_font()
+	for f in b.fields:
+		var c := Vector2(float(f["x"]), float(f["y"]))
+		var r := float(f["radius"])
+		var col := Color(str(f["color"]))
+		var pts := PackedVector2Array()
+		for k in 36:
+			pts.append(_px(c + Vector2.from_angle(TAU * float(k) / 36.0) * r))
+		field.draw_colored_polygon(pts, Color(col, 0.16))
+		var ring := pts.duplicate()
+		ring.append(pts[0])
+		field.draw_polyline(ring, Color(col, 0.6), 1.5)
+		var edge := _px(c - Vector2(r, 0))
+		field.draw_string(font, edge + Vector2(8, 4), "%s %d" % [f["name"], b.field_turns_left(f)], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(col, 0.95))
 
 
 func _show_area(ab: Dictionary, at: int) -> void:
@@ -859,6 +880,8 @@ func _play_one(ev: Dictionary) -> void:
 			_float_text(_side_point(str(ev["ref"])), "%s - no turn" % def.get("name", ev["id"]), Color(def.get("color", "#ffffff")), 16)
 		"mana":
 			_float_text(_unit_node(by).position + Vector2(30, 0), "+%s MP" % GameText.num(int(ev["amount"])), Kit.MP_BLUE, 18)
+		"field", "field_end":   # ground fouled by a feat, or come clear again
+			field.queue_redraw()
 		"hp_cost":   # a feat paid for in the user's own blood
 			_float_text(_unit_node(by).position + Vector2(30, 10), "-%s HP" % GameText.num(int(ev["amount"])), Kit.BAD, 18)
 			if by < 0:
@@ -1093,6 +1116,7 @@ func _update_view() -> void:
 	_heir_info(d.heir.hp)
 	_update_marks()
 	_refresh_chips()
+	field.queue_redraw()
 	for i in enemy_nodes.size():
 		enemy_nodes[i]["hp"].max_value = b.enemies[i]["max_hp"]
 		enemy_nodes[i]["hp"].value = b.enemies[i]["hp"]
