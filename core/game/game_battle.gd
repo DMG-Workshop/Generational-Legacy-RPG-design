@@ -205,12 +205,18 @@ func unit_point(by: int) -> Vector2:
 	return GameCombat.heir_point() if by < 0 else GameCombat.ally_point(by)
 
 
+## Where a unit's areas are measured from: its place, stepped up to the party's front line.
+func cast_point(by: int) -> Vector2:
+	return GameCombat.cast_point(unit_point(by))
+
+
 func enemy_point(i: int) -> Vector2:
 	var e: Dictionary = enemies[i]
 	return Vector2(float(e.get("x", 0.0)), float(e.get("y", 0.0)))
 
 
 ## Foes an ability would strike, aimed at `target`, with each one's damage factor: [[i, f], ...].
+## Empty when a cone or line aimed that way reaches no one.
 func aoe_hits(ab: Dictionary, caster: int, target: int) -> Array:
 	if not GameCombat.aims_at_foe(ab):
 		return []
@@ -220,7 +226,7 @@ func aoe_hits(ab: Dictionary, caster: int, target: int) -> Array:
 	var points := {}
 	for i in living_enemies():
 		points[i] = enemy_point(i)
-	return GameCombat.footprint(ab, unit_point(caster), target, points)
+	return GameCombat.footprint(ab, cast_point(caster), target, points)
 
 
 ## Indices of the living foes an ability used by `caster` (-1 heir, else ally index) on
@@ -524,6 +530,10 @@ func _lose_hp(ref: String, n: int) -> void:
 				events.append({"type": "death", "side": "enemy", "index": i})
 				_say("%s is defeated." % e["name"])
 				statuses.erase(ref)
+				var moved := GameCombat.close_ranks(enemies)
+				if not moved.is_empty():
+					events.append({"type": "advance", "indices": moved})
+					_say("%s steps up to the front." % (enemies[moved[0]]["name"] if moved.size() == 1 else "The back rank"))
 		"ally":
 			var ai := _index(ref)
 			var a: GameHeir = allies[ai]
@@ -702,8 +712,11 @@ func cast_spell(id: String, target: int) -> void:
 
 ## The heir's turn with any ability (a class skill, a spell, or anything shaped like one): pay
 ## `mp_cost`, resolve it, let allies and foes act. Another resource or scaling is the caller's.
+## An area aimed where it reaches no foe is not used: nothing is paid and the turn is not spent.
 func use_ability(ab: Dictionary, target: int, mp_cost: int = 0, power: float = -1.0) -> void:
 	if not _begin_action() or heir.mp < mp_cost:
+		return
+	if GameCombat.aims_at_foe(ab) and aoe_hits(ab, -1, target).is_empty():
 		return
 	heir.mp -= mp_cost
 	resolve_ability(-1, ab, target, power)

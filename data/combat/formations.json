@@ -11,6 +11,7 @@
   "field": {
     "heir": [0.0, 0.0],
     "allies": [[-2.5, -3.6], [-2.5, 3.6], [-5.0, 0.0]],
+    "front_line": 0.0,
     "rows": {"front": 9.0, "back": 13.0},
     "row_max": {"front": 3, "back": 3},
     "spacing": 3.2

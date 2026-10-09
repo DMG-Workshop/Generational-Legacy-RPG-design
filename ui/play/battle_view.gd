@@ -129,7 +129,7 @@ func _chips() -> HBoxContainer:
 func _build_actors() -> void:
 	var cls := d.heir.cls()
 	hero_node = Control.new()
-	hero_node.size = Vector2(124, 208)
+	hero_node.size = Vector2(124, 220)
 	var hero_body := ColorRect.new()
 	hero_body.color = Color(cls["color"])
 	hero_body.size = Vector2(80, 110)
@@ -168,7 +168,7 @@ func _build_actors() -> void:
 		var root := Control.new()
 		var w := 170.0 if e["boss"] else (120.0 if solo else 88.0)
 		var h := 190.0 if e["boss"] else (110.0 if solo else 76.0)
-		root.size = Vector2(w, h + 48)
+		root.size = Vector2(w, h + 50)
 		var mark := Panel.new()
 		mark.add_theme_stylebox_override("panel", Kit.style(Color(AREA, 0.12), 10, AREA))
 		mark.size = Vector2(w + 18, h + 18)
@@ -226,7 +226,7 @@ func _build_actors() -> void:
 ## A companion: smaller figure in class colours with a race-tinted head, name, level and HP.
 func _build_ally(a: GameHeir) -> Dictionary:
 	var root := Control.new()
-	root.size = Vector2(110, 168)
+	root.size = Vector2(110, 172)
 	var body := ColorRect.new()
 	body.color = Color(a.cls()["color"])
 	body.size = Vector2(58, 72)
@@ -292,22 +292,27 @@ func _px(p: Vector2) -> Vector2:
 	return Vector2(sz.x * (0.06 + (p.x - x0) / maxf(1.0, x1 - x0) * 0.8), sz.y * (0.5 + p.y / (2.0 * reach)))
 
 
-func _place(node: Control, center: Vector2, anchor_y: float) -> void:
+## Top-left corner that puts `node` around `center`, kept inside the arena.
+func _spot(node: Control, center: Vector2, anchor_y: float) -> Vector2:
 	var pos := center - Vector2(node.size.x * 0.5, anchor_y)
 	pos.x = clampf(pos.x, 0.0, maxf(0.0, arena.size.x - node.size.x))
 	pos.y = clampf(pos.y, 0.0, maxf(0.0, arena.size.y - node.size.y))
-	node.position = pos
+	return pos
+
+
+func _foe_spot(i: int) -> Vector2:
+	var en: Dictionary = enemy_nodes[i]
+	return _spot(en["root"], _px(b.enemy_point(i)), float(en["h"]) * 0.5 + 10.0)
 
 
 func _layout() -> void:
 	if arena == null or hero_node == null:
 		return
-	_place(hero_node, _px(b.unit_point(-1)), 90.0)
+	hero_node.position = _spot(hero_node, _px(b.unit_point(-1)), 90.0)
 	for i in ally_nodes.size():
-		_place(ally_nodes[i]["root"], _px(b.unit_point(i)), 64.0)
+		ally_nodes[i]["root"].position = _spot(ally_nodes[i]["root"], _px(b.unit_point(i)), 64.0)
 	for i in enemy_nodes.size():
-		var en: Dictionary = enemy_nodes[i]
-		_place(en["root"], _px(b.enemy_point(i)), float(en["h"]) * 0.5 + 10.0)
+		enemy_nodes[i]["root"].position = _foe_spot(i)
 	field.queue_redraw()
 
 
@@ -319,7 +324,7 @@ func _draw_field() -> void:
 	var at := b._valid_target(int(shown["at"]))
 	if at < 0:
 		return
-	var origin := b.unit_point(-1)
+	var origin := b.cast_point(-1)
 	var aim := b.enemy_point(at)
 	var t: Dictionary = ab.get("target", {})
 	var pts := PackedVector2Array()
@@ -379,9 +384,15 @@ func _on_foe_hover(idx: int, inside: bool) -> void:
 
 
 ## An area ability waits for the player to pick where it lands; single strikes go to the target.
+## Aiming starts on the target if the area reaches it, else on the first foe it does reach.
 func _begin_aim(ab: Dictionary, skill: int, spell: String) -> void:
 	aiming = {"ab": ab, "skill": skill, "spell": spell}
 	aim_at = b._valid_target(target)
+	if aim_at not in b.aoe_targets(ab, -1, aim_at):
+		for i in b.living_enemies():
+			if i in b.aoe_targets(ab, -1, i):
+				aim_at = i
+				break
 	_show_area(ab, aim_at)
 	_build_commands()
 
@@ -393,7 +404,7 @@ func _cancel_aim() -> void:
 
 
 func _confirm_aim() -> void:
-	if aiming.is_empty():
+	if aiming.is_empty() or b.aoe_targets(aiming["ab"], -1, aim_at).is_empty():
 		return
 	var plan := aiming
 	var at := aim_at
@@ -489,7 +500,9 @@ func _build_aim_commands() -> void:
 	side.add_theme_constant_override("separation", 6)
 	side.custom_minimum_size = Vector2(150, 0)
 	command_box.add_child(side)
-	side.add_child(Kit.button("Cast" if str(aiming["spell"]) != "" else "Use", func(): _confirm_aim()))
+	var go := Kit.button("Cast" if str(aiming["spell"]) != "" else "Use", func(): _confirm_aim())
+	go.disabled = b.aoe_targets(ab, -1, aim_at).is_empty()
+	side.add_child(go)
 	side.add_child(Kit.button("Cancel", func(): _cancel_aim()))
 
 
@@ -498,9 +511,13 @@ func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
 	at = b._valid_target(at)
 	if at < 0:
 		return ""
-	var n := b.aoe_targets(ab, -1, at).size()
+	var caught := b.aoe_targets(ab, -1, at)
+	var n := caught.size()
+	if n == 0:
+		return "Toward %s it reaches no foe." % b.enemies[at]["name"]
 	var foes := "%d foe%s" % [n, "" if n == 1 else "s"]
-	var text := ("Over %s: would catch %s" if hovering else "Aimed at %s: catches %s") % [b.enemies[at]["name"], foes]
+	var whom := str(b.enemies[at]["name"]) + ("" if at in caught else " (beyond reach)")
+	var text := ("Over %s: would catch %s" if hovering else "Aimed at %s: catches %s") % [whom, foes]
 	var dmg := b.estimate(-1, ab, at)
 	if dmg >= 1.0:
 		text += ", about %s damage%s" % [GameText.num(int(round(dmg))), " in all" if n > 1 else ""]
@@ -734,6 +751,9 @@ func _play_one(ev: Dictionary) -> void:
 			en2["mark"].visible = false
 			var t := create_tween()
 			t.tween_property(en2["root"], "modulate:a", 0.0, 0.4)
+		"advance":   # the back rank steps up into the fallen front rank's place
+			for k in ev["indices"]:
+				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), 0.3)
 		"defend":
 			_float_text(hero_node.position + Vector2(30, 0), "guard", Kit.MP_BLUE)
 
@@ -867,26 +887,57 @@ func _update_marks() -> void:
 			enemy_nodes[i]["mark"].visible = alive and i in caught
 
 
-## Status chips under every figure: tag and turns left, coloured by the status.
+## Status chips under every figure: tag and turns left, coloured by the status. Each row keeps to
+## the room beside its figure (the heir's runs into the open middle of the field).
 func _refresh_chips() -> void:
-	_fill_chips(hero_chips, "heir")
+	_fill_chips(hero_chips, "heir", 280.0)
 	for i in ally_nodes.size():
-		_fill_chips(ally_nodes[i]["chips"], GameBattle.ref_of(i))
+		_fill_chips(ally_nodes[i]["chips"], GameBattle.ref_of(i), 128.0)
 	for i in enemy_nodes.size():
-		_fill_chips(enemy_nodes[i]["chips"], GameBattle.enemy_ref(i))
+		_fill_chips(enemy_nodes[i]["chips"], GameBattle.enemy_ref(i), float(enemy_nodes[i]["w"]) + 52.0)
 
 
-func _fill_chips(box: HBoxContainer, ref: String) -> void:
+## Chips that would run past `room` pixels fold into a "+N" chip whose tooltip names them.
+func _fill_chips(box: HBoxContainer, ref: String, room: float) -> void:
 	Kit.clear(box)
-	for inst in b.status_list(ref):
+	var list := b.status_list(ref)
+	var font := get_theme_font("font", "Label")
+	var gap := float(box.get_theme_constant("separation")) + 4.0   # and the outline
+	var texts: Array = []
+	var widths: Array = []
+	var total := 0.0
+	for inst in list:
 		var def := GameCombat.status_def(inst["id"])
 		var stacks := int(inst["stacks"])
-		var l := Kit.label("%s%s %d" % [def.get("tag", inst["id"]), "x%d" % stacks if stacks > 1 else "", int(inst["turns"])], 11, Color(def.get("color", "#ffffff")))
-		l.add_theme_color_override("font_outline_color", Color.BLACK)
-		l.add_theme_constant_override("outline_size", 3)
-		l.tooltip_text = "%s: %d turn%s left" % [def.get("name", inst["id"]), int(inst["turns"]), "" if int(inst["turns"]) == 1 else "s"]
-		l.mouse_filter = Control.MOUSE_FILTER_PASS
-		box.add_child(l)
+		texts.append("%s%s %d" % [def.get("tag", inst["id"]), "x%d" % stacks if stacks > 1 else "", int(inst["turns"])])
+		widths.append(font.get_string_size(texts[-1], HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + gap)
+		total += float(widths[-1])
+	var shown := list.size()
+	if total > room:
+		var used := font.get_string_size("+%d" % list.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + gap
+		shown = 0
+		while shown < list.size() and used + float(widths[shown]) <= room:
+			used += float(widths[shown])
+			shown += 1
+	for k in shown:
+		var def := GameCombat.status_def(list[k]["id"])
+		box.add_child(_chip(texts[k], Color(def.get("color", "#ffffff")), _chip_tip(list[k])))
+	if shown < list.size():
+		box.add_child(_chip("+%d" % (list.size() - shown), Kit.DIM, "\n".join(PackedStringArray(list.slice(shown).map(func(inst): return _chip_tip(inst))))))
+
+
+func _chip(text: String, color: Color, tip: String) -> Label:
+	var l := Kit.label(text, 11, color)
+	l.add_theme_color_override("font_outline_color", Color.BLACK)
+	l.add_theme_constant_override("outline_size", 3)
+	l.tooltip_text = tip
+	l.mouse_filter = Control.MOUSE_FILTER_PASS
+	return l
+
+
+func _chip_tip(inst: Dictionary) -> String:
+	var def := GameCombat.status_def(inst["id"])
+	return "%s: %d turn%s left" % [def.get("name", inst["id"]), int(inst["turns"]), "" if int(inst["turns"]) == 1 else "s"]
 
 
 func _update_view() -> void:

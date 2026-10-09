@@ -22,6 +22,7 @@ func _init() -> void:
 	GameData.load_all()
 	test_data()
 	test_geometry()
+	test_reach_and_ranks()
 	test_formation()
 	test_every_ability_runs()
 	test_aoe_each_target_rolls()
@@ -145,14 +146,17 @@ func test_geometry() -> void:
 	ok(_fp(cone, o, 0, {0: Vector2(10, 0), 1: inside, 2: outside}) == [0, 1], "cone: just inside half the angle is hit, just outside is not")
 	ok(_fp(cone, o, 0, {0: Vector2(10, 0), 1: Vector2(15.99, 0), 2: Vector2(16.01, 0)}) == [0, 1], "cone: range is measured from the caster")
 	ok(_fp(cone, o, 0, {0: Vector2(10, 0), 1: Vector2(-5, 0)}) == [0], "cone: nothing behind the caster")
-	ok(_fp(cone, o, 1, {0: Vector2(9, 9), 1: Vector2(30, 0)}) == [1], "the aimed foe is always caught, even past the range")
+	ok(_fp(cone, o, 1, {0: Vector2(9, 9), 1: Vector2(30, 0)}).is_empty(), "a cone aimed past its range does not reach the foe it points at")
+	ok(_fp(cone, o, 1, {0: Vector2(9, 0.5), 1: Vector2(30, 0)}) == [0], "but catches what stands within reach that way")
 	var line := {"target": {"shape": "line", "width": 3, "length": 18}}
 	ok(_fp(line, o, 0, {0: Vector2(9, 0), 1: Vector2(12, 1.49), 2: Vector2(12, 1.51)}) == [0, 1], "line: just inside half the width is hit, just outside is not")
 	ok(_fp(line, o, 0, {0: Vector2(9, 0), 1: Vector2(17.99, 0), 2: Vector2(18.01, 0), 3: Vector2(-0.5, 0)}) == [0, 1], "line: out to its length, never behind the caster")
 	var diag := _fp(line, o, 0, {0: Vector2(9, 3), 1: Vector2(12, 4), 2: Vector2(12, 0)})
 	ok(diag == [0, 1], "line: runs from the caster through the aimed foe (%s)" % str(diag))
 	ok(_fp({"target": {"shape": "all"}}, o, 0, {0: Vector2(9, 0), 1: Vector2(40, 30)}) == [0, 1], "all: every foe")
-	ok(_fp({}, o, 1, {0: Vector2(9, 0), 1: Vector2(9, 3)}) == [1], "no target block: a single foe")
+	ok(_fp({"mult": 1.0}, o, 1, {0: Vector2(9, 0), 1: Vector2(9, 3)}) == [1], "a strike with no target block: a single foe")
+	var short_line := {"target": {"shape": "line", "width": 3, "length": 10}}
+	ok(_fp(short_line, o, 1, {0: Vector2(9, 0.5), 1: Vector2(13, 0)}) == [0], "a line stops at its length, even short of the foe it points at")
 	# Through a live battle: dead foes are never caught.
 	var d := _dyn("mage", 30)
 	var b := _battle(d, 5)
@@ -169,13 +173,69 @@ func test_geometry() -> void:
 			n = maxi(n, b.aoe_targets(ab, -1, i).size())
 		return n
 	ok(best.call(GameCombat.spell("earthshatter")) == 5, "a field-wide spell reaches all five")
-	ok(best.call(GameCombat.spell("cone_of_frost")) == 4, "a front-rank cone reaches the front and the foe aimed at")
+	ok(best.call(GameCombat.spell("cone_of_frost")) == 3, "a front-rank cone reaches the front rank only")
+	for i in 5:
+		if b.enemies[i]["row"] == "back":
+			ok(i not in b.aoe_targets(GameCombat.spell("cone_of_frost"), -1, i), "Cone of Frost aimed at back-row foe %d falls short of it" % i)
 	ok(best.call(fb) == 3, "a fireball catches a row")
 	ok(best.call(GameCombat.spell("chain_lightning")) == 2, "a line runs from the front rank to the back")
 	ok(best.call(GameCombat.spell("sleep")) == 1, "sleep holds one foe")
 	var mend: Dictionary = GameData.classes["warrior"]["skills"][1]
 	ok(GameCombat.shape(mend) == "self" and GameCombat.shape_text(mend) == "Self" and b.aoe_targets(mend, -1, 0).is_empty(), "a class heal is its user's own and catches no foe")
 	ok(GameCombat.shape(GameData.classes["warrior"]["skills"][0]) == "single", "a class strike with no target block hits one foe")
+
+
+## A cone or line reaches no further than its range: aimed at a foe beyond it, it falls short. When
+## the front rank falls, the back rank steps up. An area that reaches no one is never cast.
+func test_reach_and_ranks() -> void:
+	var d := _dyn("mage", 30, 71)
+	var foes: Array = []
+	for k in ["wolf", "harpy", "wolf", "harpy"]:
+		foes.append(d._make_enemy(GameCombat.creature_def(k), 1.0, 1.0, 30))
+	d._begin_battle(foes, "hunt")
+	var b := d.battle
+	_sturdy(b)
+	var cone := GameCombat.spell("cone_of_frost")
+	ok(b.enemies[1]["row"] == "back" and b.enemies[3]["row"] == "back", "harpies keep back behind the wolves")
+	var toward := b.aoe_targets(cone, -1, 1)
+	ok(1 not in toward and not toward.is_empty() and toward.all(func(i): return b.enemies[i]["row"] == "front"), "Cone of Frost toward a harpy reaches the wolves in front of it (%s)" % str(toward))
+	# A strike so strong the autopilot would always want it, if only it reached.
+	var pinhole := {"id": "test_pinhole", "name": "Pinhole", "group": "elemental", "school": "x", "element": "", "type": "damage", "mp": 1,
+		"stat": "mag", "mult": 9.0, "target": {"shape": "cone", "angle": 2, "range": 3}, "is_aoe": true, "learn": {"classes": []}}
+	GameData.combat["spells"]["spells"].append(pinhole)
+	GameCombat.reindex()
+	d.heir.spells.append("test_pinhole")
+	ok(GameTactics.choose(b, -1).get("spell", "") != "test_pinhole", "the autopilot never picks an area that reaches no one")
+	var mp := d.heir.mp
+	var turn := b.turn
+	var log0 := b.log.size()
+	b.cast_spell("test_pinhole", 0)
+	ok(d.heir.mp == mp and b.turn == turn and b.log.size() == log0, "nor is it cast: no MP spent, no turn lost")
+	d.heir.spells.erase("test_pinhole")
+	GameData.combat["spells"]["spells"].pop_back()
+	GameCombat.reindex()
+	# The front rank falls: the harpies step up and the cone reaches them.
+	for i in [0, 2]:
+		b.events = []
+		b._lose_hp(GameBattle.enemy_ref(i), int(b.enemies[i]["hp"]))
+	var front := float(GameCombat.formation()["field"]["rows"]["front"])
+	ok(b.enemies[1]["row"] == "front" and b.enemies[3]["row"] == "front" and is_equal_approx(float(b.enemies[1]["x"]), front), "the back rank steps up when the front rank falls")
+	ok(b.events.any(func(ev): return ev["type"] == "advance" and ev["indices"] == [1, 3]), "the screen is told who moved")
+	ok(b.log.slice(log0).has("The back rank steps up to the front."), "and the log tells it")
+	ok(1 in b.aoe_targets(cone, -1, 1), "now the cone reaches them")
+	d.battle = null
+	# A companion standing behind the heir acts from the heir's line.
+	var w := _dyn("warrior", 30, 72)
+	_full_party(w, ["varn_deepdelver", "ysolde_marrow", "tarsk_ember_eye"])
+	var wb := _battle(w, 3, "goblin")
+	_sturdy(wb)
+	var cleave: Dictionary = GameData.classes["warden"]["skills"][0]
+	for i in 3:
+		var best := 0
+		for j in 3:
+			best = maxi(best, wb.aoe_targets(cleave, i, j).size())
+		ok(best >= 2, "Hunter's Cleave from companion %d's place sweeps %d of the front rank" % [i, best])
+	w.battle = null
 
 
 func test_formation() -> void:
@@ -192,7 +252,13 @@ func test_formation() -> void:
 		ok(n < 4 or rows["back"] == n - 3, "%d foes: the front fills first, the rest stand behind" % n)
 		d.battle = null
 	var b2 := _battle(d, 2, "harpy")
-	ok(b2.enemies.all(func(e): return e["row"] == "back"), "creatures that keep back stand in the back row")
+	ok(b2.enemies.all(func(e): return e["row"] == "front"), "with no one to stand behind, creatures that keep back face the party")
+	d.battle = null
+	var mixed: Array = []
+	for k in ["harpy", "wolf", "harpy"]:
+		mixed.append(d._make_enemy(GameCombat.creature_def(k), 1.0, 1.0, d.heir.level))
+	d._begin_battle(mixed, "hunt")
+	ok(d.battle.enemies.map(func(e): return e["row"]) == ["back", "front", "back"], "behind a front rank they keep back")
 	d.battle = null
 	var b3 := _battle(d, 4, "harpy")
 	ok(b3.enemies.filter(func(e): return e["row"] == "back").size() == 3, "a full back row spills forward")
@@ -604,9 +670,13 @@ func test_party_of_three() -> void:
 				b.allies[i].mp = 100000
 				b.resolve_ability(i, o["ab"], n - 1)
 				ok(b.events.any(func(ev): return ev["type"] == "cast" and int(ev["by"]) == i), "%s used by companion %d on %d foes" % [o["ab"]["name"], i, n])
+		# Companions step up to the heir's line to act: a front-rank cone reaches the front rank
+		# from every place, a line reaches every foe it is aimed at.
 		for i in 3:
-			for ab in [GameCombat.spell("cone_of_frost"), GameCombat.spell("chain_lightning")]:
-				ok(n - 1 in b.aoe_targets(ab, i, n - 1), "%s from companion %d's place catches the aimed foe" % [ab["name"], i])
+			ok(is_equal_approx(b.cast_point(i).x, GameCombat.heir_point().x) and is_equal_approx(b.cast_point(i).y, b.unit_point(i).y), "companion %d acts from the front line" % i)
+			for j in n:
+				ok(j in b.aoe_targets(GameCombat.spell("chain_lightning"), i, j), "Chain Lightning from companion %d reaches foe %d" % [i, j])
+				ok((j in b.aoe_targets(GameCombat.spell("cone_of_frost"), i, j)) == (b.enemies[j]["row"] == "front"), "Cone of Frost from companion %d reaches foe %d only in the front rank" % [i, j])
 		d.battle = null
 		d.party.rest(d)
 		d.heir.full_heal()

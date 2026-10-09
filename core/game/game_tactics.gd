@@ -104,6 +104,8 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 			var hits: Array = []
 			if t >= 0:
 				hits = prints[t] if prints.has(t) else GameCombat.footprint(ab, ctx["origin"], t, ctx["points"])
+				if hits.is_empty():
+					continue   # aimed that way, it reaches no one
 			if aims.size() > 1:
 				# Aims that catch the same foes alike are one option, unless a sleeper is near.
 				var key := str(hits) + ("" if ctx["calm"] else "@%d" % t)
@@ -306,7 +308,7 @@ static func _context(b: GameBattle, by: int) -> Dictionary:
 		if float(threat[i]) > float(threat[worst]):
 			worst = i
 	return {"living": living, "awake": awake, "calm": awake.size() == living.size(), "worst": worst, "blows": blows,
-		"points": points, "origin": b.unit_point(by), "threat": threat, "weight": weight, "total": maxf(1.0, total),
+		"points": points, "origin": b.cast_point(by), "threat": threat, "weight": weight, "total": maxf(1.0, total),
 		"dps": maxf(1.0, dps), "turns": maxf(1.0, hp_left / maxf(1.0, dps)), "nums": mine, "mp_price": 0.0,
 		"scarcity": 0.15 + 0.85 * clampf(1.0 - _frac(me.mp, int(mine["max_mp"])) * 1.5, 0.0, 1.0),
 		"boss_turns": float(GameCombat.setting("boss_control_max_turns")), "odds": {}}

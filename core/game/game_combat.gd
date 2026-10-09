@@ -252,8 +252,9 @@ static func is_control_status(id: String) -> bool:
 
 
 ## Which foes an area covers. `points` maps enemy index -> Vector2 (living foes only); the aimed
-## foe is always inside. Returns [[index, damage factor], ...] in index order; the factor is below
-## 1 only for shapes with an edge falloff.
+## foe is the centre of a burst and the direction of a cone or line, which catch it only if it is
+## within their reach. Returns [[index, damage factor], ...] in index order; the factor is below 1
+## only for shapes with an edge falloff.
 static func footprint(ab: Dictionary, origin: Vector2, aim_index: int, points: Dictionary) -> Array:
 	var t: Dictionary = ab.get("target", {})
 	var sh := shape(ab)
@@ -291,8 +292,6 @@ static func footprint(ab: Dictionary, origin: Vector2, aim_index: int, points: D
 				var off := absf(to.cross(d))
 				if along >= -0.0001 and along <= length + 0.0001 and off <= half_w + 0.0001:
 					edge = off / half_w if half_w > 0.0 else 0.0
-		if i == aim_index:
-			edge = 0.0
 		if edge >= 0.0:
 			out.append([i, 1.0 - falloff * clampf(edge, 0.0, 1.0)])
 	return out
@@ -312,8 +311,15 @@ static func ally_point(i: int) -> Vector2:
 	return Vector2(float(s[0]) + extra, float(s[1]))
 
 
+## Where a unit standing at `p` strikes or casts from: everyone acts from the party's front line,
+## so a companion standing behind it steps up to it first. Areas are measured from here.
+static func cast_point(p: Vector2) -> Vector2:
+	return Vector2(maxf(p.x, float(formation()["field"].get("front_line", heir_point().x))), p.y)
+
+
 ## Puts every foe on the field: front row first, creatures that keep back in the back row, and any
-## row that is full spills into the other. Writes "row", "x" and "y" (paces) into each foe.
+## row that is full spills into the other. No one keeps back behind an empty front rank. Writes
+## "row", "x" and "y" (paces) into each foe.
 static func place_enemies(enemies: Array) -> void:
 	var field: Dictionary = formation()["field"]
 	var cap: Dictionary = field["row_max"]
@@ -327,6 +333,8 @@ static func place_enemies(enemies: Array) -> void:
 		if (rows[want] as Array).size() >= int(cap[want]) and (rows[other] as Array).size() < int(cap[other]):
 			want = other
 		rows[want].append(i)
+	if (rows["front"] as Array).is_empty():
+		rows = {"front": rows["back"], "back": []}
 	var spacing := float(field["spacing"])
 	for row in rows:
 		var ids: Array = rows[row]
@@ -335,6 +343,23 @@ static func place_enemies(enemies: Array) -> void:
 			e["row"] = row
 			e["x"] = float(field["rows"][row])
 			e["y"] = (float(k) - float(ids.size() - 1) * 0.5) * spacing
+
+
+## When the last foe of the front rank falls, the back rank steps up into its place (keeping their
+## spread). Returns the indices of the foes that moved.
+static func close_ranks(enemies: Array) -> Array:
+	var moved: Array = []
+	for e in enemies:
+		if int(e["hp"]) > 0 and str(e.get("row", "front")) == "front":
+			return moved
+	var front := float(formation()["field"]["rows"]["front"])
+	for i in enemies.size():
+		var e: Dictionary = enemies[i]
+		if int(e["hp"]) > 0 and str(e.get("row", "")) == "back":
+			e["row"] = "front"
+			e["x"] = front
+			moved.append(i)
+	return moved
 
 
 # ---------------------------------------------------------------- packs
