@@ -480,3 +480,22 @@ static func act(b: GameBattle, plan: Dictionary) -> void:
 				b.cast_spell(str(plan["spell"]), int(plan["target"]))
 		_:
 			b.attack(int(plan.get("target", b.first_target())))
+
+
+## The heir's turn decided and taken for them, as the autopilot and auto-battle do. A plan the
+## battle turns down (an area that reaches no one by now) becomes a plain blow, so a turn is never
+## lost to it. Returns the plan carried out.
+static func auto_turn(b: GameBattle) -> Dictionary:
+	var plan := choose(b, -1)
+	var before := b.turn
+	act(b, plan)
+	if b.result == "" and b.turn == before:
+		plan = {"act": "attack", "target": b.first_target()}
+		b.attack(int(plan["target"]))
+	return plan
+
+
+## Whether the battle under way fights itself from its first turn: a hunt or hard hunt begun with
+## auto-battle on. The player may switch it on or off in any battle.
+static func auto_from_start(d: GameDynasty) -> bool:
+	return d.auto_battle and d.battle != null and d.battle_kind in ["hunt", "hunt_hard"]

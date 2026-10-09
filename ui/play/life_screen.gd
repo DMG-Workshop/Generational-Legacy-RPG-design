@@ -217,6 +217,9 @@ func _build_actions() -> void:
 	_act("Hunt", func(): _hunt("hunt"))
 	var hard := _act("Hard hunt", func(): _hunt("hunt_hard"))
 	hard.tooltip_text = "Tougher monsters and more Elites, for double XP and gold."
+	var auto := _act("Auto-battle: %s" % ("ON" if d.auto_battle else "OFF"), func(): d.auto_battle = not d.auto_battle; app.autosave(); _refresh())
+	auto.add_theme_color_override("font_color", Kit.GOOD if d.auto_battle else Kit.TEXT)
+	auto.tooltip_text = "Hunts fight themselves, choosing as the autopilot would. Switch it off in battle to take over."
 	var legend := _act("Fight %s" % boss.get("short", boss["name"]) if not boss.is_empty() else "No legend here", func(): _legend())
 	legend.disabled = boss.is_empty()
 	if not boss.is_empty():

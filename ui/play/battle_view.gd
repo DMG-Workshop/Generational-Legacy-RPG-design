@@ -32,6 +32,11 @@ var spell_list: Control = null
 var feat_list: Control = null
 var aim_info: Label = null      # the aim panel's "catches N foes" line
 var floats: Dictionary = {}     # ref -> status words floated this action, so they stack instead of overlap
+var auto: bool = false          # the heir fights on their own (GameTactics), one action every AUTO_PACE
+var auto_button: Button
+var _auto_waiting: bool = false # an auto action is due once AUTO_PACE has passed
+
+const AUTO_PACE := 0.4
 
 
 func _ready() -> void:
@@ -46,10 +51,19 @@ func _ready() -> void:
 	root.add_theme_constant_override("separation", 8)
 	margin.add_child(root)
 
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 12)
+	root.add_child(top)
 	var title := Kit.label("Battle: %s" % _foe_list(), 22, Kit.ACCENT)
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title.clip_text = true
-	root.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(title)
+	auto = GameTactics.auto_from_start(d)
+	auto_button = Kit.button("", func(): set_auto(not auto), Vector2(190, 34))
+	auto_button.add_theme_font_size_override("font_size", 15)
+	top.add_child(auto_button)
+	_show_auto()
 
 	var ap := Kit.panel(Color("#191726"))
 	ap.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -479,6 +493,9 @@ func _use_feat(slot: int) -> void:
 func _build_commands() -> void:
 	Kit.clear(command_box)
 	aim_info = null
+	if auto and not b.is_over():
+		_build_auto_commands()
+		return
 	if not aiming.is_empty():
 		_build_aim_commands()
 		return
@@ -516,6 +533,53 @@ func _build_commands() -> void:
 	pot.disabled = d.heir.potions <= 0
 	col3.add_child(pot)
 	col3.add_child(Kit.button("Flee", func(): _do(func(): b.flee())))
+
+
+# ---------------------------------------------------------------- auto-battle
+
+## Switches auto-battle on or off, for this fight and the hunts after it. Off hands the next
+## command back to the player at once; on lets the heir fight from their next turn.
+func set_auto(on: bool) -> void:
+	auto = on
+	d.auto_battle = on
+	_show_auto()
+	if result_shown or busy:
+		return
+	aiming = {}
+	_show_area({}, -1)
+	_build_commands()
+
+
+func _show_auto() -> void:
+	auto_button.text = "Auto-battle: %s" % ("ON" if auto else "OFF")
+	auto_button.add_theme_color_override("font_color", Kit.GOOD if auto else Kit.TEXT)
+	auto_button.tooltip_text = ("%s fights on their own, choosing as the autopilot would. Click to take over." if auto
+		else "Let %s fight on their own, now and in the hunts that follow.") % d.heir.name
+
+
+func _build_auto_commands() -> void:
+	_close_spells()
+	_close_feats()
+	hint.text = "Auto-battle: %s fights on their own." % d.heir.name
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	command_box.add_child(v)
+	var l := Kit.label("Every choice is the one the autopilot would make. Switch auto-battle off to give the orders yourself.", 14, Kit.TEXT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(560, 0)
+	v.add_child(l)
+	v.add_child(Kit.button("Take over", func(): set_auto(false), Vector2(180, 38)))
+	if not _auto_waiting:
+		_auto_waiting = true
+		get_tree().create_timer(AUTO_PACE).timeout.connect(_auto_step)
+
+
+func _auto_step() -> void:
+	_auto_waiting = false
+	if not auto or busy or result_shown or b.is_over() or not is_inside_tree():
+		return
+	_do(func(): GameTactics.auto_turn(b))
 
 
 func _small_button(text: String, cb: Callable) -> Button:

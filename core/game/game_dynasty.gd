@@ -31,6 +31,7 @@ var party := GameParty.new()
 var pending_event: Dictionary = {}   # an event waiting for the player's choice (see GameEvents)
 var shop_state: Dictionary = {}      # owned by GameItems: temple services used by the living heir
 var ages := GameAges.new()           # per-Age summaries of older heirs, and the saga's greatest
+var auto_battle: bool = false        # the player's choice: hunts fight themselves (see GameTactics.auto_turn)
 
 
 static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
@@ -795,7 +796,7 @@ func to_dict() -> Dictionary:
 		"journal": journal.slice(maxi(0, journal.size() - JOURNAL_SAVED)), "next_id": next_id, "total_hunts": total_hunts,
 		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
-		"shop_state": shop_state, "ages": ages.to_dict(),
+		"shop_state": shop_state, "ages": ages.to_dict(), "auto_battle": auto_battle,
 	}
 
 
@@ -834,6 +835,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.party = GameParty.from_dict(d.get("party", {}), g)
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
+	g.auto_battle = bool(d.get("auto_battle", false))
 	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
 		GameAges.end_saga(g, [])
 	return g

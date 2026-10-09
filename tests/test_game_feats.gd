@@ -46,6 +46,7 @@ func _init() -> void:
 	test_save_load()
 	test_old_saves()
 	test_determinism()
+	test_auto_battle()
 	_ui_tests.call_deferred()
 
 
@@ -951,6 +952,53 @@ func test_determinism() -> void:
 		ok(JSON.stringify(a.to_dict()) == JSON.stringify(b.to_dict()), "a loaded copy plays on like the original")
 
 
+# ---------------------------------------------------------------- auto-battle
+
+func test_auto_battle() -> void:
+	# Each auto turn is the autopilot's own choice, carried out the same way.
+	var pair: Array = []
+	for k in 2:
+		var d := _dyn("warrior", 30, 515, "steel_sword")
+		_ready_feats(d, ["cleave", "charge", "rend"])
+		_full_party(d, ["bren_cask"])
+		pair.append(_battle(d, 3, "goblin", 1.4))
+	var a: GameBattle = pair[0]
+	var c: GameBattle = pair[1]
+	var turns := 0
+	var feats_used := 0
+	while not a.is_over() and turns < 80:
+		turns += 1
+		var plan := GameTactics.choose(c, -1)
+		GameTactics.act(c, plan)
+		var done := GameTactics.auto_turn(a)
+		ok(str(done.get("act")) == str(plan.get("act")) and str(done.get("feat", "")) == str(plan.get("feat", "")), "auto turn %d takes the tactics choice: %s" % [turns, str(done.get("act"))])
+		feats_used += 1 if str(done.get("feat", "")) != "" else 0
+	ok(a.is_over() and a.log == c.log and a.result == c.result, "an auto battle runs exactly as the autopilot's (%d turns, %s)" % [turns, a.result])
+	ok(feats_used > 0, "and uses feats on its own (%d)" % feats_used)
+	# A plan the battle turns down still takes the turn as a plain blow.
+	var d2 := _dyn("warrior", 30, 516, "steel_sword")
+	var b2 := _battle(d2, 2)
+	_sturdy(b2)
+	var t0 := b2.turn
+	GameTactics.act(b2, {"act": "ability", "feat": "cleave", "target": 0})
+	ok(b2.turn == t0, "an unreadied feat is turned down by the battle")
+	# Only hunts begin on their own; the switch is saved with the game, off in older saves.
+	var d := _dyn("warrior", 10, 517)
+	ok(not d.auto_battle, "auto-battle starts off")
+	_battle(d, 1)
+	ok(not GameTactics.auto_from_start(d), "and a hunt is then the player's to fight")
+	d.battle = null
+	d.auto_battle = true
+	for kind in ["hunt", "hunt_hard", "legend", "event"]:
+		d._begin_battle([d._make_enemy(GameCombat.creature_def("goblin"), 1.0, 1.0, 10)], kind)
+		ok(GameTactics.auto_from_start(d) == (kind in ["hunt", "hunt_hard"]), "a %s battle %s on its own" % [kind, "begins" if kind.begins_with("hunt") else "does not begin"])
+		d.battle = null
+	var raw: Dictionary = JSON.parse_string(JSON.stringify(d.to_dict()))
+	ok(GameDynasty.from_dict(raw).auto_battle, "the switch survives a save")
+	raw.erase("auto_battle")
+	ok(not GameDynasty.from_dict(raw).auto_battle, "an older save loads with it off")
+
+
 # ---------------------------------------------------------------- screens
 
 func _frames(n: int = 4) -> void:
@@ -982,6 +1030,65 @@ func _labels_text(n: Node, out: Array = []) -> Array:
 	for c in n.get_children():
 		_labels_text(c, out)
 	return out
+
+
+func _wait_idle(view: Control) -> void:
+	for k in 60:
+		if not view.busy:
+			return
+		await create_timer(0.1).timeout
+
+
+func _auto_ui(app: Node, d: GameDynasty) -> void:
+	d.battle = null
+	d.auto_battle = false
+	d.heir.full_heal()
+	app.show_state()
+	await _frames(4)
+	var toggle := _button(app.current, "Auto-battle: OFF")
+	ok(toggle != null, "the life screen shows auto-battle off")
+	toggle.pressed.emit()
+	await _frames(3)
+	ok(d.auto_battle and _button(app.current, "Auto-battle: ON") != null, "pressing it switches it on and says so")
+	ok(GameDynasty.load_from_disk().auto_battle, "and the game is saved with it")
+	_button(app.current, "Hunt").pressed.emit()
+	await _frames(4)
+	var view: Control = app.current
+	ok(d.battle != null and view.auto and _button(view, "Auto-battle: ON") != null, "a hunt begins with auto-battle on")
+	ok(_button(view, "Attack") == null and _button(view, "Take over") != null, "the heir's commands give way to a Take over button")
+	for e in d.battle.enemies:
+		e["hp"] = 100000
+		e["max_hp"] = 100000
+		e["atk"] = 0.0
+	await create_timer(2.5).timeout
+	var t1: int = d.battle.turn
+	ok(t1 >= 2, "the heir fights turn after turn unprompted (%d turns in 2.5 s)" % t1)
+	ok(t1 <= 8, "at a pace that can be followed")
+	_button(view, "Auto-battle: ON").pressed.emit()
+	await _wait_idle(view)
+	await _frames(3)
+	var t2: int = d.battle.turn
+	ok(not view.auto and not d.auto_battle and _button(view, "Auto-battle: OFF") != null, "switching it off mid-battle shows it off")
+	ok(_button(view, "Attack") != null, "and hands the commands back at once")
+	await create_timer(1.2).timeout
+	ok(d.battle.turn == t2, "no turn is taken for the player once it is off")
+	_button(view, "Attack").pressed.emit()
+	await _wait_idle(view)
+	ok(d.battle.turn == t2 + 1, "the player's own command plays")
+	_button(view, "Auto-battle: OFF").pressed.emit()
+	await _frames(2)
+	ok(d.auto_battle, "switched on again in battle")
+	for e in d.battle.enemies:
+		e["hp"] = 1
+	for k in 40:
+		if view.result_shown:
+			break
+		await create_timer(0.2).timeout
+	ok(view.result_shown and d.battle == null, "it fights on to the end")
+	_button(view, "Continue").pressed.emit()
+	await _frames(3)
+	ok(_button(app.current, "Auto-battle: ON") != null, "and stays on for the hunts after")
+	d.auto_battle = false
 
 
 func _ui_tests() -> void:
@@ -1119,6 +1226,7 @@ func _ui_tests() -> void:
 	ok(view.aim_info.text.begins_with("Around Tess"), "and says so: %s" % view.aim_info.text)
 	view._cancel_aim()
 	await _frames(2)
+	await _auto_ui(app, d)
 	app.queue_free()
 	GameDynasty.save_path = real
 	_done()

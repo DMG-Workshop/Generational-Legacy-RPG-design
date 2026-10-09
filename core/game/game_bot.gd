@@ -10,7 +10,7 @@ static func fight(d: GameDynasty) -> void:
 	var guard := 0
 	while not b.is_over() and guard < 300:
 		guard += 1
-		GameTactics.act(b, GameTactics.choose(b, -1))
+		GameTactics.auto_turn(b)
 	d.finish_battle()
 
 
