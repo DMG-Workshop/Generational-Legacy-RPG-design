@@ -4,7 +4,7 @@ extends RefCounted
 
 
 ## Fights the battle in progress to the end with GameTactics (potions and heals when low, areas
-## against packs, control on the worst foe) and settles it.
+## against packs, control on the worst foe), settles it and searches the dead or leaves them.
 static func fight(d: GameDynasty) -> void:
 	var b := d.battle
 	var guard := 0
@@ -12,6 +12,7 @@ static func fight(d: GameDynasty) -> void:
 		guard += 1
 		GameTactics.auto_turn(b)
 	d.finish_battle()
+	GamePlague.bot_loot(d)
 
 
 ## One decision for the current life. Returns false once the heir has died.

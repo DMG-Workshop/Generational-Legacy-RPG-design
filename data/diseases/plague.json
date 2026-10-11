@@ -1,0 +1,53 @@
+{
+  "settings": {
+    "infected_spawn": 0.06,
+    "infected_chance": 0.02,
+    "infected_prefix": "Plague-touched",
+    "infected_pool": [
+      {"disease": "rat_plague", "weight": 2},
+      {"disease": "red_flux", "weight": 3},
+      {"disease": "blister_pox", "weight": 3},
+      {"disease": "grave_rot", "weight": 1, "biomes": ["crypt", "ruins"]},
+      {"disease": "bog_fever", "weight": 2, "biomes": ["swamp"]}
+    ],
+    "loot_gold_share": 0.5,
+    "loot_gold_spread": 0.5,
+    "loot_item_chance": 0.15,
+    "loot_item_per_foe": 0.04,
+    "loot_finds": [
+      {"potion": true, "weight": 5},
+      {"item": "willowbark_tonic", "weight": 3},
+      {"item": "gravewort_poultice", "weight": 2},
+      {"item": "physicians_draught", "weight": 1},
+      {"item": "nightshade_oil", "weight": 1}
+    ],
+    "coat_hits": 3,
+    "vial_radius": 4.5,
+    "bot_loot_max_risk": 0.02,
+    "bot_coat_min_blows": 3.0,
+    "bot_item_worth": 0.2,
+    "companion_cure_stage_step": 0.5
+  },
+  "toxin_status": "venom",
+  "vial_status": {"rat_plague": "plague_fever", "grey_veil": "grey_choke"},
+  "statuses": [
+    {"id": "venom", "name": "Venom", "tag": "VEN", "color": "#9acd32", "harmful": true, "element": "nature", "tick": "damage", "basis": "max_hp", "stack": "refresh", "default_turns": 3, "default_potency": 0.03,
+      "text": {"apply": "Venom gets into {t}'s blood.", "tick": "Venom burns in {t} for {n}.", "end": "The venom runs out of {t}."}},
+    {"id": "plague_fever", "name": "Plague Fever", "tag": "PLG", "color": "#b8a040", "harmful": true, "tick": "damage", "basis": "max_hp", "stack": "refresh", "default_turns": 4, "default_potency": 0.04,
+      "text": {"apply": "{t} starts to sweat and shake.", "tick": "Plague fever wrings {t} for {n}.", "end": "{t}'s fever breaks."}},
+    {"id": "grey_choke", "name": "Grey Choke", "tag": "GREY", "color": "#a0a8b0", "harmful": true, "tick": "damage", "basis": "max_hp", "stack": "refresh", "default_turns": 4, "default_potency": 0.06,
+      "text": {"apply": "Grey smoke fills {t}'s lungs.", "tick": "{t} chokes on the grey for {n}.", "end": "{t} coughs the last of the grey out."}}
+  ],
+  "text": {
+    "coat": "{h} works {item} into the blade's edge.",
+    "coat_spent": "The {item} on {h}'s blade is spent.",
+    "throw": "{h} hurls the {item}.",
+    "search": "{h} searches the bodies: {gold} gold.",
+    "search_find": "{h} turns up {find} among the dead.",
+    "search_full": "{h} finds {find} but has no room for it, and sells it on for {gold} gold.",
+    "leave": "{h} leaves the dead where they fell.",
+    "clean": "The dead here carry nothing worse than fleas.",
+    "companion_died": "{name} dies at {age}, {cause}, still in House {house}'s service.",
+    "companion_cured": "The priests of {place} cure {name} of {disease} for {gold} gold."
+  }
+}
