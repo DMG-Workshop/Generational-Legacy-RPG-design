@@ -11,6 +11,7 @@ var rng: RandomNumberGenerator
 var damage_bonus: float = 0.0  # from legacy echoes
 var slayer_bonus: Dictionary = {}  # creature id -> extra damage fraction
 var weather: Dictionary = {}       # combat modifiers from the weather: dodge, crit, flee, mp_regen
+var biomes: Array = []             # the ground the battle is fought on (environmental feats need it)
 var allies: Array = []             # Array[GameHeir]: companions fighting beside the heir (see GameParty)
 var foe_hp_mult: float = 1.0       # extra toughness foes have for the companions still standing
 var result: String = ""        # "", "victory", "defeat", "fled"
@@ -24,7 +25,10 @@ var immune: Dictionary = {}    # ref -> the unit's own turns left of immunity to
 var heir_skip: bool = false    # a status cost the heir this turn; any action just lets it pass
 var casts: int = 0             # numbers each ability use; the events it causes share the number
 var uses: Dictionary = {}      # "<ref>/<ability name>" -> times used this battle
+var feat_ready: Dictionary = {}   # ref -> {feat id -> the round from which that unit may use it again, "*" -> after any feat}
+var fields: Array = []         # ground an ability fouled: [{name, x, y, radius, from, until, statuses, source, power, color, end}]
 var _nums: Dictionary = {}     # unit index -> unit_numbers, worked out once a battle
+var _gear: Dictionary = {}     # unit index -> {feat id -> why its weapon or this ground rules it out}
 
 
 func _init(p_heir: GameHeir, p_enemies: Array, p_rng: RandomNumberGenerator) -> void:
@@ -47,13 +51,15 @@ func first_target() -> int:
 	return l[0] if l.size() > 0 else -1
 
 
-## Companions join before the first blow, knowing the spells of their class and level. Foes facing
+## Companions join before the first blow, knowing the spells of their class and level and carrying
+## the feats one of them would ready on this ground (see GameFeats.ready_companion). Foes facing
 ## a band take more bringing down, so allies make a fight safer more than shorter. Their blows are
 ## not scaled: a party must never turn a fair fight into one where the heir falls before they act.
 func add_allies(units: Array) -> void:
 	allies = units
 	for a in allies:
 		a.learn_spells()
+		GameFeats.ready_companion(a, biomes, 1 + allies.size())
 	_scale_foes_to_party()
 
 
@@ -710,6 +716,145 @@ func cast_spell(id: String, target: int) -> void:
 	use_ability(GameCombat.spell(id), target, spell_cost(id))
 
 
+# ---------------------------------------------------------------- feats
+
+## The feats a unit has readied, in slot order.
+func unit_feats(by: int) -> Array:
+	return _unit(by).equipped_feats
+
+
+func feat_in_slot(slot: int) -> String:
+	var list: Array = heir.equipped_feats
+	return str(list[slot]) if slot >= 0 and slot < list.size() else ""
+
+
+## Turns a unit must wait before using a feat again; 0 when it is ready. After any feat the user
+## catches breath before the next (recovery_turns in feats.json), whatever their cooldowns.
+func feat_wait(by: int, id: String) -> int:
+	var r: Dictionary = feat_ready.get(ref_of(by), {})
+	if r.is_empty():
+		return 0
+	return maxi(0, maxi(int(r.get(id, 0)), int(r.get("*", 0))) - turn)
+
+
+## Why a unit cannot use a feat now ("" if it can): not readied, cooling down or catching breath,
+## the wrong weapon or ground, or too hurt to pay its HP.
+func feat_block(by: int, id: String) -> String:
+	var u := _unit(by)
+	if id not in u.equipped_feats:
+		return "Not readied."
+	var wait := feat_wait(by, id)
+	if wait > 0:
+		var own := maxi(0, int(feat_ready.get(ref_of(by), {}).get(id, 0)) - turn)
+		return "%s in %d turn%s." % ["Ready" if own >= wait else "Catching breath: ready", wait, "" if wait == 1 else "s"]
+	var gear: Dictionary = _gear.get(by, {})   # the weapon in hand and the ground hold for the battle
+	if not gear.has(id):
+		gear[id] = GameFeats.gear_block(u, id, biomes)
+		_gear[by] = gear
+	if str(gear[id]) != "":
+		return gear[id]
+	return GameFeats.hurt_block(u, id, int(unit_numbers(by)["max_hp"]))
+
+
+func can_use_feat(slot: int) -> bool:
+	var id := feat_in_slot(slot)
+	return result == "" and id != "" and feat_block(-1, id) == ""
+
+
+## The heir's turn with the feat readied in `slot`. It costs no MP: its cooldown starts and a few
+## take HP. Like an area spell, a feat aimed where it reaches no foe is not used.
+func use_feat(slot: int, target: int) -> void:
+	var id := feat_in_slot(slot)
+	if id == "" or (result == "" and not heir_skip and feat_block(-1, id) != ""):
+		return
+	if not _begin_action():
+		return
+	var ab := GameFeats.def(id)
+	if GameCombat.aims_at_foe(ab) and aoe_hits(ab, -1, target).is_empty():
+		return
+	_spend_feat(-1, id)
+	resolve_ability(-1, ab, target)
+	_heir_haste()
+	_end_player_turn()
+
+
+## What a feat's use costs its user: its cooldown and the user's breath start, and any HP it takes
+## is paid (it never takes the last).
+func _spend_feat(by: int, id: String) -> void:
+	var r: Dictionary = feat_ready.get(ref_of(by), {})
+	r[id] = turn + GameFeats.cooldown(id) + 1
+	r["*"] = turn + int(GameFeats.setting("recovery_turns")) + 1
+	feat_ready[ref_of(by)] = r
+	var u := _unit(by)
+	var cost := mini(GameFeats.hp_cost(u, id, int(unit_numbers(by)["max_hp"])), u.hp - 1)
+	if cost <= 0:
+		return
+	u.hp -= cost
+	events.append({"type": "hp_cost", "by": by, "amount": cost})
+	_say("%s costs %s %d HP." % [GameFeats.feat_name(id), u.name, cost])
+
+
+## Execute and its like strike harder at a foe already badly hurt.
+func _wound_mult(ab: Dictionary, i: int) -> float:
+	if not ab.has("vs_wounded"):
+		return 1.0
+	var w: Dictionary = ab["vs_wounded"]
+	var e: Dictionary = enemies[i]
+	return float(w["mult"]) if float(e["hp"]) < float(e["max_hp"]) * float(w["below"]) else 1.0
+
+
+## Ground an area leaves fouled (caltrops, a mire): from the next round, for the turns its "field"
+## gives, every foe that starts its turn inside takes the ability's statuses on foes again.
+func _lay_field(by: int, ab: Dictionary, target: int, power: float) -> void:
+	var f: Dictionary = ab["field"]
+	var at := cast_point(by) if GameCombat.around_self(ab) else enemy_point(target)
+	var name := str(ab.get("name", "?"))
+	var radius := float(ab.get("target", {}).get("radius", 3.0))
+	fields.append({"name": name, "x": at.x, "y": at.y, "radius": radius, "from": turn + 1, "until": turn + int(f.get("turns", 1)),
+		"statuses": ab.get("statuses", []).filter(func(st): return str(st.get("on", "target")) == "target"),
+		"source": ref_of(by), "power": power, "color": str(f.get("color", "#c8a060")), "end": str(f.get("text", {}).get("end", ""))})
+	events.append({"type": "field", "name": name, "x": at.x, "y": at.y, "radius": radius})
+	var lay := str(f.get("text", {}).get("lay", ""))
+	if lay != "":
+		_say(lay)
+
+
+## Rounds a field still holds, counting the one under way.
+func field_turns_left(f: Dictionary) -> int:
+	return int(f["until"]) - maxi(turn, int(f["from"])) + 1
+
+
+func _tread(i: int) -> void:
+	var p := enemy_point(i)
+	for f in fields:
+		if turn >= int(f["from"]) and p.distance_to(Vector2(float(f["x"]), float(f["y"]))) <= float(f["radius"]) + 0.0001:
+			for st in f["statuses"]:
+				try_status(enemy_ref(i), st, str(f["source"]), float(f["power"]))
+
+
+## A round ends: fields whose last round it was are gone.
+func _wear_fields() -> void:
+	for f in fields.duplicate():
+		if int(f["until"]) <= turn:
+			fields.erase(f)
+			events.append({"type": "field_end", "name": f["name"]})
+			if str(f["end"]) != "":
+				_say(str(f["end"]))
+
+
+## The party member every foe goes for while a taunt holds (-1 the heir, else the ally), or -2.
+func _taunting() -> int:
+	var found := -2
+	for r in statuses:
+		if r == "heir" or str(r).begins_with("ally"):
+			for inst in statuses[r]:
+				if GameCombat.status_def(inst["id"]).get("draws", false):
+					if r == "heir":
+						return -1
+					found = _index(r) if found == -2 else mini(found, _index(r))
+	return found
+
+
 ## The heir's turn with any ability (a class skill, a spell, or anything shaped like one): pay
 ## `mp_cost`, resolve it, let allies and foes act. Another resource or scaling is the caller's.
 ## An area aimed where it reaches no foe is not used: nothing is paid and the turn is not spent.
@@ -745,7 +890,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 		hits = aoe_hits(ab, by, target)
 	events.append({"type": "cast", "by": by, "name": name, "cast": casts, "aoe": aoe, "element": str(ab.get("element", "")),
 		"targets": hits.map(func(h): return h[0])})
-	if ab.has("group") or aoe:
+	if ab.has("group") or aoe or ab.has("feat"):
 		_say("%s %s %s." % [u.name, "casts" if ab.has("group") else "uses", name])
 	var src := ref_of(by)
 	var key := "%s/%s" % [src, name]
@@ -766,7 +911,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 					t = first_target()
 					if t < 0:
 						break
-				var took := _hit_enemy(t, power, mult, pierce, cb, by, el, casts)
+				var took := _hit_enemy(t, power, mult * _wound_mult(ab, t), pierce, cb, by, el, casts)
 				if took >= 0:
 					dealt += took
 					landed[t] = true
@@ -777,7 +922,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 		else:
 			for h in hits:
 				if enemies[h[0]]["hp"] > 0:
-					var took := _hit_enemy(h[0], power, mult * float(h[1]), pierce, cb, by, el, casts)
+					var took := _hit_enemy(h[0], power, mult * float(h[1]) * _wound_mult(ab, h[0]), pierce, cb, by, el, casts)
 					if took < 0:
 						missed[h[0]] = true
 					else:
@@ -799,6 +944,8 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 				if not shrugged.is_empty() and _tells_resist(st):
 					var what := str(GameCombat.status_def(str(st["id"])).get("name", st["id"]))
 					_say("%s resist%s %s." % [shrugged[0] if shrugged.size() == 1 else "%d foes" % shrugged.size(), "s" if shrugged.size() == 1 else "", what])
+	if ab.has("field") and not hits.is_empty():
+		_lay_field(by, ab, target, power)
 	var drain := float(ab.get("drain", 0.0))
 	if drain > 0.0 and dealt > 0:
 		if by < 0:
@@ -932,6 +1079,8 @@ func _end_player_turn() -> void:
 		if _won():
 			return
 	defending = false
+	if not fields.is_empty():
+		_wear_fields()
 	turn += 1
 	var regen := maxf(0.0, float(GameData.bal("mp_regen_per_turn_pct")) + float(weather.get("mp_regen", 0.0)))
 	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * regen)))
@@ -970,13 +1119,19 @@ func _ally_act(ai: int) -> void:
 	match str(plan.get("act", "attack")):
 		"ability":
 			a.mp -= int(plan["cost"])
+			if str(plan.get("feat", "")) != "":
+				_spend_feat(ai, str(plan["feat"]))
 			resolve_ability(ai, plan["ab"], int(plan["target"]))
 		_:
 			_hit_enemy(_valid_target(int(plan.get("target", focus))), float(unit_numbers(ai)["str"]), 1.0, 0.0, 0.0, ai)
 
 
-## Who an enemy goes for: the heir, or (less often) a companion still standing. -1 = the heir.
+## Who an enemy goes for: whoever is taunting, else the heir or (less often) a companion still
+## standing. -1 = the heir.
 func _enemy_target() -> int:
+	var drawn := _taunting()
+	if drawn > -2:
+		return drawn
 	var up := conscious_allies()
 	if up.is_empty() or rng.randf() < float(GameData.bal("companion_heir_target_chance")):
 		return -1
@@ -985,6 +1140,8 @@ func _enemy_target() -> int:
 
 func _enemy_turn(i: int) -> void:
 	var ref := enemy_ref(i)
+	if not fields.is_empty():
+		_tread(i)
 	if not _start_turn(ref):
 		return
 	_enemy_act(i)
@@ -1053,8 +1210,8 @@ func _inflict(i: int, target_ref: String) -> void:
 # ---------------------------------------------------------------- estimates (for tactics and the UI)
 
 ## A unit's fighting numbers, which hold for the whole battle (worked out again only if its level
-## changes): power by stat, crit and dodge chance, defense, max HP. Working them out walks every
-## trait and item, so blows and tactics read them from here.
+## changes): power by stat (each readied feat's under "feat:<id>"), crit and dodge chance, defense,
+## max HP. Working them out walks every trait and item, so blows and tactics read them from here.
 func unit_numbers(by: int) -> Dictionary:
 	var u := _unit(by)
 	var c: Dictionary = _nums.get(by, {})
@@ -1063,6 +1220,10 @@ func unit_numbers(by: int) -> Dictionary:
 		var mag := u.magic_power()
 		c = {"unit": u, "level": u.level, "str": atk, "mag": mag, "both": (atk + mag) * 0.6, "crit": u.crit_chance(),
 			"dodge": u.dodge_chance(), "def": u.defense(), "max_hp": u.max_hp(), "max_mp": u.max_mp()}
+		if not u.equipped_feats.is_empty():
+			var fn := GameFeats.numbers(u)
+			for id in u.equipped_feats:
+				c["feat:" + str(id)] = GameFeats.power_with(fn, str(id))
 		_nums[by] = c
 	return c
 
@@ -1091,7 +1252,7 @@ func expected_hits(by: int, ab: Dictionary, target: int, hits: Array = [], nums:
 		if i < 0:
 			continue
 		var e: Dictionary = enemies[i]
-		var dmg := maxf(1.0, power * mult * float(h[1]) - float(e["def"]) * (1.0 - pierce) * 0.5) * base * (1.0 - foe_dodge(i))
+		var dmg := maxf(1.0, power * mult * float(h[1]) * _wound_mult(ab, i) - float(e["def"]) * (1.0 - pierce) * 0.5) * base * (1.0 - foe_dodge(i))
 		if by < 0:
 			dmg *= 1.0 + damage_bonus + float(slayer_bonus.get(e["id"], 0.0))
 		if el != "":

@@ -25,12 +25,18 @@ var command_box: HBoxContainer
 var target: int = 0
 var busy: bool = false
 var result_shown: bool = false
-var aiming: Dictionary = {}    # {ab, skill, spell} while the player picks where an ability lands
+var aiming: Dictionary = {}    # {ab, skill, spell, feat (slot or -1)} while the player picks where an ability lands
 var aim_at: int = -1
 var shown: Dictionary = {}     # {ab, at}: the area drawn on the field
 var spell_list: Control = null
+var feat_list: Control = null
 var aim_info: Label = null      # the aim panel's "catches N foes" line
 var floats: Dictionary = {}     # ref -> status words floated this action, so they stack instead of overlap
+var auto: bool = false          # the heir fights on their own (GameTactics), one action every AUTO_PACE
+var auto_button: Button
+var _auto_waiting: bool = false # an auto action is due once AUTO_PACE has passed
+
+const AUTO_PACE := 0.4
 
 
 func _ready() -> void:
@@ -45,10 +51,19 @@ func _ready() -> void:
 	root.add_theme_constant_override("separation", 8)
 	margin.add_child(root)
 
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 12)
+	root.add_child(top)
 	var title := Kit.label("Battle: %s" % _foe_list(), 22, Kit.ACCENT)
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title.clip_text = true
-	root.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(title)
+	auto = GameTactics.auto_from_start(d)
+	auto_button = Kit.button("", func(): set_auto(not auto), Vector2(190, 34))
+	auto_button.add_theme_font_size_override("font_size", 15)
+	top.add_child(auto_button)
+	_show_auto()
 
 	var ap := Kit.panel(Color("#191726"))
 	ap.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -112,8 +127,13 @@ func _say(text: String) -> void:
 
 
 func _unhandled_input(ev: InputEvent) -> void:
-	if ev.is_action_pressed("ui_cancel") and not aiming.is_empty():
+	if not ev.is_action_pressed("ui_cancel"):
+		return
+	if not aiming.is_empty():
 		_cancel_aim()
+		get_viewport().set_input_as_handled()
+	elif feat_list != null:
+		_close_feats()
 		get_viewport().set_input_as_handled()
 
 
@@ -316,8 +336,11 @@ func _layout() -> void:
 	field.queue_redraw()
 
 
-## The area being aimed, drawn on the ground in paces mapped to the screen.
+## The area being aimed, drawn on the ground in paces mapped to the screen, over any ground a feat
+## has fouled.
 func _draw_field() -> void:
+	if not b.is_over():
+		_draw_ground()
 	if shown.is_empty() or b.is_over():
 		return
 	var ab: Dictionary = shown["ab"]
@@ -331,8 +354,9 @@ func _draw_field() -> void:
 	match GameCombat.shape(ab):
 		"burst":
 			var r := float(t.get("radius", 3.0))
+			var centre := origin if GameCombat.around_self(ab) else aim
 			for k in 40:
-				pts.append(_px(aim + Vector2.from_angle(TAU * float(k) / 40.0) * r))
+				pts.append(_px(centre + Vector2.from_angle(TAU * float(k) / 40.0) * r))
 		"cone":
 			var reach := float(t.get("range", 16.0))
 			var half := deg_to_rad(float(t.get("angle", 60.0)) * 0.5)
@@ -350,6 +374,24 @@ func _draw_field() -> void:
 		var ring := pts.duplicate()
 		ring.append(pts[0])
 		field.draw_polyline(ring, Color(AREA, 0.7), 2.0)
+
+
+## Caltrops, a mire: each field's reach, with its name and the rounds it still holds at its near edge.
+func _draw_ground() -> void:
+	var font := field.get_theme_default_font()
+	for f in b.fields:
+		var c := Vector2(float(f["x"]), float(f["y"]))
+		var r := float(f["radius"])
+		var col := Color(str(f["color"]))
+		var pts := PackedVector2Array()
+		for k in 36:
+			pts.append(_px(c + Vector2.from_angle(TAU * float(k) / 36.0) * r))
+		field.draw_colored_polygon(pts, Color(col, 0.16))
+		var ring := pts.duplicate()
+		ring.append(pts[0])
+		field.draw_polyline(ring, Color(col, 0.6), 1.5)
+		var edge := _px(c - Vector2(r, 0))
+		field.draw_string(font, edge + Vector2(8, 4), "%s %d" % [f["name"], b.field_turns_left(f)], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(col, 0.95))
 
 
 func _show_area(ab: Dictionary, at: int) -> void:
@@ -385,8 +427,8 @@ func _on_foe_hover(idx: int, inside: bool) -> void:
 
 ## An area ability waits for the player to pick where it lands; single strikes go to the target.
 ## Aiming starts on the target if the area reaches it, else on the first foe it does reach.
-func _begin_aim(ab: Dictionary, skill: int, spell: String) -> void:
-	aiming = {"ab": ab, "skill": skill, "spell": spell}
+func _begin_aim(ab: Dictionary, skill: int, spell: String, feat: int = -1) -> void:
+	aiming = {"ab": ab, "skill": skill, "spell": spell, "feat": feat}
 	aim_at = b._valid_target(target)
 	if aim_at not in b.aoe_targets(ab, -1, aim_at):
 		for i in b.living_enemies():
@@ -412,7 +454,9 @@ func _confirm_aim() -> void:
 	_show_area({}, -1)
 	if float(plan["ab"].get("mult", 0.0)) > 0.0:
 		target = at
-	if int(plan["skill"]) >= 0:
+	if int(plan.get("feat", -1)) >= 0:
+		_do(func(): b.use_feat(int(plan["feat"]), at))
+	elif int(plan["skill"]) >= 0:
 		_do(func(): b.use_skill(int(plan["skill"]), at))
 	else:
 		_do(func(): b.cast_spell(str(plan["spell"]), at))
@@ -435,11 +479,23 @@ func _use_spell(id: String) -> void:
 		_do(func(): b.cast_spell(id, target))
 
 
+func _use_feat(slot: int) -> void:
+	_close_feats()
+	var ab := GameFeats.def(b.feat_in_slot(slot))
+	if GameCombat.is_aoe(ab):
+		_begin_aim(ab, -1, "", slot)
+	else:
+		_do(func(): b.use_feat(slot, target))
+
+
 # ---------------------------------------------------------------- commands
 
 func _build_commands() -> void:
 	Kit.clear(command_box)
 	aim_info = null
+	if auto and not b.is_over():
+		_build_auto_commands()
+		return
 	if not aiming.is_empty():
 		_build_aim_commands()
 		return
@@ -453,6 +509,12 @@ func _build_commands() -> void:
 		command_box.add_child(c)
 	col1.add_child(Kit.button("Attack", func(): _do(func(): b.attack(target))))
 	col1.add_child(Kit.button("Defend", func(): _do(func(): b.defend())))
+	var readied: Array = b.unit_feats(-1)
+	var ready := range(readied.size()).filter(func(k): return b.can_use_feat(k)).size()
+	var fb := Kit.button("Feats (%d ready)" % ready if not readied.is_empty() else "Feats", func(): _open_feats())
+	fb.disabled = readied.is_empty()
+	fb.tooltip_text = "%s's readied feats: no MP, a cooldown each." % d.heir.name if not readied.is_empty() else "%s has no feats readied." % d.heir.name
+	col1.add_child(fb)
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
@@ -473,6 +535,65 @@ func _build_commands() -> void:
 	col3.add_child(Kit.button("Flee", func(): _do(func(): b.flee())))
 
 
+# ---------------------------------------------------------------- auto-battle
+
+## Switches auto-battle on or off, for this fight and the hunts after it. Off hands the next
+## command back to the player at once; on lets the heir fight from their next turn.
+func set_auto(on: bool) -> void:
+	auto = on
+	d.auto_battle = on
+	_show_auto()
+	if result_shown:
+		return
+	if busy:
+		Kit.clear(command_box)
+		hint.text = ""
+		if auto:
+			_auto_panel()
+		return
+	aiming = {}
+	_show_area({}, -1)
+	_build_commands()
+
+
+func _show_auto() -> void:
+	auto_button.text = "Auto-battle: %s" % ("ON" if auto else "OFF")
+	auto_button.add_theme_color_override("font_color", Kit.GOOD if auto else Kit.TEXT)
+	auto_button.tooltip_text = ("%s fights on their own, choosing as the autopilot would. Click to take over." if auto
+		else "Let %s fight on their own, now and in the hunts that follow.") % d.heir.name
+
+
+func _build_auto_commands() -> void:
+	_auto_panel()
+	if not _auto_waiting:
+		_auto_waiting = true
+		get_tree().create_timer(AUTO_PACE).timeout.connect(_auto_step)
+
+
+## What the command panel shows while the heir fights on their own.
+func _auto_panel() -> void:
+	Kit.clear(command_box)
+	_close_spells()
+	_close_feats()
+	hint.text = "Auto-battle: %s fights on their own." % d.heir.name
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	command_box.add_child(v)
+	var l := Kit.label("Every choice is the one the autopilot would make. Switch auto-battle off to give the orders yourself.", 14, Kit.TEXT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(560, 0)
+	v.add_child(l)
+	v.add_child(Kit.button("Take over", func(): set_auto(false), Vector2(180, 38)))
+
+
+func _auto_step() -> void:
+	_auto_waiting = false
+	if not auto or busy or result_shown or b.is_over() or not is_inside_tree():
+		return
+	_do(func(): GameTactics.auto_turn(b))
+
+
 func _small_button(text: String, cb: Callable) -> Button:
 	var btn := Kit.button(text, cb)
 	btn.add_theme_font_size_override("font_size", 14)
@@ -484,11 +605,14 @@ func _small_button(text: String, cb: Callable) -> Button:
 func _build_aim_commands() -> void:
 	var ab: Dictionary = aiming["ab"]
 	hint.text = "%s: click a foe to aim, click it again to %s." % [ab["name"], "cast" if str(aiming["spell"]) != "" else "strike"]
+	if GameCombat.around_self(ab):
+		hint.text = "%s strikes all around %s, wherever it is aimed." % [ab["name"], d.heir.name]
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 4)
 	command_box.add_child(v)
-	var what := Kit.label("%s  -  %s" % [GameCombat.shape_text(ab), GameCombat.describe(ab)], 13, Kit.TEXT)
+	var effect := GameFeats.describe(str(ab["feat"])) if ab.has("feat") else GameCombat.describe(ab)
+	var what := Kit.label("%s  -  %s" % [GameCombat.shape_text(ab), effect], 13, Kit.TEXT)
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	what.custom_minimum_size = Vector2(380, 0)
 	v.add_child(what)
@@ -514,10 +638,14 @@ func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
 	var caught := b.aoe_targets(ab, -1, at)
 	var n := caught.size()
 	if n == 0:
+		if GameCombat.around_self(ab):
+			return "No foe stands within reach of %s." % d.heir.name
 		return "Toward %s it reaches no foe." % b.enemies[at]["name"]
 	var foes := "%d foe%s" % [n, "" if n == 1 else "s"]
 	var whom := str(b.enemies[at]["name"]) + ("" if at in caught else " (beyond reach)")
 	var text := ("Over %s: would catch %s" if hovering else "Aimed at %s: catches %s") % [whom, foes]
+	if GameCombat.around_self(ab):
+		text = "Around %s: catches %s" % [d.heir.name, foes]
 	var dmg := b.estimate(-1, ab, at)
 	if dmg >= 1.0:
 		text += ", about %s damage%s" % [GameText.num(int(round(dmg))), " in all" if n > 1 else ""]
@@ -526,34 +654,34 @@ func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
 
 # ---------------------------------------------------------------- spell list
 
-func _open_spells() -> void:
-	if busy or spell_list != null:
-		return
-	spell_list = Control.new()
-	spell_list.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	spell_list.z_index = 5
-	add_child(spell_list)
+## A list over the field (the spellbook, the readied feats): a click outside it or on Close shuts
+## it. Returns [the list's root, the box its rows go in].
+func _list_panel(title: String, close: Callable) -> Array:
+	var root := Control.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.z_index = 5
+	add_child(root)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.45)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventMouseButton and ev.pressed:
-			_close_spells())
-	spell_list.add_child(dim)
+			close.call())
+	root.add_child(dim)
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
 	p.position = Vector2(150, 48)
 	p.size = Vector2(980, 470)
-	spell_list.add_child(p)
+	root.add_child(p)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
 	var top := HBoxContainer.new()
 	v.add_child(top)
-	var t := Kit.label("Spells  -  %s has %s / %s MP" % [d.heir.name, GameText.num(d.heir.mp), GameText.num(d.heir.max_mp())], 20, Kit.ACCENT)
+	var t := Kit.label(title, 20, Kit.ACCENT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
-	top.add_child(Kit.button("Close", func(): _close_spells(), Vector2(100, 34)))
+	top.add_child(Kit.button("Close", close, Vector2(100, 34)))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -562,6 +690,15 @@ func _open_spells() -> void:
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override("separation", 4)
 	scroll.add_child(rows)
+	return [root, rows]
+
+
+func _open_spells() -> void:
+	if busy or spell_list != null:
+		return
+	var made := _list_panel("Spells  -  %s has %s / %s MP" % [d.heir.name, GameText.num(d.heir.mp), GameText.num(d.heir.max_mp())], _close_spells)
+	spell_list = made[0]
+	var rows: VBoxContainer = made[1]
 	var groups: Dictionary = GameData.combat["spells"].get("groups", {})
 	for g in groups:
 		var ids: Array = b.known_spells().filter(func(id): return GameCombat.spell(id).get("group", "") == g)
@@ -616,6 +753,95 @@ func _close_spells() -> void:
 	_show_area({}, -1)
 
 
+# ---------------------------------------------------------------- feat list
+
+## The readied feats in a panel over the party's side of the field, so the foes stay in sight:
+## hovering a feat outlines the foes it would catch. The rest of the screen keeps working.
+func _open_feats() -> void:
+	if busy or b.unit_feats(-1).is_empty():
+		return
+	if feat_list != null:
+		_close_feats()
+		return
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
+	p.z_index = 5
+	var room := _feat_list_room()
+	p.position = room.position
+	p.custom_minimum_size = Vector2(room.size.x, 0)
+	add_child(p)
+	feat_list = p
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	p.add_child(v)
+	var top := HBoxContainer.new()
+	v.add_child(top)
+	var t := Kit.label("Feats  -  no MP, each waits out its cooldown", 18, Kit.ACCENT)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(t)
+	top.add_child(Kit.button("Close", _close_feats, Vector2(90, 32)))
+	for k in b.unit_feats(-1).size():
+		v.add_child(_feat_row(k, room.size.x))
+	var rec := int(GameFeats.setting("recovery_turns"))
+	var note := "Feats are learned and readied in a town or right after a rest."
+	if rec > 0:
+		note = "After any feat %s catches breath for %s before the next. %s" % [d.heir.name, "a turn" if rec == 1 else "%d turns" % rec, note]
+	var foot := Kit.label(note, 13, Kit.DIM)
+	foot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	foot.custom_minimum_size = Vector2(room.size.x - 24.0, 0)
+	v.add_child(foot)
+
+
+## Where the feat list goes: the top left of the field, up to the nearest foe still standing.
+func _feat_list_room() -> Rect2:
+	var area := Rect2(arena.get_global_position() - get_global_position(), arena.size)
+	var right := area.end.x - 8.0
+	for i in b.living_enemies():
+		right = minf(right, enemy_nodes[i]["root"].position.x + area.position.x - 14.0)
+	var w := clampf(right - area.position.x - 8.0, 520.0, 780.0)
+	return Rect2(area.position + Vector2(8, 8), Vector2(w, area.size.y - 16.0))
+
+
+## A readied feat: its button, whether it is ready (or why not), its area and what it does.
+func _feat_row(slot: int, width: float) -> Control:
+	var id := b.feat_in_slot(slot)
+	var ab := GameFeats.def(id)
+	var kind := GameFeats.kind_info(str(ab.get("kind", "")))
+	var block := b.feat_block(-1, id)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var btn := Kit.button(str(ab["name"]), func(): _use_feat(slot), Vector2(170, 34))
+	btn.add_theme_font_size_override("font_size", 15)
+	btn.clip_text = true
+	btn.disabled = not b.can_use_feat(slot)
+	btn.tooltip_text = str(ab.get("description", ""))
+	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	btn.mouse_entered.connect(func(): _show_area(ab, target))
+	btn.mouse_exited.connect(func(): _show_area({}, -1))
+	row.add_child(btn)
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 0)
+	row.add_child(v)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 12)
+	v.add_child(top)
+	top.add_child(Kit.label(GameFeats.shape_text(id), 14, Color(kind.get("color", "#ffffff"))))
+	top.add_child(Kit.label("Ready" if block == "" else block, 14, Kit.GOOD if block == "" else Kit.BAD))
+	var what := Kit.label(GameFeats.describe(id), 13, Kit.TEXT if block == "" else Kit.DIM)
+	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	what.custom_minimum_size = Vector2(width - 214.0, 0)
+	v.add_child(what)
+	return row
+
+
+func _close_feats() -> void:
+	if feat_list != null:
+		feat_list.queue_free()
+		feat_list = null
+	_show_area({}, -1)
+
+
 # ---------------------------------------------------------------- playing a turn
 
 func _do(action: Callable) -> void:
@@ -623,8 +849,11 @@ func _do(action: Callable) -> void:
 		return
 	busy = true
 	_close_spells()
+	_close_feats()
 	Kit.clear(command_box)
 	hint.text = ""
+	if auto:
+		_auto_panel()
 	var log_start := b.log.size()
 	action.call()
 	for i in range(log_start, b.log.size()):
@@ -729,6 +958,14 @@ func _play_one(ev: Dictionary) -> void:
 			_float_text(_side_point(str(ev["ref"])), "%s - no turn" % def.get("name", ev["id"]), Color(def.get("color", "#ffffff")), 16)
 		"mana":
 			_float_text(_unit_node(by).position + Vector2(30, 0), "+%s MP" % GameText.num(int(ev["amount"])), Kit.MP_BLUE, 18)
+		"field", "field_end":   # ground fouled by a feat, or come clear again
+			field.queue_redraw()
+		"hp_cost":   # a feat paid for in the user's own blood
+			_float_text(_unit_node(by).position + Vector2(30, 10), "-%s HP" % GameText.num(int(ev["amount"])), Kit.BAD, 18)
+			if by < 0:
+				_step_heir_hp(-int(ev["amount"]))
+			else:
+				_step_ally_hp(by, -int(ev["amount"]))
 		"miss":
 			if ev["side"] == "enemy":   # a foe slipped the party's blow
 				if int(ev.get("cast", 0)) == 0:
@@ -957,6 +1194,7 @@ func _update_view() -> void:
 	_heir_info(d.heir.hp)
 	_update_marks()
 	_refresh_chips()
+	field.queue_redraw()
 	for i in enemy_nodes.size():
 		enemy_nodes[i]["hp"].max_value = b.enemies[i]["max_hp"]
 		enemy_nodes[i]["hp"].value = b.enemies[i]["hp"]
@@ -976,6 +1214,9 @@ func _show_result() -> void:
 	result_shown = true
 	aiming = {}
 	_close_spells()
+	_close_feats()
+	Kit.clear(command_box)
+	hint.text = ""
 	var msgs: Array = d.finish_battle()
 	hero_label.text = "%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)]
 	app.autosave()

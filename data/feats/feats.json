@@ -1,0 +1,242 @@
+{
+  "settings": {
+    "start_points": 2,
+    "point_levels": [3, 5, 7, 10, 13, 16, 20, 25, 30, 36, 43, 50, 60, 70, 85, 100, 120, 150, 180, 220, 270, 330, 400, 500, 620, 750, 900, 1100, 1350, 1650, 2000, 2500, 3000, 3700, 4500, 5500, 7000, 8500, 10000, 12500, 15000, 19000, 24000, 30000, 37000, 46000, 57000, 70000, 85000, 99999],
+    "slot_levels": [[1, 2], [10, 3], [40, 4], [250, 5], [2000, 6]],
+    "companion_slots": 2,
+    "recovery_turns": 1,
+    "bot_targets": {"single": 1.0, "cone": 1.6, "burst": 1.7, "line": 1.3, "all": 2.0, "around": 1.9, "party": 1.0, "self": 1.0},
+    "bot_status_worth": {"stun": 0.6, "fear": 0.35, "slow": 0.25, "weaken": 0.2, "vulnerable": 0.25, "bleed": 0.15, "burn": 0.15, "rallied": 0.6, "shield": 0.45, "taunt": 0.4},
+    "bot_party_worth": 0.8,
+    "bot_min_score": 0.02,
+    "bot_hp_cost_worth": 4.0,
+    "bot_taunt_min_hp": 0.6
+  },
+  "kinds": {
+    "physical": {"name": "Physical", "color": "#e8a05a", "text": "Weapon work: power from STR, AGI and the weapon in hand."},
+    "tactical": {"name": "Tactical", "color": "#7fb7ff", "text": "Tricks of the field: holds, shouts and openings."},
+    "environmental": {"name": "Environmental", "color": "#8fd14f", "text": "The ground itself as a weapon, where the ground allows."}
+  },
+  "weapon_kinds": {
+    "blade": {"noun": "blade", "name": "Blades", "items": ["iron_sword", "steel_sword", "mithril_blade", "sunblade", "spell_saber", "notched_falchion"]},
+    "blunt": {"noun": "mace", "name": "Maces and hammers", "items": ["iron_mace", "warhammer", "holy_mace"]},
+    "bow": {"noun": "bow", "name": "Bows", "items": ["hunting_bow", "longbow", "elven_bow"]},
+    "staff": {"noun": "staff", "name": "Staves", "items": ["oak_staff", "runed_staff", "archmage_staff", "staff_of_ages", "drowned_staff"]}
+  },
+  "statuses": [
+    {
+      "id": "rallied", "name": "Rallied", "tag": "RLY", "color": "#ffb347", "harmful": false,
+      "mods": {"damage_dealt": 1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.15,
+      "text": {"apply": "{t} takes heart.", "end": "{t}'s fire cools."}
+    },
+    {
+      "id": "taunt", "name": "Taunting", "tag": "TNT", "color": "#e0605a", "harmful": false, "draws": true,
+      "mods": {"damage_taken": -1.0}, "basis": "flat", "stack": "refresh", "default_turns": 2, "default_potency": 0.3,
+      "text": {"apply": "{t} calls the foes out.", "end": "The foes lose interest in {t}."}
+    }
+  ],
+  "feats": [
+    {
+      "id": "cleave", "name": "Cleave", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "A heavy swing that carries on through the foes beside the first.",
+      "scaling": {"str": 1.0, "weapon_tier": 0.08}, "mult": 0.9,
+      "target": {"shape": "cone", "angle": 60, "range": 10.5},
+      "requires": {"min_level": 1, "weapon": ["blade", "blunt"]}
+    },
+    {
+      "id": "aimed_shot", "name": "Aimed Shot", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "Draw slow, breathe out, loose. The arrow finds the gap in the armour.",
+      "scaling": {"agi": 1.1, "weapon_tier": 0.08}, "mult": 1.25, "crit_bonus": 0.3, "pierce": 0.3,
+      "target": {"shape": "single"},
+      "requires": {"min_level": 1, "weapon": ["bow"]}
+    },
+    {
+      "id": "feint", "name": "Feint", "kind": "tactical", "cost": 1, "cooldown": 2,
+      "description": "Show an opening that is not there. The foe lunges at it and comes away shaken.",
+      "scaling": {"agi": 0.9, "weapon_tier": 0.04}, "mult": 0.7, "crit_bonus": 0.2,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "weaken", "chance": 0.8, "turns": 2, "potency": 0.25}],
+      "requires": {"min_level": 1}
+    },
+    {
+      "id": "pommel_strike", "name": "Pommel Strike", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "Reverse the grip and crack the hilt against the foe's skull.",
+      "scaling": {"str": 0.7, "weapon_tier": 0.04}, "mult": 0.55,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "stun", "chance": 0.45, "turns": 1}],
+      "requires": {"min_level": 2, "weapon": ["blade"]}
+    },
+    {
+      "id": "shield_bash", "name": "Shield Bash", "kind": "physical", "cost": 1, "cooldown": 3,
+      "description": "Drive the rim of the shield into the foe's face and step through.",
+      "scaling": {"str": 0.8}, "mult": 0.75,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "stun", "chance": 0.6, "turns": 1}],
+      "requires": {"min_level": 3, "classes": ["warrior", "paladin", "templar", "warden", "dread_knight", "cleric"]}
+    },
+    {
+      "id": "taunt", "name": "Taunt", "kind": "tactical", "cost": 1, "cooldown": 4, "companion": false,
+      "description": "Bang steel on steel and call them out. Every foe comes for you, and you are ready for it.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "taunt", "chance": 1.0, "turns": 2, "potency": 0.3, "on": "self"}],
+      "requires": {"min_level": 3}
+    },
+    {
+      "id": "hamstring", "name": "Hamstring", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "A low cut behind the knee. The foe will not keep pace for a while.",
+      "scaling": {"str": 0.4, "agi": 0.6, "weapon_tier": 0.04}, "mult": 0.75,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "slow", "chance": 0.85, "turns": 3, "potency": 0.2}],
+      "requires": {"min_level": 4}
+    },
+    {
+      "id": "flurry", "name": "Flurry", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "Three quick blows before the foe can bring its guard round.",
+      "scaling": {"agi": 0.7, "str": 0.3, "weapon_tier": 0.04}, "mult": 0.45, "hits": 3, "crit_bonus": 0.1,
+      "target": {"shape": "single"},
+      "requires": {"min_level": 5}
+    },
+    {
+      "id": "mire_trap", "name": "Mire Trap", "kind": "environmental", "cost": 1, "cooldown": 4,
+      "description": "Give ground until the foes stand on the soft stuff. The bog keeps what it catches.",
+      "terrain": "soft ground underfoot (swamps)",
+      "scaling": {"agi": 0.8}, "mult": 0.3,
+      "target": {"shape": "burst", "radius": 4.5},
+      "statuses": [{"id": "slow", "chance": 0.9, "turns": 3, "potency": 0.25}, {"id": "weaken", "chance": 0.5, "turns": 2, "potency": 0.2}],
+      "field": {"turns": 2, "color": "#6f8f4a", "text": {"lay": "The ground under the foes turns to sucking mud.", "end": "The mire settles."}},
+      "requires": {"min_level": 5, "biomes": ["swamp"]}
+    },
+    {
+      "id": "charge", "name": "Charge", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "Run at the line and go through it. The foe behind feels it too.",
+      "scaling": {"str": 1.0, "weapon_tier": 0.06}, "mult": 1.0,
+      "target": {"shape": "line", "width": 3, "length": 18},
+      "statuses": [{"id": "stun", "chance": 0.25, "turns": 1}],
+      "requires": {"min_level": 6}
+    },
+    {
+      "id": "rally", "name": "Rally", "kind": "tactical", "cost": 2, "cooldown": 5,
+      "description": "A shout that puts the heart back into everyone fighting at your side.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "party"},
+      "statuses": [{"id": "rallied", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "party"}],
+      "requires": {"min_level": 6}
+    },
+    {
+      "id": "rend", "name": "Rend", "kind": "physical", "cost": 2, "cooldown": 2,
+      "description": "A dragging cut that opens the flesh and keeps it open.",
+      "scaling": {"str": 0.8, "agi": 0.2, "weapon_tier": 0.06}, "mult": 0.7,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "bleed", "chance": 0.9, "turns": 3, "potency": 0.12}],
+      "requires": {"min_level": 8, "weapon": ["blade"]}
+    },
+    {
+      "id": "rockslide", "name": "Rockslide", "kind": "environmental", "cost": 2, "cooldown": 4,
+      "description": "Kick the loose stone above the foes and let the slope do the rest.",
+      "terrain": "loose rock overhead (mountains, caves, hills)",
+      "scaling": {"str": 0.6, "agi": 0.4}, "mult": 1.1,
+      "target": {"shape": "burst", "radius": 5.0, "falloff": 0.3},
+      "statuses": [{"id": "stun", "chance": 0.3, "turns": 1}],
+      "requires": {"min_level": 8, "biomes": ["mountains", "cave", "hills"]}
+    },
+    {
+      "id": "brushfire", "name": "Brushfire", "kind": "environmental", "cost": 2, "cooldown": 4,
+      "description": "A spark in the dry undergrowth, and a wall of fire rolls toward the foe.",
+      "terrain": "dry brush (forests)",
+      "scaling": {"str": 0.5, "agi": 0.5}, "mult": 0.8, "element": "fire",
+      "target": {"shape": "cone", "angle": 70, "range": 14},
+      "statuses": [{"id": "burn", "chance": 0.7, "turns": 3, "potency": 0.15}],
+      "requires": {"min_level": 8, "biomes": ["forest"]}
+    },
+    {
+      "id": "sunder", "name": "Sunder", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "A blow aimed at the armour, not the flesh. It cracks, and it stays cracked.",
+      "scaling": {"str": 1.1, "weapon_tier": 0.1}, "mult": 0.85, "pierce": 0.5,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "vulnerable", "chance": 0.85, "turns": 3, "potency": 0.25}],
+      "requires": {"min_level": 10, "weapon": ["blunt"]}
+    },
+    {
+      "id": "caltrops", "name": "Caltrops", "kind": "tactical", "cost": 2, "cooldown": 4,
+      "description": "A fistful of iron spikes flung under the foes' feet.",
+      "scaling": {"agi": 0.6, "str": 0.2}, "mult": 0.2,
+      "target": {"shape": "burst", "radius": 5.0},
+      "statuses": [{"id": "bleed", "chance": 0.75, "turns": 3, "potency": 0.1}, {"id": "slow", "chance": 0.35, "turns": 2, "potency": 0.2}],
+      "field": {"turns": 2, "color": "#9aa4b0", "text": {"lay": "Iron spikes litter the ground under the foes.", "end": "The caltrops are trodden into the dirt."}},
+      "requires": {"min_level": 10}
+    },
+    {
+      "id": "undertow", "name": "Undertow", "kind": "environmental", "cost": 2, "cooldown": 4,
+      "description": "Fight with the surf at your back and let the drag take the foes' feet from under them.",
+      "terrain": "surf and shingle (coasts)",
+      "scaling": {"agi": 0.7, "str": 0.3}, "mult": 0.85,
+      "target": {"shape": "line", "width": 3.5, "length": 18},
+      "statuses": [{"id": "slow", "chance": 0.7, "turns": 2, "potency": 0.2}, {"id": "stun", "chance": 0.2, "turns": 1}],
+      "requires": {"min_level": 10, "biomes": ["coast"]}
+    },
+    {
+      "id": "rain_of_arrows", "name": "Rain of Arrows", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "Loose high and fast, and let the arrows come down on the whole knot of foes.",
+      "scaling": {"agi": 0.9, "str": 0.2, "weapon_tier": 0.06}, "mult": 0.8,
+      "target": {"shape": "burst", "radius": 4.5, "falloff": 0.2},
+      "requires": {"min_level": 12, "weapon": ["bow"]}
+    },
+    {
+      "id": "falling_masonry", "name": "Falling Masonry", "kind": "environmental", "cost": 2, "cooldown": 4,
+      "description": "Old stonework has been waiting a long time to fall. Help it.",
+      "terrain": "old stonework overhead (crypts, ruins)",
+      "scaling": {"str": 1.0}, "mult": 1.2,
+      "target": {"shape": "burst", "radius": 3.5},
+      "statuses": [{"id": "stun", "chance": 0.35, "turns": 1}],
+      "requires": {"min_level": 14, "biomes": ["crypt", "ruins"]}
+    },
+    {
+      "id": "whirlwind", "name": "Whirlwind", "kind": "physical", "cost": 2, "cooldown": 3, "hp_cost": 0.04,
+      "description": "Spin with the weapon held out. Everything within reach is cut, and the turn leaves you open.",
+      "scaling": {"str": 0.9, "agi": 0.2, "weapon_tier": 0.08}, "mult": 1.15,
+      "target": {"shape": "burst", "radius": 10.5, "center": "self"},
+      "requires": {"min_level": 18, "weapon": ["blade", "blunt"]}
+    },
+    {
+      "id": "execute", "name": "Execute", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "Finish what was started. Little use on a fresh foe; deadly on a staggering one.",
+      "scaling": {"str": 1.0, "weapon_tier": 0.08}, "mult": 0.8,
+      "vs_wounded": {"below": 0.35, "mult": 3.0},
+      "target": {"shape": "single"},
+      "requires": {"min_level": 30}
+    },
+    {
+      "id": "war_cry", "name": "War Cry", "kind": "tactical", "cost": 2, "cooldown": 5,
+      "description": "A roar that carries across the whole field. Faint hearts break at it.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "all"},
+      "statuses": [{"id": "fear", "chance": 0.45, "turns": 2, "potency": 0.5}],
+      "requires": {"min_level": 45}
+    },
+    {
+      "id": "hold_the_line", "name": "Hold the Line", "kind": "tactical", "cost": 2, "cooldown": 5,
+      "description": "Shoulders together and guards up: the next blows land on steel instead of flesh.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "party"},
+      "statuses": [{"id": "shield", "chance": 1.0, "turns": 2, "potency": 0.12, "on": "party"}],
+      "requires": {"min_level": 70}
+    },
+    {
+      "id": "earthshaker", "name": "Earthshaker", "kind": "physical", "cost": 3, "cooldown": 5, "hp_cost": 0.04,
+      "description": "Bring the weapon down so hard that the ground throws every foe off its feet.",
+      "scaling": {"str": 1.1, "weapon_tier": 0.08}, "mult": 0.7,
+      "target": {"shape": "all"},
+      "statuses": [{"id": "stun", "chance": 0.2, "turns": 1}],
+      "requires": {"min_level": 200}
+    },
+    {
+      "id": "thousand_cuts", "name": "Thousand Cuts", "kind": "physical", "cost": 4, "cooldown": 5,
+      "description": "The blade moves faster than the eye can follow, and every foe on the field bleeds.",
+      "scaling": {"agi": 0.8, "str": 0.4, "weapon_tier": 0.08}, "mult": 0.8,
+      "target": {"shape": "all"},
+      "statuses": [{"id": "bleed", "chance": 0.6, "turns": 3, "potency": 0.1}],
+      "requires": {"min_level": 1200, "weapon": ["blade"]}
+    }
+  ]
+}

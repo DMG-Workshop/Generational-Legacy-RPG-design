@@ -247,18 +247,24 @@ static func aims_at_foe(ab: Dictionary) -> bool:
 	return shape(ab) in ENEMY_SHAPES
 
 
+## A burst centred on whoever uses it (a whirlwind) rather than on the aimed foe.
+static func around_self(ab: Dictionary) -> bool:
+	return str(ab.get("target", {}).get("center", "")) == "self" and shape(ab) == "burst"
+
+
 static func is_control_status(id: String) -> bool:
 	return bool(status_def(id).get("control", false))
 
 
 ## Which foes an area covers. `points` maps enemy index -> Vector2 (living foes only); the aimed
-## foe is the centre of a burst and the direction of a cone or line, which catch it only if it is
-## within their reach. Returns [[index, damage factor], ...] in index order; the factor is below 1
-## only for shapes with an edge falloff.
+## foe is the centre of a burst (unless it is centred on the user: "center": "self") and the
+## direction of a cone or line, which catch it only if it is within their reach. Returns
+## [[index, damage factor], ...] in index order; the factor is below 1 only for shapes with an
+## edge falloff.
 static func footprint(ab: Dictionary, origin: Vector2, aim_index: int, points: Dictionary) -> Array:
 	var t: Dictionary = ab.get("target", {})
 	var sh := shape(ab)
-	var aim: Vector2 = points.get(aim_index, origin)
+	var aim: Vector2 = origin if around_self(ab) else points.get(aim_index, origin)
 	var falloff := float(t.get("falloff", 0.0))
 	var out: Array = []
 	var keys: Array = points.keys()
@@ -398,7 +404,7 @@ static func shape_text(ab: Dictionary) -> String:
 	var t: Dictionary = ab.get("target", {})
 	match shape(ab):
 		"burst":
-			return "Burst %s" % _num(float(t.get("radius", 3.0)))
+			return ("Around %s" if around_self(ab) else "Burst %s") % _num(float(t.get("radius", 3.0)))
 		"cone":
 			return "Cone %d°" % int(t.get("angle", 60))
 		"line":
@@ -427,7 +433,7 @@ static func describe(ab: Dictionary) -> String:
 			dmg = "%d hits of x%s" % [int(ab["hits"]), _num(mult)]
 		match shape(ab):
 			"burst":
-				dmg += " to foes within %s paces of the target" % _num(float(ab["target"].get("radius", 3.0)))
+				dmg += " to foes within %s paces of %s" % [_num(float(ab["target"].get("radius", 3.0))), "the user" if around_self(ab) else "the target"]
 			"cone":
 				dmg += " in a %d° cone" % int(ab["target"].get("angle", 60))
 			"line":

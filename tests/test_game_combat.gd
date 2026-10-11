@@ -1048,7 +1048,12 @@ func test_tactics() -> void:
 	mb.focus = 0
 	mb.apply_status(GameBattle.enemy_ref(0), "sleep", 1.0, 2, "heir")
 	var ally := GameTactics.choose(mb, 0)
-	ok(int(ally.get("target", -1)) == 1, "a companion leaves the sleeper and strikes the other foe")
+	var struck: Array = []   # a shout for the party (a feat) strikes no one
+	if ally["act"] == "attack":
+		struck = [int(ally["target"])]
+	elif ally["act"] == "ability" and GameCombat.aims_at_foe(ally["ab"]):
+		struck = mb.aoe_targets(ally["ab"], 0, int(ally["target"]))
+	ok(0 not in struck and (struck.is_empty() or 1 in struck), "a companion leaves the sleeper and strikes the other foe (%s)" % str(ally.get("ab", {}).get("name", ally["act"])))
 	m.battle = null
 	# A companion mage uses areas against a pack.
 	var w := _dyn("warrior", 30)

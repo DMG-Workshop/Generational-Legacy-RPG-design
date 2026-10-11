@@ -27,6 +27,7 @@ static var names: Dictionary = {}
 static var combat: Dictionary = {}   # spells, statuses, elements, formations (see GameCombat)
 static var diseases: Dictionary = {}   # {settings, diseases}: read through GameDisease
 static var ages: Dictionary = {}       # {settings, text}: read through GameAges
+static var feats: Dictionary = {}      # {settings, kinds, weapon_kinds, statuses, feats}: read through GameFeats
 
 
 static func load_json(path: String) -> Variant:
@@ -73,6 +74,7 @@ static func load_all() -> void:
 	combat = {"spells": load_json("res://data/spells/spells.json"), "statuses": load_json("res://data/combat/statuses.json"), "elements": load_json("res://data/combat/elements.json"), "formations": load_json("res://data/combat/formations.json")}
 	diseases = load_json("res://data/diseases/diseases.json")
 	ages = load_json("res://data/ages/ages.json")
+	feats = load_json("res://data/feats/feats.json")
 	_loaded = true
 
 

@@ -31,6 +31,7 @@ var party := GameParty.new()
 var pending_event: Dictionary = {}   # an event waiting for the player's choice (see GameEvents)
 var shop_state: Dictionary = {}      # owned by GameItems: temple services used by the living heir
 var ages := GameAges.new()           # per-Age summaries of older heirs, and the saga's greatest
+var auto_battle: bool = false        # the player's choice: hunts fight themselves (see GameTactics.auto_turn)
 
 
 static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
@@ -77,6 +78,7 @@ func _setup_new_heir(h: GameHeir) -> void:
 	h.spells = []
 	h.spell_news = []
 	h.learn_spells()
+	GameFeats.start(h)
 	h.training = {"str": 0.0, "mag": 0.0, "agi": 0.0, "vit": 0.0}
 	h.milestones_done = []
 	h.battles_won = 0
@@ -372,7 +374,9 @@ func rest() -> Array:
 	party.rest(self)
 	var msgs: Array = ["%s rests and recovers fully." % heir.name]
 	GameDisease.on_rest(self, msgs)
-	return _finish_time("rest", msgs)
+	msgs = _finish_time("rest", msgs)
+	heir.downtime = state == "life"   # until the next action that takes time (see GameFeats)
+	return msgs
 
 
 func work() -> Array:
@@ -508,6 +512,7 @@ func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle = GameBattle.new(heir, foes, rng)
 	battle.slayer_bonus = slayer_map()
 	battle.weather = world.weather().get("combat", {})
+	battle.biomes = world.here().get("biomes", [])
 	battle.add_allies(party.battle_allies(self))
 	battle_kind = kind
 	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
@@ -629,6 +634,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		heir.spell_news = []
 		msgs.append(learned)
 		_say(learned)
+	GameFeats.on_years(self, msgs)
 	heir.age += years
 	world.advance(years, rng)
 	party.on_years(self, years, msgs)
@@ -790,7 +796,7 @@ func to_dict() -> Dictionary:
 		"journal": journal.slice(maxi(0, journal.size() - JOURNAL_SAVED)), "next_id": next_id, "total_hunts": total_hunts,
 		"killer_id": killer_id, "world": world.to_dict(), "flags": flags,
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
-		"shop_state": shop_state, "ages": ages.to_dict(),
+		"shop_state": shop_state, "ages": ages.to_dict(), "auto_battle": auto_battle,
 	}
 
 
@@ -829,6 +835,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.party = GameParty.from_dict(d.get("party", {}), g)
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
+	g.auto_battle = bool(d.get("auto_battle", false))
 	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
 		GameAges.end_saga(g, [])
 	return g
