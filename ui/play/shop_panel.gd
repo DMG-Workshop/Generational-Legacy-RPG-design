@@ -239,6 +239,19 @@ func _build_cures() -> void:
 		var title := "%s: %s (stage %d of %d)" % [info["name"], info["stage_name"], info["stage"], info["stages"]]
 		var outlook: String = info["outlook"]
 		rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%sg" % GameText.num(cost), Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
+	for m in dynasty.party.members:
+		var u := dynasty.party.sick_body(dynasty, m)
+		for e in u.diseases:
+			var mid: String = m["id"]
+			var id: String = e["id"]
+			var info := GameDisease.describe_entry(e)
+			var cost := GameDisease.cure_price(dynasty, id, u)
+			var b := Kit.button("Cure", func(): _act(GamePlague.cure_companion(dynasty, mid, id)), Vector2(96, 34))
+			b.disabled = h.gold < cost
+			b.tooltip_text = "The priests cure %s at once." % m["name"]
+			var title := "%s: %s, %s (stage %d of %d)" % [m["name"], info["name"], info["stage_name"], info["stage"], info["stages"]]
+			var outlook: String = info["outlook"]
+			rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%sg" % GameText.num(cost), Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
 
 
 func _build_gear() -> void:

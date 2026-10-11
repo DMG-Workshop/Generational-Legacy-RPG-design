@@ -15,7 +15,8 @@
    "color": "#6abf4b",
    "element": "nature",
    "swarm": true,
-   "inflicts": [{"id": "poison", "chance": 0.15, "turns": 3, "potency": 0.02}]
+   "inflicts": [{"id": "poison", "chance": 0.15, "turns": 3, "potency": 0.02}],
+   "carries": [{"disease": "bog_fever", "chance": 0.002}]
   },
   {
    "id": "wolf",
@@ -47,7 +48,8 @@
    "gold": 12,
    "color": "#5e8c3a",
    "element": "",
-   "swarm": true
+   "swarm": true,
+   "carries": [{"disease": "red_flux", "chance": 0.002}]
   },
   {
    "id": "bandit",
@@ -78,7 +80,8 @@
    "gold": 15,
    "color": "#d8d8c8",
    "element": "shadow",
-   "swarm": true
+   "swarm": true,
+   "carries": [{"disease": "grave_rot", "chance": 0.004}]
   },
   {
    "id": "harpy",
@@ -110,7 +113,8 @@
    "xp": 24,
    "gold": 20,
    "color": "#4e6b3a",
-   "element": "nature"
+   "element": "nature",
+   "carries": [{"disease": "bog_fever", "chance": 0.006}]
   },
   {
    "id": "fire_imp",
@@ -159,7 +163,8 @@
    "gold": 26,
    "color": "#7f8fbf",
    "element": "shadow",
-   "row": "back"
+   "row": "back",
+   "carries": [{"disease": "grave_rot", "chance": 0.006}]
   },
   {
    "id": "drake",
@@ -289,7 +294,8 @@
    "color": "#6f3a7f",
    "element": "shadow",
    "row": "back",
-   "inflicts": [{"id": "weaken", "chance": 0.2, "turns": 2, "potency": 0.2}]
+   "inflicts": [{"id": "weaken", "chance": 0.2, "turns": 2, "potency": 0.2}],
+   "carries": [{"disease": "grave_rot", "chance": 0.008}]
   },
   {
    "id": "abyssal_knight",
@@ -353,6 +359,39 @@
    "color": "#b01f2f",
    "element": "fire",
    "inflicts": [{"id": "burn", "chance": 0.25, "turns": 2, "potency": 0.2}]
+  },
+  {
+   "id": "plague_rat",
+   "name": "Plague Rat",
+   "biomes": ["cave", "coast", "swamp"],
+   "min_gen": 1,
+   "max_gen": 160,
+   "hp": 34,
+   "atk": 12,
+   "defense": 1,
+   "agi": 6,
+   "xp": 9,
+   "gold": 4,
+   "color": "#7a6a58",
+   "element": "",
+   "swarm": true,
+   "carries": [{"disease": "rat_plague", "chance": 0.005}]
+  },
+  {
+   "id": "ghoul",
+   "name": "Barrow Ghoul",
+   "biomes": ["crypt", "ruins", "swamp"],
+   "min_gen": 40,
+   "max_gen": 300,
+   "hp": 96,
+   "atk": 26,
+   "defense": 5,
+   "agi": 4,
+   "xp": 23,
+   "gold": 18,
+   "color": "#8c9a7a",
+   "element": "shadow",
+   "carries": [{"disease": "grave_rot", "chance": 0.006}, {"disease": "red_flux", "chance": 0.004}]
   },
   {
    "id": "grimfang",

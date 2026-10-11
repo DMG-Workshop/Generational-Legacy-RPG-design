@@ -432,9 +432,11 @@ static func on_succession(_d: GameDynasty, parent: GameHeir, c: GameHeir, msgs: 
 
 # ---------------------------------------------------------------- treatment
 
-## Temple price: grows with the disease's severity, its stage and the generation.
-static func cure_price(d: GameDynasty, id: String) -> int:
-	var stage := int(entry(d.heir, id).get("stage", 0))
+## Temple price: grows with the disease's severity, its stage and the generation. `who` is the
+## patient (the heir by default; a companion's unit); a sickness they do not have is priced at its
+## first stage.
+static func cure_price(d: GameDynasty, id: String, who: GameHeir = null) -> int:
+	var stage := int(entry(who if who != null else d.heir, id).get("stage", 0))
 	var p := float(setting("cure_cost")) * float(def(id).get("cures", {}).get("temple", 1.0))
 	p *= (1.0 + float(setting("cure_stage_step")) * float(stage)) * GameItems.price_mult(d)
 	return maxi(1, int(round(p)))
@@ -541,7 +543,7 @@ static func on_wear(d: GameDynasty, item_id: String) -> String:
 
 ## Errands between actions (no time passes): treat the worst sickness first with a remedy
 ## carried, else the cheaper of a remedy sold here or the temple, keeping the potion reserve.
-## The bot stays away from the black market.
+## The bot stays away from the black market. Then sick companions (GamePlague.bot_tick).
 static func bot_tick(d: GameDynasty) -> void:
 	if d.state != "life" or d.battle != null:
 		return
@@ -553,7 +555,8 @@ static func bot_tick(d: GameDynasty) -> void:
 				acted = true
 				break
 		if not acted:
-			return
+			break
+	GamePlague.bot_tick(d)
 
 
 static func _by_severity(h: GameHeir) -> Array:

@@ -132,7 +132,8 @@ func test_content_gates_use_era() -> void:
 	GameAges.jump_to(d, 1101)
 	ok(d.era_gen() == 1 and d.age_number() == 2, "jumped to the first generation of Age 2")
 	ok(d.stirring_legends().map(func(c): return c["id"]) == ["grimfang"], "Age 2 opens with the first era's legend: %s" % str(d.stirring_legends().map(func(c): return c["id"])))
-	var early := ["slime", "wolf", "goblin", "bandit"]
+	var early: Array = GameData.creatures.filter(func(c): return not c.get("boss", false) and int(c["min_gen"]) <= 1).map(func(c): return c["id"])
+	ok("goblin" in early and "skeleton" not in early, "first-era beasts read from data: %s" % str(early))
 	var late := ["abyssal_knight", "star_eater", "time_wraith", "elder_dragon"]
 	for place in ["whisperwood", "greenvale", "goblin_warrens"]:
 		d.world.visit(place)

@@ -944,7 +944,8 @@ func test_packs() -> void:
 
 ## A pack hurts about as much as the usual foes of the same hunt, though armour blunts each of its
 ## smaller blows: the same heirs (fixed seeds, the autopilot, alone or with three companions) lose
-## about as much HP to either, a defeat counting as all of it.
+## about as much HP to either, a defeat counting as all of it. Plain hunts cost little HP, so one
+## set of seeds swings the ratio from 0.8 to 1.8; three sets keep it steady.
 func test_pack_threat() -> void:
 	var packs: Dictionary = GameCombat.formation()["packs"]
 	var keep := {"swarm_bonus": packs["swarm_bonus"], "biomes": packs["biomes"].duplicate(), "chance": {}}
@@ -960,16 +961,17 @@ func test_pack_threat() -> void:
 				packs["kinds"][k]["chance"] = 1.0 if mode == "pack" else 0.0
 			for cls in ["warrior", "mage", "ranger", "cleric", "rogue", "druid"]:
 				for spec in [[8, 1], [60, 1], [1200, 100]]:
-					for k in 4:
-						var d := _dyn(cls, spec[0], 500 + k * 31 + spec[0] + cls.length())
+					for k in 12:
+						var off := k / 4
+						var d := _dyn(cls, spec[0], 500 + (k % 4) * 31 + spec[0] + cls.length() + off)
 						d.gen = spec[1]
 						d.heir.gen = spec[1]
 						d.heir.full_heal()
 						d.heir.potions = 2
-						d.world.visit(["whisperwood", "goblin_warrens", "mirefen", "the_rift"][k])
+						d.world.visit(["whisperwood", "goblin_warrens", "mirefen", "the_rift"][k % 4])
 						if k % 2 == 1:
 							_full_party(d)
-						d.rng.seed = 900 + k * 7 + spec[0]
+						d.rng.seed = 900 + (k % 4) * 7 + spec[0] + off
 						var b := d.start_hunt(kind)
 						var guard := 0
 						while not b.is_over() and guard < 300:

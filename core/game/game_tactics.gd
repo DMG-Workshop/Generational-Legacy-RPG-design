@@ -10,7 +10,9 @@ extends RefCounted
 
 
 ## What a unit can afford this turn: [{ab, cost, skill (class skill index or -1), spell (id or ""),
-## feat (id or ""), hp (HP the feat costs)}]. A feat costs no MP; it is an option while it is ready.
+## feat (id or ""), hp (HP the feat costs), item (a plague vial's id or "")}]. A feat costs no MP;
+## it is an option while it is ready. A vial in the heir's pack is weighed as if it cost a share of
+## the heir's HP (settings.bot_item_worth in plague.json), so one is thrown only into a hard fight.
 static func options(b: GameBattle, by: int) -> Array:
 	var u := b.unit(by)
 	var out: Array = []
@@ -30,6 +32,10 @@ static func options(b: GameBattle, by: int) -> Array:
 		if b.feat_block(by, id) == "":
 			out.append({"ab": GameFeats.def(id), "cost": 0, "skill": -1, "spell": "", "feat": id,
 				"hp": GameFeats.hp_cost(u, id, int(b.unit_numbers(by)["max_hp"]))})
+	if by < 0 and not b.heir.inventory.is_empty():
+		for id in GamePlague.vials_carried(b.heir):
+			out.append({"ab": GamePlague.vial_ability(id), "cost": 0, "skill": -1, "spell": "", "item": id,
+				"hp": float(GamePlague.setting("bot_item_worth")) * float(b.unit_numbers(-1)["max_hp"])})
 	return out
 
 
@@ -38,7 +44,8 @@ static func _frac(hp: int, max_hp: int) -> float:
 
 
 static func _plan(o: Dictionary, target: int) -> Dictionary:
-	return {"act": "ability", "ab": o["ab"], "cost": o["cost"], "skill": o["skill"], "spell": o["spell"], "feat": o.get("feat", ""), "target": target}
+	return {"act": "ability", "ab": o["ab"], "cost": o["cost"], "skill": o["skill"], "spell": o["spell"], "feat": o.get("feat", ""),
+		"item": o.get("item", ""), "target": target}
 
 
 ## One decision: {"act": "pass"|"potion"|"attack"|"ability", "target", and for an ability
@@ -472,7 +479,9 @@ static func act(b: GameBattle, plan: Dictionary) -> void:
 		"potion":
 			b.use_potion()
 		"ability":
-			if str(plan.get("feat", "")) != "":
+			if str(plan.get("item", "")) != "":
+				b.throw_vial(str(plan["item"]), int(plan["target"]))
+			elif str(plan.get("feat", "")) != "":
 				b.use_feat(b.heir.equipped_feats.find(plan["feat"]), int(plan["target"]))
 			elif int(plan.get("skill", -1)) >= 0:
 				b.use_skill(int(plan["skill"]), int(plan["target"]))
@@ -484,14 +493,21 @@ static func act(b: GameBattle, plan: Dictionary) -> void:
 
 ## The heir's turn decided and taken for them, as the autopilot and auto-battle do. A plan the
 ## battle turns down (an area that reaches no one by now) becomes a plain blow, so a turn is never
-## lost to it. Returns the plan carried out.
+## lost to it. A toxin in the pack may first go on the blade (no turn). Returns the plan carried out.
 static func auto_turn(b: GameBattle) -> Dictionary:
+	var coated: Array = []
+	if not b.heir.inventory.is_empty() and b.coating.is_empty():
+		GamePlague.auto_coat(b)
+		if not b.coating.is_empty():
+			coated = b.events.duplicate()   # the turn's action starts its own events; keep the coating's to show
 	var plan := choose(b, -1)
 	var before := b.turn
 	act(b, plan)
 	if b.result == "" and b.turn == before:
 		plan = {"act": "attack", "target": b.first_target()}
 		b.attack(int(plan["target"]))
+	if not coated.is_empty():
+		b.events = coated + b.events
 	return plan
 
 

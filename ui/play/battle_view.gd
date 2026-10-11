@@ -29,6 +29,7 @@ var aiming: Dictionary = {}    # {ab, skill, spell, feat (slot or -1)} while the
 var aim_at: int = -1
 var shown: Dictionary = {}     # {ab, at}: the area drawn on the field
 var spell_list: Control = null
+var poison_list: Control = null # the toxins and vials in the pack
 var feat_list: Control = null
 var aim_info: Label = null      # the aim panel's "catches N foes" line
 var floats: Dictionary = {}     # ref -> status words floated this action, so they stack instead of overlap
@@ -135,6 +136,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 	elif feat_list != null:
 		_close_feats()
 		get_viewport().set_input_as_handled()
+	elif poison_list != null:
+		_close_poisons()
+		get_viewport().set_input_as_handled()
 
 
 # ---------------------------------------------------------------- figures
@@ -225,7 +229,7 @@ func _build_actors() -> void:
 		lv.position = Vector2(4, h - 22)
 		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(lv)
-		var lbl := Kit.label(e["name"], 13)
+		var lbl := Kit.label(e["name"], 13, GamePlague.infected_color() if e.has("infected") else Kit.TEXT)
 		lbl.position = Vector2(0, h + 3)
 		lbl.size = Vector2(w + 64, 18)
 		lbl.clip_text = true
@@ -426,10 +430,13 @@ func _on_foe_hover(idx: int, inside: bool) -> void:
 
 
 ## An area ability waits for the player to pick where it lands; single strikes go to the target.
-## Aiming starts on the target if the area reaches it, else on the first foe it does reach.
-func _begin_aim(ab: Dictionary, skill: int, spell: String, feat: int = -1) -> void:
-	aiming = {"ab": ab, "skill": skill, "spell": spell, "feat": feat}
+## Aiming starts on the target if the area reaches it, else on the first foe it does reach; a
+## plague vial starts where its burst catches the most foes.
+func _begin_aim(ab: Dictionary, skill: int, spell: String, feat: int = -1, item: String = "") -> void:
+	aiming = {"ab": ab, "skill": skill, "spell": spell, "feat": feat, "item": item}
 	aim_at = b._valid_target(target)
+	if item != "":
+		aim_at = GamePlague.best_aim(b, ab, aim_at)
 	if aim_at not in b.aoe_targets(ab, -1, aim_at):
 		for i in b.living_enemies():
 			if i in b.aoe_targets(ab, -1, i):
@@ -454,7 +461,9 @@ func _confirm_aim() -> void:
 	_show_area({}, -1)
 	if float(plan["ab"].get("mult", 0.0)) > 0.0:
 		target = at
-	if int(plan.get("feat", -1)) >= 0:
+	if str(plan.get("item", "")) != "":
+		_do(func(): b.throw_vial(str(plan["item"]), at))
+	elif int(plan.get("feat", -1)) >= 0:
 		_do(func(): b.use_feat(int(plan["feat"]), at))
 	elif int(plan["skill"]) >= 0:
 		_do(func(): b.use_skill(int(plan["skill"]), at))
@@ -524,6 +533,16 @@ func _build_commands() -> void:
 		btn.mouse_entered.connect(func(): _show_area(s, target))
 		btn.mouse_exited.connect(func(): _show_area({}, -1))
 		col2.add_child(btn)
+	var kit := GamePlague.toxins_carried(d.heir).size() + GamePlague.vials_carried(d.heir).size()
+	if kit > 0 or not b.coating.is_empty():
+		var n := 0
+		for id in d.heir.inventory:
+			if GameItems.kind_of(id) in ["toxin", "vial"]:
+				n += 1
+		var pb := _small_button("Poisons (%d)" % n, func(): _open_poisons())
+		pb.disabled = n == 0
+		pb.tooltip_text = "Coat the blade with a toxin (no turn) or throw a plague vial."
+		col2.add_child(pb)
 	if not GameCombat.class_spell_plan(d.heir.class_id).is_empty() or not b.known_spells().is_empty():
 		var sb := Kit.button("Spells (%d)" % b.known_spells().size(), func(): _open_spells())
 		sb.disabled = b.known_spells().is_empty()
@@ -575,6 +594,7 @@ func _auto_panel() -> void:
 	Kit.clear(command_box)
 	_close_spells()
 	_close_feats()
+	_close_poisons()
 	hint.text = "Auto-battle: %s fights on their own." % d.heir.name
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
@@ -604,7 +624,8 @@ func _small_button(text: String, cb: Callable) -> Button:
 
 func _build_aim_commands() -> void:
 	var ab: Dictionary = aiming["ab"]
-	hint.text = "%s: click a foe to aim, click it again to %s." % [ab["name"], "cast" if str(aiming["spell"]) != "" else "strike"]
+	var verb := "throw" if str(aiming.get("item", "")) != "" else ("cast" if str(aiming["spell"]) != "" else "strike")
+	hint.text = "%s: click a foe to aim, click it again to %s." % [ab["name"], verb]
 	if GameCombat.around_self(ab):
 		hint.text = "%s strikes all around %s, wherever it is aimed." % [ab["name"], d.heir.name]
 	var v := VBoxContainer.new()
@@ -624,7 +645,7 @@ func _build_aim_commands() -> void:
 	side.add_theme_constant_override("separation", 6)
 	side.custom_minimum_size = Vector2(150, 0)
 	command_box.add_child(side)
-	var go := Kit.button("Cast" if str(aiming["spell"]) != "" else "Use", func(): _confirm_aim())
+	var go := Kit.button(verb.capitalize() if verb != "strike" else "Use", func(): _confirm_aim())
 	go.disabled = b.aoe_targets(ab, -1, aim_at).is_empty()
 	side.add_child(go)
 	side.add_child(Kit.button("Cancel", func(): _cancel_aim()))
@@ -753,6 +774,73 @@ func _close_spells() -> void:
 	_show_area({}, -1)
 
 
+# ---------------------------------------------------------------- toxins and vials
+
+## The toxins and plague vials in the pack: a toxin goes on the blade at once and costs no turn;
+## a vial is aimed like an area spell.
+func _open_poisons() -> void:
+	if busy or poison_list != null:
+		return
+	var made := _list_panel("Poisons  -  from the black market", _close_poisons)
+	poison_list = made[0]
+	var rows: VBoxContainer = made[1]
+	var tox := GamePlague.toxins_carried(d.heir)
+	if not tox.is_empty() or not b.coating.is_empty():
+		rows.add_child(Kit.label("Toxins: coat the blade, no turn spent. The next %d blade blows carry it; pure spells do not." % int(GamePlague.setting("coat_hits")), 15, Kit.DIM))
+	if not b.coating.is_empty():
+		rows.add_child(Kit.label("The blade is coated with %s: %d blow%s left." % [GameItems.item_name(str(b.coating["item"])), int(b.coating["hits"]), "" if int(b.coating["hits"]) == 1 else "s"], 14, Kit.GOOD))
+	for id in tox:
+		var t: Dictionary = GameItems.item_def(id)["toxin"]
+		var what := "Venom %d%% of max HP a turn for %d turns%s. Handling it: %d%% risk of %s." % [int(round(float(t["poison_pct"]) * 100.0)), int(t["turns"]),
+			", and weakens %d%%" % int(round(float(t["weaken"]) * 100.0)) if t.has("weaken") else "", int(round(float(t["backfire"]["chance"]) * 100.0)), GameDisease.disease_name(str(t["backfire"]["disease"]))]
+		var item: String = id
+		rows.add_child(_poison_row("Coat: %s (%d)" % [GameItems.item_name(id), GameItems.count(d.heir, id)], what, b.can_coat(id), func(): _coat(item)))
+	var vials := GamePlague.vials_carried(d.heir)
+	if not vials.is_empty():
+		rows.add_child(Kit.label("Plague vials: thrown like an area spell, a turn spent.", 15, Kit.DIM))
+	for id in vials:
+		var ab := GamePlague.vial_ability(id)
+		var v: Dictionary = GameItems.item_def(id)["vial"]
+		var what := "%s  -  %s. The thrower: %d%% risk of %s." % [GameCombat.shape_text(ab), GameCombat.describe(ab), int(round(float(v["splash"]) * 100.0)), GameDisease.disease_name(str(v["disease"]))]
+		var item: String = id
+		var row := _poison_row("Throw: %s (%d)" % [GameItems.item_name(id), GameItems.count(d.heir, id)], what, b.can_throw(id), func(): _throw(item))
+		row.get_child(0).mouse_entered.connect(func(): _show_area(ab, target))
+		row.get_child(0).mouse_exited.connect(func(): _show_area({}, -1))
+		rows.add_child(row)
+
+
+func _poison_row(title: String, what: String, enabled: bool, cb: Callable) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var btn := Kit.button(title, cb, Vector2(300, 34))
+	btn.add_theme_font_size_override("font_size", 15)
+	btn.clip_text = true
+	btn.disabled = not enabled
+	row.add_child(btn)
+	var l := Kit.label(what, 13, Kit.TEXT if enabled else Kit.DIM)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(l)
+	return row
+
+
+func _close_poisons() -> void:
+	if poison_list != null:
+		poison_list.queue_free()
+		poison_list = null
+	_show_area({}, -1)
+
+
+func _coat(item: String) -> void:
+	_close_poisons()
+	_do(func(): b.coat_blade(item))
+
+
+func _throw(item: String) -> void:
+	_close_poisons()
+	_begin_aim(GamePlague.vial_ability(item), -1, "", -1, item)
+
+
 # ---------------------------------------------------------------- feat list
 
 ## The readied feats in a panel over the party's side of the field, so the foes stay in sight:
@@ -850,6 +938,7 @@ func _do(action: Callable) -> void:
 	busy = true
 	_close_spells()
 	_close_feats()
+	_close_poisons()
 	Kit.clear(command_box)
 	hint.text = ""
 	if auto:
@@ -993,6 +1082,10 @@ func _play_one(ev: Dictionary) -> void:
 				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), 0.3)
 		"defend":
 			_float_text(hero_node.position + Vector2(30, 0), "guard", Kit.MP_BLUE)
+		"coat":
+			_float_text(hero_node.position + Vector2(30, 70), "blade coated", GamePlague.toxin_color(), 18)
+		"coat_end":
+			_float_text(hero_node.position + Vector2(30, 0), "coating spent", Kit.DIM, 16)
 
 
 func _hurt_text(ev: Dictionary) -> String:
@@ -1137,6 +1230,10 @@ func _update_marks() -> void:
 ## the room beside its figure (the heir's runs into the open middle of the field).
 func _refresh_chips() -> void:
 	_fill_chips(hero_chips, "heir", 280.0)
+	if not b.coating.is_empty():
+		var c := _chip("TOX %d" % int(b.coating["hits"]), GamePlague.toxin_color(), "%s on the blade: %d blow%s left" % [GameItems.item_name(str(b.coating["item"])), int(b.coating["hits"]), "" if int(b.coating["hits"]) == 1 else "s"])
+		hero_chips.add_child(c)
+		hero_chips.move_child(c, 0)
 	for i in ally_nodes.size():
 		_fill_chips(ally_nodes[i]["chips"], GameBattle.ref_of(i), 128.0)
 	for i in enemy_nodes.size():
@@ -1215,6 +1312,7 @@ func _show_result() -> void:
 	aiming = {}
 	_close_spells()
 	_close_feats()
+	_close_poisons()
 	Kit.clear(command_box)
 	hint.text = ""
 	var msgs: Array = d.finish_battle()
@@ -1240,4 +1338,41 @@ func _show_result() -> void:
 		var l := Kit.label(m, 16)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
+	if d.loot.is_empty():
+		v.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
+	elif auto:   # auto-battle settles the bodies as the autopilot would
+		_loot_done(v, null, GamePlague.bot_loot(d), "Auto-battle: ")
+	else:
+		_loot_choice(v)
+
+
+## The dead of a won hunt: search them (extra gold, maybe a find, a chance of their sickness) or
+## leave them. The victory's own gold is already counted.
+func _loot_choice(v: VBoxContainer) -> void:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	v.add_child(box)
+	var risk := Kit.label(GamePlague.risk_text(d), 15, Kit.BAD if GamePlague.risk(d) > 0.0 else Kit.DIM)
+	risk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(risk)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	box.add_child(row)
+	var search := Kit.button("Search the bodies", func(): _loot_done(v, box, GamePlague.search(d), ""), Vector2(0, 44))
+	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	search.tooltip_text = "Extra gold and maybe something useful. Whatever sickness the dead carry, %s risks catching." % d.heir.name
+	row.add_child(search)
+	var leave := Kit.button("Leave them", func(): _loot_done(v, box, GamePlague.leave(d), ""), Vector2(0, 44))
+	leave.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(leave)
+
+
+func _loot_done(v: VBoxContainer, box: Control, lines: Array, lead: String) -> void:
+	if box != null:
+		box.queue_free()
+	for k in lines.size():
+		var l := Kit.label((lead if k == 0 else "") + str(lines[k]), 16, Kit.BAD if " catches " in str(lines[k]) else Kit.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+	app.autosave()
 	v.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
