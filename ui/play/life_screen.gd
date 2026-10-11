@@ -9,6 +9,7 @@ const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const EventPanel := preload("res://ui/play/event_panel.gd")
 const FeatsPanel := preload("res://ui/play/feats_panel.gd")
+const LootPanel := preload("res://ui/play/loot_panel.gd")
 
 const COLUMN_W := 300
 const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
@@ -69,6 +70,8 @@ func _ready() -> void:
 	_refresh()
 	if d.has_pending_event():
 		_open.call_deferred(EventPanel)
+	elif not d.loot.is_empty():   # closed on a result screen before searching the dead
+		_open.call_deferred(LootPanel)
 
 
 ## A fixed-width side panel that scrolls when a long life fills it.
@@ -292,6 +295,8 @@ func _changed() -> void:
 	_refresh()
 	if d.has_pending_event() and not _has_open(EventPanel):
 		_open(EventPanel)
+	elif not d.loot.is_empty() and not _has_open(LootPanel) and not _has_open(EventPanel):
+		_open(LootPanel)
 
 
 func _open(panel_script: Script) -> void:
