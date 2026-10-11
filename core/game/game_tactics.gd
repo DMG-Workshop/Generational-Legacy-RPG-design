@@ -9,7 +9,8 @@ class_name GameTactics
 extends RefCounted
 
 
-## What a unit can afford this turn: [{ab, cost, skill (class skill index or -1), spell (id or "")}].
+## What a unit can afford this turn: [{ab, cost, skill (class skill index or -1), spell (id or ""),
+## feat (id or ""), hp (HP the feat costs)}]. A feat costs no MP; it is an option while it is ready.
 static func options(b: GameBattle, by: int) -> Array:
 	var u := b.unit(by)
 	var out: Array = []
@@ -25,6 +26,10 @@ static func options(b: GameBattle, by: int) -> Array:
 		var c := GameCombat.ability_cost(sp, u.level)
 		if u.mp >= c:
 			out.append({"ab": sp, "cost": c, "skill": -1, "spell": id})
+	for id in b.unit_feats(by):
+		if b.feat_block(by, id) == "":
+			out.append({"ab": GameFeats.def(id), "cost": 0, "skill": -1, "spell": "", "feat": id,
+				"hp": GameFeats.hp_cost(u, id, int(b.unit_numbers(by)["max_hp"]))})
 	return out
 
 
@@ -33,11 +38,11 @@ static func _frac(hp: int, max_hp: int) -> float:
 
 
 static func _plan(o: Dictionary, target: int) -> Dictionary:
-	return {"act": "ability", "ab": o["ab"], "cost": o["cost"], "skill": o["skill"], "spell": o["spell"], "target": target}
+	return {"act": "ability", "ab": o["ab"], "cost": o["cost"], "skill": o["skill"], "spell": o["spell"], "feat": o.get("feat", ""), "target": target}
 
 
 ## One decision: {"act": "pass"|"potion"|"attack"|"ability", "target", and for an ability
-## "ab", "cost", "skill", "spell"}. `by` is -1 for the heir, else the ally's index.
+## "ab", "cost", "skill", "spell", "feat"}. `by` is -1 for the heir, else the ally's index.
 static func choose(b: GameBattle, by: int) -> Dictionary:
 	if by < 0 and b.heir_skip:
 		return {"act": "pass"}
@@ -95,7 +100,7 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 				"single":
 					aims = [aim, ctx["worst"]] if ab.has("statuses") and ctx["worst"] != aim else [aim]
 				_:
-					aims = _area_aims(ab, ctx, aim, prints)
+					aims = [aim] if GameCombat.around_self(ab) else _area_aims(ab, ctx, aim, prints)
 		var seen := {}
 		var mp_back := 0.0
 		if ab.get("mana", false):
@@ -115,7 +120,8 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 			var v := _value(b, by, ab, t, ctx, hits)
 			if int(o["skill"]) == main and main >= 0:
 				main_v = maxf(main_v, v)
-			cands.append({"plan": _plan(o, t), "value": v, "cost": int(o["cost"]), "other": float(ab.get("mult", 0.0)) <= 0.0, "mp_back": mp_back})
+			cands.append({"plan": _plan(o, t), "value": v, "cost": int(o["cost"]), "other": float(ab.get("mult", 0.0)) <= 0.0,
+				"mp_back": mp_back, "hp": float(o.get("hp", 0))})
 	if main >= 0:
 		ctx["mp_price"] = maxf(0.0, main_v - blow) / float(maxi(1, GameBattle.unit_skill_cost(me, main)))
 	var price := float(ctx["mp_price"]) * float(ctx["scarcity"])
@@ -128,7 +134,7 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 			if floor_price < 0.0:
 				floor_price = maxf(price, _heal_worth(b, by) * float(GameCombat.setting("bot_mp_floor")))
 			cost_price = floor_price
-		var score := float(c["value"]) + (float(c["mp_back"]) - float(c["cost"])) * cost_price
+		var score := float(c["value"]) + (float(c["mp_back"]) - float(c["cost"])) * cost_price - float(c.get("hp", 0.0))
 		if c["other"] and score > 0.0:
 			score /= margin
 		c["score"] = score
@@ -173,8 +179,9 @@ static func _heal_worth(b: GameBattle, by: int) -> float:
 	return float(nums["heal_worth"])
 
 
-## A companion with no spells and no area skill has nothing to weigh: the class strike on the
-## heir's focus while MP lasts, else a plain blow.
+## A companion with no spells and no area or status skill has little to weigh: its feat when one
+## is ready and lands harder than its other blows, else the class strike on the heir's focus while
+## MP lasts, else a plain blow.
 static func _plain(u: GameHeir) -> bool:
 	if not u.spells.is_empty():
 		return false
@@ -189,10 +196,29 @@ static func _plain_blow(b: GameBattle, by: int, opts: Array) -> Dictionary:
 	var t := b._valid_target(b.focus)
 	if t not in awake and not awake.is_empty():
 		t = awake[0]
+	var plan := {"act": "attack", "target": t}
+	var feats: Array = []
 	for o in opts:
-		if o["ab"].get("type", "") == "damage":
-			return _plan(o, t)
-	return {"act": "attack", "target": t}
+		if str(o.get("feat", "")) != "":
+			feats.append(o)
+		elif plan["act"] == "attack" and o["ab"].get("type", "") == "damage":
+			plan = _plan(o, t)
+	if feats.is_empty():
+		return plan
+	# A feat is aimed at the focus, and never where it would wake a sleeper.
+	var nums := b.unit_numbers(by)
+	var best := b.estimate(by, plan.get("ab", {}), t, nums)
+	for o in feats:
+		var hits := b.aoe_hits(o["ab"], by, t)
+		if hits.is_empty() or hits.any(func(h): return h[0] not in awake):
+			continue
+		var v := -float(o["hp"])
+		for h in b.expected_hits(by, o["ab"], t, hits, nums):
+			v += minf(float(h[1]), float(b.enemies[h[0]]["hp"]))
+		if v > best:
+			best = v
+			plan = _plan(o, t)
+	return plan
 
 
 static func _keep_better(cur: Dictionary, cand: Dictionary) -> Dictionary:
@@ -393,30 +419,49 @@ static func _value(b: GameBattle, by: int, ab: Dictionary, t: int, ctx: Dictiona
 	return v
 
 
-## What a party blessing spares, once a battle and never twice at once: a ward soaks blows,
-## regrowth mends them, haste adds actions.
+## What a party blessing spares, never twice at once (a spell's once a battle; a feat's again once
+## its cooldown is over): a ward soaks blows, regrowth mends them, haste adds actions, a rally adds
+## damage. A taunt is weighed on its own (see _taunt_value).
 static func _blessing_value(b: GameBattle, by: int, ab: Dictionary, ctx: Dictionary) -> float:
-	if int(b.uses.get("%s/%s" % [GameBattle.ref_of(by), ab.get("name", "")], 0)) > 0:
+	if not ab.has("feat") and int(b.uses.get("%s/%s" % [GameBattle.ref_of(by), ab.get("name", "")], 0)) > 0:
 		return -INF
 	var v := 0.0
 	var members: Array = [-1] + b.conscious_allies()
 	var strike := float(ctx["total"]) / float(members.size())   # what one member's turn of blows spares
 	for st in ab.get("statuses", []):
-		if b.has_status("heir", str(st["id"])):
+		if b.has_status("heir" if str(st.get("on", "party")) == "party" else GameBattle.ref_of(by), str(st["id"])):
 			return -INF
 		var def := GameCombat.status_def(str(st["id"]))
 		var turns := minf(float(st.get("turns", def.get("default_turns", 1))), float(ctx["turns"]))
 		var pot := float(st.get("potency", def.get("default_potency", 1.0)))
+		if def.get("draws", false):
+			v += _taunt_value(b, by, ctx, turns, pot)
+			continue
 		var incoming := float(ctx["total"]) * turns / float(members.size())
-		for who in members:
+		var mods: Dictionary = def.get("mods", {})
+		for who in (members if str(st.get("on", "party")) == "party" else [by]):
 			var max_hp := float(b.unit_numbers(who)["max_hp"])
 			if def.get("absorb", false):
 				v += minf(pot * max_hp, incoming)
 			elif def.get("tick", "") == "heal":
 				v += minf(pot * max_hp * turns, incoming + max_hp - float(b.unit(who).hp))
-			elif def.get("mods", {}).has("extra_action"):
-				v += pot * float(def["mods"]["extra_action"]) * turns * strike
+			elif mods.has("extra_action"):
+				v += pot * float(mods["extra_action"]) * turns * strike
+			elif float(mods.get("damage_dealt", 0.0)) > 0.0:
+				v += pot * float(mods["damage_dealt"]) * turns * strike
 	return v
+
+
+## Drawing every foe onto oneself for `turns`: every blow then lands on the one braced for it, so
+## the party is spared the guard's share of them all. With anyone else standing, that pulls their
+## blows onto the taunter too, which is only worth it while the taunter is hale.
+static func _taunt_value(b: GameBattle, by: int, ctx: Dictionary, turns: float, pot: float) -> float:
+	if b._taunting() > -2:
+		return -INF
+	var alone := by < 0 and b.conscious_allies().is_empty()
+	if not alone and _frac(b.unit(by).hp, int(b.unit_numbers(by)["max_hp"])) < float(GameFeats.setting("bot_taunt_min_hp")):
+		return -INF
+	return pot * float(ctx["total"]) * turns
 
 
 ## Carries out a plan for the heir through the battle's own actions.
@@ -427,9 +472,30 @@ static func act(b: GameBattle, plan: Dictionary) -> void:
 		"potion":
 			b.use_potion()
 		"ability":
-			if int(plan.get("skill", -1)) >= 0:
+			if str(plan.get("feat", "")) != "":
+				b.use_feat(b.heir.equipped_feats.find(plan["feat"]), int(plan["target"]))
+			elif int(plan.get("skill", -1)) >= 0:
 				b.use_skill(int(plan["skill"]), int(plan["target"]))
 			else:
 				b.cast_spell(str(plan["spell"]), int(plan["target"]))
 		_:
 			b.attack(int(plan.get("target", b.first_target())))
+
+
+## The heir's turn decided and taken for them, as the autopilot and auto-battle do. A plan the
+## battle turns down (an area that reaches no one by now) becomes a plain blow, so a turn is never
+## lost to it. Returns the plan carried out.
+static func auto_turn(b: GameBattle) -> Dictionary:
+	var plan := choose(b, -1)
+	var before := b.turn
+	act(b, plan)
+	if b.result == "" and b.turn == before:
+		plan = {"act": "attack", "target": b.first_target()}
+		b.attack(int(plan["target"]))
+	return plan
+
+
+## Whether the battle under way fights itself from its first turn: a hunt or hard hunt begun with
+## auto-battle on. The player may switch it on or off in any battle.
+static func auto_from_start(d: GameDynasty) -> bool:
+	return d.auto_battle and d.battle != null and d.battle_kind in ["hunt", "hunt_hard"]
