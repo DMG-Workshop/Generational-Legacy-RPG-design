@@ -34,6 +34,11 @@ static func toxin_color() -> Color:
 	return Color(str(GameCombat.status_def(str(data()["toxin_status"])).get("color", "#9acd32")))
 
 
+## The colour a plague-touched foe's name is shown in.
+static func infected_color() -> Color:
+	return Color(str(data()["settings"].get("infected_color", "#c8b050")))
+
+
 # ---------------------------------------------------------------- carriers
 
 ## What a foe's body may pass on: [{disease, chance}].

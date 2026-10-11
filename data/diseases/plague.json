@@ -3,6 +3,7 @@
     "infected_spawn": 0.06,
     "infected_chance": 0.02,
     "infected_prefix": "Plague-touched",
+    "infected_color": "#c8b050",
     "infected_pool": [
       {"disease": "rat_plague", "weight": 2},
       {"disease": "red_flux", "weight": 3},
