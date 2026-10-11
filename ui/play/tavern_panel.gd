@@ -230,6 +230,12 @@ func _member_card(m: Dictionary) -> Control:
 	v.add_child(Kit.label(u.name, 17, Kit.ACCENT))
 	v.add_child(Kit.label("%s %s  Lv%s" % [u.race()["name"], u.cls()["name"], GameText.num(u.level)], 14, Kit.DIM))
 	v.add_child(_wrap(p.age_text(d, id), 13, OLD if p.is_old(d, id) else Kit.DIM))
+	for e in u.diseases:
+		var info := GameDisease.describe_entry(e)
+		var sick := _wrap("Sick: %s (%s), %s" % [info["name"], info["stage_name"], info["outlook"]], 13, Kit.BAD)
+		sick.tooltip_text = "%s\n%s\nThe temple can cure it." % [info["effects"], info["description"]]
+		sick.mouse_filter = Control.MOUSE_FILTER_PASS
+		v.add_child(sick)
 	# Health and mana side by side keep a full party of three on screen.
 	var gauges := HBoxContainer.new()
 	gauges.add_theme_constant_override("separation", 12)
@@ -303,6 +309,8 @@ func _past_line(id: String, e: Dictionary) -> String:
 			return "%s fell in battle at %d, in year %s%s." % [e["name"], int(e["age"]), GameText.num(int(e["year"])), fought]
 		"retired":
 			return "%s retired to %s at %d, in year %s%s." % [e["name"], dynasty.party._place_name(id), int(e["age"]), GameText.num(int(e["year"])), fought]
+		"sick":
+			return "%s died at %d in year %s, %s, in the house's service%s." % [e["name"], int(e["age"]), GameText.num(int(e["year"])), e.get("cause", "taken by sickness"), fought]
 	var where := "in the house's service" if bool(e.get("served", true)) else "after leaving the house's service"
 	return "%s died of old age at %d in year %s, %s%s." % [e["name"], int(e["age"]), GameText.num(int(e["year"])), where, fought]
 
@@ -338,5 +346,6 @@ static func summary_lines(d: GameDynasty) -> Array:
 		if d.party.is_old(d, m["id"]):
 			years += ", " + d.party.old_text(d, m["id"])
 		# A no-break space keeps "HP" with its numbers when the line wraps.
-		out.append("%s (%s), %s %s Lv%s  HP\u00a0%s/%s" % [u.name, years, u.race()["name"], u.cls()["name"], GameText.num(u.level), GameText.num(u.hp), GameText.num(u.max_hp())])
+		var sick := "" if u.diseases.is_empty() else "  Sick:\u00a0" + GameDisease.status_text(u)
+		out.append("%s (%s), %s %s Lv%s  HP\u00a0%s/%s%s" % [u.name, years, u.race()["name"], u.cls()["name"], GameText.num(u.level), GameText.num(u.hp), GameText.num(u.max_hp()), sick])
 	return out

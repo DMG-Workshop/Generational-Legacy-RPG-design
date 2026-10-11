@@ -5,7 +5,8 @@
 class_name GameParty
 extends RefCounted
 
-# [{id, name, hp, mp, level, gen, due, battles, hired_gen}] - due is upkeep owed but not yet paid.
+# [{id, name, hp, mp, level, gen, due, battles, hired_gen, diseases}] - due is upkeep owed but not yet
+# paid; diseases is the companion's sickness (see GameDisease), shared with their unit.
 var members: Array = []
 # companion id -> {name, status, gen, first_gen, battles, fallen: [names], line, past: [...],
 #                  born?, rolled?, back_year?}
@@ -93,9 +94,22 @@ func unit(d: GameDynasty, m: Dictionary) -> GameHeir:
 	return u
 
 
-## The member's body at their recorded level and generation, as old as they are now, unwounded.
+## The member's body at their recorded level and generation, as old as they are now, unwounded,
+## carrying their sickness.
 func _body(d: GameDynasty, m: Dictionary) -> GameHeir:
-	return build_unit(m["id"], int(m["level"]), int(m["gen"]), m["name"], decline(d, m["id"]))
+	var u := build_unit(m["id"], int(m["level"]), int(m["gen"]), m["name"], decline(d, m["id"]))
+	if not m.has("diseases"):
+		m["diseases"] = []
+	u.diseases = m["diseases"]
+	return u
+
+
+## The member's body for sickness rules (GameDisease and GamePlague): their age and wounds too.
+func sick_body(d: GameDynasty, m: Dictionary) -> GameHeir:
+	var u := _body(d, m)
+	u.age = age(d, m["id"])
+	u.hp = clampi(int(m["hp"]), 1, u.max_hp())
+	return u
 
 
 ## What whoever holds this role now would bring to the current heir (for the tavern).
@@ -305,7 +319,7 @@ func hire(d: GameDynasty, id: String) -> String:
 	history[id] = rec
 	var u := offer_unit(d, id)
 	members.append({"id": id, "name": nm, "hp": u.hp, "mp": u.mp, "level": u.level, "gen": d.gen,
-		"due": 0.0, "battles": 0, "hired_gen": d.gen})
+		"due": 0.0, "battles": 0, "hired_gen": d.gen, "diseases": []})
 	var c := def(id)
 	var text: String
 	if returning and is_old(d, id):
@@ -398,6 +412,7 @@ func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 		var u := _body(d, m)
 		m["hp"] = mini(u.max_hp(), int(m["hp"]) + int(ceil(float(u.max_hp()) * mend)))
 		m["mp"] = mini(u.max_mp(), int(m["mp"]) + int(ceil(float(u.max_mp()) * mend)))
+	GamePlague.party_years(d, self, years, msgs)
 
 
 ## Everyone the house has hired grows older with the calendar, in its service or not. Past old
@@ -542,6 +557,22 @@ func _fall(d: GameDynasty, m: Dictionary) -> String:
 	return "%s falls in the fighting and does not rise. House %s will remember." % [m["name"], d.dynasty_name]
 
 
+## A sickness takes a companion in service: kept in the record like a death of old age, with its
+## cause, and a successor may take up the work after a few years. Returns the journal line.
+func die_of_sickness(d: GameDynasty, m: Dictionary, cause: String) -> String:
+	var id: String = m["id"]
+	var nm: String = m["name"]
+	var years := int(age(d, id))
+	_settle(d, m)
+	_part(d, m, "dead")
+	_close_line(d, id, {"name": nm, "end": "sick", "cause": cause, "age": years, "year": int(d.world.year) + 1, "gen": d.gen, "served": true})
+	var rec: Dictionary = history[id]
+	if def(id).has("successor"):
+		rec["name"] = str(def(id)["successor"]).replace("{given}", GameInheritance.random_name(d.rng))
+		rec["back_year"] = d.world.year + float(setting("successor_wait_years"))
+	return GamePlague.text("companion_died", {"name": nm, "age": years, "cause": cause, "house": d.dynasty_name})
+
+
 ## The names of the last few who fell in a role; `line` still counts every holder.
 static func _recent_fallen(fallen: Array) -> Array:
 	return fallen.slice(maxi(0, fallen.size() - int(GameAges.setting("party_fallen_kept"))))
@@ -610,6 +641,7 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 			"id": id, "name": str(raw.get("name", def(id)["name"])), "hp": int(raw.get("hp", 1)), "mp": int(raw.get("mp", 0)),
 			"level": int(raw.get("level", 1)), "gen": int(raw.get("gen", 1)), "due": float(raw.get("due", 0.0)),
 			"battles": int(raw.get("battles", 0)), "hired_gen": int(raw.get("hired_gen", 1)),
+			"diseases": GameDisease.load_list(raw.get("diseases", [])),
 		})
 	var h = v.get("history", {})
 	if typeof(h) != TYPE_DICTIONARY:
@@ -634,6 +666,8 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 				rec["past"].append({"name": str(e.get("name", "")), "end": str(e.get("end", "died")), "age": int(e.get("age", 0)),
 					"year": int(e.get("year", 1)), "gen": int(e.get("gen", 1)), "served": bool(e.get("served", true)),
 					"battles": int(e.get("battles", 0))})
+				if e.has("cause"):
+					rec["past"].back()["cause"] = str(e["cause"])
 		for key in ["born", "rolled", "back_year"]:
 			if r.has(key):
 				rec[key] = float(r[key])

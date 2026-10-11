@@ -29,6 +29,9 @@ var feat_ready: Dictionary = {}   # ref -> {feat id -> the round from which that
 var fields: Array = []         # ground an ability fouled: [{name, x, y, radius, from, until, statuses, source, power, color, end}]
 var _nums: Dictionary = {}     # unit index -> unit_numbers, worked out once a battle
 var _gear: Dictionary = {}     # unit index -> {feat id -> why its weapon or this ground rules it out}
+var coating: Dictionary = {}   # {item, hits}: a toxin on the heir's blade (see GamePlague)
+var exposures: Array = []      # [{disease, chance, source}]: what the heir risked, rolled once the battle is settled
+var _blade: bool = false       # the heir's blows now come from the blade, so a coating rides on them
 
 
 func _init(p_heir: GameHeir, p_enemies: Array, p_rng: RandomNumberGenerator) -> void:
@@ -628,6 +631,8 @@ func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: 
 	_lose_hp(ref, amount - absorbed)
 	if e["hp"] > 0:
 		_after_blow(ref)
+	if by < 0 and _blade and not coating.is_empty():
+		_envenom(idx)
 	return hp_before - int(e["hp"])
 
 
@@ -636,6 +641,7 @@ func attack(target: int) -> void:
 		return
 	target = _valid_target(target)
 	focus = target
+	_blade = true
 	_hit_enemy(target, float(unit_numbers(-1)["str"]), 1.0, 0.0, 0.0)
 	_heir_haste()
 	_end_player_turn()
@@ -877,6 +883,8 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 	if power < 0.0:
 		var nums := unit_numbers(by)
 		power = float(nums.get(str(ab.get("stat", "str")), nums["str"]))
+	if by < 0:
+		_blade = str(ab.get("stat", "str")) != "mag"
 	casts += 1
 	var name := str(ab.get("name", "?"))
 	var aoe := GameCombat.is_aoe(ab)
@@ -977,7 +985,65 @@ func _heir_haste() -> void:
 	if result != "" or living_enemies().is_empty() or not _extra_action("heir"):
 		return
 	var t := _valid_target(focus)
+	_blade = true
 	_hit_enemy(t, float(unit_numbers(-1)["str"]), 1.0, 0.0, 0.0)
+
+
+# ---------------------------------------------------------------- toxins and vials
+
+## The heir may coat the blade with a toxin from the pack while no coating is on it.
+func can_coat(item: String) -> bool:
+	return result == "" and not heir_skip and coating.is_empty() and item in heir.inventory and GameItems.kind_of(item) == "toxin"
+
+
+## Works a toxin into the blade; it takes no turn. The heir's next blade blows (plain blows and
+## skills that are not pure magic) carry its statuses. The handling may make the heir sick.
+func coat_blade(item: String) -> void:
+	if not can_coat(item):
+		return
+	events = []
+	heir.inventory.erase(item)
+	coating = {"item": item, "hits": int(GamePlague.setting("coat_hits"))}
+	events.append({"type": "coat", "item": item})
+	_say(GamePlague.text("coat", {"h": heir.name, "item": GameItems.item_name(item)}))
+	var bf: Dictionary = GameItems.item_def(item)["toxin"].get("backfire", {})
+	if not bf.is_empty():
+		exposures.append({"disease": str(bf["disease"]), "chance": float(bf["chance"]), "source": "toxin"})
+
+
+## A landed blade blow: the coating's statuses roll on the foe, and one of its hits is spent.
+func _envenom(idx: int) -> void:
+	var item := str(coating["item"])
+	if enemies[idx]["hp"] > 0:
+		for st in GamePlague.coat_statuses(item):
+			try_status(enemy_ref(idx), st, "heir")
+	coating["hits"] = int(coating["hits"]) - 1
+	if int(coating["hits"]) <= 0:
+		coating = {}
+		events.append({"type": "coat_end", "item": item})
+		_say(GamePlague.text("coat_spent", {"h": heir.name, "item": GameItems.item_name(item)}))
+
+
+func can_throw(item: String) -> bool:
+	return result == "" and item in heir.inventory and GameItems.kind_of(item) == "vial"
+
+
+## Throws a plague vial: a burst that sickens and weakens every foe inside (GamePlague.vial_ability).
+## Thrown where it reaches no foe, it is not thrown. The thrower risks the splash.
+func throw_vial(item: String, target: int) -> void:
+	if result == "" and not heir_skip and not can_throw(item):
+		return
+	if not _begin_action():
+		return
+	var ab := GamePlague.vial_ability(item)
+	if aoe_hits(ab, -1, target).is_empty():
+		return
+	heir.inventory.erase(item)
+	var v: Dictionary = GameItems.item_def(item)["vial"]
+	exposures.append({"disease": str(v["disease"]), "chance": float(v.get("splash", 0.0)), "source": "vial"})
+	resolve_ability(-1, ab, target)
+	_heir_haste()
+	_end_player_turn()
 
 
 # ---------------------------------------------------------------- other heir actions
