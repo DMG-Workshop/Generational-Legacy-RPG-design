@@ -47,6 +47,7 @@ func _init() -> void:
 	test_old_saves()
 	test_determinism()
 	test_auto_battle()
+	test_lost_turn_and_quiet()
 	_ui_tests.call_deferred()
 
 
@@ -1003,6 +1004,33 @@ func test_auto_battle() -> void:
 	ok(GameDynasty.from_dict(raw).auto_battle, "the switch survives a save")
 	raw.erase("auto_battle")
 	ok(not GameDynasty.from_dict(raw).auto_battle, "an older save loads with it off")
+
+
+## A heir who lost the turn and presses a feat only lets the turn pass: the feat is not spent. And
+## every action that takes time ends the quiet after a rest, working and exploring included.
+func test_lost_turn_and_quiet() -> void:
+	var d := _dyn("warrior", 20, 518, "steel_sword")
+	_ready_feats(d, ["cleave", "flurry"])
+	var b := _battle(d, 3)
+	_sturdy(b)
+	b.heir_skip = true
+	var t := b.turn
+	b.use_feat(0, 0)
+	ok(b.turn == t + 1 and not b.heir_skip, "a lost turn passes when a feat is pressed")
+	ok(b.feat_wait(-1, "cleave") == 0 and b.feat_wait(-1, "flurry") == 0 and _feat_casts(b).is_empty(), "and the feat is neither used nor cooling")
+	d.battle = null
+	var r := _dyn("rogue", 15, 519, "iron_sword")
+	r.world.visit("whisperwood")
+	for what in ["work", "explore"]:
+		r.rest()
+		ok(r.heir.downtime and GameFeats.manage_block(r) == "", "rested in the wilds before %s" % what)
+		if what == "work":
+			r.work()
+		else:
+			r.explore()
+		ok(r.state != "life" or (not r.heir.downtime and GameFeats.manage_block(r) != ""), "%s ends the quiet" % what)
+		if not r.pending_event.is_empty():
+			r.resolve_event(0)
 
 
 # ---------------------------------------------------------------- screens
