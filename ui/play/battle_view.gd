@@ -1083,7 +1083,7 @@ func _play_one(ev: Dictionary) -> void:
 		"defend":
 			_float_text(hero_node.position + Vector2(30, 0), "guard", Kit.MP_BLUE)
 		"coat":
-			_float_text(hero_node.position + Vector2(30, 0), "blade coated", GamePlague.toxin_color(), 18)
+			_float_text(hero_node.position + Vector2(30, 70), "blade coated", GamePlague.toxin_color(), 18)
 		"coat_end":
 			_float_text(hero_node.position + Vector2(30, 0), "coating spent", Kit.DIM, 16)
 
