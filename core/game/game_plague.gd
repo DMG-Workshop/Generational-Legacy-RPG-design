@@ -104,15 +104,25 @@ static func offer(_d: GameDynasty, b: GameBattle) -> Dictionary:
 	return {"gold": gold, "item_chance": chance, "foes": foes}
 
 
-## The chance of catching something while searching, after resistance and what the heir already has.
-static func risk(d: GameDynasty) -> float:
-	var clean := 1.0
-	for f in d.loot.get("foes", []):
+## The one sickness a search risks: the likeliest among the dead after resistance, leaving out
+## what the heir already has. A search is one exposure, however many carriers lie there.
+## {disease, chance (before resistance), risk (after)}; {} when the dead are clean.
+static func exposure(h: GameHeir, loot: Dictionary) -> Dictionary:
+	var best := {}
+	for f in loot.get("foes", []):
 		for c in f["carries"]:
 			var id := str(c["disease"])
-			if not GameDisease.has(d.heir, id):
-				clean *= 1.0 - float(c["chance"]) * (1.0 - GameDisease.resistance(d.heir, id))
-	return 1.0 - clean
+			if GameDisease.has(h, id):
+				continue
+			var r := float(c["chance"]) * (1.0 - GameDisease.resistance(h, id))
+			if best.is_empty() or r > float(best["risk"]):
+				best = {"disease": id, "chance": float(c["chance"]), "risk": r}
+	return best
+
+
+## The chance of catching something while searching, after resistance and what the heir already has.
+static func risk(d: GameDynasty) -> float:
+	return float(exposure(d.heir, d.loot).get("risk", 0.0))
 
 
 ## The sicknesses among the dead, worst first: [id, ...].
@@ -147,13 +157,14 @@ static func risk_text(d: GameDynasty) -> String:
 	return "%s sickness (%s): %s risk of catching it." % [who, ", ".join(names), odds]
 
 
-## Search the bodies: extra gold, maybe a find, and a contagion check for every carrier.
+## Search the bodies: extra gold, maybe a find, and one contagion check (see exposure).
 static func search(d: GameDynasty) -> Array:
 	var loot := d.loot
 	d.loot = {}
 	if loot.is_empty() or d.state != "life":
 		return []
 	var h := d.heir
+	var x := exposure(h, loot)
 	var out: Array = []
 	var spread := float(setting("loot_gold_spread"))
 	var gold := maxi(1, int(round(float(loot["gold"]) * float(setting("loot_gold_share")) * (1.0 + spread * (2.0 * d.rng.randf() - 1.0)))))
@@ -161,11 +172,10 @@ static func search(d: GameDynasty) -> Array:
 	out.append(text("search", {"h": h.name, "gold": GameText.num(gold)}))
 	if d.rng.randf() < float(loot["item_chance"]):
 		out.append(_find(d))
-	for f in loot["foes"]:
-		for c in f["carries"]:
-			var line := GameDisease.contagion_check(d, h, str(c["disease"]), float(c["chance"]), "corpse")
-			if line != "":
-				out.append(line)
+	if not x.is_empty():
+		var line := GameDisease.contagion_check(d, h, str(x["disease"]), float(x["chance"]), "corpse")
+		if line != "":
+			out.append(line)
 	for m in out:
 		d._say(m)
 	return out
@@ -283,6 +293,18 @@ static func vial_ability(item_id: String) -> Dictionary:
 		"statuses": [{"id": sick, "turns": turns}, {"id": "weaken", "potency": float(v.get("weaken", 0.1)), "turns": turns}]}
 	_vials[item_id] = ab
 	return ab
+
+
+## Where a thrown burst catches the most living foes; `prefer` (the current target) wins a tie.
+static func best_aim(b: GameBattle, ab: Dictionary, prefer: int) -> int:
+	var best := prefer
+	var most := b.aoe_targets(ab, -1, prefer).size() if prefer >= 0 else 0
+	for i in b.living_enemies():
+		var n := b.aoe_targets(ab, -1, i).size()
+		if n > most:
+			best = i
+			most = n
+	return best
 
 
 ## Auto-battle and the autopilot coat the blade (it takes no turn) when the foes left would take

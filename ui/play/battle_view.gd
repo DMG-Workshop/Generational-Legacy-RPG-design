@@ -430,10 +430,13 @@ func _on_foe_hover(idx: int, inside: bool) -> void:
 
 
 ## An area ability waits for the player to pick where it lands; single strikes go to the target.
-## Aiming starts on the target if the area reaches it, else on the first foe it does reach.
+## Aiming starts on the target if the area reaches it, else on the first foe it does reach; a
+## plague vial starts where its burst catches the most foes.
 func _begin_aim(ab: Dictionary, skill: int, spell: String, feat: int = -1, item: String = "") -> void:
 	aiming = {"ab": ab, "skill": skill, "spell": spell, "feat": feat, "item": item}
 	aim_at = b._valid_target(target)
+	if item != "":
+		aim_at = GamePlague.best_aim(b, ab, aim_at)
 	if aim_at not in b.aoe_targets(ab, -1, aim_at):
 		for i in b.living_enemies():
 			if i in b.aoe_targets(ab, -1, i):

@@ -16,7 +16,7 @@
    "element": "nature",
    "swarm": true,
    "inflicts": [{"id": "poison", "chance": 0.15, "turns": 3, "potency": 0.02}],
-   "carries": [{"disease": "bog_fever", "chance": 0.005}]
+   "carries": [{"disease": "bog_fever", "chance": 0.002}]
   },
   {
    "id": "wolf",
@@ -49,7 +49,7 @@
    "color": "#5e8c3a",
    "element": "",
    "swarm": true,
-   "carries": [{"disease": "red_flux", "chance": 0.005}]
+   "carries": [{"disease": "red_flux", "chance": 0.002}]
   },
   {
    "id": "bandit",
@@ -81,7 +81,7 @@
    "color": "#d8d8c8",
    "element": "shadow",
    "swarm": true,
-   "carries": [{"disease": "grave_rot", "chance": 0.01}]
+   "carries": [{"disease": "grave_rot", "chance": 0.004}]
   },
   {
    "id": "harpy",
@@ -114,7 +114,7 @@
    "gold": 20,
    "color": "#4e6b3a",
    "element": "nature",
-   "carries": [{"disease": "bog_fever", "chance": 0.015}]
+   "carries": [{"disease": "bog_fever", "chance": 0.006}]
   },
   {
    "id": "fire_imp",
@@ -164,7 +164,7 @@
    "color": "#7f8fbf",
    "element": "shadow",
    "row": "back",
-   "carries": [{"disease": "grave_rot", "chance": 0.015}]
+   "carries": [{"disease": "grave_rot", "chance": 0.006}]
   },
   {
    "id": "drake",
@@ -295,7 +295,7 @@
    "element": "shadow",
    "row": "back",
    "inflicts": [{"id": "weaken", "chance": 0.2, "turns": 2, "potency": 0.2}],
-   "carries": [{"disease": "grave_rot", "chance": 0.02}]
+   "carries": [{"disease": "grave_rot", "chance": 0.008}]
   },
   {
    "id": "abyssal_knight",
@@ -375,7 +375,7 @@
    "color": "#7a6a58",
    "element": "",
    "swarm": true,
-   "carries": [{"disease": "rat_plague", "chance": 0.01}]
+   "carries": [{"disease": "rat_plague", "chance": 0.005}]
   },
   {
    "id": "ghoul",
@@ -391,7 +391,7 @@
    "gold": 18,
    "color": "#8c9a7a",
    "element": "shadow",
-   "carries": [{"disease": "grave_rot", "chance": 0.015}, {"disease": "red_flux", "chance": 0.01}]
+   "carries": [{"disease": "grave_rot", "chance": 0.006}, {"disease": "red_flux", "chance": 0.004}]
   },
   {
    "id": "grimfang",

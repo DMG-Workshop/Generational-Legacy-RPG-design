@@ -495,14 +495,19 @@ static func act(b: GameBattle, plan: Dictionary) -> void:
 ## battle turns down (an area that reaches no one by now) becomes a plain blow, so a turn is never
 ## lost to it. A toxin in the pack may first go on the blade (no turn). Returns the plan carried out.
 static func auto_turn(b: GameBattle) -> Dictionary:
-	if not b.heir.inventory.is_empty():
+	var coated: Array = []
+	if not b.heir.inventory.is_empty() and b.coating.is_empty():
 		GamePlague.auto_coat(b)
+		if not b.coating.is_empty():
+			coated = b.events.duplicate()   # the turn's action starts its own events; keep the coating's to show
 	var plan := choose(b, -1)
 	var before := b.turn
 	act(b, plan)
 	if b.result == "" and b.turn == before:
 		plan = {"act": "attack", "target": b.first_target()}
 		b.attack(int(plan["target"]))
+	if not coated.is_empty():
+		b.events = coated + b.events
 	return plan
 
 

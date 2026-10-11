@@ -1,7 +1,7 @@
 {
   "settings": {
-    "infected_spawn": 0.06,
-    "infected_chance": 0.02,
+    "infected_spawn": 0.03,
+    "infected_chance": 0.015,
     "infected_prefix": "Plague-touched",
     "infected_color": "#c8b050",
     "infected_pool": [
@@ -24,7 +24,7 @@
     ],
     "coat_hits": 3,
     "vial_radius": 4.5,
-    "bot_loot_max_risk": 0.02,
+    "bot_loot_max_risk": 0.005,
     "bot_coat_min_blows": 3.0,
     "bot_item_worth": 0.2,
     "companion_cure_stage_step": 0.5

@@ -145,7 +145,7 @@ func _test_infected_foes() -> void:
 	_check(elite["name"] == "Elite Plague-touched Dire Wolf", "an elite stays an elite first: %s" % elite["name"])
 	_tune("infected_spawn", 0.0)
 	b = _hunt(d, "skeleton", 2)
-	_check(GamePlague.carried(b.enemies[0]) == [{"disease": "grave_rot", "chance": 0.01}], "an uninfected skeleton carries at its base odds")
+	_check(GamePlague.carried(b.enemies[0]) == [{"disease": "grave_rot", "chance": float(GameCombat.creature_def("skeleton")["carries"][0]["chance"])}], "an uninfected skeleton carries at its base odds")
 	d.battle = null
 	_tune("infected_spawn", old)
 
@@ -253,8 +253,28 @@ func _test_contagion_rates() -> void:
 		{"id": "wolf", "name": "Wolf", "carries": []}]}
 	d.heir.diseases = []
 	var r := GamePlague.risk(d)
-	var exp := 1.0 - (1.0 - 0.01 * (1.0 - GameDisease.resistance(d.heir, "grave_rot"))) * (1.0 - 0.015 * (1.0 - GameDisease.resistance(d.heir, "grave_rot"))) * (1.0 - 0.01 * (1.0 - GameDisease.resistance(d.heir, "red_flux")))
-	_check(absf(r - exp) < 0.000001, "the risk adds every carrier's odds: %.4f" % r)
+	var exp := maxf(0.015 * (1.0 - GameDisease.resistance(d.heir, "grave_rot")), 0.01 * (1.0 - GameDisease.resistance(d.heir, "red_flux")))
+	_check(absf(r - exp) < 0.000001, "a search is one exposure, to the likeliest sickness among the dead: %.4f" % r)
+	_check(GamePlague.exposure(d.heir, d.loot)["disease"] == "grave_rot", "and that is the ghoul's grave rot")
+	GameDisease.infect(d.heir, "grave_rot", "test")
+	_check(GamePlague.exposure(d.heir, d.loot)["disease"] == "red_flux", "a sickness the heir already has is not risked again")
+	d.heir.diseases = []
+	# However many carriers lie there, a search catches about as often as the likeliest alone.
+	var pack := {"gold": 10, "item_chance": 0.0, "foes": []}
+	for i in 4:
+		pack["foes"].append({"id": "plague_rat", "name": "Plague Rat", "carries": [{"disease": "rat_plague", "chance": 0.02}]})
+	var got := 0
+	for i in n:
+		d.loot = pack.duplicate(true)
+		d.heir.diseases = []
+		GamePlague.search(d)
+		got += 0 if d.heir.diseases.is_empty() else 1
+	var one := 0.02 * (1.0 - GameDisease.resistance(d.heir, "rat_plague"))
+	_check(absf(float(got) / float(n) - one) < 0.006, "four 2%% carriers: %.4f of searches catch it, as one would (%.4f)" % [float(got) / float(n), one])
+	d.loot = {"gold": 10, "item_chance": 0.0, "foes": [
+		{"id": "skeleton", "name": "Skeleton", "carries": [{"disease": "grave_rot", "chance": 0.01}]},
+		{"id": "ghoul", "name": "Ghoul", "carries": [{"disease": "grave_rot", "chance": 0.015}, {"disease": "red_flux", "chance": 0.01}]},
+		{"id": "wolf", "name": "Wolf", "carries": []}]}
 	_check(GamePlague.risk_diseases(d) == ["grave_rot", "red_flux"], "the deadly one is named first")
 	var t := GamePlague.risk_text(d)
 	_check("2 of the dead carry" in t and "Grave Rot" in t and "%" in t, "the risk is told: %s" % t)
@@ -294,18 +314,18 @@ func _test_loot_worth_the_risk() -> void:
 		_hunt(d, "skeleton", 3)
 		_win(d)
 		var exp_gold := float(d.loot["gold"]) * float(GamePlague.setting("loot_gold_share"))
-		var cost := 0.0
-		for f in d.loot["foes"]:
-			for c in f["carries"]:
-				cost += float(c["chance"]) * float(GameDisease.cure_price(d, str(c["disease"])))
+		var x := GamePlague.exposure(d.heir, d.loot)
+		var cost := float(x["risk"]) * float(GameDisease.cure_price(d, str(x["disease"])))
 		_check(exp_gold > cost * 2.0, "gen %d: searching skeletons pays %.0f gold against %.1f expected cure cost" % [spec[0], exp_gold, cost])
 
 
 func _test_bot_loot() -> void:
 	var d := _fresh(39)
 	d.heir.level = 30
-	d.loot = {"gold": 100, "item_chance": 0.0, "foes": [{"id": "wolf", "name": "Wolf", "carries": [{"disease": "red_flux", "chance": 0.01}]}]}
-	_check(GamePlague.bot_wants_search(d), "low risk: the autopilot searches")
+	var low := float(GamePlague.setting("bot_loot_max_risk"))
+	d.loot = {"gold": 100, "item_chance": 0.0, "foes": [{"id": "wolf", "name": "Wolf", "carries": [{"disease": "red_flux", "chance": low}]}]}
+	d.heir.gold = 0
+	_check(GamePlague.bot_wants_search(d), "low risk: the autopilot searches, even with no gold for a cure")
 	d.loot = {"gold": 100, "item_chance": 0.0, "foes": []}
 	for i in 3:
 		d.loot["foes"].append({"id": "ghoul", "name": "Ghoul", "carries": [{"disease": "grave_rot", "chance": 0.02}, {"disease": "rat_plague", "chance": 0.02}]})
@@ -477,6 +497,7 @@ func _test_tactics() -> void:
 		e["max_hp"] = e["hp"]
 	GameTactics.auto_turn(b)
 	_check(GameItems.count(d.heir, "nightshade_oil") == 0, "a long fight: the autopilot coats its blade")
+	_check(not b.events.is_empty() and b.events[0]["type"] == "coat" and b.events.size() > 1, "auto-battle keeps the coating's event ahead of the blow, so it is shown: %s" % str(b.events.map(func(e): return e["type"])))
 	d.battle = null
 	# A quick one: it keeps the toxin.
 	d.heir.inventory = ["nightshade_oil"]
@@ -516,6 +537,20 @@ func _test_tactics() -> void:
 		x.battle = null
 	_check(thrown >= 3, "a vial goes into a crowd of hard foes (%d of 4)" % thrown)
 	_check(kept == 4, "and is kept against a single wolf (%d of 4)" % kept)
+	# A thrown vial starts aimed where it catches the most foes, the current target on a tie.
+	var z := _fresh(98)
+	z.heir.level = 40
+	b = _hunt(z, "ogre", 5)
+	var vab := GamePlague.vial_ability("plague_vial")
+	for i in 5:
+		var aim := GamePlague.best_aim(b, vab, i)
+		var most := 0
+		for j in 5:
+			most = maxi(most, b.aoe_targets(vab, -1, j).size())
+		_check(b.aoe_targets(vab, -1, aim).size() == most, "aim from foe %d catches the most foes (%d)" % [i, most])
+		if b.aoe_targets(vab, -1, i).size() == most:
+			_check(aim == i, "a target that already catches the most stays the aim")
+	z.battle = null
 	# A plan with a vial is carried out by act().
 	var y := _fresh(99)
 	y.heir.level = 40
