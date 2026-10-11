@@ -318,7 +318,7 @@ static func after_battle(d: GameDynasty, b: GameBattle) -> Array:
 ## Years pass for the party: each companion's sickness runs its course (a deadly last stage can
 ## take them), and the catching kinds pass between the heir and the companions.
 static func party_years(d: GameDynasty, p: GameParty, years: float, msgs: Array) -> void:
-	if p.members.is_empty():
+	if p.members.is_empty() or (d.heir.diseases.is_empty() and p.members.all(func(m): return (m.get("diseases", []) as Array).is_empty())):
 		return
 	var bodies: Array = [d.heir]
 	for m in p.members.duplicate():
