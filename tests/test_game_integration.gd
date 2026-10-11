@@ -407,10 +407,12 @@ func test_founders_start_equipped() -> void:
 	ok(GameItems.equipped(d.heir, "weapon") != "" and GameItems.equipped(d.heir, "armor") != "", "the autopilot founder buys a weapon and armour at once (%s)" % str(d.heir.equipment))
 	ok(d.heir.gold >= GameItems.bot_reserve(d), "and keeps the potion reserve (%d)" % d.heir.gold)
 	# Founders across the starting classes: few die in battle, and not far more often than their heirs.
+	# 108 founders: with 36 the share swung by a founder or two whenever an unrelated change moved
+	# the seeded rolls (4 vs 6 of 36), while 360 founders gave 11-14% either way.
 	var slain := [0, 0]
 	var lives := [0, 0]
 	var classes := GameData.starting_ids(GameData.classes)
-	for i in 36:
+	for i in 108:
 		var f := GameDynasty.new_game(9100 + i, "", classes[i % classes.size()], "faetouched", "human")
 		for life in 2:
 			GameBot.live_life(f)
