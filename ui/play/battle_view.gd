@@ -35,6 +35,8 @@ var aim_info: Label = null      # the aim panel's "catches N foes" line
 var floats: Dictionary = {}     # ref -> status words floated this action, so they stack instead of overlap
 var auto: bool = false          # the heir fights on their own (GameTactics), one action every AUTO_PACE
 var auto_button: Button
+var result_scroll: ScrollContainer = null   # the result panel's story, capped to the window
+var result_panel: Control = null
 var _auto_waiting: bool = false # an auto action is due once AUTO_PACE has passed
 
 const AUTO_PACE := 0.4
@@ -1329,50 +1331,87 @@ func _show_result() -> void:
 	var p := Kit.panel(Color("#221f30"))
 	p.custom_minimum_size = Vector2(560, 0)
 	center.add_child(p)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 10)
+	p.add_child(outer)
+	var title: String = {"victory": "VICTORY", "defeat": "DEFEAT", "fled": "ESCAPED"}.get(b.result, "")
+	outer.add_child(Kit.label(title, 36, Kit.GOOD if b.result == "victory" else (Kit.BAD if b.result == "defeat" else Kit.ACCENT)))
+	# The story scrolls when a long fight (or a sick party) tells more than fits; the choice and
+	# Continue stay below it, always on screen.
+	result_scroll = ScrollContainer.new()
+	result_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(result_scroll)
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", 14)   # keeps the text clear of the scroll bar
+	result_scroll.add_child(pad)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
-	p.add_child(v)
-	var title: String = {"victory": "VICTORY", "defeat": "DEFEAT", "fled": "ESCAPED"}.get(b.result, "")
-	v.add_child(Kit.label(title, 36, Kit.GOOD if b.result == "victory" else (Kit.BAD if b.result == "defeat" else Kit.ACCENT)))
+	pad.add_child(v)
+	var foot := VBoxContainer.new()
+	foot.add_theme_constant_override("separation", 8)
+	outer.add_child(foot)
+	result_panel = p
 	for m in msgs:
 		var l := Kit.label(m, 16)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 	if d.loot.is_empty():
-		v.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
+		foot.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
 	elif auto:   # auto-battle settles the bodies as the autopilot would
-		_loot_done(v, null, GamePlague.bot_loot(d), "Auto-battle: ")
+		_loot_done(v, foot, null, GamePlague.bot_loot(d), "Auto-battle: ")
 	else:
-		_loot_choice(v)
+		_loot_choice(v, foot)
+	_fit_result.call_deferred()
 
 
 ## The dead of a won hunt: search them (extra gold, maybe a find, a chance of their sickness) or
 ## leave them. The victory's own gold is already counted.
-func _loot_choice(v: VBoxContainer) -> void:
+func _loot_choice(v: VBoxContainer, foot: VBoxContainer) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
-	v.add_child(box)
+	foot.add_child(box)
 	var risk := Kit.label(GamePlague.risk_text(d), 15, Kit.BAD if GamePlague.risk(d) > 0.0 else Kit.DIM)
 	risk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(risk)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	box.add_child(row)
-	var search := Kit.button("Search the bodies", func(): _loot_done(v, box, GamePlague.search(d), ""), Vector2(0, 44))
+	var search := Kit.button("Search the bodies", func(): _loot_done(v, foot, box, GamePlague.search(d), ""), Vector2(0, 44))
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search.tooltip_text = "Extra gold and maybe something useful. Whatever sickness the dead carry, %s risks catching." % d.heir.name
 	row.add_child(search)
-	var leave := Kit.button("Leave them", func(): _loot_done(v, box, GamePlague.leave(d), ""), Vector2(0, 44))
+	var leave := Kit.button("Leave them", func(): _loot_done(v, foot, box, GamePlague.leave(d), ""), Vector2(0, 44))
 	leave.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(leave)
 
 
-func _loot_done(v: VBoxContainer, box: Control, lines: Array, lead: String) -> void:
+## Size the result's story to what it holds, but never past the window: beyond that it scrolls,
+## showing its latest lines.
+func _fit_result() -> void:
+	if result_scroll == null or not is_instance_valid(result_scroll) or not is_inside_tree():
+		return
+	await get_tree().process_frame   # wrapped labels know their height once laid out at the panel's width
+	if not is_instance_valid(result_scroll):
+		return
+	var story := result_scroll.get_child(0) as Control
+	result_scroll.custom_minimum_size.y = 0
+	var rest := result_panel.get_combined_minimum_size().y
+	var room := maxf(80.0, get_viewport_rect().size.y - 40.0 - rest)
+	result_scroll.custom_minimum_size.y = minf(story.get_combined_minimum_size().y, room)
+	await get_tree().process_frame
+	if is_instance_valid(result_scroll):
+		result_scroll.scroll_vertical = int(result_scroll.get_v_scroll_bar().max_value)
+
+
+func _loot_done(v: VBoxContainer, foot: VBoxContainer, box: Control, lines: Array, lead: String) -> void:
 	if box != null:
+		foot.remove_child(box)
 		box.queue_free()
 	for k in lines.size():
 		var l := Kit.label((lead if k == 0 else "") + str(lines[k]), 16, Kit.BAD if " catches " in str(lines[k]) else Kit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 	app.autosave()
-	v.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
+	foot.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
+	_fit_result.call_deferred()
