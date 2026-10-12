@@ -180,9 +180,9 @@ func test_points() -> void:
 	for lv in [1, 30, 100, 5000, 99999]:
 		at[lv] = GameSkillTree.points_at(lv)
 	print("  skill points at level 1/30/100/5000/99999: ", at.values())
-	ok(at[30] >= 8 and at[30] <= 14, "frequent early: %d by level 30" % at[30])
-	ok(at[100] > at[30] and at[100] - at[30] < at[30], "slower by level 100 (%d)" % at[100])
-	ok(at[5000] > at[100] and at[5000] < at[100] * 4, "level 5,000 has more, not hundreds (%d)" % at[5000])
+	ok(at[30] >= 5 and at[30] <= 14, "frequent early: %d by level 30" % at[30])
+	ok(at[100] > at[30] and at[100] - at[30] <= at[30] + 2, "slower by level 100 (%d)" % at[100])
+	ok(at[5000] > at[100] and at[5000] < at[100] * 6, "level 5,000 has more, not hundreds (%d)" % at[5000])
 	ok(at[99999] > at[5000] and at[99999] - at[5000] < at[5000], "the cap brings the last few (%d)" % at[99999])
 	var last := 0
 	var mono := true
@@ -695,12 +695,13 @@ func test_companions() -> void:
 	var d := _dyn("mage", 40, 71)
 	var m := _hire(d, "bren_cask")
 	var u := d.party.unit(d, m)
-	ok(int(m["tree"]["level"]) == 40 and GameSkillTree.spent(u) == GameSkillTree.points_at(40), "a hired companion spends the points of its level along its path (%d)" % GameSkillTree.spent(u))
+	ok(int(m["tree"]["level"]) == 40 and GameSkillTree.spent(u) == GameSkillTree.companion_points_at(40), "a hired companion spends the points of its level along its path (%d)" % GameSkillTree.spent(u))
 	ok(u.tree_points == 0 and u.tree_ranks.has("w_brawn"), "starting where a warrior would: %s" % str(u.tree_ranks.keys().slice(0, 4)))
 	d.heir.gain_xp(400000)
 	d.party.sync(d)
 	var u2 := d.party.unit(d, m)
-	ok(int(m["tree"]["level"]) == d.heir.level and GameSkillTree.spent(u2) == GameSkillTree.points_at(d.heir.level), "levels gained bring points it spends at once (%d at level %d)" % [GameSkillTree.spent(u2), d.heir.level])
+	ok(GameSkillTree.companion_points_at(d.heir.level) < GameSkillTree.points_at(d.heir.level), "a hireling has fewer points than an heir of its level")
+	ok(int(m["tree"]["level"]) == d.heir.level and GameSkillTree.spent(u2) == GameSkillTree.companion_points_at(d.heir.level), "levels gained bring points it spends at once (%d at level %d)" % [GameSkillTree.spent(u2), d.heir.level])
 	# The player spends and refunds for a companion; the heir pays the fee.
 	m["tree"]["points"] = 3
 	var line := GameSkillTree.spend(d, "bren_cask", "w_thick_hide")
@@ -721,7 +722,7 @@ func test_companions() -> void:
 	var ym := _hire(young, "bren_cask")
 	ym["tree"] = {"ranks": {"w_brawn": 3, "w_heavy_blows": 3, "w_iron_grip": 3}, "points": 0, "level": 500}
 	var yu := young.party.unit(young, ym)
-	ok(int(ym["tree"]["level"]) == 3 and GameSkillTree.spent(yu) <= GameSkillTree.points_at(3), "a companion of a lower level holds no more than its level gives (%d)" % GameSkillTree.spent(yu))
+	ok(int(ym["tree"]["level"]) == 3 and GameSkillTree.spent(yu) <= GameSkillTree.companion_points_at(3), "a companion of a lower level holds no more than its level gives (%d)" % GameSkillTree.spent(yu))
 	# A successor starts fresh.
 	var s := _dyn("mage", 60, 73)
 	var sm := _hire(s, "bren_cask")
@@ -735,7 +736,7 @@ func test_companions() -> void:
 	var nm := s.party.member("bren_cask")
 	if not nm.is_empty():
 		var nu := s.party.unit(s, nm)
-		ok(int(nu.tree_ranks.get("w_thick_hide", 0)) < 3 and GameSkillTree.spent(nu) == GameSkillTree.points_at(60), "the successor starts fresh along the path (%s)" % hired.left(50))
+		ok(int(nu.tree_ranks.get("w_thick_hide", 0)) < 3 and GameSkillTree.spent(nu) == GameSkillTree.companion_points_at(60), "the successor starts fresh along the path (%s)" % hired.left(50))
 	else:
 		ok(true, "no successor at the tavern yet: %s" % hired.left(60))
 	# Ageing still works with a tree.
@@ -764,7 +765,7 @@ func test_companion_saves() -> void:
 		mm.erase("tree")
 	var f := GameDynasty.from_dict(raw)
 	var fu := f.party.unit(f, f.party.member("bren_cask"))
-	ok(GameSkillTree.spent(fu) == GameSkillTree.points_at(fu.level), "an old companion gets the points of level %d (%d spent)" % [fu.level, GameSkillTree.spent(fu)])
+	ok(GameSkillTree.spent(fu) == GameSkillTree.companion_points_at(fu.level), "an old companion gets the points of level %d (%d spent)" % [fu.level, GameSkillTree.spent(fu)])
 
 
 # ---------------------------------------------------------------- the autopilot
@@ -863,7 +864,7 @@ func test_old_saves() -> void:
 		ok(d.heir.tree_points == GameSkillTree.points_at(d.heir.level) and d.heir.tree_ranks.is_empty(), "%s: the heir has the points of level %d" % [tag, d.heir.level])
 		for m in d.party.members:
 			var u := d.party.unit(d, m)
-			ok(GameSkillTree.spent(u) == GameSkillTree.points_at(u.level), "%s: %s gets the points of level %d" % [tag, m["name"], u.level])
+			ok(GameSkillTree.spent(u) == GameSkillTree.companion_points_at(u.level), "%s: %s gets the points of level %d" % [tag, m["name"], u.level])
 		for i in 200:
 			if d.state == "succession":
 				d.choose_heir(0)

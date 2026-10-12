@@ -23,7 +23,7 @@ const AREA := {"radius": ["burst"], "range": ["cone"], "angle": ["cone"], "lengt
 const NODE_KEYS := ["id", "tier", "col", "requires", "cost", "max_rank"]
 const SETTING_KEYS := ["start_points", "point_bands", "inherit_share", "inherit_fate_failure", "inherit_per_curse",
 	"inherit_per_blessing", "inherit_max", "inherit_curses", "inherit_blessings", "respec_fee", "respec_fee_per_sqrt_level",
-	"cost_floor", "pierce_cap", "labels", "points_as_value", "bot"]
+	"cost_floor", "pierce_cap", "labels", "points_as_value", "bot", "companion_points"]
 
 static var _src: Dictionary = {}
 static var _keys_src: Dictionary = {}
@@ -172,6 +172,11 @@ static func points_at(level: int) -> int:
 		if level <= until:
 			break
 	return n
+
+
+## A hireling's points at `level`: a share of an heir's (settings.companion_points).
+static func companion_points_at(level: int) -> int:
+	return int(floor(float(points_at(level)) * float(setting("companion_points")) + 0.000001))
 
 
 ## The next level after `level` that brings a skill point, or -1 past the last.
@@ -698,14 +703,11 @@ static func load_member(v: Variant) -> Dictionary:
 static func attach(u: GameHeir, m: Dictionary) -> void:
 	var t: Dictionary = m.get("tree", {})
 	var auto := 0
-	if t.is_empty():
-		t = {"ranks": {}, "points": points_at(u.level), "level": u.level}
-		auto = int(t["points"])
-	elif int(t["level"]) > u.level:
-		t = {"ranks": {}, "points": points_at(u.level), "level": u.level}
+	if t.is_empty() or int(t["level"]) > u.level:
+		t = {"ranks": {}, "points": companion_points_at(u.level), "level": u.level}
 		auto = int(t["points"])
 	elif int(t["level"]) < u.level:
-		auto = points_at(u.level) - points_at(int(t["level"]))
+		auto = companion_points_at(u.level) - companion_points_at(int(t["level"]))
 		t["points"] = int(t["points"]) + auto
 		t["level"] = u.level
 	u.tree_ranks = (t["ranks"] as Dictionary).duplicate()
