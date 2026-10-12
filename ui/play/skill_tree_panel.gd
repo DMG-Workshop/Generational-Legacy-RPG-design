@@ -315,6 +315,8 @@ func _held(u: GameHeir) -> Array:
 	var f := GameSkillTree.fx(u)
 	var parts: Array = []
 	for s in GameSkillTree.CORE:
+		if float(f["flat"].get(s, 0.0)) > 0.0:
+			parts.append("+%s %s" % [GameSkillTree._n(float(f["flat"][s])), GameSkillTree.label(s)])
 		if float(f["pct"].get(s, 0.0)) > 0.0:
 			parts.append("+%s%% %s" % [GameSkillTree._n(float(f["pct"][s]) * 100.0), GameSkillTree.label(s)])
 	for s in f["bonus"]:

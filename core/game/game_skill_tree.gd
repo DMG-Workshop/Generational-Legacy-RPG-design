@@ -35,6 +35,7 @@ static var _keystones: Dictionary = {}
 static var _for_class: Dictionary = {}   # class id -> tree ids
 static var _paths: Dictionary = {}       # class id -> node ids in the order the autopilot buys ranks
 static var _epoch: int = 0               # bumps when the data is read again, so cached effects go stale
+static var _fx_cache: Dictionary = {}    # "class|ranks|free" -> fx, cleared with the data
 
 
 static func _index() -> void:
@@ -51,6 +52,7 @@ static func _index() -> void:
 	_keystones.clear()
 	_for_class.clear()
 	_paths.clear()
+	_fx_cache.clear()
 	for k in _keys_src.get("keystones", []):
 		_keystones[str(k["id"])] = k
 	for t in _src.get("trees", []):
@@ -401,8 +403,15 @@ static func respec(d: GameDynasty, who: String = "") -> String:
 ## bonus (trait-like stats), mods ("skill:damage", "spell:fireball", "feat:*" -> summed upgrades),
 ## rules (rule -> params), made (upgraded abilities)}.
 static func fx(u: GameHeir) -> Dictionary:
+	if u.tree_fx_v == u.tree_version and u.tree_fx_e == _epoch and _epoch > 0:
+		return u.tree_fx
 	_index()
-	if u.tree_fx_v == u.tree_version and u.tree_fx_e == _epoch:
+	# Companions are rebuilt for every look at them; units of one class with the same ranks share one result.
+	var key := "%s|%s|%s" % [u.class_id, str(u.tree_ranks), str(u.tree_free)]
+	if _fx_cache.has(key):
+		u.tree_fx = _fx_cache[key]
+		u.tree_fx_v = u.tree_version
+		u.tree_fx_e = _epoch
 		return u.tree_fx
 	var f := {"flat": {}, "pct": {}, "bonus": {}, "mods": {}, "rules": {}, "made": {}, "skills": []}
 	var done := {}
@@ -419,6 +428,9 @@ static func fx(u: GameHeir) -> Dictionary:
 			var k := keystone(str(n["keystone"]))
 			if str(k.get("rule", "")) != "":
 				f["rules"][str(k["rule"])] = k.get("params", {})
+	if _fx_cache.size() >= 512:
+		_fx_cache.clear()
+	_fx_cache[key] = f
 	u.tree_fx = f
 	u.tree_fx_v = u.tree_version
 	u.tree_fx_e = _epoch
