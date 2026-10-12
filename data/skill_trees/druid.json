@@ -50,7 +50,7 @@
     "abilities": [
      {
       "skill": "damage",
-      "mult": 0.08,
+      "mult": 0.05,
       "width": 0.5
      }
     ]
@@ -159,7 +159,7 @@
    "max_rank": 3,
    "effect": {
     "bonus": {
-     "max_hp": 0.04
+     "max_hp": 0.03
     }
    }
   },
@@ -177,7 +177,7 @@
    "effect": {
     "stats": {
      "mag": {
-      "pct": 0.04
+      "pct": 0.03
      }
     }
    }
@@ -233,7 +233,7 @@
    "effect": {
     "stats": {
      "vit": {
-      "pct": 0.04
+      "pct": 0.03
      }
     }
    }
@@ -367,10 +367,10 @@
    "effect": {
     "stats": {
      "mag": {
-      "pct": 0.02
+      "pct": 0.01
      },
      "vit": {
-      "pct": 0.03
+      "pct": 0.015
      }
     }
    }

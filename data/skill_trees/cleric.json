@@ -50,7 +50,7 @@
     "abilities": [
      {
       "skill": "damage",
-      "mult": 0.08
+      "mult": 0.05
      }
     ]
    }
@@ -172,7 +172,7 @@
    "effect": {
     "stats": {
      "mag": {
-      "pct": 0.04
+      "pct": 0.03
      }
     }
    }
@@ -350,7 +350,7 @@
     "abilities": [
      {
       "skill": "damage",
-      "mult": 0.06
+      "mult": 0.04
      },
      {
       "spell": "*",
@@ -375,14 +375,14 @@
    "effect": {
     "stats": {
      "mag": {
-      "pct": 0.02
+      "pct": 0.01
      },
      "vit": {
-      "pct": 0.02
+      "pct": 0.01
      }
     },
     "bonus": {
-     "healing_power": 0.01
+     "healing_power": 0.005
     }
    }
   }

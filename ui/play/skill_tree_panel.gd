@@ -106,8 +106,12 @@ func _build() -> void:
 	row.add_child(frame)
 	scroll = ScrollContainer.new()
 	frame.add_child(scroll)
+	var center := CenterContainer.new()   # a small tree sits in the middle, a large one scrolls
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(center)
 	canvas = Control.new()
-	scroll.add_child(canvas)
+	center.add_child(canvas)
 	_draw_tree(u)
 	canvas.draw.connect(_draw_edges.bind(u))
 	row.add_child(_side(u))
@@ -314,7 +318,7 @@ func _held(u: GameHeir) -> Array:
 		if float(f["pct"].get(s, 0.0)) > 0.0:
 			parts.append("+%s%% %s" % [GameSkillTree._n(float(f["pct"][s]) * 100.0), GameSkillTree.label(s)])
 	for s in f["bonus"]:
-		if s != "crit_damage":
+		if s != "crit_damage" and absf(float(f["bonus"][s])) >= 0.00005:
 			parts.append("%s%s%% %s" % ["+" if float(f["bonus"][s]) >= 0.0 else "", GameSkillTree._n(float(f["bonus"][s]) * 100.0), GameSkillTree.label(s)])
 	if not parts.is_empty():
 		out.append("All trees together: " + ", ".join(PackedStringArray(parts)) + ".")

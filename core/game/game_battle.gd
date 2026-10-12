@@ -1214,9 +1214,8 @@ func _end_player_turn() -> void:
 	var regen := maxf(0.0, float(GameData.bal("mp_regen_per_turn_pct")) + float(weather.get("mp_regen", 0.0)))
 	for by in [-1] + conscious_allies():
 		var nums := unit_numbers(by)
-		if not bool(nums["no_regen"]):
-			var u := _unit(by)
-			u.mp = mini(int(nums["max_mp"]), u.mp + int(ceil(float(nums["max_mp"]) * (regen + float(nums["mp_regen"])))))
+		var u := _unit(by)
+		u.mp = mini(int(nums["max_mp"]), u.mp + int(ceil(float(nums["max_mp"]) * (regen + float(nums["mp_regen"])))))
 	_start_heir_turn()
 
 
@@ -1373,7 +1372,7 @@ func unit_numbers(by: int) -> Dictionary:
 			"crit_mult": float(GameSkillTree.rule(u, "crit_mult").get("mult", 1.75)) + u.trait_total("crit_damage"),
 			"wrath": float(GameSkillTree.rule(u, "wrath").get("max", 0.0)), "dealt": 1.0 + float(glass.get("dealt", 0.0)),
 			"taken": 1.0 + float(glass.get("taken", 0.0)), "mom": float(GameSkillTree.rule(u, "mind_over_matter").get("share", 0.0)),
-			"no_regen": GameSkillTree.has_rule(u, "mind_over_matter"), "mp_regen": u.trait_total("mp_regen"),
+			"mp_regen": u.trait_total("mp_regen"),
 			"resist": clampf(u.trait_total("resist"), 0.0, 0.9)}
 		if not u.equipped_feats.is_empty():
 			var fn := GameFeats.numbers(u)

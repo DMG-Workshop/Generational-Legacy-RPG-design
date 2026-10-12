@@ -390,12 +390,13 @@ func test_upgrades_in_battle() -> void:
 	_give(d.heir, {"w_brawn": 1, "w_heavy_blows": 3})
 	var b := _battle(d)
 	_sturdy(b)
-	ok(absf(float(b.skill_info(0)["mult"]) - 1.9 * 1.24) < 0.0001, "the battle's Power Strike carries Heavy Blows (x%s)" % b.skill_info(0)["mult"])
+	var up := 3.0 * float(GameSkillTree.node("w_heavy_blows")["effect"]["abilities"][0]["mult"])
+	ok(absf(float(b.skill_info(0)["mult"]) - 1.9 * (1.0 + up)) < 0.0001, "the battle's Power Strike carries Heavy Blows (x%s)" % b.skill_info(0)["mult"])
 	var hits: Array = b.expected_hits(-1, b.skill_info(0), 0)
 	var plain := _dyn("warrior", 60, 31)
 	var pb := _battle(plain)
 	_sturdy(pb)
-	ok(float(hits[0][1]) > float(pb.expected_hits(-1, pb.skill_info(0), 0)[0][1]) * 1.2, "and lands harder")
+	ok(float(hits[0][1]) > float(pb.expected_hits(-1, pb.skill_info(0), 0)[0][1]) * (1.0 + up * 0.8), "and lands harder")
 	# A cheaper heal costs less MP in battle.
 	_give(d.heir, {"w_iron_grip": 1, "w_second_breath": 2})
 	ok(b.skill_cost(1) < pb.skill_cost(1), "Second Breath costs less (%d < %d)" % [b.skill_cost(1), pb.skill_cost(1)])
@@ -518,10 +519,12 @@ func test_keystones() -> void:
 	var taken_mp := mp0 - e.heir.mp
 	var taken_hp := hp0 - e.heir.hp
 	ok(absf(float(taken_mp) / float(taken_mp + taken_hp) - 0.5) < 0.05, "half of it from mana (%d MP, %d HP)" % [taken_mp, taken_hp])
-	_sturdy(eb)
-	e.heir.mp = 10
-	eb.pass_turn()
-	ok(e.heir.mp <= 10, "no MP comes back at the turn's end (%d)" % e.heir.mp)
+	e.heir.mp = 0
+	hp0 = e.heir.hp
+	eb._enemy_act(0)
+	ok(e.heir.mp == 0 and e.heir.hp < hp0 and not eb.log.back().find("mana takes") >= 0, "with no mana left the whole blow lands on HP")
+	var plain_mage := _unit("mage", 80)
+	ok(float(e.heir.max_hp()) < float(plain_mage.max_hp()), "its price: less max HP (%d < %d)" % [e.heir.max_hp(), plain_mage.max_hp()])
 
 	# Assassin's Mark: crits x2.6.
 	var a := _dyn("rogue", 80, 46)

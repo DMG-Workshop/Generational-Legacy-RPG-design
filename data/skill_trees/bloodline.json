@@ -14,7 +14,7 @@
    "max_rank": 3,
    "effect": {
     "bonus": {
-     "max_hp": 0.03
+     "max_hp": 0.02
     }
    },
    "inheritable": true
@@ -166,7 +166,7 @@
    "effect": {
     "stats": {
      "all": {
-      "pct": 0.02
+      "pct": 0.015
      }
     }
    },
@@ -265,7 +265,7 @@
    "max_rank": 3,
    "effect": {
     "bonus": {
-     "max_hp": 0.03
+     "max_hp": 0.02
     }
    },
    "inheritable": true
@@ -327,7 +327,7 @@
    "effect": {
     "stats": {
      "all": {
-      "pct": 0.02
+      "pct": 0.01
      }
     }
    },
@@ -351,7 +351,7 @@
      }
     },
     "bonus": {
-     "max_hp": 0.01
+     "max_hp": 0.005
     }
    }
   }

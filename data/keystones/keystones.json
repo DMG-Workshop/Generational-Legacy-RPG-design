@@ -7,11 +7,11 @@
    "params": {},
    "effect": {
     "bonus": {
-     "defense": 0.45,
-     "max_hp": 0.12
+     "defense": 0.7,
+     "max_hp": 0.15
     }
    },
-   "text": "Plant your feet and let them come.",
+   "text": "Plant your feet and let them come: +70% defense, +15% max HP.",
    "drawback": "You never dodge a blow.",
    "suits": [
     "warrior",
@@ -59,7 +59,7 @@
    "name": "Blood Magic",
    "rule": "blood_magic",
    "params": {
-    "hp_share": 0.5
+    "hp_share": 0.3
    },
    "effect": {
     "bonus": {
@@ -67,7 +67,7 @@
     }
    },
    "text": "Skills and spells cost HP instead of MP, and spells strike 15% harder.",
-   "drawback": "Each cast takes half its share of your mana pool from your health instead.",
+   "drawback": "Each cast takes from your health three tenths of the share of your mana pool it would have cost.",
    "excludes": [
     "eldritch_bastion",
     "lichs_ward",
@@ -81,15 +81,15 @@
    "name": "Blood Rite",
    "rule": "blood_magic",
    "params": {
-    "hp_share": 0.4
+    "hp_share": 0.25
    },
    "effect": {
     "bonus": {
      "element_power": 0.1
     }
    },
-   "text": "Skills and spells cost HP instead of MP; Soul Drain pays much of it back.",
-   "drawback": "Each cast takes 40% of its share of your mana pool from your health.",
+   "text": "Skills and spells cost HP instead of MP, spells strike 10% harder, and Soul Drain pays much of it back.",
+   "drawback": "Each cast takes from your health a quarter of the share of your mana pool it would have cost.",
    "excludes": [
     "eldritch_bastion",
     "lichs_ward",
@@ -110,11 +110,12 @@
    },
    "effect": {
     "bonus": {
-     "max_mp": 0.2
+     "max_mp": 0.2,
+     "max_hp": -0.1
     }
    },
    "text": "Half of every blow you take is paid from your mana first.",
-   "drawback": "Your mana no longer returns on its own in battle.",
+   "drawback": "-10% max HP, and mana spent on blows is gone for spells.",
    "excludes": [
     "blood_magic",
     "blood_rite"
@@ -130,11 +131,12 @@
    },
    "effect": {
     "bonus": {
-     "max_mp": 0.15
+     "max_mp": 0.15,
+     "max_hp": -0.1
     }
    },
    "text": "Half of every blow you take is paid from your mana first.",
-   "drawback": "Your mana no longer returns on its own in battle.",
+   "drawback": "-10% max HP, and mana spent on blows is gone for spells.",
    "excludes": [
     "blood_magic",
     "blood_rite"
@@ -150,11 +152,12 @@
    },
    "effect": {
     "bonus": {
-     "max_mp": 0.2
+     "max_mp": 0.2,
+     "max_hp": -0.1
     }
    },
    "text": "Two parts in five of every blow you take are paid from your mana first.",
-   "drawback": "Your mana no longer returns on its own in battle.",
+   "drawback": "-10% max HP, and mana spent on blows is gone for spells.",
    "excludes": [
     "blood_magic",
     "blood_rite"
@@ -170,11 +173,12 @@
    },
    "effect": {
     "bonus": {
-     "max_mp": 0.25
+     "max_mp": 0.25,
+     "max_hp": -0.1
     }
    },
    "text": "Over a third of every blow you take is paid from your mana first.",
-   "drawback": "Your mana no longer returns on its own in battle.",
+   "drawback": "-10% max HP, and mana spent on blows is gone for spells.",
    "excludes": [
     "blood_magic",
     "blood_rite"
@@ -296,11 +300,11 @@
    "params": {},
    "effect": {
     "bonus": {
-     "defense": 0.55,
-     "max_hp": 0.1
+     "defense": 0.7,
+     "max_hp": 0.12
     }
    },
-   "text": "Skin like cut stone: +55% defense and +10% max HP.",
+   "text": "Skin like cut stone: +70% defense and +12% max HP.",
    "drawback": "You never dodge a blow.",
    "suits": []
   },

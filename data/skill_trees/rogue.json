@@ -50,7 +50,7 @@
     "abilities": [
      {
       "skill": "damage",
-      "mult": 0.08,
+      "mult": 0.05,
       "crit": 0.02
      }
     ]
@@ -159,7 +159,7 @@
    "effect": {
     "stats": {
      "agi": {
-      "pct": 0.04
+      "pct": 0.03
      }
     }
    }
@@ -294,7 +294,7 @@
    "effect": {
     "stats": {
      "str": {
-      "pct": 0.04
+      "pct": 0.03
      }
     }
    }
@@ -333,7 +333,7 @@
     "abilities": [
      {
       "skill": "damage",
-      "mult": 0.06,
+      "mult": 0.04,
       "crit": 0.02
      }
     ]
@@ -377,14 +377,14 @@
    "effect": {
     "stats": {
      "agi": {
-      "pct": 0.02
+      "pct": 0.01
      },
      "str": {
-      "pct": 0.02
+      "pct": 0.01
      }
     },
     "bonus": {
-     "luck": 0.003
+     "luck": 0.002
     }
    }
   }

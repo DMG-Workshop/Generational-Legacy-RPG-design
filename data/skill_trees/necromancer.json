@@ -50,7 +50,7 @@
     "abilities": [
      {
       "skill": "damage",
-      "mult": 0.08
+      "mult": 0.05
      }
     ]
    }
@@ -107,7 +107,7 @@
    "max_rank": 3,
    "effect": {
     "bonus": {
-     "element_power": 0.04
+     "element_power": 0.03
     }
    }
   },
@@ -181,7 +181,7 @@
    "effect": {
     "stats": {
      "mag": {
-      "pct": 0.04
+      "pct": 0.03
      }
     }
    }
@@ -237,7 +237,7 @@
    "max_rank": 3,
    "effect": {
     "bonus": {
-     "max_hp": 0.04
+     "max_hp": 0.03
     }
    }
   },
@@ -317,7 +317,7 @@
     "abilities": [
      {
       "skill": "damage",
-      "mult": 0.06
+      "mult": 0.04
      },
      {
       "spell": "*",
@@ -360,11 +360,11 @@
    "effect": {
     "stats": {
      "mag": {
-      "pct": 0.03
+      "pct": 0.015
      }
     },
     "bonus": {
-     "max_hp": 0.01
+     "max_hp": 0.005
     }
    }
   }
