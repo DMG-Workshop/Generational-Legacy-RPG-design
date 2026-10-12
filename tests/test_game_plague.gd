@@ -87,6 +87,8 @@ func _test_chances_are_low() -> void:
 	for c in GameData.creatures:
 		for x in c.get("carries", []):
 			_check(float(x["chance"]) <= 0.02, "%s carries %s at most 2%%" % [c["id"], x["disease"]])
+			_check(float(x["chance"]) <= 0.005, "%s: a search risks %s at most 0.5%% (most victories end in one)" % [c["id"], x["disease"]])
+	_check(float(GamePlague.setting("infected_chance")) <= 0.005, "a plague-touched body passes its sickness at most 0.5% of searches")
 	for dz in GameDisease.all():
 		_check(float(dz["contagion"].get("companion", 0.0)) <= 0.02, "%s: companion contagion at most 2%% a year" % dz["id"])
 	for id in GameData.items:
