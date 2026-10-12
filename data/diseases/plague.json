@@ -1,7 +1,7 @@
 {
   "settings": {
     "infected_spawn": 0.02,
-    "infected_chance": 0.012,
+    "infected_chance": 0.003,
     "infected_prefix": "Plague-touched",
     "infected_color": "#c8b050",
     "infected_pool": [
