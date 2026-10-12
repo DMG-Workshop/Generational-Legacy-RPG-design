@@ -84,6 +84,8 @@ func _rumour(id: String) -> String:
 		var gone := "The barkeep keeps a cup turned down for %s, who died of old age at %d." % [e["name"], int(e["age"])]
 		if e["end"] == "retired":
 			gone = "%s has retired to %s, and the regulars still ask after them." % [e["name"], p._place_name(id)]
+		elif e["end"] == "sick":
+			gone = "The barkeep keeps a cup turned down for %s, who died at %d, %s." % [e["name"], int(e["age"]), e.get("cause", "taken by sickness")]
 		return "%s %s" % [gone, p.locked_reason(d, id)]
 	var hint: String = GameParty.def(id).get("hint", "Someone at the back keeps their own counsel.")
 	return "%s %s" % [hint, p.locked_reason(d, id)]
@@ -176,6 +178,8 @@ func _heritage(id: String) -> String:
 			return "Takes up the work of %s, who died of old age at %d." % [e["name"], int(e["age"])]
 		if e["end"] == "retired":
 			return "Takes up the work of %s, who retired at %d." % [e["name"], int(e["age"])]
+		if e["end"] == "sick":
+			return "Takes up the work of %s, who died at %d, %s." % [e["name"], int(e["age"]), e.get("cause", "taken by sickness")]
 		return "Takes up the work of %s, who fell for your house." % e["name"]
 	if not fallen.is_empty():
 		return "Takes up the work of %s, who fell for your house." % " and ".join(fallen)

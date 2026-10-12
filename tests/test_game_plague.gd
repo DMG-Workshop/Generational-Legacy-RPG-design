@@ -704,6 +704,10 @@ func _test_companion_death() -> void:
 	var tp = Tavern.new()
 	tp.dynasty = d
 	_check(tp._past_line("bren_cask", past).find("Grave Rot") >= 0, "the tavern's record reads it: %s" % tp._past_line("bren_cask", past))
+	var talk: String = tp._rumour("bren_cask")
+	_check("Grave Rot" in talk and not "old age" in talk, "the barkeep tells it too: %s" % talk)
+	var heir_line: String = tp._heritage("bren_cask")
+	_check("Grave Rot" in heir_line and not "fell for" in heir_line, "and so does the successor's card: %s" % heir_line)
 	tp.free()
 
 
