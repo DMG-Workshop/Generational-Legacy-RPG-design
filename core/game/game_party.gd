@@ -318,8 +318,18 @@ func hire(d: GameDynasty, id: String) -> String:
 	rec["gen"] = d.gen
 	history[id] = rec
 	var u := offer_unit(d, id)
-	members.append({"id": id, "name": nm, "hp": u.hp, "mp": u.mp, "level": u.level, "gen": d.gen,
-		"due": 0.0, "battles": 0, "hired_gen": d.gen, "diseases": []})
+	var m := {"id": id, "name": nm, "hp": u.hp, "mp": u.mp, "level": u.level, "gen": d.gen,
+		"due": 0.0, "battles": 0, "hired_gen": d.gen, "diseases": []}
+	var away: Dictionary = rec.get("away", {})
+	rec.erase("away")
+	if not away.is_empty():
+		# The same holder comes back as they left: still sick, and only as mended as the years away allow.
+		m["diseases"] = GameDisease.load_list(away.get("diseases", []))
+		var gone := maxf(0.0, d.world.year - float(away.get("year", d.world.year)))
+		var share := minf(1.0, float(away.get("hp_share", 1.0)) + float(GameData.bal("companion_mend_per_year")) * gone)
+		var sick := _body(d, m)
+		m["hp"] = clampi(int(round(float(sick.max_hp()) * share)), 1, sick.max_hp())
+	members.append(m)
 	var c := def(id)
 	var text: String
 	if returning and is_old(d, id):
@@ -328,6 +338,8 @@ func hire(d: GameDynasty, id: String) -> String:
 		text = "%s comes back to House %s's service and asks no fee." % [nm, d.dynasty_name]
 	else:
 		text = "%s, %s %s, joins %s for %s gold (upkeep %s a year)." % [nm, GameData.races[c["race"]]["name"], GameData.classes[c["class"]]["name"], d.heir.name, GameText.num(price), GameText.num(upkeep(d, id))]
+	if not (m["diseases"] as Array).is_empty():
+		text += " They still carry %s." % [names_text((m["diseases"] as Array).map(func(e): return GameDisease.disease_name(str(e["id"]))))]
 	d._say(text)
 	return text
 
@@ -364,6 +376,12 @@ func _part(d: GameDynasty, m: Dictionary, status: String) -> void:
 	rec["status"] = status
 	rec["gen"] = d.gen
 	rec["battles"] = int(rec.get("battles", 0)) + int(m["battles"])
+	if status in ["dismissed", "left"]:
+		var u := _body(d, m)
+		rec["away"] = {"diseases": (m.get("diseases", []) as Array).duplicate(true), "year": d.world.year,
+			"hp_share": snappedf(clampf(float(m["hp"]) / float(maxi(1, u.max_hp())), 0.0, 1.0), 0.0001)}
+	else:
+		rec.erase("away")
 	history[m["id"]] = rec
 
 
@@ -490,6 +508,7 @@ func _close_line(_d: GameDynasty, id: String, entry: Dictionary) -> void:
 	rec.erase("born")
 	rec.erase("rolled")
 	rec.erase("back_year")
+	rec.erase("away")
 
 
 ## The family's companions stay on with the new heir; append messages to `msgs`.
@@ -671,6 +690,10 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 		for key in ["born", "rolled", "back_year"]:
 			if r.has(key):
 				rec[key] = float(r[key])
+		var away = r.get("away", {})
+		if typeof(away) == TYPE_DICTIONARY and not away.is_empty() and rec["status"] in ["dismissed", "left"]:
+			rec["away"] = {"diseases": GameDisease.load_list(away.get("diseases", [])), "year": float(away.get("year", 0.0)),
+				"hp_share": snappedf(float(away.get("hp_share", 1.0)), 0.0001)}
 		p.history[str(id)] = rec
 	if d != null:
 		for m in p.members:

@@ -673,6 +673,7 @@ func retire() -> Array:
 
 func _die(cause: String) -> Array:
 	var msgs: Array = []
+	loot = {}   # the dead of the last fight are the fallen heir's, not the next one's
 	var rec := {
 		"gen": gen, "name": heir.full_name(), "class_id": heir.class_id, "race_id": heir.race_id,
 		"traits": heir.traits.map(func(t): return GameData.trait_name(t)),
@@ -844,7 +845,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
 	g.auto_battle = bool(d.get("auto_battle", false))
-	g.loot = GamePlague.load_loot(d.get("loot", {}))
+	g.loot = GamePlague.load_loot(d.get("loot", {})) if g.state == "life" else {}
 	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
 		GameAges.end_saga(g, [])
 	return g

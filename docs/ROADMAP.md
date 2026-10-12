@@ -4,10 +4,16 @@
 
 In order:
 
-1. **Feats.** Non-spell damage feats, feat points and slots, loadouts changed only in towns or after a rest. Includes the **auto-battle toggle**: once turned on, Hunt and Hard hunt fight themselves until the player turns it off.
-2. **Battle-side diseases.** Looting corpses, coating blades with toxins, throwing plague vials, sickness spreading between companions.
+1. **Feats.** Done. Non-spell damage feats, feat points and slots, loadouts changed only in towns or after a rest. Includes the **auto-battle toggle**: once turned on, Hunt and Hard hunt fight themselves until the player turns it off.
+2. **Battle-side diseases.** Done. Looting corpses, coating blades with toxins, throwing plague vials, sickness spreading between companions.
 3. **Whole-game bug hunt.** UI, saves, balance and long runs, across every system.
 4. **Skill trees** for the heir and for companions, with some nodes passing down the bloodline.
+5. **Mobile: Android and iOS.** The same Godot project, exported to phones and tablets. The game logic and data stay as they are; the work is in the screens:
+   - Export setup for Android (built on Linux with the Android SDK and a signing key) and iOS (built on a Mac with Xcode; installing on an iPhone or publishing needs an Apple Developer account).
+   - Touch instead of hover: everything that shows details on mouse hover (traits, feat and spell previews, tavern, shop and map details) also shows them on tap-and-hold.
+   - Readable on a phone: a text-size setting and larger buttons, with layouts checked on small screens.
+   - Landscape lock, so the 1280x720 layout fills the screen.
+   - Saves, auto-battle and the autopilot checked on a real device.
 
 ## After the text game: the 2D/3D sandbox
 
