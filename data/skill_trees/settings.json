@@ -4,11 +4,11 @@
   "point_bands": [
    [
     30,
-    5
+    6
    ],
    [
     90,
-    8
+    10
    ],
    [
     300,
@@ -31,7 +31,7 @@
     4000
    ]
   ],
-  "companion_points": 0.5,
+  "companion_points": 0.4,
   "inherit_share": 0.5,
   "inherit_fate_failure": -0.2,
   "inherit_per_curse": -0.1,
