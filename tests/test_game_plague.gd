@@ -178,6 +178,24 @@ func _test_loot_offer() -> void:
 	_check(not d.loot.is_empty(), "won again")
 	d.rest()
 	_check(d.loot.is_empty(), "moving on (any action that takes time) leaves the dead unsearched")
+	_hunt(d, "wolf", 2)
+	_win(d)
+	_check(not d.loot.is_empty(), "won before retiring")
+	var first := d.heir.name
+	d.heir.age = d.heir.lifespan
+	d.retire()
+	_check(d.state == "succession" and d.loot.is_empty(), "a retiring heir leaves their dead behind")
+	if d.state == "succession" and not d.candidates.is_empty():
+		d.choose_heir(0)
+		_check(d.state == "life" and d.gen == 2, "a new heir took over from %s" % first)
+		_check(d.loot.is_empty() and GamePlague.search(d).is_empty(), "the new heir finds no bodies from a fight they never fought")
+	var stale := _fresh(34)
+	stale.heir.level = 10
+	_hunt(stale, "wolf", 2)
+	_win(stale)
+	var sd: Dictionary = JSON.parse_string(JSON.stringify(stale.to_dict()))
+	sd["state"] = "succession"
+	_check((GameDynasty.from_dict(sd).loot as Dictionary).is_empty(), "an old save in succession drops the last heir's dead")
 	# Generation scaling: the purse grows with the foes' own gold.
 	var late := _fresh(33)
 	late.gen = 300
