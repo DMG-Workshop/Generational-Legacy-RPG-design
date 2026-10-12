@@ -523,7 +523,7 @@ static func upgraded(u: GameHeir, kind: String, ab: Dictionary) -> Dictionary:
 
 static func _mods_for(f: Dictionary, kind: String, ab: Dictionary) -> Dictionary:
 	var keys: Array = ["%s:%s" % [kind, ab.get("id", "")], kind + ":*"]
-	if kind == "skill":
+	if kind == "skill" and "skill:" + str(ab.get("type", "")) not in keys:   # a skill may be named for its type
 		keys.append("skill:" + str(ab.get("type", "")))
 	var m := {}
 	for k in keys:
@@ -860,6 +860,30 @@ static func auto_spend(u: GameHeir, budget: int = -1) -> int:
 	return bought
 
 
+## The player hands the choice over: every point the heir or a companion holds is spent along the
+## path the autopilot follows for their class. Returns the journal line or why not.
+static func auto(d: GameDynasty, who: String = "") -> String:
+	var why := spend_block(d)
+	var u := unit_of(d, who)
+	if why == "" and u == null:
+		why = "No such companion."
+	if why != "":
+		return why
+	var before := u.tree_ranks.duplicate()
+	if auto_spend(u) == 0:
+		return "Nothing on %s's path can be bought with %s skill point%s." % [u.name, GameText.num(u.tree_points), "" if u.tree_points == 1 else "s"]
+	_store(d, who, u)
+	var got: Array = []
+	for id in u.tree_ranks:
+		var n := int(u.tree_ranks[id]) - int(before.get(id, 0))
+		if n > 0:
+			got.append(node_name(id) if n == 1 else "%s x%d" % [node_name(id), n])
+	var what := _and_list(got) if got.size() <= 6 else "%s and %d more" % [", ".join(PackedStringArray(got.slice(0, 5))), got.size() - 5]
+	var text := "%s follows the well-worn path: %s (%s skill point%s left)." % [u.name, what, GameText.num(u.tree_points), "" if u.tree_points == 1 else "s"]
+	d._say(text)
+	return text
+
+
 ## The autopilot's tree errand: spend the heir's points along the path for their class.
 static func bot_tick(d: GameDynasty) -> void:
 	if spend_block(d) != "":
@@ -874,7 +898,8 @@ static func on_years(d: GameDynasty, msgs: Array) -> void:
 	sync(h)
 	if h.tree_news <= 0:
 		return
-	var line := "%s earns %s (%s to spend)." % [h.name, "a skill point" if h.tree_news == 1 else "%s skill points" % GameText.num(h.tree_news), GameText.num(h.tree_points)]
+	var line := "%s earns %s%s." % [h.name, "a skill point" if h.tree_news == 1 else "%s skill points" % GameText.num(h.tree_news),
+		" (%s to spend)" % GameText.num(h.tree_points) if h.tree_points > 0 else ""]
 	h.tree_news = 0
 	msgs.append(line)
 	d._say(line)
