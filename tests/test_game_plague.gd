@@ -116,6 +116,7 @@ func _test_data() -> void:
 			var ab := GamePlague.vial_ability(id)
 			_check(GameCombat.shape(ab) == "burst" and GameCombat.is_aoe(ab), "%s is thrown as a burst" % id)
 			_check(not GameCombat.status_def(str(ab["statuses"][0]["id"])).is_empty(), "%s sickens with a known status" % id)
+	_check(_unread_settings().is_empty(), "every plague setting is read by the game: %s" % str(_unread_settings()))
 	for id in ["plague_rat", "ghoul", "skeleton", "wraith", "bog_troll"]:
 		_check(not (GameCombat.creature_def(id).get("carries", []) as Array).is_empty(), "%s carries sickness" % id)
 
@@ -828,3 +829,17 @@ func _test_companion_rehire() -> void:
 	var rec: Dictionary = d.party.history[found]
 	d.party._close_line(d, found, {"name": rec["name"], "end": "died", "age": 70, "year": 1, "gen": d.gen, "served": false})
 	_check(not rec.has("away"), "a closed line forgets the old holder's sickness")
+
+
+## Tunables in plague.json that no script in core/ or ui/ names.
+func _unread_settings() -> Array:
+	var code := ""
+	for dir in ["res://core/game", "res://ui/play"]:
+		for f in DirAccess.get_files_at(dir):
+			if f.ends_with(".gd"):
+				code += FileAccess.get_file_as_string(dir.path_join(f))
+	var out: Array = []
+	for key in GameData.plague["settings"]:
+		if not ("\"%s\"" % key) in code:
+			out.append(key)
+	return out

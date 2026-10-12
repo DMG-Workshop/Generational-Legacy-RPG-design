@@ -26,8 +26,7 @@
     "vial_radius": 4.5,
     "bot_loot_max_risk": 0.005,
     "bot_coat_min_blows": 3.0,
-    "bot_item_worth": 0.2,
-    "companion_cure_stage_step": 0.5
+    "bot_item_worth": 0.2
   },
   "toxin_status": "venom",
   "vial_status": {"rat_plague": "plague_fever", "grey_veil": "grey_choke"},
