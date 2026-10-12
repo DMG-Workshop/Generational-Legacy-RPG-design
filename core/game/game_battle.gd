@@ -1332,19 +1332,25 @@ func _enemy_hit_ally(i: int, ai: int) -> void:
 		_inflict(i, ref)
 
 
-## Mind over Matter: part of a blow the wards left is paid from the unit's mana. Returns the share
-## taken that way (it counts as absorbed, so _absorb leaves it to the wards first).
+## Mind over Matter: part of a blow the wards left is paid from the unit's mana, each MP covering
+## hp_per_mp HP. Returns the HP taken that way (it counts as absorbed, so _absorb leaves it to the
+## wards first).
 func _mind_over_matter(by: int, n: int) -> int:
-	var share := float(unit_numbers(by)["mom"])
+	var nums := unit_numbers(by)
+	var share := float(nums["mom"])
 	if share <= 0.0 or n <= 0:
 		return 0
 	var u := _unit(by)
-	var take := mini(u.mp, int(round(float(n) * share)))
-	if take > 0:
-		u.mp -= take
-		events.append({"type": "mana", "by": by, "amount": -take})
+	var per := maxf(1.0, float(nums["mom_per_mp"]))
+	var want := int(round(float(n) * share))
+	var mp := mini(u.mp, int(ceil(float(want) / per)))
+	var take := mini(want, int(floor(float(mp) * per)))
+	if mp > 0 and take > 0:
+		u.mp -= mp
+		events.append({"type": "mana", "by": by, "amount": -mp})
 		_say("%s's mana takes %d of the blow." % [u.name, take])
-	return take
+		return take
+	return 0
 
 
 ## A creature's own statuses (a fire imp's burn...) on a unit it just struck.
@@ -1372,6 +1378,7 @@ func unit_numbers(by: int) -> Dictionary:
 			"crit_mult": float(GameSkillTree.rule(u, "crit_mult").get("mult", 1.75)) + u.trait_total("crit_damage"),
 			"wrath": float(GameSkillTree.rule(u, "wrath").get("max", 0.0)), "dealt": 1.0 + float(glass.get("dealt", 0.0)),
 			"taken": 1.0 + float(glass.get("taken", 0.0)), "mom": float(GameSkillTree.rule(u, "mind_over_matter").get("share", 0.0)),
+			"mom_per_mp": float(GameSkillTree.rule(u, "mind_over_matter").get("hp_per_mp", 1.0)),
 			"mp_regen": u.trait_total("mp_regen"),
 			"resist": clampf(u.trait_total("resist"), 0.0, 0.9)}
 		if not u.equipped_feats.is_empty():

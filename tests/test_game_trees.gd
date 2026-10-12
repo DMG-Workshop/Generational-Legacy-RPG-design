@@ -477,11 +477,12 @@ func test_keystones() -> void:
 	var gb := _battle(g)
 	_keystone_unit(g, ["m_focus", "m_searing", "m_lore", "m_mastery", "m_glass_cannon"])
 	gb._nums.clear()
-	ok(absf(gb._dealt_mult("heir") - 1.3) < 0.0001, "Glass Cannon: x1.3 damage dealt")
-	ok(absf(float(gb.unit_numbers(-1)["taken"]) - 1.35) < 0.0001, "and x1.35 damage taken")
+	var gk: Dictionary = GameSkillTree.keystone("glass_cannon")["params"]
+	ok(absf(gb._dealt_mult("heir") - 1.0 - float(gk["dealt"])) < 0.0001, "Glass Cannon: x%.2f damage dealt" % gb._dealt_mult("heir"))
+	ok(absf(float(gb.unit_numbers(-1)["taken"]) - 1.0 - float(gk["taken"])) < 0.0001, "and x%.2f damage taken" % float(gb.unit_numbers(-1)["taken"]))
 	var plain := _dyn("mage", 80, 43)
 	var pb := _battle(plain)
-	ok(gb.foe_threat(0) > pb.foe_threat(0) * 1.3, "foes threaten more (%d vs %d)" % [int(gb.foe_threat(0)), int(pb.foe_threat(0))])
+	ok(gb.foe_threat(0) > pb.foe_threat(0) * (1.0 + float(gk["taken"]) - 0.01), "foes threaten more (%d vs %d)" % [int(gb.foe_threat(0)), int(pb.foe_threat(0))])
 
 	# Blood Magic: skills cost HP, not MP.
 	var n := _dyn("necromancer", 80, 44)
@@ -518,13 +519,16 @@ func test_keystones() -> void:
 	ok(e.heir.mp < mp0 and e.heir.hp < hp0, "Eldritch Bastion: the blow takes MP and HP (MP %d -> %d)" % [mp0, e.heir.mp])
 	var taken_mp := mp0 - e.heir.mp
 	var taken_hp := hp0 - e.heir.hp
-	ok(absf(float(taken_mp) / float(taken_mp + taken_hp) - 0.5) < 0.05, "half of it from mana (%d MP, %d HP)" % [taken_mp, taken_hp])
+	var per := float(GameSkillTree.keystone("eldritch_bastion")["params"]["hp_per_mp"])
+	ok(per > 1.0 and absf(float(taken_mp) * per / (float(taken_mp) * per + float(taken_hp)) - 0.5) < 0.05, "half of it from mana, each MP covering %.1f HP (%d MP, %d HP)" % [per, taken_mp, taken_hp])
 	e.heir.mp = 0
 	hp0 = e.heir.hp
 	eb._enemy_act(0)
 	ok(e.heir.mp == 0 and e.heir.hp < hp0 and not eb.log.back().find("mana takes") >= 0, "with no mana left the whole blow lands on HP")
-	var plain_mage := _unit("mage", 80)
-	ok(float(e.heir.max_hp()) < float(plain_mage.max_hp()), "its price: less max HP (%d < %d)" % [e.heir.max_hp(), plain_mage.max_hp()])
+	e.heir.mp = 3
+	hp0 = e.heir.hp
+	eb._enemy_act(0)
+	ok(e.heir.mp == 0 and hp0 - e.heir.hp > 0, "its price: the mana is spent, and a pool run dry leaves the rest to HP (%d HP taken)" % [hp0 - e.heir.hp])
 
 	# Assassin's Mark: crits x2.6.
 	var a := _dyn("rogue", 80, 46)
@@ -785,7 +789,9 @@ func test_bot() -> void:
 				good = good and c in k.get("suits", []) and not rules.has(k["rule"])
 				rules[k["rule"]] = true
 		ok(good and path.size() > 60, "%s: the path respects prerequisites, ranks and keystones that suit it (%d ranks)" % [c, path.size()])
-	ok(not GameSkillTree.path_of("mage").any(func(id): return GameSkillTree.is_keystone(id)), "a Mage's path takes no keystone that does not suit it")
+	var mage_keys: Array = GameSkillTree.path_of("mage").filter(func(id): return GameSkillTree.is_keystone(id))
+	ok(mage_keys == ["m_glass_cannon"], "a Mage's path takes Glass Cannon and no keystone that does not suit it: %s" % str(mage_keys))
+	ok(not GameSkillTree.path_of("monk").any(func(id): return GameSkillTree.is_keystone(id)), "a Monk's path takes no keystone: none suits it")
 	ok(GameSkillTree.path_of("warrior").has("w_juggernaut") and not GameSkillTree.path_of("warrior").has("w_berserker"), "a Warrior's path takes Juggernaut, not Wrath")
 	var style_ok := GameSkillTree.path_of("mage").slice(0, 6).all(func(id): return id.begins_with("m_") or id.begins_with("b_"))
 	ok(style_ok and not GameSkillTree.path_of("mage").slice(0, 12).has("b_steel"), "a Mage starts with spellcraft, not steel")

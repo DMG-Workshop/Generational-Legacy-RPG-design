@@ -44,13 +44,14 @@
    "name": "Glass Cannon",
    "rule": "glass",
    "params": {
-    "dealt": 0.3,
-    "taken": 0.35
+    "dealt": 0.35,
+    "taken": 0.25
    },
    "effect": {},
-   "text": "All damage you deal is raised by 30%.",
-   "drawback": "All damage you take is raised by 35%.",
+   "text": "All damage you deal is raised by 35%.",
+   "drawback": "All damage you take is raised by 25%.",
    "suits": [
+    "mage",
     "arcane_trickster"
    ]
   },
@@ -106,16 +107,16 @@
    "name": "Eldritch Bastion",
    "rule": "mind_over_matter",
    "params": {
-    "share": 0.5
+    "share": 0.5,
+    "hp_per_mp": 1.5
    },
    "effect": {
     "bonus": {
-     "max_mp": 0.2,
-     "max_hp": -0.1
+     "max_mp": 0.1
     }
    },
-   "text": "Half of every blow you take is paid from your mana first.",
-   "drawback": "-10% max HP, and mana spent on blows is gone for spells.",
+   "text": "Half of every blow you take is paid from your mana first, 1 MP for every 1.5 HP. +10% max MP.",
+   "drawback": "Mana spent on blows is gone for spells.",
    "excludes": [
     "blood_magic",
     "blood_rite"
@@ -127,16 +128,16 @@
    "name": "Lich's Ward",
    "rule": "mind_over_matter",
    "params": {
-    "share": 0.5
+    "share": 0.5,
+    "hp_per_mp": 1.5
    },
    "effect": {
     "bonus": {
-     "max_mp": 0.15,
-     "max_hp": -0.1
+     "max_mp": 0.15
     }
    },
-   "text": "Half of every blow you take is paid from your mana first.",
-   "drawback": "-10% max HP, and mana spent on blows is gone for spells.",
+   "text": "Half of every blow you take is paid from your mana first, 1 MP for every 1.5 HP. +15% max MP.",
+   "drawback": "Mana spent on blows is gone for spells and Soul Drain.",
    "excludes": [
     "blood_magic",
     "blood_rite"
@@ -148,16 +149,16 @@
    "name": "Faith's Bulwark",
    "rule": "mind_over_matter",
    "params": {
-    "share": 0.4
+    "share": 0.4,
+    "hp_per_mp": 1.5
    },
    "effect": {
     "bonus": {
-     "max_mp": 0.2,
-     "max_hp": -0.1
+     "max_mp": 0.2
     }
    },
-   "text": "Two parts in five of every blow you take are paid from your mana first.",
-   "drawback": "-10% max HP, and mana spent on blows is gone for spells.",
+   "text": "Two parts in five of every blow you take are paid from your mana first, 1 MP for every 1.5 HP. +20% max MP.",
+   "drawback": "Mana spent on blows is gone for healing.",
    "excludes": [
     "blood_magic",
     "blood_rite"
@@ -169,16 +170,16 @@
    "name": "Stillness",
    "rule": "mind_over_matter",
    "params": {
-    "share": 0.35
+    "share": 0.35,
+    "hp_per_mp": 3
    },
    "effect": {
     "bonus": {
-     "max_mp": 0.25,
-     "max_hp": -0.1
+     "max_mp": 0.25
     }
    },
-   "text": "Over a third of every blow you take is paid from your mana first.",
-   "drawback": "-10% max HP, and mana spent on blows is gone for spells.",
+   "text": "Over a third of every blow you take is paid from your mana first, 1 MP for every 3 HP. +25% max MP.",
+   "drawback": "Mana spent on blows is gone for your techniques.",
    "excludes": [
     "blood_magic",
     "blood_rite"
@@ -269,11 +270,12 @@
    "params": {},
    "effect": {
     "bonus": {
-     "defense": 0.3,
+     "defense": 0.6,
+     "max_hp": 0.1,
      "healing_power": 0.15
     }
    },
-   "text": "Sink into the earth: +30% defense and +15% healing.",
+   "text": "Sink into the earth: +60% defense, +10% max HP and +15% healing.",
    "drawback": "You never dodge a blow.",
    "suits": []
   },
@@ -313,15 +315,15 @@
    "name": "Last of the Line",
    "rule": "wrath",
    "params": {
-    "max": 0.4
+    "max": 0.6
    },
    "effect": {
     "bonus": {
-     "max_hp": -0.1
+     "max_hp": -0.05
     }
    },
-   "text": "The house will not end here: up to +40% damage as your HP runs out.",
-   "drawback": "-10% max HP.",
+   "text": "The house will not end here: up to +60% damage as your HP runs out.",
+   "drawback": "-5% max HP.",
    "suits": []
   }
  ]
