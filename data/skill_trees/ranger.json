@@ -1,0 +1,369 @@
+{
+ "id": "ranger",
+ "name": "The Long Watch",
+ "class": "ranger",
+ "description": "Patience, a steady draw and the woods as an ally.",
+ "nodes": [
+  {
+   "id": "g_steady",
+   "name": "Steady Aim",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "agi": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "g_trail",
+   "name": "Trail Legs",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "vit": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "g_volley",
+   "name": "Wider Volley",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "g_steady"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.06,
+      "angle": 10
+     }
+    ]
+   }
+  },
+  {
+   "id": "g_eagle",
+   "name": "Eagle Eye",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "g_steady",
+    "g_trail"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "luck": 0.01
+    }
+   }
+  },
+  {
+   "id": "g_surgeon",
+   "name": "Field Surgeon",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "g_trail"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "heal",
+      "heal": 0.1,
+      "cost": -0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "g_draw",
+   "name": "Heavy Draw",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "g_volley"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.04
+    }
+   }
+  },
+  {
+   "id": "g_aimed",
+   "name": "Breath Held",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "g_eagle"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "aimed_shot",
+      "mult": 0.1,
+      "crit": 0.05
+     }
+    ]
+   }
+  },
+  {
+   "id": "g_woodcraft",
+   "name": "Woodcraft",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "g_eagle"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    }
+   }
+  },
+  {
+   "id": "g_patience",
+   "name": "Hunter's Patience",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "g_surgeon"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.05
+    }
+   }
+  },
+  {
+   "id": "g_bodkin",
+   "name": "Bodkin Points",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "g_draw"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "pierce": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "g_rain",
+   "name": "Black Sky",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "g_aimed",
+    "g_draw"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "rain_of_arrows",
+      "radius": 1,
+      "mult": 0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "g_fleet",
+   "name": "Fleet",
+   "tier": 4,
+   "col": 3,
+   "requires": [
+    "g_woodcraft"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "agi": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "g_snares",
+   "name": "Snares",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "g_patience"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "caltrops",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "g_deadeye",
+   "keystone": "deadeye",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "g_rain",
+    "g_bodkin"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "g_reckless",
+   "keystone": "glass_cannon",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "g_rain",
+    "g_fleet"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "g_bowyer",
+   "name": "Bowyer's Pull",
+   "tier": 5,
+   "col": 3,
+   "requires": [
+    "g_fleet"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "str": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "g_hide",
+   "name": "Leather and Moss",
+   "tier": 5,
+   "col": 4,
+   "requires": [
+    "g_snares",
+    "g_fleet"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.04
+    }
+   }
+  },
+  {
+   "id": "g_storm",
+   "name": "Storm of Shafts",
+   "tier": 6,
+   "col": 1,
+   "requires": [
+    "g_deadeye",
+    "g_rain"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.06
+     }
+    ]
+   }
+  },
+  {
+   "id": "g_ghost_wood",
+   "name": "Ghost of the Wood",
+   "tier": 6,
+   "col": 3,
+   "requires": [
+    "g_bowyer",
+    "g_hide"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    },
+    "stats": {
+     "agi": {
+      "pct": 0.02
+     }
+    }
+   }
+  },
+  {
+   "id": "g_far_famed",
+   "name": "Far-Famed Bow",
+   "tier": 7,
+   "col": 2,
+   "requires": [
+    "g_storm",
+    "g_ghost_wood"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Hunters name their sons after you.",
+   "effect": {
+    "stats": {
+     "agi": {
+      "pct": 0.02
+     },
+     "str": {
+      "pct": 0.02
+     }
+    },
+    "bonus": {
+     "luck": 0.003
+    }
+   }
+  }
+ ]
+}

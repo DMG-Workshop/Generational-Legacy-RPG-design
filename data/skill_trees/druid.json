@@ -1,0 +1,379 @@
+{
+ "id": "druid",
+ "name": "The Green Way",
+ "class": "druid",
+ "description": "Root, thorn and season; the slow strength of growing things.",
+ "nodes": [
+  {
+   "id": "d_green",
+   "name": "Green Thought",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "mag": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "d_roots",
+   "name": "Deep Roots",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "vit": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "d_thorns",
+   "name": "Sharper Thorns",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "d_green"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.08,
+      "width": 0.5
+     }
+    ]
+   }
+  },
+  {
+   "id": "d_regrowth",
+   "name": "Lush Regrowth",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "d_green",
+    "d_roots"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "heal",
+      "heal": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "d_bark",
+   "name": "Barkskin",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "d_roots"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.06
+    }
+   }
+  },
+  {
+   "id": "d_vines",
+   "name": "Strangling Vines",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "d_thorns"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "entangle",
+      "turns": 1,
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "d_acid",
+   "name": "Bitter Rain",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "d_thorns"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "acid_rain",
+      "radius": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "d_seasons",
+   "name": "Seasons' Patience",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "d_regrowth"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "mp_regen": 0.01
+    }
+   }
+  },
+  {
+   "id": "d_kin",
+   "name": "Kin of Beasts",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "d_bark"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.04
+    }
+   }
+  },
+  {
+   "id": "d_wild",
+   "name": "Wild Power",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "d_vines",
+    "d_acid"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "mag": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "d_sky",
+   "name": "Sky's Anger",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "d_acid"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "chain_lightning",
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "d_rejuv",
+   "name": "Spring Rain",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "d_seasons"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "rejuvenation",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "d_oak",
+   "name": "Heart of Oak",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "d_kin"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "vit": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "d_quake",
+   "name": "Earthshatter",
+   "tier": 5,
+   "col": 0,
+   "requires": [
+    "d_wild"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "earthshatter",
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "d_grove",
+   "keystone": "grove_mother",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "d_rejuv"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "d_rooted",
+   "keystone": "rooted",
+   "tier": 5,
+   "col": 4,
+   "requires": [
+    "d_oak"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "d_thicket",
+   "name": "Thicket",
+   "tier": 5,
+   "col": 3,
+   "requires": [
+    "d_rejuv",
+    "d_oak"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.06
+    }
+   }
+  },
+  {
+   "id": "d_winter",
+   "name": "Winter's Teeth",
+   "tier": 6,
+   "col": 0,
+   "requires": [
+    "d_quake",
+    "d_sky"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "blizzard",
+      "mult": 0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "d_warden",
+   "name": "Warden of the Wild",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "d_grove",
+    "d_thicket"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.06
+    }
+   }
+  },
+  {
+   "id": "d_elder",
+   "name": "Elder Grove",
+   "tier": 6,
+   "col": 4,
+   "requires": [
+    "d_rooted",
+    "d_thicket"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.03,
+     "defense": 0.03
+    }
+   }
+  },
+  {
+   "id": "d_old_forest",
+   "name": "Old as Forests",
+   "tier": 7,
+   "col": 2,
+   "requires": [
+    "d_winter",
+    "d_warden",
+    "d_elder"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Birds nest in your hair and you let them.",
+   "effect": {
+    "stats": {
+     "mag": {
+      "pct": 0.02
+     },
+     "vit": {
+      "pct": 0.03
+     }
+    }
+   }
+  }
+ ]
+}

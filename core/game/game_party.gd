@@ -101,6 +101,7 @@ func _body(d: GameDynasty, m: Dictionary) -> GameHeir:
 	if not m.has("diseases"):
 		m["diseases"] = []
 	u.diseases = m["diseases"]
+	GameSkillTree.attach(u, m)
 	return u
 
 
@@ -391,13 +392,12 @@ func _part(d: GameDynasty, m: Dictionary, status: String) -> void:
 func _sync_member(d: GameDynasty, m: Dictionary) -> void:
 	if int(m["level"]) == d.heir.level and int(m["gen"]) == d.gen:
 		return
-	var frail := decline(d, m["id"])
-	var old := build_unit(m["id"], int(m["level"]), int(m["gen"]), m["name"], frail)
-	var neu := build_unit(m["id"], d.heir.level, d.gen, m["name"], frail)
-	m["hp"] = clampi(int(round(float(m["hp"]) * float(neu.max_hp()) / float(old.max_hp()))), 1, neu.max_hp())
-	m["mp"] = clampi(int(round(float(m["mp"]) * float(neu.max_mp()) / maxf(1.0, float(old.max_mp())))), 0, neu.max_mp())
+	var old := _body(d, m)
 	m["level"] = d.heir.level
 	m["gen"] = d.gen
+	var neu := _body(d, m)   # its skill tree takes the points of the new level first
+	m["hp"] = clampi(int(round(float(m["hp"]) * float(neu.max_hp()) / float(old.max_hp()))), 1, neu.max_hp())
+	m["mp"] = clampi(int(round(float(m["mp"]) * float(neu.max_mp()) / maxf(1.0, float(old.max_mp())))), 0, neu.max_mp())
 
 
 func sync(d: GameDynasty) -> void:
@@ -660,7 +660,7 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 			"id": id, "name": str(raw.get("name", def(id)["name"])), "hp": int(raw.get("hp", 1)), "mp": int(raw.get("mp", 0)),
 			"level": int(raw.get("level", 1)), "gen": int(raw.get("gen", 1)), "due": float(raw.get("due", 0.0)),
 			"battles": int(raw.get("battles", 0)), "hired_gen": int(raw.get("hired_gen", 1)),
-			"diseases": GameDisease.load_list(raw.get("diseases", [])),
+			"diseases": GameDisease.load_list(raw.get("diseases", [])), "tree": GameSkillTree.load_member(raw.get("tree")),
 		})
 	var h = v.get("history", {})
 	if typeof(h) != TYPE_DICTIONARY:

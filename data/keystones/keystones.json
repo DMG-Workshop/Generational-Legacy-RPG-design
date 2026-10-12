@@ -1,0 +1,324 @@
+{
+ "keystones": [
+  {
+   "id": "juggernaut",
+   "name": "Juggernaut",
+   "rule": "no_dodge",
+   "params": {},
+   "effect": {
+    "bonus": {
+     "defense": 0.45,
+     "max_hp": 0.12
+    }
+   },
+   "text": "Plant your feet and let them come.",
+   "drawback": "You never dodge a blow.",
+   "suits": [
+    "warrior",
+    "paladin",
+    "dread_knight",
+    "warden"
+   ]
+  },
+  {
+   "id": "berserker",
+   "name": "Berserker's Wrath",
+   "rule": "wrath",
+   "params": {
+    "max": 0.6
+   },
+   "effect": {
+    "bonus": {
+     "healing_power": -0.3,
+     "defense": -0.15
+    }
+   },
+   "text": "Every wound feeds the fire: up to +60% damage as your HP runs out.",
+   "drawback": "-30% healing received, -15% defense.",
+   "suits": [
+    "duelist"
+   ]
+  },
+  {
+   "id": "glass_cannon",
+   "name": "Glass Cannon",
+   "rule": "glass",
+   "params": {
+    "dealt": 0.3,
+    "taken": 0.35
+   },
+   "effect": {},
+   "text": "All damage you deal is raised by 30%.",
+   "drawback": "All damage you take is raised by 35%.",
+   "suits": [
+    "arcane_trickster"
+   ]
+  },
+  {
+   "id": "blood_magic",
+   "name": "Blood Magic",
+   "rule": "blood_magic",
+   "params": {
+    "hp_share": 0.5
+   },
+   "effect": {
+    "bonus": {
+     "element_power": 0.15
+    }
+   },
+   "text": "Skills and spells cost HP instead of MP, and spells strike 15% harder.",
+   "drawback": "Each cast takes half its share of your mana pool from your health instead.",
+   "excludes": [
+    "eldritch_bastion",
+    "lichs_ward",
+    "faiths_bulwark",
+    "stillness"
+   ],
+   "suits": []
+  },
+  {
+   "id": "blood_rite",
+   "name": "Blood Rite",
+   "rule": "blood_magic",
+   "params": {
+    "hp_share": 0.4
+   },
+   "effect": {
+    "bonus": {
+     "element_power": 0.1
+    }
+   },
+   "text": "Skills and spells cost HP instead of MP; Soul Drain pays much of it back.",
+   "drawback": "Each cast takes 40% of its share of your mana pool from your health.",
+   "excludes": [
+    "eldritch_bastion",
+    "lichs_ward",
+    "faiths_bulwark",
+    "stillness"
+   ],
+   "suits": [
+    "necromancer",
+    "dread_knight"
+   ]
+  },
+  {
+   "id": "eldritch_bastion",
+   "name": "Eldritch Bastion",
+   "rule": "mind_over_matter",
+   "params": {
+    "share": 0.5
+   },
+   "effect": {
+    "bonus": {
+     "max_mp": 0.2
+    }
+   },
+   "text": "Half of every blow you take is paid from your mana first.",
+   "drawback": "Your mana no longer returns on its own in battle.",
+   "excludes": [
+    "blood_magic",
+    "blood_rite"
+   ],
+   "suits": []
+  },
+  {
+   "id": "lichs_ward",
+   "name": "Lich's Ward",
+   "rule": "mind_over_matter",
+   "params": {
+    "share": 0.5
+   },
+   "effect": {
+    "bonus": {
+     "max_mp": 0.15
+    }
+   },
+   "text": "Half of every blow you take is paid from your mana first.",
+   "drawback": "Your mana no longer returns on its own in battle.",
+   "excludes": [
+    "blood_magic",
+    "blood_rite"
+   ],
+   "suits": []
+  },
+  {
+   "id": "faiths_bulwark",
+   "name": "Faith's Bulwark",
+   "rule": "mind_over_matter",
+   "params": {
+    "share": 0.4
+   },
+   "effect": {
+    "bonus": {
+     "max_mp": 0.2
+    }
+   },
+   "text": "Two parts in five of every blow you take are paid from your mana first.",
+   "drawback": "Your mana no longer returns on its own in battle.",
+   "excludes": [
+    "blood_magic",
+    "blood_rite"
+   ],
+   "suits": []
+  },
+  {
+   "id": "stillness",
+   "name": "Stillness",
+   "rule": "mind_over_matter",
+   "params": {
+    "share": 0.35
+   },
+   "effect": {
+    "bonus": {
+     "max_mp": 0.25
+    }
+   },
+   "text": "Over a third of every blow you take is paid from your mana first.",
+   "drawback": "Your mana no longer returns on its own in battle.",
+   "excludes": [
+    "blood_magic",
+    "blood_rite"
+   ],
+   "suits": []
+  },
+  {
+   "id": "assassins_mark",
+   "name": "Assassin's Mark",
+   "rule": "crit_mult",
+   "params": {
+    "mult": 2.6
+   },
+   "effect": {
+    "bonus": {
+     "luck": -0.04
+    }
+   },
+   "text": "Critical hits deal x2.6 instead of x1.75.",
+   "drawback": "-4% critical chance.",
+   "suits": [
+    "rogue",
+    "ninja",
+    "duelist"
+   ]
+  },
+  {
+   "id": "deadeye",
+   "name": "Deadeye",
+   "rule": "crit_mult",
+   "params": {
+    "mult": 2.4
+   },
+   "effect": {
+    "bonus": {
+     "melee_damage": -0.08
+    }
+   },
+   "text": "Critical hits deal x2.4 instead of x1.75.",
+   "drawback": "-8% damage on every blow that does not crit.",
+   "suits": [
+    "ranger",
+    "beastmaster"
+   ]
+  },
+  {
+   "id": "martyr",
+   "name": "Martyr",
+   "rule": "party_heals",
+   "params": {
+    "potency": 0.6,
+    "cost": 0.4
+   },
+   "effect": {},
+   "text": "Your class heal reaches the whole party, at 60% of its strength.",
+   "drawback": "It costs 40% more to cast.",
+   "suits": [
+    "cleric",
+    "paladin",
+    "templar"
+   ]
+  },
+  {
+   "id": "grove_mother",
+   "name": "Grove Mother",
+   "rule": "party_heals",
+   "params": {
+    "potency": 0.6,
+    "cost": 0.5
+   },
+   "effect": {
+    "bonus": {
+     "healing_power": 0.08
+    }
+   },
+   "text": "Your class heal reaches the whole party, at 60% of its strength, and all your healing is 8% stronger.",
+   "drawback": "Your class heal costs 50% more to cast.",
+   "suits": [
+    "druid",
+    "shaman",
+    "beastmaster"
+   ]
+  },
+  {
+   "id": "rooted",
+   "name": "Rooted",
+   "rule": "no_dodge",
+   "params": {},
+   "effect": {
+    "bonus": {
+     "defense": 0.3,
+     "healing_power": 0.15
+    }
+   },
+   "text": "Sink into the earth: +30% defense and +15% healing.",
+   "drawback": "You never dodge a blow.",
+   "suits": []
+  },
+  {
+   "id": "fury_of_the_fist",
+   "name": "Fury of the Fist",
+   "rule": "wrath",
+   "params": {
+    "max": 0.5
+   },
+   "effect": {
+    "bonus": {
+     "defense": -0.2
+    }
+   },
+   "text": "Up to +50% damage as your HP runs out.",
+   "drawback": "-20% defense.",
+   "suits": []
+  },
+  {
+   "id": "diamond_body",
+   "name": "Diamond Body",
+   "rule": "no_dodge",
+   "params": {},
+   "effect": {
+    "bonus": {
+     "defense": 0.55,
+     "max_hp": 0.1
+    }
+   },
+   "text": "Skin like cut stone: +55% defense and +10% max HP.",
+   "drawback": "You never dodge a blow.",
+   "suits": []
+  },
+  {
+   "id": "last_of_the_line",
+   "name": "Last of the Line",
+   "rule": "wrath",
+   "params": {
+    "max": 0.4
+   },
+   "effect": {
+    "bonus": {
+     "max_hp": -0.1
+    }
+   },
+   "text": "The house will not end here: up to +40% damage as your HP runs out.",
+   "drawback": "-10% max HP.",
+   "suits": []
+  }
+ ]
+}

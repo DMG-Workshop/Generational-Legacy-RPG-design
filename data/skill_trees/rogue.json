@@ -1,0 +1,392 @@
+{
+ "id": "rogue",
+ "name": "The Quiet Knife",
+ "class": "rogue",
+ "description": "Speed, nerve, and knowing exactly where to put the blade.",
+ "nodes": [
+  {
+   "id": "r_quick",
+   "name": "Quick Hands",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "agi": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "r_wiry",
+   "name": "Wiry",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "str": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "r_fangs",
+   "name": "Honed Fangs",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "r_quick"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.08,
+      "crit": 0.02
+     }
+    ]
+   }
+  },
+  {
+   "id": "r_light_step",
+   "name": "Light Step",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "r_quick",
+    "r_wiry"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    }
+   }
+  },
+  {
+   "id": "r_cutpurse",
+   "name": "Cutpurse",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "r_wiry"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1,
+     "stealth": 0.03
+    }
+   }
+  },
+  {
+   "id": "r_bait",
+   "name": "Bait and Switch",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "r_fangs"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "feint",
+      "cooldown": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "r_vitals",
+   "name": "Find the Vitals",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "r_fangs"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "luck": 0.01
+    }
+   }
+  },
+  {
+   "id": "r_slip",
+   "name": "Slip Away",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "r_light_step"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "heal",
+      "heal": 0.1,
+      "cost": -0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "r_poise",
+   "name": "Poise",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "r_light_step",
+    "r_cutpurse"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "agi": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "r_low_cut",
+   "name": "Low Cut",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "r_bait"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "hamstring",
+      "turns": 1,
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "r_flurry",
+   "name": "Flurry Drills",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "r_bait",
+    "r_vitals"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "flurry",
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "r_killer",
+   "name": "Killer's Instinct",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "r_vitals"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "crit_damage": 0.1
+    }
+   }
+  },
+  {
+   "id": "r_evasion",
+   "name": "Evasion",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "r_poise"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01,
+     "resist": 0.04
+    }
+   }
+  },
+  {
+   "id": "r_open_veins",
+   "name": "Opened Veins",
+   "tier": 5,
+   "col": 0,
+   "requires": [
+    "r_low_cut",
+    "r_flurry"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "rend",
+      "turns": 1,
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "r_assassin",
+   "keystone": "assassins_mark",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "r_killer"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "r_glass",
+   "keystone": "glass_cannon",
+   "tier": 5,
+   "col": 3,
+   "requires": [
+    "r_killer",
+    "r_evasion"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "r_sinew",
+   "name": "Sinew",
+   "tier": 5,
+   "col": 4,
+   "requires": [
+    "r_evasion"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "str": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "r_thousand",
+   "name": "A Thousand Cuts",
+   "tier": 6,
+   "col": 0,
+   "requires": [
+    "r_open_veins"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "thousand_cuts",
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "r_master",
+   "name": "Master of Knives",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "r_assassin",
+    "r_flurry"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.06,
+      "crit": 0.02
+     }
+    ]
+   }
+  },
+  {
+   "id": "r_ghost",
+   "name": "Ghost",
+   "tier": 6,
+   "col": 4,
+   "requires": [
+    "r_sinew",
+    "r_glass"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    },
+    "stats": {
+     "agi": {
+      "pct": 0.02
+     }
+    }
+   }
+  },
+  {
+   "id": "r_whispered",
+   "name": "Whispered Name",
+   "tier": 7,
+   "col": 2,
+   "requires": [
+    "r_thousand",
+    "r_master",
+    "r_ghost"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Doors open before you knock. Some of them should not.",
+   "effect": {
+    "stats": {
+     "agi": {
+      "pct": 0.02
+     },
+     "str": {
+      "pct": 0.02
+     }
+    },
+    "bonus": {
+     "luck": 0.003
+    }
+   }
+  }
+ ]
+}

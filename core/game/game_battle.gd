@@ -272,7 +272,20 @@ func status_mod(ref: String, key: String) -> float:
 
 
 func _dealt_mult(ref: String) -> float:
-	return maxf(0.1, 1.0 + status_mod(ref, "damage_dealt"))
+	var m := maxf(0.1, 1.0 + status_mod(ref, "damage_dealt"))
+	return m * _rule_dealt(ref) if _side(ref) != "enemy" else m
+
+
+## What a keystone does to the damage a party member deals: Glass Cannon always, Wrath by the share
+## of HP already lost.
+func _rule_dealt(ref: String) -> float:
+	var by := -1 if ref == "heir" else _index(ref)
+	var nums := unit_numbers(by)
+	var m := float(nums["dealt"])
+	if float(nums["wrath"]) > 0.0:
+		var u := _unit(by)
+		m *= 1.0 + float(nums["wrath"]) * clampf(1.0 - float(u.hp) / float(maxi(1, int(nums["max_hp"]))), 0.0, 1.0)
+	return m
 
 
 func _taken_mult(ref: String) -> float:
@@ -306,6 +319,8 @@ func status_chance(target_ref: String, entry: Dictionary, source: String) -> flo
 	chance *= clampf(1.0 - float(GameCombat.setting("level_resist")) * (ratio - 1.0), float(GameCombat.setting("resist_floor")), float(GameCombat.setting("resist_ceiling")))
 	if control and _ref_boss(target_ref):
 		chance *= float(GameCombat.setting("boss_control_chance"))
+	if _side(target_ref) != "enemy":
+		chance *= 1.0 - float(unit_numbers(-1 if target_ref == "heir" else _index(target_ref))["resist"])
 	return clampf(chance, 0.0, 1.0)
 
 
@@ -594,7 +609,7 @@ func _calc_damage(power: float, mult: float, idx: int, pierce: float, crit_bonus
 	dmg *= _dealt_mult(ref_of(by)) * _taken_mult(enemy_ref(idx))
 	var crit := rng.randf() < float(unit_numbers(by)["crit"]) + crit_bonus + float(weather.get("crit", 0.0)) + status_mod(ref_of(by), "crit")
 	if crit:
-		dmg *= 1.75
+		dmg *= float(unit_numbers(by)["crit_mult"])
 	return {"amount": maxi(1, int(round(dmg))), "crit": crit}
 
 
@@ -651,8 +666,9 @@ func skill_count() -> int:
 	return (heir.cls()["skills"] as Array).size()
 
 
+## The heir's class skill as the skill tree has shaped it.
 func skill_info(i: int) -> Dictionary:
-	return heir.cls()["skills"][i]
+	return GameSkillTree.skill(heir, i)
 
 
 ## Skill costs grow with level, so max MP growth buys stronger casts rather than endless heals.
@@ -661,12 +677,12 @@ func skill_cost(i: int) -> int:
 
 
 static func unit_skill_cost(u: GameHeir, i: int) -> int:
-	return GameCombat.ability_cost(u.cls()["skills"][i], u.level)
+	return GameCombat.ability_cost(GameSkillTree.skill(u, i), u.level)
 
 
 ## First skill of a kind ("damage" or "heal") in a unit's class, or -1.
 static func unit_skill_of(u: GameHeir, kind: String) -> int:
-	var skills: Array = u.cls()["skills"]
+	var skills: Array = GameSkillTree.skills(u)
 	for i in skills.size():
 		if skills[i]["type"] == kind:
 			return i
@@ -687,7 +703,7 @@ static func heal_amount(caster: GameHeir, patient: GameHeir, s: Dictionary) -> i
 
 
 func can_use_skill(i: int) -> bool:
-	return result == "" and heir.mp >= skill_cost(i)
+	return result == "" and can_pay(-1, skill_cost(i))
 
 
 func use_skill(i: int, target: int) -> void:
@@ -707,11 +723,58 @@ func known_spells() -> Array:
 
 
 func spell_cost(id: String) -> int:
-	return GameCombat.ability_cost(GameCombat.spell(id), heir.level)
+	return GameCombat.ability_cost(unit_spell(-1, id), heir.level)
+
+
+## A spell as the unit's skill tree has shaped it.
+func unit_spell(by: int, id: String) -> Dictionary:
+	return GameSkillTree.spell(_unit(by), id)
+
+
+func unit_feat(by: int, id: String) -> Dictionary:
+	return GameSkillTree.feat(_unit(by), id)
 
 
 func can_cast(id: String) -> bool:
-	return result == "" and id in heir.spells and heir.mp >= spell_cost(id)
+	return result == "" and id in heir.spells and can_pay(-1, spell_cost(id))
+
+
+## Blood Magic turns a skill's or spell's MP cost into HP (see GameSkillTree.blood_cost).
+func pays_in_hp(by: int) -> bool:
+	return bool(unit_numbers(by)["blood"])
+
+
+func blood_cost(by: int, mp_cost: int) -> int:
+	var nums := unit_numbers(by)
+	return GameSkillTree.blood_cost(_unit(by), mp_cost, int(nums["max_hp"]), int(nums["max_mp"]))
+
+
+## Whether the unit can pay an ability's cost: MP, or under Blood Magic HP that leaves it standing.
+func can_pay(by: int, mp_cost: int) -> bool:
+	if pays_in_hp(by):
+		return mp_cost <= 0 or _unit(by).hp > blood_cost(by, mp_cost)
+	return _unit(by).mp >= mp_cost
+
+
+## "6 MP", or "14 HP" under Blood Magic, for the buttons.
+func pay_text(by: int, mp_cost: int) -> String:
+	return "%s HP" % GameText.num(blood_cost(by, mp_cost)) if pays_in_hp(by) and mp_cost > 0 else "%s MP" % GameText.num(mp_cost)
+
+
+## Takes the cost; returns false (nothing paid) when the unit cannot.
+func _pay(by: int, mp_cost: int) -> bool:
+	if not can_pay(by, mp_cost):
+		return false
+	var u := _unit(by)
+	if not pays_in_hp(by):
+		u.mp -= mp_cost
+		return true
+	var hp := blood_cost(by, mp_cost) if mp_cost > 0 else 0
+	if hp > 0:
+		u.hp -= hp
+		events.append({"type": "hp_cost", "by": by, "amount": hp})
+		_say("Blood Magic costs %s %d HP." % [u.name, hp])
+	return true
 
 
 func cast_spell(id: String, target: int) -> void:
@@ -719,7 +782,7 @@ func cast_spell(id: String, target: int) -> void:
 		return
 	if result == "" and not heir_skip and not can_cast(id):
 		return
-	use_ability(GameCombat.spell(id), target, spell_cost(id))
+	use_ability(unit_spell(-1, id), target, spell_cost(id))
 
 
 # ---------------------------------------------------------------- feats
@@ -775,7 +838,7 @@ func use_feat(slot: int, target: int) -> void:
 		return
 	if not _begin_action():
 		return
-	var ab := GameFeats.def(id)
+	var ab := unit_feat(-1, id)
 	if GameCombat.aims_at_foe(ab) and aoe_hits(ab, -1, target).is_empty():
 		return
 	_spend_feat(-1, id)
@@ -788,7 +851,7 @@ func use_feat(slot: int, target: int) -> void:
 ## is paid (it never takes the last).
 func _spend_feat(by: int, id: String) -> void:
 	var r: Dictionary = feat_ready.get(ref_of(by), {})
-	r[id] = turn + GameFeats.cooldown(id) + 1
+	r[id] = turn + int(unit_feat(by, id).get("cooldown", 0)) + 1
 	r["*"] = turn + int(GameFeats.setting("recovery_turns")) + 1
 	feat_ready[ref_of(by)] = r
 	var u := _unit(by)
@@ -865,11 +928,11 @@ func _taunting() -> int:
 ## `mp_cost`, resolve it, let allies and foes act. Another resource or scaling is the caller's.
 ## An area aimed where it reaches no foe is not used: nothing is paid and the turn is not spent.
 func use_ability(ab: Dictionary, target: int, mp_cost: int = 0, power: float = -1.0) -> void:
-	if not _begin_action() or heir.mp < mp_cost:
+	if not _begin_action() or not can_pay(-1, mp_cost):
 		return
 	if GameCombat.aims_at_foe(ab) and aoe_hits(ab, -1, target).is_empty():
 		return
-	heir.mp -= mp_cost
+	_pay(-1, mp_cost)
 	resolve_ability(-1, ab, target, power)
 	_heir_haste()
 	_end_player_turn()
@@ -1149,10 +1212,11 @@ func _end_player_turn() -> void:
 		_wear_fields()
 	turn += 1
 	var regen := maxf(0.0, float(GameData.bal("mp_regen_per_turn_pct")) + float(weather.get("mp_regen", 0.0)))
-	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * regen)))
-	for ai in conscious_allies():
-		var a: GameHeir = allies[ai]
-		a.mp = mini(a.max_mp(), a.mp + int(ceil(float(a.max_mp()) * regen)))
+	for by in [-1] + conscious_allies():
+		var nums := unit_numbers(by)
+		if not bool(nums["no_regen"]):
+			var u := _unit(by)
+			u.mp = mini(int(nums["max_mp"]), u.mp + int(ceil(float(nums["max_mp"]) * (regen + float(nums["mp_regen"])))))
 	_start_heir_turn()
 
 
@@ -1184,7 +1248,7 @@ func _ally_act(ai: int) -> void:
 	var plan := GameTactics.choose(self, ai)
 	match str(plan.get("act", "attack")):
 		"ability":
-			a.mp -= int(plan["cost"])
+			_pay(ai, int(plan.get("mp", plan["cost"])))
 			if str(plan.get("feat", "")) != "":
 				_spend_feat(ai, str(plan["feat"]))
 			resolve_ability(ai, plan["ab"], int(plan["target"]))
@@ -1222,7 +1286,7 @@ func _enemy_act(i: int) -> void:
 		_enemy_hit_ally(i, who)
 		return
 	var me := unit_numbers(-1)
-	if rng.randf() < clampf(float(me["dodge"]) + float(weather.get("dodge", 0.0)) + status_mod("heir", "dodge"), 0.0, 0.6):
+	if not bool(me["no_dodge"]) and rng.randf() < clampf(float(me["dodge"]) + float(weather.get("dodge", 0.0)) + status_mod("heir", "dodge"), 0.0, 0.6):
 		events.append({"type": "miss", "side": "player", "index": i})
 		_say("%s attacks, but %s dodges." % [e["name"], heir.name])
 		return
@@ -1231,9 +1295,10 @@ func _enemy_act(i: int) -> void:
 		dmg *= 1.0 - clampf(heir.trait_total("fire_resistance"), 0.0, 0.8)
 	if defending:
 		dmg *= 0.5
-	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult("heir") * (1.0 + _shatter("heir"))
+	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult("heir") * (1.0 + _shatter("heir")) * float(me["taken"])
 	var amount := maxi(1, int(round(dmg)))
 	var absorbed := mini(amount, _ward("heir"))
+	absorbed += _mind_over_matter(-1, amount - absorbed)
 	events.append({"type": "damage", "side": "player", "index": i, "amount": amount - absorbed, "crit": false, "absorbed": absorbed})
 	_say_blow(e["name"], heir.name, amount - absorbed, absorbed, false)
 	_absorb("heir", amount, false)
@@ -1248,16 +1313,17 @@ func _enemy_hit_ally(i: int, ai: int) -> void:
 	var a: GameHeir = allies[ai]
 	var ref := ref_of(ai)
 	var nums := unit_numbers(ai)
-	if rng.randf() < clampf(float(nums["dodge"]) + float(weather.get("dodge", 0.0)) + status_mod(ref, "dodge"), 0.0, 0.6):
+	if not bool(nums["no_dodge"]) and rng.randf() < clampf(float(nums["dodge"]) + float(weather.get("dodge", 0.0)) + status_mod(ref, "dodge"), 0.0, 0.6):
 		events.append({"type": "miss", "side": "ally", "index": i, "ally": ai})
 		_say("%s attacks, but %s dodges." % [e["name"], a.name])
 		return
 	var dmg: float = maxf(1.0, float(e["atk"]) * rng.randf_range(0.85, 1.15) - float(nums["def"]) * 0.6)
 	if e["element"] == "fire":
 		dmg *= 1.0 - clampf(a.trait_total("fire_resistance"), 0.0, 0.8)
-	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult(ref) * (1.0 + _shatter(ref))
+	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult(ref) * (1.0 + _shatter(ref)) * float(nums["taken"])
 	var amount := maxi(1, int(round(dmg)))
 	var absorbed := mini(amount, _ward(ref))
+	absorbed += _mind_over_matter(ai, amount - absorbed)
 	events.append({"type": "damage", "side": "ally", "index": i, "ally": ai, "amount": amount - absorbed, "crit": false, "absorbed": absorbed})
 	_say_blow(e["name"], a.name, amount - absorbed, absorbed, false)
 	_absorb(ref, amount, false)
@@ -1265,6 +1331,21 @@ func _enemy_hit_ally(i: int, ai: int) -> void:
 	if a.hp > 0:
 		_after_blow(ref)
 		_inflict(i, ref)
+
+
+## Mind over Matter: part of a blow the wards left is paid from the unit's mana. Returns the share
+## taken that way (it counts as absorbed, so _absorb leaves it to the wards first).
+func _mind_over_matter(by: int, n: int) -> int:
+	var share := float(unit_numbers(by)["mom"])
+	if share <= 0.0 or n <= 0:
+		return 0
+	var u := _unit(by)
+	var take := mini(u.mp, int(round(float(n) * share)))
+	if take > 0:
+		u.mp -= take
+		events.append({"type": "mana", "by": by, "amount": -take})
+		_say("%s's mana takes %d of the blow." % [u.name, take])
+	return take
 
 
 ## A creature's own statuses (a fire imp's burn...) on a unit it just struck.
@@ -1284,8 +1365,16 @@ func unit_numbers(by: int) -> Dictionary:
 	if c.is_empty() or int(c["level"]) != u.level or c["unit"] != u:
 		var atk := u.attack_power()
 		var mag := u.magic_power()
+		var glass := GameSkillTree.rule(u, "glass")
+		var no_dodge := GameSkillTree.has_rule(u, "no_dodge")
 		c = {"unit": u, "level": u.level, "str": atk, "mag": mag, "both": (atk + mag) * 0.6, "crit": u.crit_chance(),
-			"dodge": u.dodge_chance(), "def": u.defense(), "max_hp": u.max_hp(), "max_mp": u.max_mp()}
+			"dodge": 0.0 if no_dodge else u.dodge_chance(), "def": u.defense(), "max_hp": u.max_hp(), "max_mp": u.max_mp(),
+			"no_dodge": no_dodge, "blood": GameSkillTree.has_rule(u, "blood_magic"),
+			"crit_mult": float(GameSkillTree.rule(u, "crit_mult").get("mult", 1.75)) + u.trait_total("crit_damage"),
+			"wrath": float(GameSkillTree.rule(u, "wrath").get("max", 0.0)), "dealt": 1.0 + float(glass.get("dealt", 0.0)),
+			"taken": 1.0 + float(glass.get("taken", 0.0)), "mom": float(GameSkillTree.rule(u, "mind_over_matter").get("share", 0.0)),
+			"no_regen": GameSkillTree.has_rule(u, "mind_over_matter"), "mp_regen": u.trait_total("mp_regen"),
+			"resist": clampf(u.trait_total("resist"), 0.0, 0.9)}
 		if not u.equipped_feats.is_empty():
 			var fn := GameFeats.numbers(u)
 			for id in u.equipped_feats:
@@ -1311,7 +1400,7 @@ func expected_hits(by: int, ab: Dictionary, target: int, hits: Array = [], nums:
 	var crit := clampf(float(nums["crit"]) + float(ab.get("crit_bonus", 0.0)) + float(weather.get("crit", 0.0)) + (0.0 if calm else status_mod(ref_of(by), "crit")), 0.0, 1.0)
 	var n := 1 if GameCombat.is_aoe(ab) else int(ab.get("hits", 1))
 	var el := str(ab.get("element", ""))
-	var base := (1.0 + crit * 0.75) * float(n) * (1.0 if calm else _dealt_mult(ref_of(by)))
+	var base := (1.0 + crit * (float(nums["crit_mult"]) - 1.0)) * float(n) * (_rule_dealt(ref_of(by)) if calm else _dealt_mult(ref_of(by)))
 	var out: Array = []
 	for h in hits:
 		var i: int = h[0]
@@ -1345,15 +1434,15 @@ func foe_threat(i: int) -> float:
 	if e["hp"] <= 0:
 		return 0.0
 	if statuses.is_empty():
-		return maxf(1.0, float(e["atk"]) - float(me["def"]) * 0.6) * (1.0 - clampf(float(me["dodge"]), 0.0, 0.6))
+		return maxf(1.0, float(e["atk"]) - float(me["def"]) * 0.6) * float(me["taken"]) * (1.0 - clampf(float(me["dodge"]), 0.0, 0.6))
 	var ref := enemy_ref(i)
 	if is_held(ref):
 		return 0.0
-	var dmg := maxf(1.0, float(e["atk"]) - float(me["def"]) * 0.6) * _dealt_mult(ref) * _taken_mult("heir")
+	var dmg := maxf(1.0, float(e["atk"]) - float(me["def"]) * 0.6) * _dealt_mult(ref) * _taken_mult("heir") * float(me["taken"])
 	for inst in status_list(ref):
 		match str(GameCombat.status_def(inst["id"]).get("skip", "")):
 			"chance":
 				dmg *= 1.0 - clampf(float(inst["amount"]), 0.0, 1.0)
 			"alternate":
 				dmg *= 0.5
-	return dmg * (1.0 - clampf(float(me["dodge"]) + status_mod("heir", "dodge"), 0.0, 0.6))
+	return dmg * (1.0 - (0.0 if bool(me["no_dodge"]) else clampf(float(me["dodge"]) + status_mod("heir", "dodge"), 0.0, 0.6)))

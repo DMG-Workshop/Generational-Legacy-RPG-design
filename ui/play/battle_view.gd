@@ -483,7 +483,7 @@ func _use_skill(i: int) -> void:
 
 func _use_spell(id: String) -> void:
 	_close_spells()
-	var sp := GameCombat.spell(id)
+	var sp := b.unit_spell(-1, id)
 	if GameCombat.is_aoe(sp):
 		_begin_aim(sp, -1, id)
 	else:
@@ -492,7 +492,7 @@ func _use_spell(id: String) -> void:
 
 func _use_feat(slot: int) -> void:
 	_close_feats()
-	var ab := GameFeats.def(b.feat_in_slot(slot))
+	var ab := b.unit_feat(-1, b.feat_in_slot(slot))
 	if GameCombat.is_aoe(ab):
 		_begin_aim(ab, -1, "", slot)
 	else:
@@ -529,7 +529,7 @@ func _build_commands() -> void:
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
-		var btn := _small_button("%s (%s MP)" % [s["name"], GameText.num(b.skill_cost(i))], func(): _use_skill(idx))
+		var btn := _small_button("%s (%s)" % [s["name"], b.pay_text(-1, b.skill_cost(i))], func(): _use_skill(idx))
 		btn.disabled = not b.can_use_skill(i)
 		btn.tooltip_text = "%s  -  %s\n%s" % [s["name"], GameCombat.shape_text(s), GameCombat.describe(s)]
 		btn.mouse_entered.connect(func(): _show_area(s, target))
@@ -736,10 +736,10 @@ func _open_spells() -> void:
 
 
 func _spell_row(id: String) -> Control:
-	var sp := GameCombat.spell(id)
+	var sp := b.unit_spell(-1, id)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
-	var btn := Kit.button("%s  (%s MP)" % [sp["name"], GameText.num(b.spell_cost(id))], func(): _use_spell(id), Vector2(260, 34))
+	var btn := Kit.button("%s  (%s)" % [sp["name"], b.pay_text(-1, b.spell_cost(id))], func(): _use_spell(id), Vector2(260, 34))
 	btn.add_theme_font_size_override("font_size", 15)
 	btn.clip_text = true
 	btn.disabled = not b.can_cast(id)
@@ -751,7 +751,7 @@ func _spell_row(id: String) -> Control:
 	var shape := Kit.label(GameCombat.shape_text(sp), 14, Color(GameCombat.element_color(el)) if el != "" else Kit.TEXT)
 	shape.custom_minimum_size = Vector2(96, 0)
 	row.add_child(shape)
-	var what := Kit.label(GameCombat.describe(sp) + ("" if b.can_cast(id) else "  (not enough MP)"), 13, Kit.TEXT if b.can_cast(id) else Kit.DIM)
+	var what := Kit.label(GameCombat.describe(sp) + ("" if b.can_cast(id) else "  (not enough %s)" % ("HP" if b.pays_in_hp(-1) else "MP")), 13, Kit.TEXT if b.can_cast(id) else Kit.DIM)
 	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	what.clip_text = true
 	what.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -895,7 +895,7 @@ func _feat_list_room() -> Rect2:
 ## A readied feat: its button, whether it is ready (or why not), its area and what it does.
 func _feat_row(slot: int, width: float) -> Control:
 	var id := b.feat_in_slot(slot)
-	var ab := GameFeats.def(id)
+	var ab := b.unit_feat(-1, id)
 	var kind := GameFeats.kind_info(str(ab.get("kind", "")))
 	var block := b.feat_block(-1, id)
 	var row := HBoxContainer.new()

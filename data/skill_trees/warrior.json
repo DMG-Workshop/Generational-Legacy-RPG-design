@@ -1,0 +1,424 @@
+{
+ "id": "warrior",
+ "name": "Path of the Blade",
+ "class": "warrior",
+ "description": "Drill, steel and the stubbornness to stand where others break.",
+ "nodes": [
+  {
+   "id": "w_brawn",
+   "name": "Brawn",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "text": "Hours at the pell.",
+   "effect": {
+    "stats": {
+     "str": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "w_thick_hide",
+   "name": "Thick Hide",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "text": "Bruises that no longer show.",
+   "effect": {
+    "stats": {
+     "vit": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "w_heavy_blows",
+   "name": "Heavy Blows",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "w_brawn"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_iron_grip",
+   "name": "Iron Grip",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "w_brawn",
+    "w_thick_hide"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.04
+    }
+   }
+  },
+  {
+   "id": "w_mail_drill",
+   "name": "Mail Drill",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "w_thick_hide"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.06
+    }
+   }
+  },
+  {
+   "id": "w_cleaving_arc",
+   "name": "Cleaving Arc",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "w_heavy_blows"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "cleave",
+      "mult": 0.1,
+      "angle": 15
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_veteran",
+   "name": "Veteran's Eye",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "w_iron_grip"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "luck": 0.01
+    }
+   }
+  },
+  {
+   "id": "w_second_breath",
+   "name": "Second Breath",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "w_iron_grip"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "heal",
+      "heal": 0.1,
+      "cost": -0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_stubborn",
+   "name": "Stubborn",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "w_mail_drill"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.06
+    }
+   }
+  },
+  {
+   "id": "w_broad_back",
+   "name": "Broad Back",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "w_mail_drill"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.04
+    }
+   }
+  },
+  {
+   "id": "w_deep_rend",
+   "name": "Deep Rend",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "w_cleaving_arc"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "rend",
+      "mult": 0.1,
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_might",
+   "name": "Might of the Line",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "w_veteran"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "str": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "w_shield_wall",
+   "name": "Shield Wall",
+   "tier": 4,
+   "col": 3,
+   "requires": [
+    "w_stubborn",
+    "w_broad_back"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "shield_bash",
+      "cooldown": -1,
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_battle_hardened",
+   "name": "Battle-Hardened",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "w_broad_back"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "vit": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "w_whirl",
+   "name": "Eye of the Storm",
+   "tier": 5,
+   "col": 0,
+   "requires": [
+    "w_deep_rend"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "whirlwind",
+      "radius": 1.5,
+      "mult": 0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_berserker",
+   "keystone": "berserker",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "w_might"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "w_executioner",
+   "name": "Headsman",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "w_might"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "execute",
+      "mult": 0.12
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_juggernaut",
+   "keystone": "juggernaut",
+   "tier": 5,
+   "col": 3,
+   "requires": [
+    "w_shield_wall",
+    "w_battle_hardened"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "w_war_cry",
+   "name": "Bellow",
+   "tier": 6,
+   "col": 1,
+   "requires": [
+    "w_berserker",
+    "w_executioner"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "war_cry",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_warlord",
+   "name": "Warlord",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "w_executioner"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.06,
+      "crit": 0.03
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_unbroken",
+   "name": "Unbroken",
+   "tier": 6,
+   "col": 4,
+   "requires": [
+    "w_battle_hardened"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.04,
+     "defense": 0.04
+    }
+   }
+  },
+  {
+   "id": "w_earthshaker",
+   "name": "Groundbreaker",
+   "tier": 6,
+   "col": 0,
+   "requires": [
+    "w_whirl"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "earthshaker",
+      "mult": 0.12
+     }
+    ]
+   }
+  },
+  {
+   "id": "w_legend",
+   "name": "Living Legend",
+   "tier": 7,
+   "col": 2,
+   "requires": [
+    "w_warlord",
+    "w_unbroken",
+    "w_earthshaker"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Songs are sung of you in taverns you have never seen.",
+   "effect": {
+    "stats": {
+     "str": {
+      "pct": 0.02
+     },
+     "vit": {
+      "pct": 0.02
+     }
+    },
+    "bonus": {
+     "max_hp": 0.01
+    }
+   }
+  }
+ ]
+}

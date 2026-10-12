@@ -27,6 +27,7 @@ static func step(d: GameDynasty) -> bool:
 	GameQuests.bot_tick(d)
 	GameParty.bot_tick(d)
 	GameFeats.bot_tick(d)
+	GameSkillTree.bot_tick(d)
 	var hp_frac := float(h.hp) / float(h.max_hp())
 	while h.potions < 3 and h.gold >= d.potion_price() * 2:
 		d.buy_potion()

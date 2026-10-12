@@ -29,6 +29,8 @@ static var diseases: Dictionary = {}   # {settings, diseases}: read through Game
 static var plague: Dictionary = {}     # looting, toxins, vials: read through GamePlague
 static var ages: Dictionary = {}       # {settings, text}: read through GameAges
 static var feats: Dictionary = {}      # {settings, kinds, weapon_kinds, statuses, feats}: read through GameFeats
+static var skill_trees: Dictionary = {}   # {settings, trees}: read through GameSkillTree
+static var keystones: Dictionary = {}     # {keystones}: read through GameSkillTree
 
 
 static func load_json(path: String) -> Variant:
@@ -77,6 +79,9 @@ static func load_all() -> void:
 	plague = load_json("res://data/diseases/plague.json")
 	ages = load_json("res://data/ages/ages.json")
 	feats = load_json("res://data/feats/feats.json")
+	skill_trees = load_json("res://data/skill_trees/settings.json")
+	skill_trees["trees"] = skill_trees["trees"].map(func(t): return load_json("res://data/skill_trees/%s.json" % t))
+	keystones = load_json("res://data/keystones/keystones.json")
 	_loaded = true
 
 

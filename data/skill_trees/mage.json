@@ -1,0 +1,426 @@
+{
+ "id": "mage",
+ "name": "The Arcane Art",
+ "class": "mage",
+ "description": "Fire, frost and storm, bent to a careful will.",
+ "nodes": [
+  {
+   "id": "m_focus",
+   "name": "Focused Mind",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "mag": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "m_wellspring",
+   "name": "Wellspring",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_mp": 0.06
+    }
+   }
+  },
+  {
+   "id": "m_searing",
+   "name": "Searing Bolt",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "m_focus"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_kindling",
+   "name": "Kindling",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "m_focus",
+    "m_wellspring"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "fireball",
+      "radius": 0.5,
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_ebb",
+   "name": "Ebb and Flow",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "m_wellspring"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "mp_regen": 0.01
+    }
+   }
+  },
+  {
+   "id": "m_lore",
+   "name": "Arcane Lore",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "m_searing"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.04
+    }
+   }
+  },
+  {
+   "id": "m_frostbite",
+   "name": "Frostbite",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "m_kindling"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "cone_of_frost",
+      "angle": 15,
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_steady",
+   "name": "Steady Hands",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "m_ebb"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "heal",
+      "heal": 0.1,
+      "cost": -0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_thrift",
+   "name": "Thrift",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "m_ebb"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "*",
+      "cost": -0.05
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_mastery",
+   "name": "Mastery",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "m_lore"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "mag": {
+      "pct": 0.04
+     }
+    }
+   }
+  },
+  {
+   "id": "m_storm",
+   "name": "Storm Caller",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "m_frostbite",
+    "m_lore"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "chain_lightning",
+      "mult": 0.1,
+      "width": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_robes",
+   "name": "Warded Robes",
+   "tier": 4,
+   "col": 3,
+   "requires": [
+    "m_steady"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "ward",
+      "turns": 1
+     }
+    ],
+    "bonus": {
+     "defense": 0.05
+    }
+   }
+  },
+  {
+   "id": "m_deep_sleep",
+   "name": "Deep Sleep",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "m_thrift"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "sleep",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_glass_cannon",
+   "keystone": "glass_cannon",
+   "tier": 5,
+   "col": 0,
+   "requires": [
+    "m_mastery"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "m_falling_star",
+   "name": "Falling Star",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "m_storm"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "meteor",
+      "radius": 1,
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_blood_magic",
+   "keystone": "blood_magic",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "m_mastery",
+    "m_thrift"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "m_bastion",
+   "keystone": "eldritch_bastion",
+   "tier": 5,
+   "col": 3,
+   "requires": [
+    "m_robes"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "m_quickening",
+   "name": "Quickening",
+   "tier": 5,
+   "col": 4,
+   "requires": [
+    "m_robes",
+    "m_deep_sleep"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "haste",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_archmage",
+   "name": "Archmage",
+   "tier": 6,
+   "col": 0,
+   "requires": [
+    "m_mastery"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.06
+     },
+     {
+      "spell": "*",
+      "mult": 0.04
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_long_winter",
+   "name": "Long Winter",
+   "tier": 6,
+   "col": 1,
+   "requires": [
+    "m_falling_star"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "blizzard",
+      "turns": 1,
+      "mult": 0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_counterspell",
+   "name": "Counterspell",
+   "tier": 6,
+   "col": 3,
+   "requires": [
+    "m_bastion",
+    "m_quickening"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.06
+    }
+   }
+  },
+  {
+   "id": "m_age_of_storms",
+   "name": "Age of Storms",
+   "tier": 7,
+   "col": 1,
+   "requires": [
+    "m_long_winter"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "storm_of_ages",
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "m_ascendant",
+   "name": "Ascendant",
+   "tier": 7,
+   "col": 2,
+   "requires": [
+    "m_archmage",
+    "m_long_winter",
+    "m_counterspell"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "The weave answers before you ask.",
+   "effect": {
+    "stats": {
+     "mag": {
+      "pct": 0.03
+     }
+    },
+    "bonus": {
+     "max_mp": 0.02
+    }
+   }
+  }
+ ]
+}
