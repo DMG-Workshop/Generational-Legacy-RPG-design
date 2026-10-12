@@ -70,6 +70,7 @@ func _init() -> void:
 	_test_companion_contagion()
 	_test_companion_death()
 	_test_companion_cure()
+	_test_companion_rehire()
 	_test_old_saves()
 	_test_determinism()
 	print("%d checks, %d failures" % [checks, failures])
@@ -779,3 +780,47 @@ func _test_determinism() -> void:
 	_check((a[0] as Array).any(func(l): return "Plague-touched" in str(l)), "plague-touched foes turned up")
 	_check((a[0] as Array).any(func(l): return "searches the bodies" in str(l)), "the dead were searched")
 	_check(_run(778)[1] != a[1], "another seed differs")
+
+
+## Dismissing and hiring back the same holder is no cure: the sickness and the wounds come back.
+func _test_companion_rehire() -> void:
+	var d := _fresh(115)
+	d.heir.level = 20
+	d.heir.gold = 1000000
+	var found := ""
+	for pid in ["hearthmere", d.world.location]:
+		d.world.visit(pid)
+		for id in d.party.at_tavern(d, pid):
+			if d.party.hire_block(d, id) == "":
+				found = id
+				break
+		if found != "":
+			break
+	_check(found != "", "someone to hire")
+	if found == "":
+		return
+	d.party.hire(d, found)
+	var m: Dictionary = d.party.member(found)
+	GameDisease.infect(d.party.sick_body(d, m), "rat_plague", "corpse", 2)
+	m["hp"] = 1
+	var was: String = JSON.stringify(m["diseases"])
+	d.party.dismiss(d, found)
+	var g := _roundtrip(d)
+	for x in [d, g]:
+		x.party.hire(x, found)
+		var back: Dictionary = x.party.member(found)
+		_check(JSON.stringify(back["diseases"]) == was, "a rehired companion is still sick: %s" % str(back["diseases"]))
+		_check(int(back["hp"]) <= 2, "and still wounded: %d" % int(back["hp"]))
+		_check(typeof(back["diseases"][0]["stage"]) == TYPE_INT, "with its stage an int")
+	_check(JSON.stringify(g.to_dict()) == JSON.stringify(d.to_dict()), "a saved dismissal brings back the same companion")
+	# Years away mend wounds but not sickness.
+	d.party.dismiss(d, found)
+	d.world.year += 5.0
+	d.party.hire(d, found)
+	var later: Dictionary = d.party.member(found)
+	_check(int(later["hp"]) > 2 and GameDisease.has(d.party.unit(d, later), "rat_plague"), "years away mend the wounds, not the plague")
+	# A new holder of the role starts healthy.
+	d.party.dismiss(d, found)
+	var rec: Dictionary = d.party.history[found]
+	d.party._close_line(d, found, {"name": rec["name"], "end": "died", "age": 70, "year": 1, "gen": d.gen, "served": false})
+	_check(not rec.has("away"), "a closed line forgets the old holder's sickness")
