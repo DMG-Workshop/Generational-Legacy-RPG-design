@@ -84,11 +84,6 @@
    "stealth": "stealth",
    "work_gold": "gold from work"
   },
-  "points_as_value": [
-   "reflexes",
-   "luck",
-   "mp_regen"
-  ],
   "bot": {
    "flat": 1.0,
    "lookahead": 0.5,

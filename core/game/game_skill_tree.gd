@@ -23,7 +23,7 @@ const AREA := {"radius": ["burst"], "range": ["cone"], "angle": ["cone"], "lengt
 const NODE_KEYS := ["id", "tier", "col", "requires", "cost", "max_rank"]
 const SETTING_KEYS := ["start_points", "point_bands", "inherit_share", "inherit_fate_failure", "inherit_per_curse",
 	"inherit_per_blessing", "inherit_max", "inherit_curses", "inherit_blessings", "respec_fee", "respec_fee_per_sqrt_level",
-	"cost_floor", "pierce_cap", "labels", "points_as_value", "bot", "companion_points"]
+	"cost_floor", "pierce_cap", "labels", "bot", "companion_points"]
 
 static var _src: Dictionary = {}
 static var _keys_src: Dictionary = {}
