@@ -712,6 +712,10 @@ func test_companions() -> void:
 	var u := d.party.unit(d, m)
 	ok(int(m["tree"]["level"]) == 40 and GameSkillTree.spent(u) == GameSkillTree.companion_points_at(40), "a hired companion spends the points of its level along its path (%d)" % GameSkillTree.spent(u))
 	ok(u.tree_points == 0 and u.tree_ranks.has("w_brawn"), "starting where a warrior would: %s" % str(u.tree_ranks.keys().slice(0, 4)))
+	var vet_d := _dyn("mage", 3000, 74)
+	var vet := vet_d.party.unit(vet_d, _hire(vet_d, "bren_cask"))
+	ok(vet.max_hp() > GameParty.build_unit("bren_cask", 3000, 1).max_hp() and vet.hp == vet.max_hp() and vet.mp == vet.max_mp(),
+		"a veteran joins at full health with the HP its tree adds (%d / %d HP)" % [vet.hp, vet.max_hp()])
 	d.heir.gain_xp(400000)
 	d.party.sync(d)
 	var u2 := d.party.unit(d, m)

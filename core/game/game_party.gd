@@ -330,6 +330,10 @@ func hire(d: GameDynasty, id: String) -> String:
 		var share := minf(1.0, float(away.get("hp_share", 1.0)) + float(GameData.bal("companion_mend_per_year")) * gone)
 		var sick := _body(d, m)
 		m["hp"] = clampi(int(round(float(sick.max_hp()) * share)), 1, sick.max_hp())
+	else:
+		var fresh := _body(d, m)   # the skill tree it brings raises its max HP and MP
+		m["hp"] = fresh.max_hp()
+		m["mp"] = fresh.max_mp()
 	members.append(m)
 	var c := def(id)
 	var text: String
