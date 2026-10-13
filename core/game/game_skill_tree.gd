@@ -407,7 +407,12 @@ static func fx(u: GameHeir) -> Dictionary:
 		return u.tree_fx
 	_index()
 	# Companions are rebuilt for every look at them; units of one class with the same ranks share one result.
-	var key := "%s|%s|%s" % [u.class_id, str(u.tree_ranks), str(u.tree_free)]
+	# Sorted, so a tree read back from a save (keys in another order) sums its floats the same way.
+	var ids: Array = u.tree_ranks.keys() + u.tree_free.keys()
+	ids.sort()
+	var key := u.class_id
+	for id in ids:
+		key += "|%s:%d" % [id, rank(u, str(id))]
 	if _fx_cache.has(key):
 		u.tree_fx = _fx_cache[key]
 		u.tree_fx_v = u.tree_version
@@ -415,7 +420,7 @@ static func fx(u: GameHeir) -> Dictionary:
 		return u.tree_fx
 	var f := {"flat": {}, "pct": {}, "bonus": {}, "mods": {}, "rules": {}, "made": {}, "skills": []}
 	var done := {}
-	for id in u.tree_ranks.keys() + u.tree_free.keys():
+	for id in ids:
 		if done.has(id):
 			continue
 		done[id] = true
