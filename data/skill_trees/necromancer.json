@@ -1,0 +1,372 @@
+{
+ "id": "necromancer",
+ "name": "The Black Lantern",
+ "class": "necromancer",
+ "description": "What the dead know, and what they can be made to do.",
+ "nodes": [
+  {
+   "id": "n_grave",
+   "name": "Grave Lore",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "mag": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "n_cold",
+   "name": "Cold Blood",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "vit": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "n_drain",
+   "name": "Deep Drain",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "n_grave"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.05
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_dread",
+   "name": "Dread Presence",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "n_grave",
+    "n_cold"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "fear",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_bones",
+   "name": "Thick Bones",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "n_cold"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "heal",
+      "heal": 0.1,
+      "cost": -0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_dark",
+   "name": "Dark Arts",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "n_drain"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.03
+    }
+   }
+  },
+  {
+   "id": "n_tide",
+   "name": "Black Tide",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "n_drain",
+    "n_dread"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "grave_tide",
+      "angle": 15,
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_wither",
+   "name": "Withering",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "n_dread"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "curse_of_weakness",
+      "radius": 1,
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_hollow",
+   "name": "Hollow Body",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "n_bones"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "resist": 0.06
+    }
+   }
+  },
+  {
+   "id": "n_patience",
+   "name": "Death's Patience",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "n_dark"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "mag": {
+      "pct": 0.03
+     }
+    }
+   }
+  },
+  {
+   "id": "n_bone_storm",
+   "name": "Bone Storm",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "n_tide"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "bone_storm",
+      "radius": 1,
+      "mult": 0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_expose",
+   "name": "Find the Rot",
+   "tier": 4,
+   "col": 3,
+   "requires": [
+    "n_wither"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "expose_weakness",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_vigor",
+   "name": "Unliving Vigor",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "n_hollow"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.03
+    }
+   }
+  },
+  {
+   "id": "n_blood_rite",
+   "keystone": "blood_rite",
+   "tier": 5,
+   "col": 0,
+   "requires": [
+    "n_patience"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "n_soul_tap",
+   "name": "Soul Tap",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "n_patience",
+    "n_expose"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "mana_tap",
+      "mult": 0.2
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_lich",
+   "keystone": "lichs_ward",
+   "tier": 5,
+   "col": 4,
+   "requires": [
+    "n_vigor"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "n_requiem",
+   "name": "Requiem",
+   "tier": 6,
+   "col": 1,
+   "requires": [
+    "n_bone_storm"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "requiem",
+      "turns": 1,
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_master",
+   "name": "Master of Death",
+   "tier": 6,
+   "col": 0,
+   "requires": [
+    "n_patience"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.04
+     },
+     {
+      "spell": "*",
+      "mult": 0.03
+     }
+    ]
+   }
+  },
+  {
+   "id": "n_ossuary",
+   "name": "Ossuary Wards",
+   "tier": 6,
+   "col": 4,
+   "requires": [
+    "n_lich",
+    "n_vigor"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.05,
+     "max_hp": 0.02
+    }
+   }
+  },
+  {
+   "id": "n_deathless",
+   "name": "Deathless Name",
+   "tier": 7,
+   "col": 2,
+   "requires": [
+    "n_master",
+    "n_requiem",
+    "n_ossuary"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Mothers in three kingdoms frighten children with you.",
+   "effect": {
+    "stats": {
+     "mag": {
+      "pct": 0.015
+     }
+    },
+    "bonus": {
+     "max_hp": 0.005
+    }
+   }
+  }
+ ]
+}

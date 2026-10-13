@@ -671,7 +671,8 @@ static func bot_tick(d: GameDynasty) -> void:
 
 ## Everything the autopilot's choice of feats depends on (live; duplicate it to keep it).
 static func _bot_key(h: GameHeir, biomes: Array, party: int) -> Array:
-	return [h.level, h.feat_points, h.equipment, h.training, h.traits, h.diseases, h.heirloom_bonus, h.known_feats, h.equipped_feats, biomes, party]
+	return [h.level, h.feat_points, h.equipment, h.training, h.traits, h.diseases, h.heirloom_bonus, h.known_feats, h.equipped_feats, biomes, party,
+		h.tree_ranks, h.tree_free]
 
 
 # ---------------------------------------------------------------- checks

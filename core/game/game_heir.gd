@@ -47,6 +47,15 @@ var feat_points: int = 0        # feat points not yet spent
 var feat_level: int = 0         # level up to which the milestone feat points are granted
 var feat_news: Array = []       # feat milestones reached that the journal has yet to tell
 var downtime: bool = false      # rested, and nothing has taken time since: feats may be changed
+var tree_ranks: Dictionary = {}  # skill tree node id -> ranks bought (see GameSkillTree)
+var tree_free: Dictionary = {}   # node id -> ranks carried in the blood, free
+var tree_points: int = 0         # skill points not yet spent
+var tree_level: int = 0          # level up to which skill points are granted
+var tree_news: int = 0           # skill points earned that the journal has yet to tell
+var tree_version: int = 0        # not saved: bumps on every change, so cached effects are worked out again
+var tree_fx: Dictionary = {}
+var tree_fx_v: int = -1
+var tree_fx_e: int = -1
 
 
 func full_name() -> String:
@@ -96,7 +105,7 @@ func trait_total(stat: String) -> float:
 					total += float(e["value"])
 	if not diseases.is_empty():
 		total += GameDisease.effect_total(self, stat)
-	return total
+	return total + GameSkillTree.bonus(self, stat)
 
 
 func fate_modifier_total() -> float:
@@ -135,10 +144,11 @@ func growth_of(s: String) -> float:
 
 func stat(s: String) -> float:
 	var v: float = maxf(1.0, base_of(s) + growth_of(s) * float(level - 1))
-	v = (v + training[s]) * GameData.heir_scale(gen)
+	var tree := not tree_ranks.is_empty() or not tree_free.is_empty()
+	v = (v + training[s] + (GameSkillTree.flat(self, s) if tree else 0.0)) * GameData.heir_scale(gen)
 	v *= 1.0 + float(archetype_bonus.get("all_stats", 0.0))
 	v *= 1.0 + float(archetype_bonus.get(s, 0.0))
-	return v
+	return v * (1.0 + GameSkillTree.pct(self, s)) if tree else v
 
 
 ## 1 in the first Age. Later, the share of a stat's heir_scale that counts where the stat meets a
@@ -216,6 +226,7 @@ func gain_xp(amount: int) -> int:
 	if gained > 0:
 		spell_news.append_array(learn_spells())
 		GameFeats.sync(self)
+		GameSkillTree.sync(self)
 	return gained
 
 
@@ -258,7 +269,7 @@ func to_dict() -> Dictionary:
 		"equipment": equipment, "inventory": inventory, "spells": spells, "spell_news": spell_news,
 		"diseases": diseases, "tainted_gear": tainted_gear, "disease_level": disease_level,
 		"known_feats": known_feats, "equipped_feats": equipped_feats, "feat_points": feat_points,
-		"feat_level": feat_level, "feat_news": feat_news, "downtime": downtime,
+		"feat_level": feat_level, "feat_news": feat_news, "downtime": downtime, "skill_tree": GameSkillTree.to_dict(self),
 		"spouse": spouse.to_dict() if spouse != null else null,
 	}
 
@@ -296,6 +307,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 		h.learn_spells()
 	h.disease_level = int(d.get("disease_level", h.level))
 	GameFeats.load_into(h, d)
+	GameSkillTree.load_into(h, d.get("skill_tree"))
 	for c in d["children"]:
 		h.children.append(GameHeir.from_dict(c))
 	if d["spouse"] != null:
