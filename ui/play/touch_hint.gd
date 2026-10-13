@@ -101,7 +101,10 @@ func tick(delta: float) -> void:
 			hide_hint()
 
 
+## A second finger: a pinch or a slip, neither a hold nor a click.
 func _cancel_hold() -> void:
+	if _down and _target != null and is_instance_valid(_target) and not _shown:
+		_cancel_press(_target)
 	_down = false
 	_target = null
 
