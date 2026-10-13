@@ -2,6 +2,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
 
 const BOX := Vector2(88, 28)
 const SIDE_W := 300
@@ -68,16 +69,19 @@ class MapCanvas extends Control:
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	set_meta("back_close", func(): queue_free())
+	var compact := UiSettings.compact(self)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	var p := Kit.panel(Color("#1a1828"))
 	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	p.offset_left = 30
-	p.offset_right = -30
-	p.offset_top = 24
-	p.offset_bottom = -24
+	var gap := Kit.overlay_margin(self)
+	p.offset_left = gap.x
+	p.offset_right = -gap.x
+	p.offset_top = gap.y
+	p.offset_bottom = -gap.y
 	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
 	add_child(p)
 	var v := VBoxContainer.new()
@@ -88,6 +92,8 @@ func _ready() -> void:
 	v.add_child(top)
 	var title := Kit.label("Map of House %s  -  %s  -  %s" % [dynasty.dynasty_name, w.date_text(), w.weather()["name"]], 20, Kit.ACCENT)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	title.clip_text = true
 	top.add_child(title)
 	top.add_child(Kit.button("Close", func(): queue_free(), Vector2(100, 34)))
 
@@ -98,12 +104,13 @@ func _ready() -> void:
 	var canvas := MapCanvas.new()
 	canvas.world = w
 	canvas.flags = dynasty.flags
-	canvas.custom_minimum_size = Vector2(600, 420)
+	var room := UiSettings.room(self)
+	canvas.custom_minimum_size = Vector2(600, 420) if not compact else Vector2(minf(420.0, room.x - 340.0), minf(420.0, room.y - 120.0))
 	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(canvas)
 
 	var side_scroll := ScrollContainer.new()
-	side_scroll.custom_minimum_size = Vector2(SIDE_W, 0)
+	side_scroll.custom_minimum_size = Vector2(SIDE_W if not compact else 260, 0)
 	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	row.add_child(side_scroll)
 	var side := VBoxContainer.new()

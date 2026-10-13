@@ -1,0 +1,15 @@
+{
+	"settings": {
+		"ui_scales": [1.0, 1.25, 1.5],
+		"default_scale_mobile": 1.25,
+		"default_scale_desktop": 1.0,
+		"hold_seconds": 0.5,
+		"hold_slop_px": 14,
+		"hint_linger_seconds": 3.0,
+		"hint_max_width": 440,
+		"hint_font_size": 15,
+		"touch_target_px": 48,
+		"compact_width": 1180,
+		"short_height": 600
+	}
+}
