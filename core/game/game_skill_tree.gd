@@ -176,9 +176,15 @@ static func points_at(level: int) -> int:
 	return n
 
 
-## A hireling's points at `level`: a share of an heir's (settings.companion_points).
+## A hireling's points at `level`: a share of an heir's (settings.companion_points), small while
+## young hirelings fight beside young heirs and growing, by the log of the level, between `from`
+## and `to`, so a veteran keeps pace with an heir who has filled a tree.
 static func companion_points_at(level: int) -> int:
-	return int(floor(float(points_at(level)) * float(setting("companion_points")) + 0.000001))
+	var c: Dictionary = setting("companion_points")
+	var lo := log(maxf(1.0, float(c["from"])))
+	var t := clampf((log(float(maxi(1, level))) - lo) / maxf(0.000001, log(maxf(1.0, float(c["to"]))) - lo), 0.0, 1.0)
+	var share := lerpf(float(c["share"]), float(c["late_share"]), t)
+	return int(floor(float(points_at(level)) * share + 0.000001))
 
 
 ## The next level after `level` that brings a skill point, or -1 past the last.
@@ -1125,6 +1131,11 @@ static func validate() -> Array:
 	for k in ["inherit_share", "inherit_max"]:
 		if float(s[k]) < 0.0 or float(s[k]) > 1.0:
 			out.append("settings.%s is a share from 0 to 1" % k)
+	var cp: Variant = s["companion_points"]
+	if typeof(cp) != TYPE_DICTIONARY or not ["share", "late_share", "from", "to"].all(func(x): return cp.has(x)):
+		out.append("settings.companion_points needs share, late_share, from and to")
+	elif not (0.0 <= float(cp["share"]) and float(cp["share"]) <= float(cp["late_share"]) and float(cp["late_share"]) <= 1.0 and 1 <= int(cp["from"]) and int(cp["from"]) < int(cp["to"])):
+		out.append("settings.companion_points: shares from 0 to 1 that only grow, from a level below to")
 	for k in _keystones:
 		var ks: Dictionary = _keystones[k]
 		for key in ["name", "rule", "text", "drawback"]:

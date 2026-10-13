@@ -197,6 +197,17 @@ func test_points() -> void:
 		agree = agree and n > lv and GameSkillTree.points_at(n) == GameSkillTree.points_at(lv) + 1 and GameSkillTree.points_at(n - 1) == GameSkillTree.points_at(lv)
 	ok(agree, "next_point_level names the very level of the next point")
 	ok(GameSkillTree.next_point_level(99999) == -1, "nothing after the cap")
+	# A hireling's share is small while young and grows toward late_share; it never falls.
+	var cl := 0
+	var cmono := true
+	for lv in [1, 6, 30, 100, 101, 300, 500, 999, 1000, 1500, 5000, 25000, 99999]:
+		var cpts := GameSkillTree.companion_points_at(lv)
+		cmono = cmono and cpts >= cl and cpts <= GameSkillTree.points_at(lv)
+		cl = cpts
+	var cps: Dictionary = GameSkillTree.setting("companion_points")
+	ok(cmono, "a companion's points never fall and never pass an heir's")
+	ok(GameSkillTree.companion_points_at(100) == int(floor(GameSkillTree.points_at(100) * float(cps["share"]))), "a young hireling has the early share (%d at level 100)" % GameSkillTree.companion_points_at(100))
+	ok(GameSkillTree.companion_points_at(5000) == int(floor(GameSkillTree.points_at(5000) * float(cps["late_share"]))), "a veteran has the late share (%d at level 5,000)" % GameSkillTree.companion_points_at(5000))
 	# Points come with levels gained, and the journal tells them when time passes.
 	var d := _dyn("warrior", 1, 7)
 	var h := d.heir

@@ -31,7 +31,12 @@
     4000
    ]
   ],
-  "companion_points": 0.4,
+  "companion_points": {
+   "share": 0.25,
+   "late_share": 0.4,
+   "from": 100,
+   "to": 1000
+  },
   "inherit_share": 0.5,
   "inherit_fate_failure": -0.2,
   "inherit_per_curse": -0.1,
