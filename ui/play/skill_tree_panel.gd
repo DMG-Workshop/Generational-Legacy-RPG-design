@@ -169,7 +169,7 @@ func _draw_tree(u: GameHeir) -> void:
 		b.position = at
 		b.size = NODE
 		b.custom_minimum_size = NODE
-		b.text = "%s\n%d/%d" % [n["name"], r, mx]
+		b.text = "%s\n%d/%d%s" % [n["name"], r, mx, "  *" if GameSkillTree.inheritable(id) else ""]
 		b.clip_text = true
 		b.add_theme_font_size_override("font_size", 12)
 		var keyst := GameSkillTree.is_keystone(id)
@@ -266,7 +266,7 @@ func _show(id: String) -> void:
 		var t := GameSkillTree.tree(tree_id)
 		side_box.add_child(_wrap(str(t["name"]), 17, Kit.ACCENT))
 		side_box.add_child(_wrap(str(t.get("description", "")), 13, Kit.DIM))
-		side_box.add_child(_wrap("Gold: taken. Green: open to buy. Violet: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.", 12, Kit.DIM))
+		side_box.add_child(_wrap("Gold: taken. Green: open to buy. Violet: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
 		for line in _held(u):
 			side_box.add_child(_wrap(line, 13, Kit.TEXT))
 		return
