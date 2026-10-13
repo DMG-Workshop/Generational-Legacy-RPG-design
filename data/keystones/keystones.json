@@ -34,7 +34,7 @@
     }
    },
    "text": "Every wound feeds the fire: up to +60% damage as your HP runs out.",
-   "drawback": "-30% healing received, -15% defense.",
+   "drawback": "-30% to your own heals and potions, -15% defense.",
    "suits": [
     "duelist"
    ]
@@ -48,8 +48,8 @@
     "taken": 0.25
    },
    "effect": {},
-   "text": "All damage you deal is raised by 35%.",
-   "drawback": "All damage you take is raised by 25%.",
+   "text": "Your blows and spells strike 35% harder.",
+   "drawback": "Blows you take land 25% harder.",
    "suits": [
     "mage",
     "arcane_trickster"
@@ -219,7 +219,7 @@
     }
    },
    "text": "Critical hits deal x2.4 instead of x1.75.",
-   "drawback": "-8% damage on every blow that does not crit.",
+   "drawback": "-8% weapon damage.",
    "suits": [
     "ranger",
     "beastmaster"
