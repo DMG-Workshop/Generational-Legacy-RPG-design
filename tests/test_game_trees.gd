@@ -864,6 +864,17 @@ func test_save_load() -> void:
 	raw["heir"]["skill_tree"]["ranks"]["w_brawn"] = 9
 	var f := GameDynasty.from_dict(raw)
 	ok(not f.heir.tree_ranks.has("gone_node") and int(f.heir.tree_ranks["w_brawn"]) == 3, "unknown nodes are dropped and ranks capped")
+	# A node the data has since dropped gives its points back (the save spent them on it).
+	var spent_raw: Dictionary = JSON.parse_string(j)
+	var st: Dictionary = spent_raw["heir"]["skill_tree"]
+	st["points"] = GameSkillTree.points_at(int(st["level"])) - GameSkillTree.spent(d.heir)
+	var dropped := int(st["ranks"]["w_brawn"]) * GameSkillTree.cost("w_brawn")
+	st["ranks"].erase("w_brawn")   # as if a later version had dropped Brawn
+	var r := GameDynasty.from_dict(spent_raw)
+	ok(r.heir.tree_points == int(st["points"]) + dropped and dropped > 0, "the points of a dropped node come back (%d)" % r.heir.tree_points)
+	var cm := {"ranks": {"w_brawn": 1, "gone_node": 5}, "points": 0, "level": 500}
+	var back := GameSkillTree.load_member(JSON.parse_string(JSON.stringify(cm)))
+	ok(int(back["points"]) == GameSkillTree.companion_points_at(500) - GameSkillTree.cost("w_brawn"), "so do a companion's (%d)" % int(back["points"]))
 	# A save from before skill trees.
 	var old: Dictionary = JSON.parse_string(j)
 	old["heir"].erase("skill_tree")

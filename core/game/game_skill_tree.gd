@@ -244,9 +244,13 @@ static func cost(id: String) -> int:
 
 ## Points spent on the unit's tree (refunded by a respec).
 static func spent(u: GameHeir) -> int:
+	return _cost_of(u.tree_ranks)
+
+
+static func _cost_of(ranks: Dictionary) -> int:
 	var n := 0
-	for id in u.tree_ranks:
-		n += int(u.tree_ranks[id]) * cost(str(id))
+	for id in ranks:
+		n += int(ranks[id]) * cost(str(id))
 	return n
 
 
@@ -716,7 +720,9 @@ static func _pos(id: String) -> int:
 static func load_member(v: Variant) -> Dictionary:
 	if typeof(v) != TYPE_DICTIONARY or not v.has("points"):
 		return {}
-	return {"ranks": _ranks(v.get("ranks", {})), "points": int(v.get("points", 0)), "level": int(v.get("level", 1))}
+	var ranks := _ranks(v.get("ranks", {}))
+	var level := int(v.get("level", 1))
+	return {"ranks": ranks, "points": maxi(int(v.get("points", 0)), companion_points_at(level) - _cost_of(ranks)), "level": level}
 
 
 ## Gives a companion's unit its tree from the party record. A record from before trees, or one
@@ -954,6 +960,8 @@ static func load_into(u: GameHeir, v: Variant) -> void:
 			u.tree_ranks[id] = int(u.tree_ranks[id]) - over
 			if int(u.tree_ranks[id]) <= 0:
 				u.tree_ranks.erase(id)
+	# Ranks of nodes the data has since dropped, or capped lower, come back as points.
+	u.tree_points = maxi(u.tree_points, points_at(u.tree_level) - spent(u))
 	changed(u)
 
 
