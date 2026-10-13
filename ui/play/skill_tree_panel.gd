@@ -269,6 +269,8 @@ func _show(id: String) -> void:
 		side_box.add_child(_wrap("Gold: taken. Green: open to buy. Violet: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
 		for line in _held(u):
 			side_box.add_child(_wrap(line, 13, Kit.TEXT))
+		for line in GameSkillTree.plan_lines(dynasty, who):
+			side_box.add_child(_wrap(line, 13, Color("#e8a05a")))
 		return
 	var n := GameSkillTree.node(id)
 	var r := GameSkillTree.rank(u, id)

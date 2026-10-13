@@ -744,6 +744,46 @@ func test_companions() -> void:
 	ym["tree"] = {"ranks": {"w_brawn": 3, "w_heavy_blows": 3, "w_iron_grip": 3}, "points": 0, "level": 500}
 	var yu := young.party.unit(young, ym)
 	ok(int(ym["tree"]["level"]) == 3 and GameSkillTree.spent(yu) <= GameSkillTree.companion_points_at(3), "a companion of a lower level holds no more than its level gives (%d)" % GameSkillTree.spent(yu))
+	ok(not ym["tree"].has("plan"), "a tree the player never touched follows the path again, with no plan")
+	# What the player chose by hand comes back first as the points return, and survives a save.
+	var pd := _dyn("mage", 400, 75)
+	var pm := _hire(pd, "bren_cask")
+	GameSkillTree.respec(pd, "bren_cask")
+	for id in ["b_vigor", "b_hardy", "b_survivor", "b_hand"]:
+		GameSkillTree.spend(pd, "bren_cask", id)
+	var chosen: Dictionary = (pm["tree"]["ranks"] as Dictionary).duplicate()
+	ok(chosen.size() == 4 and not pm["tree"].has("plan"), "Bren holds the four ranks chosen for him")
+	pd.heir.level = 1
+	var low := pd.party.unit(pd, pm)
+	ok(low.tree_ranks.size() < 4 and (pm["tree"]["plan"] as Dictionary) == chosen, "brought down to level 1 he keeps them as a plan (%s)" % str(pm["tree"].get("plan")))
+	var pe := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(pd.to_dict())))
+	ok(pe.party.member("bren_cask")["tree"].get("plan", {}) == chosen, "the plan survives a save")
+	pd.heir.level = 400
+	var back_up := pd.party.unit(pd, pm)
+	ok(chosen.keys().all(func(id): return GameSkillTree.rank(back_up, id) == int(chosen[id])) and not pm["tree"].has("plan"),
+		"back at level 400 he bought them again first (%s)" % str(back_up.tree_ranks))
+	ok(GameSkillTree.spent(back_up) + back_up.tree_points == GameSkillTree.companion_points_at(400), "and spent no more than the level gives")
+	pd.heir.level = 1
+	pd.party.unit(pd, pm)
+	pd.heir.level = 60
+	var part := pd.party.unit(pd, pm)
+	ok(GameSkillTree.spent(part) > 0 and pm["tree"].has("plan"), "part way back up the plan waits (%s)" % str(part.tree_ranks))
+	ok(GameSkillTree.plan_lines(pd, "bren_cask").size() == 1, "and the panel can tell it: %s" % str(GameSkillTree.plan_lines(pd, "bren_cask")))
+	pd.world.visit("hearthmere")
+	GameSkillTree.respec(pd, "bren_cask")
+	ok(not pm["tree"].has("plan"), "a refund forgets the plan")
+	# Dismissed and hired again, a companion comes back with the tree it left with.
+	var rd := _dyn("mage", 400, 76)
+	var rm := _hire(rd, "bren_cask")
+	GameSkillTree.respec(rd, "bren_cask")
+	GameSkillTree.spend(rd, "bren_cask", "b_old_blood")
+	var left_with: Dictionary = (rm["tree"]["ranks"] as Dictionary).duplicate()
+	rd.party.dismiss(rd, "bren_cask")
+	rd = GameDynasty.from_dict(JSON.parse_string(JSON.stringify(rd.to_dict())))
+	rd.heir.gold += 10000000
+	rd.party.hire(rd, "bren_cask")
+	var rm2 := rd.party.member("bren_cask")
+	ok(not rm2.is_empty() and (rm2["tree"]["ranks"] as Dictionary) == left_with, "Bren comes back with the ranks he left with (%s)" % str(rm2.get("tree", {}).get("ranks")))
 	# A successor starts fresh.
 	var s := _dyn("mage", 60, 73)
 	var sm := _hire(s, "bren_cask")

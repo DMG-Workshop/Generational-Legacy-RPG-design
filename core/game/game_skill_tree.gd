@@ -352,13 +352,18 @@ static func unit_of(d: GameDynasty, who: String) -> GameHeir:
 	return null if m.is_empty() else d.party.unit(d, m)
 
 
-## A companion's tree lives in its party record.
-static func _store(d: GameDynasty, who: String, u: GameHeir) -> void:
+## A companion's tree lives in its party record, marked as shaped by the player's hand (a refund
+## also drops the plan of ranks to buy back).
+static func _store(d: GameDynasty, who: String, u: GameHeir, keep_plan: bool = true) -> void:
 	if who == "":
 		return
 	var m := d.party.member(who)
 	if not m.is_empty():
+		var plan: Dictionary = (m.get("tree", {}) as Dictionary).get("plan", {})
 		m["tree"] = state_of(u)
+		m["tree"]["hand"] = true
+		if keep_plan and not plan.is_empty():
+			m["tree"]["plan"] = plan
 
 
 # ---------------------------------------------------------------- respec
@@ -399,7 +404,7 @@ static func respec(d: GameDynasty, who: String = "") -> String:
 	u.tree_points += back
 	u.tree_ranks = {}
 	changed(u)
-	_store(d, who, u)
+	_store(d, who, u, false)
 	var text := "%s pays %s gold to unlearn and has %s skill point%s to spend again." % [u.name, GameText.num(fee), GameText.num(u.tree_points), "" if u.tree_points == 1 else "s"]
 	if who != "":
 		text = "%s pays %s gold for %s to unlearn; %s skill point%s to spend again." % [d.heir.name, GameText.num(fee), u.name, GameText.num(u.tree_points), "" if u.tree_points == 1 else "s"]
@@ -722,17 +727,29 @@ static func load_member(v: Variant) -> Dictionary:
 		return {}
 	var ranks := _ranks(v.get("ranks", {}))
 	var level := int(v.get("level", 1))
-	return {"ranks": ranks, "points": maxi(int(v.get("points", 0)), companion_points_at(level) - _cost_of(ranks)), "level": level}
+	var out := {"ranks": ranks, "points": maxi(int(v.get("points", 0)), companion_points_at(level) - _cost_of(ranks)), "level": level}
+	var plan := _ranks(v.get("plan", {}))
+	if not plan.is_empty():
+		out["plan"] = plan
+	if bool(v.get("hand", false)):
+		out["hand"] = true
+	return out
 
 
 ## Gives a companion's unit its tree from the party record. A record from before trees, or one
 ## made at hire, gets the points of the companion's level spent along its class's path; points
 ## of levels gained since are spent the same way. A companion brought down to a lower level (a
-## young heir now leads) learns again along that path for the points the level gives.
+## young heir now leads) learns again for the points the level gives; if the player shaped its
+## tree, the ranks it held are kept as a plan and bought back first as the points return.
 static func attach(u: GameHeir, m: Dictionary) -> void:
 	var t: Dictionary = m.get("tree", {})
 	var auto := 0
+	var plan: Dictionary = t.get("plan", {})
 	if t.is_empty() or int(t["level"]) > u.level:
+		if bool(t.get("hand", false)):
+			plan = plan.duplicate()
+			for id in t["ranks"]:
+				plan[id] = maxi(int(plan.get(id, 0)), int(t["ranks"][id]))
 		t = {"ranks": {}, "points": companion_points_at(u.level), "level": u.level}
 		auto = int(t["points"])
 	elif int(t["level"]) < u.level:
@@ -746,9 +763,46 @@ static func attach(u: GameHeir, m: Dictionary) -> void:
 	u.tree_news = 0
 	changed(u)
 	if auto > 0:
-		auto_spend(u, auto)
+		auto_spend(u, auto - _follow_plan(u, plan, auto))
 		t = state_of(u)
+	if not plan.is_empty() and plan.keys().any(func(id): return rank(u, str(id)) < int(plan[id])):
+		t["plan"] = plan
+	else:
+		t.erase("plan")
+	if bool(m.get("tree", {}).get("hand", false)):
+		t["hand"] = true
 	m["tree"] = t
+
+
+## Buys the ranks of a plan the unit lacks, shallow nodes first, for up to `budget` points.
+## Returns the points spent.
+static func _follow_plan(u: GameHeir, plan: Dictionary, budget: int) -> int:
+	var order: Array = plan.keys()
+	order.sort_custom(func(a, b): return int(node(a)["tier"]) < int(node(b)["tier"]) or (int(node(a)["tier"]) == int(node(b)["tier"]) and str(a) < str(b)))
+	var used := 0
+	var grew := true
+	while grew:
+		grew = false
+		for id in order:
+			if rank(u, id) < int(plan[id]) and used + cost(id) <= budget and take(u, id):
+				used += cost(id)
+				grew = true
+	return used
+
+
+## For the panel: the ranks a companion will buy back first, or nothing.
+static func plan_lines(d: GameDynasty, who: String) -> Array:
+	var u := unit_of(d, who) if who != "" else null
+	if u == null:
+		return []
+	var plan: Dictionary = (d.party.member(who).get("tree", {}) as Dictionary).get("plan", {})
+	var parts: Array = []
+	for id in plan:
+		if rank(u, str(id)) < int(plan[id]):
+			parts.append("%s %d/%d" % [node_name(str(id)), int(plan[id]), max_rank(str(id))])
+	if parts.is_empty():
+		return []
+	return ["%s will learn again first, as points return: %s. Unlearning forgets this." % [u.name, _and_list(parts)]]
 
 
 static func state_of(u: GameHeir) -> Dictionary:

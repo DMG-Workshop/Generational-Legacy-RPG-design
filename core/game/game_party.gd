@@ -329,6 +329,7 @@ func hire(d: GameDynasty, id: String) -> String:
 	if not away.is_empty():
 		# The same holder comes back as they left: still sick, and only as mended as the years away allow.
 		m["diseases"] = GameDisease.load_list(away.get("diseases", []))
+		m["tree"] = GameSkillTree.load_member(away.get("tree"))
 		var gone := maxf(0.0, d.world.year - float(away.get("year", d.world.year)))
 		var share := minf(1.0, float(away.get("hp_share", 1.0)) + float(GameData.bal("companion_mend_per_year")) * gone)
 		var sick := _body(d, m)
@@ -383,7 +384,7 @@ func _part(d: GameDynasty, m: Dictionary, status: String) -> void:
 	if status in ["dismissed", "left"]:
 		var u := _body(d, m)
 		rec["away"] = {"diseases": (m.get("diseases", []) as Array).duplicate(true), "year": d.world.year,
-			"hp_share": snappedf(clampf(float(m["hp"]) / float(maxi(1, u.max_hp())), 0.0, 1.0), 0.0001)}
+			"hp_share": snappedf(clampf(float(m["hp"]) / float(maxi(1, u.max_hp())), 0.0, 1.0), 0.0001), "tree": (m.get("tree", {}) as Dictionary).duplicate(true)}
 	else:
 		rec.erase("away")
 	history[m["id"]] = rec
@@ -696,7 +697,7 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 		var away = r.get("away", {})
 		if typeof(away) == TYPE_DICTIONARY and not away.is_empty() and rec["status"] in ["dismissed", "left"]:
 			rec["away"] = {"diseases": GameDisease.load_list(away.get("diseases", [])), "year": float(away.get("year", 0.0)),
-				"hp_share": snappedf(float(away.get("hp_share", 1.0)), 0.0001)}
+				"hp_share": snappedf(float(away.get("hp_share", 1.0)), 0.0001), "tree": GameSkillTree.load_member(away.get("tree"))}
 		p.history[str(id)] = rec
 	if d != null:
 		for m in p.members:
