@@ -66,7 +66,7 @@ func _build() -> void:
 	var pts := GameSkillTree.points(u)
 	top.add_child(Kit.label("%s, %s %s, level %s" % [u.name, u.race()["name"], u.cls()["name"], GameText.num(u.level)], 17, Kit.TEXT))
 	top.add_child(Kit.label("Skill points %s" % GameText.num(pts), 18, Kit.ACCENT))
-	var nxt := GameSkillTree.next_point_level(u.level)
+	var nxt := GameSkillTree.next_point_for(u)
 	if nxt > 0:
 		top.add_child(Kit.label("Next at level %s" % GameText.num(nxt), 14, Kit.DIM))
 	var fill := Control.new()

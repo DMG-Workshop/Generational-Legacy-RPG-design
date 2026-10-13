@@ -744,6 +744,9 @@ func test_companions() -> void:
 	ym["tree"] = {"ranks": {"w_brawn": 3, "w_heavy_blows": 3, "w_iron_grip": 3}, "points": 0, "level": 500}
 	var yu := young.party.unit(young, ym)
 	ok(int(ym["tree"]["level"]) == 3 and GameSkillTree.spent(yu) <= GameSkillTree.companion_points_at(3), "a companion of a lower level holds no more than its level gives (%d)" % GameSkillTree.spent(yu))
+	var cn := GameSkillTree.next_point_for(yu)
+	ok(cn > 3 and GameSkillTree.companion_points_at(cn) == GameSkillTree.companion_points_at(3) + 1 and GameSkillTree.companion_points_at(cn - 1) == GameSkillTree.companion_points_at(3),
+		"a companion's next point is named by its own share (level %d)" % cn)
 	ok(not ym["tree"].has("plan"), "a tree the player never touched follows the path again, with no plan")
 	# What the player chose by hand comes back first as the points return, and survives a save.
 	var pd := _dyn("mage", 400, 75)

@@ -202,6 +202,18 @@ static func next_point_level(level: int) -> int:
 	return -1
 
 
+## The next level that brings this unit a point: an heir's milestones, or for a companion the
+## first of them where its share grows by a whole point. -1 past the last.
+static func next_point_for(u: GameHeir) -> int:
+	if not u.has_meta("companion"):
+		return next_point_level(u.level)
+	var now := companion_points_at(u.level)
+	var at := next_point_level(u.level)
+	while at > 0 and companion_points_at(at) <= now:
+		at = next_point_level(at)
+	return at
+
+
 ## A new heir: nothing bought, the points of their own level. Class nodes are personal; what the
 ## blood carries is given at succession (see inherit).
 static func start(u: GameHeir) -> void:
