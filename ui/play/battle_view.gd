@@ -42,6 +42,8 @@ var result_panel: Control = null
 var _auto_waiting: bool = false # an auto action is due once AUTO_PACE has passed
 var cmd_w := 600.0              # the command panel's width: narrower on a narrow screen
 var figure_scale := 1.0         # figures shrink to fit a short arena (a phone, large text)
+var bottom: HBoxContainer       # the log and the command panel
+var cmd_panel: PanelContainer
 
 const AUTO_PACE := 0.4
 
@@ -49,10 +51,7 @@ const AUTO_PACE := 0.4
 func _ready() -> void:
 	d = app.dynasty
 	b = d.battle
-	var room := UiSettings.room(self)
-	cmd_w = clampf(room.x - 420.0, 480.0, 600.0)
-	if room.y < float(UiSettings.setting("short_height")):   # four or five columns of commands
-		cmd_w = clampf(room.x - 330.0, 480.0, 760.0)
+	_size_commands()
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
@@ -90,8 +89,7 @@ func _ready() -> void:
 	arena.add_child(field)
 	arena.resized.connect(_layout)
 
-	var bottom := HBoxContainer.new()
-	bottom.custom_minimum_size = Vector2(0, 170 if not _short() else 0)
+	bottom = HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 10)
 	root.add_child(bottom)
 	var lp := Kit.panel(Color("#1a1828"))
@@ -99,18 +97,17 @@ func _ready() -> void:
 	bottom.add_child(lp)
 	log_label = Kit.rich()
 	lp.add_child(log_label)
-	var cp := Kit.panel()
-	cp.custom_minimum_size = Vector2(cmd_w, 0)
-	bottom.add_child(cp)
+	cmd_panel = Kit.panel()
+	bottom.add_child(cmd_panel)
 	var cv := VBoxContainer.new()
-	cp.add_child(cv)
+	cmd_panel.add_child(cv)
 	hint = Kit.label("", 14, Kit.DIM)
 	hint.clip_text = true
-	hint.custom_minimum_size = Vector2(cmd_w - 40.0, 0)
 	cv.add_child(hint)
 	command_box = HBoxContainer.new()
 	command_box.add_theme_constant_override("separation", 8)
 	cv.add_child(command_box)
+	_fit_bottom()
 	_build_actors()
 	_build_commands()
 	target = b.first_target()
@@ -135,6 +132,33 @@ func _foe_list() -> String:
 
 func _say(text: String) -> void:
 	log_label.append_text(GameText.group_numbers(text) + "\n")
+
+
+## The command panel's width for the room the screen has.
+func _size_commands() -> void:
+	var room := UiSettings.room(self)
+	cmd_w = clampf(room.x - 420.0, 480.0, 600.0)
+	if room.y < float(UiSettings.setting("short_height")):   # four or five columns of commands
+		cmd_w = clampf(room.x - 330.0, 480.0, 760.0)
+
+
+func _fit_bottom() -> void:
+	bottom.custom_minimum_size = Vector2(0, 170 if not _short() else 0)
+	cmd_panel.custom_minimum_size = Vector2(cmd_w, 0)
+	hint.custom_minimum_size = Vector2(cmd_w - 40.0, 0)
+
+
+## The text size changed mid-fight: the commands are laid out again for the new room (the field
+## follows on its own as the arena resizes). Open lists close, as they were placed for the old size.
+func relayout() -> void:
+	_size_commands()
+	_fit_bottom()
+	if result_shown or busy:
+		return
+	_close_spells()
+	_close_feats()
+	_close_poisons()
+	_build_commands()
 
 
 ## Android's back button: drop an aim, else shut an open list. False when there is nothing to undo.

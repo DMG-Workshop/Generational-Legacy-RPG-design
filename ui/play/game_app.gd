@@ -150,10 +150,14 @@ func set_ui_scale(s: float) -> void:
 	UiSettings.set_scale(s)
 	UiSettings.apply(get_window())
 	apply_safe_area()
-	# A fight lays itself out again as the window changes; other screens are rebuilt at the new size.
+	# A fight is laid out again in place (rebuilding it would lose its log); other screens are
+	# rebuilt at the new size.
 	if menu_mode() == "battle":
-		return
-	if menu_mode() == "title":
+		current.relayout()
+		for c in current.get_children():
+			if c is MenuPanel:
+				c.queue_free()
+	elif menu_mode() == "title":
 		show_title()
 	else:
 		show_state()

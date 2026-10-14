@@ -67,6 +67,7 @@ func _run() -> void:
 	await test_pause_saves()
 	await test_safe_area()
 	await test_scale_layouts()
+	await test_scale_mid_fight()
 	print("mobile tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -728,3 +729,42 @@ func test_scale_layouts() -> void:
 	app.set_ui_scale(1.0)
 	await _frames(2)
 	ok(is_equal_approx(root.content_scale_factor, 1.0), "back to 100%")
+
+
+## The text size changed from the menu mid-fight: the commands are laid out for the new room, the
+## menu reopens showing the new size, and it draws above the fight's raised lists.
+func test_scale_mid_fight() -> void:
+	_game()
+	for i in 200:
+		d.start_hunt("hunt")
+		if d.battle != null:
+			break
+	d.auto_battle = false
+	app.show_state()
+	await _frames(4)
+	var bv: Control = app.current
+	bv.set_auto(false)
+	await _frames(2)
+	var w100: float = bv.cmd_w
+	var m: Control = app.open_menu()
+	await _frames(2)
+	_find(m, "150%").pressed.emit()
+	await _frames(4)
+	ok(app.current == bv and d.battle != null, "the fight goes on through a text-size change")
+	ok(not is_equal_approx(bv.cmd_w, w100) and is_equal_approx(bv.cmd_panel.custom_minimum_size.x, bv.cmd_w), "the commands are sized for the new room (%.0f -> %.0f)" % [w100, bv.cmd_w])
+	var menus := bv.get_children().filter(func(c): return c is MenuPanel and not c.is_queued_for_deletion())
+	ok(menus.size() == 1, "one menu stays open")
+	if menus.size() == 1:
+		var cur := _find(menus[0], "150%")
+		ok(cur != null and cur.get_theme_color("font_color") == Kit.ACCENT, "and it marks 150% as the size in use")
+		ok((menus[0] as Control).z_index > 10, "the menu draws above the fight's lists and result")
+	_check_inside(app.frame, Rect2(Vector2.ZERO, root.get_visible_rect().size), "battle after a text-size change")
+	app.go_back()
+	app.set_ui_scale(1.0)
+	await _frames(2)
+	for c in bv.get_children():
+		if c is MenuPanel:
+			c.queue_free()
+	d.battle = null
+	app.show_state()
+	await _frames(2)

@@ -12,6 +12,7 @@ var note: Label
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	set_meta("back_close", func(): queue_free())
+	z_index = 20   # above a fight's lists and result, which draw raised
 	var mode: String = app.menu_mode()
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
