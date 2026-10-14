@@ -862,6 +862,7 @@ func test_scaling() -> void:
 		d.party.hire(d, "maddy_thorn")
 		var u := d.party.unit(d, d.party.members[0])
 		ok(u.level == level and u.gen == gen, "companion at level %d gen %d" % [level, gen])
+		GameSkillTree.auto_spend(d.heir)   # both with their skill points spent the same way
 		var hp_ratio := float(u.max_hp()) / float(d.heir.max_hp())
 		ok(hp_ratio > 0.4 and hp_ratio < 1.0, "companion HP keeps pace with the heir at L%d g%d (%.2f)" % [level, gen, hp_ratio])
 		# Against an untrained heir of the same build the share is exact at every level and age.
@@ -871,6 +872,8 @@ func test_scaling() -> void:
 		plain.gen = gen
 		plain.level = level
 		var power := float(GameData.bal("companion_power"))
+		u.tree_ranks = {}   # the share holds before the skill tree adds its own
+		GameSkillTree.changed(u)
 		ok(absf(float(u.max_hp()) / float(plain.max_hp()) - power) < 0.02, "health share is companion_power at L%d g%d (%.3f)" % [level, gen, float(u.max_hp()) / float(plain.max_hp())])
 		ok(absf(u.attack_power() / plain.attack_power() - power) < 0.01, "attack share is companion_power at L%d g%d" % [level, gen])
 		var cost := GameBattle.unit_skill_cost(u, 0)

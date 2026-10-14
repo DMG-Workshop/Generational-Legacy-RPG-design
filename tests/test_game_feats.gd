@@ -726,6 +726,8 @@ func test_companion_choices() -> void:
 	var b := _battle(d, 3, "goblin")
 	_sturdy(b)
 	var bren: GameHeir = b.allies[0]
+	bren.tree_ranks = {}   # the weighing below is about feats, not what Bren's skill tree adds
+	GameSkillTree.changed(bren)
 	ok(GameTactics._plain(bren) and not bren.equipped_feats.is_empty(), "Bren carries feats and still fights the simple way: %s" % str(bren.equipped_feats))
 	bren.known_feats = ["rockslide"]
 	bren.equipped_feats = ["rockslide"]

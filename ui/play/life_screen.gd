@@ -9,6 +9,7 @@ const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const EventPanel := preload("res://ui/play/event_panel.gd")
 const FeatsPanel := preload("res://ui/play/feats_panel.gd")
+const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const LootPanel := preload("res://ui/play/loot_panel.gd")
 
 const COLUMN_W := 300
@@ -187,6 +188,7 @@ func _build_right() -> void:
 		right.add_child(Kit.label("Unmarried. Without children, distant cousins inherit with weaker blood.", 14, Kit.DIM))
 	_section("Gear", ShopPanel.summary_lines(d))
 	_section("Feats", FeatsPanel.summary_lines(d))
+	_section("Skill trees", SkillTreePanel.summary_lines(d))
 	_section("Companions", TavernPanel.summary_lines(d))
 	_section("Quests", BoardPanel.summary_lines(d))
 	right.add_child(HSeparator.new())
@@ -244,6 +246,9 @@ func _build_actions() -> void:
 	var feats := _act("Feats", func(): _open(FeatsPanel))
 	var pts := GameFeats.points(h)
 	feats.tooltip_text = "Learn and ready feats%s. Only in a town or right after a rest." % ("" if pts == 0 else " (%s point%s to spend)" % [GameText.num(pts), "" if pts == 1 else "s"])
+	var sp := GameSkillTree.points(h)
+	var trees := _act("Skill trees" if sp == 0 else "Skill trees (%s)" % GameText.num(sp), func(): _open(SkillTreePanel))
+	trees.tooltip_text = "Spend skill points for %s and the companions. Unlearning needs a town or a rest." % h.name
 	for s in ["str", "mag", "agi", "vit"]:
 		var st: String = s
 		_act("Train %s" % st.to_upper(), func(): _do(func(): return d.train(st)))

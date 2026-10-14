@@ -1,0 +1,175 @@
+{
+ "settings": {
+  "start_points": 1,
+  "point_bands": [
+   [
+    30,
+    6
+   ],
+   [
+    90,
+    10
+   ],
+   [
+    300,
+    20
+   ],
+   [
+    1500,
+    60
+   ],
+   [
+    6000,
+    250
+   ],
+   [
+    25000,
+    1000
+   ],
+   [
+    99999,
+    4000
+   ]
+  ],
+  "companion_points": {
+   "share": 0.25,
+   "late_share": 0.4,
+   "from": 100,
+   "to": 1000
+  },
+  "inherit_share": 0.5,
+  "inherit_fate_failure": -0.2,
+  "inherit_per_curse": -0.1,
+  "inherit_per_blessing": 0.1,
+  "inherit_max": 0.85,
+  "inherit_curses": {
+   "categories": [
+    "curse"
+   ],
+   "traits": [
+    "cursed"
+   ]
+  },
+  "inherit_blessings": {
+   "categories": [
+    "blessing"
+   ],
+   "traits": [
+    "blessed"
+   ]
+  },
+  "respec_fee": 40,
+  "respec_fee_per_sqrt_level": 0.06,
+  "cost_floor": 0.3,
+  "pierce_cap": 0.9,
+  "labels": {
+   "str": "STR",
+   "agi": "AGI",
+   "vit": "VIT",
+   "mag": "MAG",
+   "all": "all stats",
+   "max_hp": "max HP",
+   "max_mp": "max MP",
+   "melee_damage": "weapon damage",
+   "element_power": "spell power",
+   "defense": "defense",
+   "reflexes": "dodge",
+   "luck": "crit chance",
+   "crit_damage": "crit damage",
+   "healing_power": "healing",
+   "resist": "chance to shrug off harmful effects",
+   "mp_regen": "max MP back each turn",
+   "fire_resistance": "fire resistance",
+   "persuasion": "persuasion",
+   "stealth": "stealth",
+   "work_gold": "gold from work"
+  },
+  "bot": {
+   "flat": 1.0,
+   "lookahead": 0.5,
+   "styles": {
+    "str": {
+     "str": 1.0,
+     "agi": 0.45,
+     "vit": 0.55,
+     "mag": 0.0,
+     "all": 2.0,
+     "max_hp": 0.8,
+     "max_mp": 0.1,
+     "melee_damage": 1.0,
+     "element_power": 0.0,
+     "defense": 0.35,
+     "reflexes": 1.6,
+     "luck": 1.2,
+     "crit_damage": 0.25,
+     "healing_power": 0.25,
+     "resist": 0.25,
+     "mp_regen": 0.8
+    },
+    "mag": {
+     "str": 0.0,
+     "agi": 0.3,
+     "vit": 0.6,
+     "mag": 1.0,
+     "all": 1.9,
+     "max_hp": 0.85,
+     "max_mp": 0.35,
+     "melee_damage": 0.0,
+     "element_power": 1.0,
+     "defense": 0.35,
+     "reflexes": 1.4,
+     "luck": 1.0,
+     "crit_damage": 0.2,
+     "healing_power": 0.35,
+     "resist": 0.3,
+     "mp_regen": 2.0
+    },
+    "both": {
+     "str": 0.55,
+     "agi": 0.35,
+     "vit": 0.55,
+     "mag": 0.55,
+     "all": 2.0,
+     "max_hp": 0.8,
+     "max_mp": 0.25,
+     "melee_damage": 0.55,
+     "element_power": 0.55,
+     "defense": 0.35,
+     "reflexes": 1.5,
+     "luck": 1.1,
+     "crit_damage": 0.22,
+     "healing_power": 0.3,
+     "resist": 0.28,
+     "mp_regen": 1.4
+    }
+   },
+   "ability": {
+    "skill_damage": 1.0,
+    "skill_heal": 0.25,
+    "spell": 0.35,
+    "spell_all": 1.6,
+    "feat": 0.12,
+    "mult": 1.0,
+    "cost": 0.3,
+    "heal": 1.0,
+    "area": 3.0,
+    "turns": 3.0,
+    "cooldown": 4.0,
+    "crit": 1.2,
+    "pierce": 0.6
+   },
+   "keystone": 6.0
+  }
+ },
+ "trees": [
+  "bloodline",
+  "warrior",
+  "mage",
+  "rogue",
+  "cleric",
+  "ranger",
+  "monk",
+  "necromancer",
+  "druid"
+ ]
+}

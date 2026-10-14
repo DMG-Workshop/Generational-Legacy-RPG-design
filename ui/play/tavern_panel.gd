@@ -3,6 +3,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const OLD := Color("#e8a05a")
+const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
@@ -222,6 +223,17 @@ func _offer_card(id: String) -> Control:
 	return shell[0]
 
 
+func _tree(id: String) -> void:
+	var p: Control = SkillTreePanel.new()
+	p.dynasty = dynasty
+	p.who = id
+	p.on_change = func():
+		if on_change.is_valid():
+			on_change.call()
+		_build()
+	add_child(p)
+
+
 func _member_card(m: Dictionary) -> Control:
 	var d := dynasty
 	var p := d.party
@@ -246,6 +258,10 @@ func _member_card(m: Dictionary) -> Control:
 	v.add_child(gauges)
 	gauges.add_child(_gauge("HP %s / %s" % [GameText.num(u.hp), GameText.num(u.max_hp())], Kit.GOOD, u.max_hp(), u.hp))
 	gauges.add_child(_gauge("MP %s / %s" % [GameText.num(u.mp), GameText.num(u.max_mp())], Kit.MP_BLUE, maxf(1.0, u.max_mp()), u.mp))
+	var tb := Kit.button("Skill tree", func(): _tree(id), Vector2(120, 34))
+	var pts := GameSkillTree.points(u)
+	tb.tooltip_text = "%s's skill tree%s." % [u.name, "" if pts == 0 else " (%s point%s to spend)" % [GameText.num(pts), "" if pts == 1 else "s"]]
+	side.add_child(tb)
 	var label := "Confirm" if confirm_id == id else "Dismiss"
 	var btn := Kit.button(label, func(): _dismiss(id), Vector2(120, 34))
 	btn.tooltip_text = "Pay off %s. They go home and will come back without a fee." % u.name

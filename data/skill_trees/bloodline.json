@@ -1,0 +1,359 @@
+{
+ "id": "bloodline",
+ "name": "The Blood of the House",
+ "class": "",
+ "description": "What runs in the family. Marked nodes pass, in part, to the next heir.",
+ "nodes": [
+  {
+   "id": "b_vigor",
+   "name": "Ancestral Vigor",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_old_blood",
+   "name": "Old Blood",
+   "tier": 1,
+   "col": 2,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "all": {
+      "flat": 1
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_wits",
+   "name": "Quick Wits",
+   "tier": 1,
+   "col": 4,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "persuasion": 0.03
+    }
+   }
+  },
+  {
+   "id": "b_hardy",
+   "name": "Hardy Stock",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "b_vigor"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_steel",
+   "name": "Family Steel",
+   "tier": 2,
+   "col": 1,
+   "requires": [
+    "b_old_blood"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_arcana",
+   "name": "Echoing Arcana",
+   "tier": 2,
+   "col": 3,
+   "requires": [
+    "b_old_blood"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_trade",
+   "name": "Family Trade",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "b_wits"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "b_survivor",
+   "name": "Survivor's Blood",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "b_hardy"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.04,
+     "max_hp": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_luck",
+   "name": "Lucky Line",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "b_steel"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "luck": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_memory",
+   "name": "Blood Memory",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "b_steel",
+    "b_arcana"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.015
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_name",
+   "name": "A Known Name",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "b_trade"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "persuasion": 0.04
+    }
+   }
+  },
+  {
+   "id": "b_hand",
+   "name": "Ancestor's Hand",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "b_survivor"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_fury",
+   "name": "Lineage's Fury",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "b_luck"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "crit_damage": 0.08
+    }
+   }
+  },
+  {
+   "id": "b_watchers",
+   "name": "The Watchers",
+   "tier": 4,
+   "col": 3,
+   "requires": [
+    "b_memory"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    }
+   }
+  },
+  {
+   "id": "b_ember",
+   "name": "Ember in the Veins",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "b_old_blood"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "fire_resistance": 0.06
+    }
+   }
+  },
+  {
+   "id": "b_grit",
+   "name": "Grandmother's Grit",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "b_memory"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_ledger",
+   "name": "House Ledger",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "b_name"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "b_omens",
+   "name": "Reader of Omens",
+   "tier": 5,
+   "col": 3,
+   "requires": [
+    "b_watchers"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.04
+    }
+   }
+  },
+  {
+   "id": "b_last_of_line",
+   "keystone": "last_of_the_line",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "b_fury"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "b_heroes",
+   "name": "Heir of Heroes",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "b_memory",
+    "b_hand"
+   ],
+   "cost": 1,
+   "max_rank": 5,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "b_saga",
+   "name": "Living Saga",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "b_heroes"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Your name is added to a list that is already long.",
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "max_hp": 0.005
+    }
+   }
+  }
+ ]
+}

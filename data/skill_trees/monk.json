@@ -1,0 +1,357 @@
+{
+ "id": "monk",
+ "name": "The Still Fist",
+ "class": "monk",
+ "description": "Breath, balance, and a body made into a weapon.",
+ "nodes": [
+  {
+   "id": "k_stance",
+   "name": "Horse Stance",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "str": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "k_breath",
+   "name": "Breath Control",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "agi": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "k_palm",
+   "name": "Iron Palm",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "k_stance"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.05,
+      "pierce": 0.03
+     }
+    ]
+   }
+  },
+  {
+   "id": "k_body",
+   "name": "Iron Body",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "k_stance",
+    "k_breath"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.06
+    }
+   }
+  },
+  {
+   "id": "k_snake",
+   "name": "Snake Reflexes",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "k_breath"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    }
+   }
+  },
+  {
+   "id": "k_fists",
+   "name": "Hundred Fists",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "k_palm"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "flurry",
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "k_strength",
+   "name": "Tiger Strength",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "k_palm",
+    "k_body"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "str": {
+      "pct": 0.03
+     }
+    }
+   }
+  },
+  {
+   "id": "k_peace",
+   "name": "Deeper Peace",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "k_snake"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "heal",
+      "heal": 0.1,
+      "cost": -0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "k_discipline",
+   "name": "Discipline",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "k_snake"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "resist": 0.06
+    }
+   }
+  },
+  {
+   "id": "k_points",
+   "name": "Vital Points",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "k_fists"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "luck": 0.01,
+     "crit_damage": 0.05
+    }
+   }
+  },
+  {
+   "id": "k_sweep",
+   "name": "Sweeping Kick",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "k_fists"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "hamstring",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "k_spirit",
+   "name": "Spirit Well",
+   "tier": 4,
+   "col": 3,
+   "requires": [
+    "k_peace"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "max_mp": 0.05,
+     "mp_regen": 0.01
+    }
+   }
+  },
+  {
+   "id": "k_balance",
+   "name": "Perfect Balance",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "k_discipline"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "agi": {
+      "pct": 0.03
+     }
+    }
+   }
+  },
+  {
+   "id": "k_fury",
+   "keystone": "fury_of_the_fist",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "k_strength",
+    "k_points"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "k_diamond",
+   "keystone": "diamond_body",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "k_strength"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "k_stillness",
+   "keystone": "stillness",
+   "tier": 5,
+   "col": 3,
+   "requires": [
+    "k_spirit"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "k_hide",
+   "name": "Weathered",
+   "tier": 5,
+   "col": 4,
+   "requires": [
+    "k_balance"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.03
+    }
+   }
+  },
+  {
+   "id": "k_grandmaster",
+   "name": "Grandmaster",
+   "tier": 6,
+   "col": 1,
+   "requires": [
+    "k_fury",
+    "k_points"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.04
+     }
+    ]
+   }
+  },
+  {
+   "id": "k_wind",
+   "name": "Walk on Wind",
+   "tier": 6,
+   "col": 4,
+   "requires": [
+    "k_hide",
+    "k_stillness"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    },
+    "stats": {
+     "agi": {
+      "pct": 0.02
+     }
+    }
+   }
+  },
+  {
+   "id": "k_enlightened",
+   "name": "Enlightened",
+   "tier": 7,
+   "col": 2,
+   "requires": [
+    "k_grandmaster",
+    "k_wind",
+    "k_diamond"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "You no longer count your breaths.",
+   "effect": {
+    "stats": {
+     "str": {
+      "pct": 0.01
+     },
+     "agi": {
+      "pct": 0.01
+     },
+     "vit": {
+      "pct": 0.01
+     }
+    }
+   }
+  }
+ ]
+}

@@ -16,21 +16,22 @@ extends RefCounted
 static func options(b: GameBattle, by: int) -> Array:
 	var u := b.unit(by)
 	var out: Array = []
-	var skills: Array = u.cls()["skills"]
+	var skills: Array = GameSkillTree.skills(u)
+	var blood := b.pays_in_hp(by)   # Blood Magic: no MP is spent, the HP taken is weighed like a feat's
 	for i in skills.size():
 		var c := GameBattle.unit_skill_cost(u, i)
-		if u.mp >= c:
-			out.append({"ab": skills[i], "cost": c, "skill": i, "spell": ""})
+		if b.can_pay(by, c):
+			out.append({"ab": skills[i], "cost": 0 if blood else c, "skill": i, "spell": "", "mp": c, "hp": b.blood_cost(by, c) if blood else 0})
 	for id in b.unit_spells(by):
-		var sp := GameCombat.spell(id)
+		var sp := b.unit_spell(by, id)
 		if sp.is_empty():
 			continue
 		var c := GameCombat.ability_cost(sp, u.level)
-		if u.mp >= c:
-			out.append({"ab": sp, "cost": c, "skill": -1, "spell": id})
+		if b.can_pay(by, c):
+			out.append({"ab": sp, "cost": 0 if blood else c, "skill": -1, "spell": id, "mp": c, "hp": b.blood_cost(by, c) if blood else 0})
 	for id in b.unit_feats(by):
 		if b.feat_block(by, id) == "":
-			out.append({"ab": GameFeats.def(id), "cost": 0, "skill": -1, "spell": "", "feat": id,
+			out.append({"ab": b.unit_feat(by, id), "cost": 0, "skill": -1, "spell": "", "feat": id,
 				"hp": GameFeats.hp_cost(u, id, int(b.unit_numbers(by)["max_hp"]))})
 	if by < 0 and not b.heir.inventory.is_empty():
 		for id in GamePlague.vials_carried(b.heir):
@@ -45,7 +46,7 @@ static func _frac(hp: int, max_hp: int) -> float:
 
 static func _plan(o: Dictionary, target: int) -> Dictionary:
 	return {"act": "ability", "ab": o["ab"], "cost": o["cost"], "skill": o["skill"], "spell": o["spell"], "feat": o.get("feat", ""),
-		"item": o.get("item", ""), "target": target}
+		"item": o.get("item", ""), "target": target, "mp": o.get("mp", o["cost"])}
 
 
 ## One decision: {"act": "pass"|"potion"|"attack"|"ability", "target", and for an ability
@@ -182,7 +183,7 @@ static func _heal_worth(b: GameBattle, by: int) -> float:
 	if not nums.has("heal_worth"):
 		var u := b.unit(by)
 		var k := GameBattle.unit_skill_of(u, "heal")
-		nums["heal_worth"] = 0.0 if k < 0 else float(GameBattle.heal_amount(u, b.heir, u.cls()["skills"][k])) / float(maxi(1, GameBattle.unit_skill_cost(u, k)))
+		nums["heal_worth"] = 0.0 if k < 0 else float(GameBattle.heal_amount(u, b.heir, GameSkillTree.skill(u, k))) / float(maxi(1, GameBattle.unit_skill_cost(u, k)))
 	return float(nums["heal_worth"])
 
 
@@ -192,7 +193,7 @@ static func _heal_worth(b: GameBattle, by: int) -> float:
 static func _plain(u: GameHeir) -> bool:
 	if not u.spells.is_empty():
 		return false
-	for s in u.cls()["skills"]:
+	for s in GameSkillTree.skills(u):
 		if GameCombat.is_aoe(s) or s.has("statuses"):
 			return false
 	return true
@@ -330,7 +331,7 @@ static func _context(b: GameBattle, by: int) -> Dictionary:
 		var d := maxf(1.0, float(nums["str"]) - armour)
 		var k := GameBattle.unit_skill_of(u, "damage")
 		if k >= 0:
-			var s: Dictionary = u.cls()["skills"][k]
+			var s: Dictionary = GameSkillTree.skill(u, k)
 			var p: float = nums.get(str(s.get("stat", "str")), nums["str"])
 			d = maxf(d, p * float(s["mult"]) * float(s.get("hits", 1)) - armour * (1.0 - float(s.get("pierce", 0.0))))
 		dps += d * (1.0 + float(nums["crit"]) * 0.75)

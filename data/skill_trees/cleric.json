@@ -1,0 +1,390 @@
+{
+ "id": "cleric",
+ "name": "The Lit Path",
+ "class": "cleric",
+ "description": "Prayer that mends and prayer that burns.",
+ "nodes": [
+  {
+   "id": "c_faith",
+   "name": "Faith",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "mag": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "c_pilgrim",
+   "name": "Pilgrim's Legs",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "vit": {
+      "flat": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "c_smite",
+   "name": "Righteous Smite",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "c_faith"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.05
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_hands",
+   "name": "Gentle Hands",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "c_faith",
+    "c_pilgrim"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "heal",
+      "heal": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_vestments",
+   "name": "Blessed Vestments",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "c_pilgrim"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.06
+    }
+   }
+  },
+  {
+   "id": "c_hammer",
+   "name": "Hammer of Judgement",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "c_smite"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "hammer_of_judgement",
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_wells",
+   "name": "Deep Wells",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "c_hands"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_mp": 0.05
+    }
+   }
+  },
+  {
+   "id": "c_devotion",
+   "name": "Devotion",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "c_hands"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.06
+    }
+   }
+  },
+  {
+   "id": "c_purity",
+   "name": "Purity",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "c_vestments"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "resist": 0.06
+    }
+   }
+  },
+  {
+   "id": "c_zeal",
+   "name": "Zeal",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "c_hammer",
+    "c_wells"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "mag": {
+      "pct": 0.03
+     }
+    }
+   }
+  },
+  {
+   "id": "c_radiance",
+   "name": "Radiance",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "c_hammer"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "radiant_burst",
+      "radius": 1,
+      "mult": 0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_many_hands",
+   "name": "Many Hands",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "c_devotion"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "mass_heal",
+      "heal": 0.1,
+      "cost": -0.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_aegis",
+   "name": "Aegis",
+   "tier": 4,
+   "col": 4,
+   "requires": [
+    "c_purity"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "ward",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_wrath",
+   "name": "Wrath of Heaven",
+   "tier": 5,
+   "col": 0,
+   "requires": [
+    "c_zeal",
+    "c_radiance"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "wrath_of_heaven",
+      "mult": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_martyr",
+   "keystone": "martyr",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "c_many_hands"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "c_renewal",
+   "name": "Renewal",
+   "tier": 5,
+   "col": 3,
+   "requires": [
+    "c_many_hands",
+    "c_aegis"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "rejuvenation",
+      "turns": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_bulwark",
+   "keystone": "faiths_bulwark",
+   "tier": 5,
+   "col": 4,
+   "requires": [
+    "c_aegis"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "c_purifier",
+   "name": "Purifier",
+   "tier": 6,
+   "col": 4,
+   "requires": [
+    "c_bulwark",
+    "c_purity"
+   ],
+   "cost": 1,
+   "max_rank": 1,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "cleanse",
+      "cost": -0.25
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_saint",
+   "name": "Sainthood",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "c_martyr",
+    "c_renewal"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.05,
+     "max_hp": 0.03
+    }
+   }
+  },
+  {
+   "id": "c_avenger",
+   "name": "Avenger",
+   "tier": 6,
+   "col": 0,
+   "requires": [
+    "c_wrath"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "skill": "damage",
+      "mult": 0.04
+     },
+     {
+      "spell": "*",
+      "mult": 0.03
+     }
+    ]
+   }
+  },
+  {
+   "id": "c_hallowed",
+   "name": "Hallowed",
+   "tier": 7,
+   "col": 2,
+   "requires": [
+    "c_avenger",
+    "c_saint",
+    "c_purifier"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Where you walk, the sick sit up.",
+   "effect": {
+    "stats": {
+     "mag": {
+      "pct": 0.01
+     },
+     "vit": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "healing_power": 0.005
+    }
+   }
+  }
+ ]
+}

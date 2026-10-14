@@ -80,6 +80,7 @@ func _setup_new_heir(h: GameHeir) -> void:
 	h.spell_news = []
 	h.learn_spells()
 	GameFeats.start(h)
+	GameSkillTree.start(h)
 	h.training = {"str": 0.0, "mag": 0.0, "agi": 0.0, "vit": 0.0}
 	h.milestones_done = []
 	h.battles_won = 0
@@ -643,6 +644,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		msgs.append(learned)
 		_say(learned)
 	GameFeats.on_years(self, msgs)
+	GameSkillTree.on_years(self, msgs)
 	heir.age += years
 	world.advance(years, rng)
 	party.on_years(self, years, msgs)
@@ -766,6 +768,7 @@ func choose_heir(index: int) -> Array:
 	pending_archetype = ""
 	world.visit(GameData.world["start"])
 	_setup_new_heir(c)
+	GameSkillTree.inherit(self, parent, c, msgs)
 	# The heir inherits what the family has left: its gold and the items bought.
 	c.gold = int(float(parent.gold) * float(GameData.bal("gold_inherit_fraction")))
 	c.potions = maxi(c.potions, parent.potions)
