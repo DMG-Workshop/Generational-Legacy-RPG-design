@@ -107,11 +107,14 @@ func _ready() -> void:
 	var room := UiSettings.room(self)
 	canvas.custom_minimum_size = Vector2(600, 420) if not compact else Vector2(minf(420.0, room.x - 340.0), minf(420.0, room.y - 120.0))
 	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	canvas.size_flags_stretch_ratio = 1.6
 	row.add_child(canvas)
 
 	var side_scroll := ScrollContainer.new()
 	side_scroll.custom_minimum_size = Vector2(SIDE_W if not compact else 260, 0)
 	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	if compact:   # a narrow screen shares the spare width, so road names and travel times fit
+		side_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(side_scroll)
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 6)

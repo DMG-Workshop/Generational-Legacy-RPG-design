@@ -554,8 +554,11 @@ func _build_commands() -> void:
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
-		var btn := _small_button(("%s\n%s" if _short() else "%s (%s)") % [s["name"], b.pay_text(-1, b.skill_cost(i))], func(): _use_skill(idx))
-		if _short():   # the cost under the name: four columns are too narrow for both on one line
+		var cost := b.pay_text(-1, b.skill_cost(i))
+		var one := "%s (%s)" % [s["name"], cost]
+		var two := _short() or not _fits(one, 14, (cmd_w - 40.0) / 3.0 - 20.0)
+		var btn := _small_button("%s\n%s" % [s["name"], cost] if two else one, func(): _use_skill(idx))
+		if two:   # the cost under the name: a narrow column cannot hold both on one line
 			btn.add_theme_font_size_override("font_size", 13)
 			btn.add_theme_constant_override("line_spacing", -2)
 		btn.disabled = not b.can_use_skill(i)
@@ -582,6 +585,10 @@ func _build_commands() -> void:
 	col3.add_child(pot)
 	col3.add_child(Kit.button("Flee", func(): _do(func(): b.flee())))
 	_lay_out_commands([col1, col2, col3])
+
+
+func _fits(text: String, font_size: int, width: float) -> bool:
+	return ThemeDB.fallback_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= width
 
 
 func _short() -> bool:
@@ -807,8 +814,11 @@ func _spell_row(id: String) -> Control:
 	row.add_child(shape)
 	var what := Kit.label(GameCombat.describe(sp) + ("" if b.can_cast(id) else "  (not enough %s)" % ("HP" if b.pays_in_hp(-1) else "MP")), 13, Kit.TEXT if b.can_cast(id) else Kit.DIM)
 	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	what.clip_text = true
-	what.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if UiSettings.compact(self):   # a narrow list wraps rather than hide the end of the effect
+		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	else:
+		what.clip_text = true
+		what.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	what.tooltip_text = what.text
 	what.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(what)
