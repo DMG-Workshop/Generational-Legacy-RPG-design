@@ -29,6 +29,7 @@ var training: Dictionary = {"str": 0.0, "mag": 0.0, "agi": 0.0, "vit": 0.0}
 var family_founded: bool = false
 var extra_life_used: bool = false
 var battles_won: int = 0
+var clean_streak: int = 0   # clean wins in a row (little HP lost); a costly win, defeat or flight ends it
 var kills: Dictionary = {}
 var parent_names: Array = []
 var children: Array = []     # Array[GameHeir], born to this heir
@@ -264,7 +265,7 @@ func to_dict() -> Dictionary:
 		"gold": gold, "potions": potions, "traits": traits, "dormant": dormant,
 		"fate_value": fate_value, "milestones_done": milestones_done, "archetype": archetype,
 		"archetype_bonus": archetype_bonus, "training": training, "family_founded": family_founded,
-		"extra_life_used": extra_life_used, "battles_won": battles_won, "kills": kills,
+		"extra_life_used": extra_life_used, "battles_won": battles_won, "clean_streak": clean_streak, "kills": kills,
 		"parent_names": parent_names, "heirloom_bonus": heirloom_bonus, "children": kids,
 		"equipment": equipment, "inventory": inventory, "spells": spells, "spell_news": spell_news,
 		"diseases": diseases, "tainted_gear": tainted_gear, "disease_level": disease_level,
@@ -287,6 +288,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.archetype = d["archetype"]; h.archetype_bonus = d["archetype_bonus"]
 	h.training = d["training"]; h.family_founded = d["family_founded"]
 	h.extra_life_used = d["extra_life_used"]; h.battles_won = int(d["battles_won"])
+	h.clean_streak = int(d.get("clean_streak", 0))
 	h.kills = {}
 	for k in d["kills"]:
 		h.kills[k] = int(d["kills"][k])
