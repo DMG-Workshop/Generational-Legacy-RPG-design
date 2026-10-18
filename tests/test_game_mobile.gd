@@ -1,8 +1,10 @@
 ## Phones and tablets: hold-for-details on touch screens (a hold shows the tooltip and is not a
-## click, a tap still clicks, a drag scrolls), every tooltip and hover preview in the shipped UI
-## reachable that way, the text-size setting (saved apart from the dynasty, applied as the content
-## scale, no screen overflowing at 150%, touch-sized buttons), saving on pause, the Android back
-## button, the safe area and the export presets.
+## click, a tap still clicks, a drag scrolls), no engine tooltip or hover preview from a finger's
+## emulated mouse while the mouse keeps both, every tooltip and hover preview in the shipped UI
+## reachable that way, the text-size and touch-layout settings (saved apart from the dynasty, old
+## files read as Auto), no Quit on mobile, every screen at every text size on phone, tablet and
+## small windows (nothing off the safe area or cut off, touch-sized buttons and tabs), saving on
+## pause, the Android back button, the safe area and the export presets.
 ## Run: godot --headless --path . -s res://tests/test_game_mobile.gd
 extends SceneTree
 
@@ -21,6 +23,8 @@ const LootPanel := preload("res://ui/play/loot_panel.gd")
 const MenuPanel := preload("res://ui/play/menu_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
+const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
+const EndingScreen := preload("res://ui/play/ending_screen.gd")
 const DIR := "user://test_mobile/"
 
 var checks := 0
@@ -58,10 +62,13 @@ func _run() -> void:
 	await _frames(2)
 	test_project_and_presets()
 	test_settings_file()
+	await test_touch_layout_setting()
 	await test_hold_and_tap()
 	await test_drag_scrolls()
 	await test_hover_preview()
+	await test_no_native_tooltip_from_touch()
 	test_static_scan()
+	await test_quit_button()
 	await test_every_tooltip_reachable()
 	await test_back_button()
 	await test_pause_saves()
@@ -218,7 +225,95 @@ func test_settings_file() -> void:
 	var dyn := GameDynasty.new_game(3, "Ana", "mage", "faetouched", "elf")
 	var saved := JSON.stringify(dyn.to_dict())
 	ok(not ("ui_scale" in saved) and not ("content_scale" in saved), "the dynasty save does not carry the UI scale")
+	ok(not ("touch_layout" in saved), "nor the touch layout")
 	UiSettings.set_scale(1.0)
+
+
+## Menu > Touch layout: Auto (phones and tablets only, so a touch-screen laptop keeps the desktop
+## layout), On or Off, saved beside the text size; files from before it load as Auto.
+func test_touch_layout_setting() -> void:
+	var keep_touch := UiSettings.force_touch
+	UiSettings.force_touch = -1
+	DirAccess.remove_absolute(UiSettings.path)
+	UiSettings.touch_layout = ""
+	UiSettings.scale = -1.0
+	ok(UiSettings.get_touch_layout() == "auto", "no settings file: the touch layout is Auto")
+	UiSettings.force_mobile = 0
+	ok(not UiSettings.touch(), "Auto on a desktop (touch screen or not): the desktop layout")
+	UiSettings.force_mobile = 1
+	ok(UiSettings.touch(), "Auto on a phone: the touch layout")
+	UiSettings.set_touch_layout("off")
+	ok(not UiSettings.touch(), "Off: the desktop layout even on a phone")
+	UiSettings.force_mobile = 0
+	UiSettings.set_touch_layout("on")
+	ok(UiSettings.touch(), "On: the touch layout on a desktop")
+	UiSettings.touch_layout = ""
+	ok(UiSettings.get_touch_layout() == "on", "the choice is read back from the file")
+	UiSettings.set_scale(1.25)
+	UiSettings.touch_layout = ""
+	UiSettings.scale = -1.0
+	ok(UiSettings.get_touch_layout() == "on" and is_equal_approx(UiSettings.get_scale(), 1.25), "the text size and the touch layout are kept side by side")
+	var cf := ConfigFile.new()
+	cf.load(UiSettings.path)
+	ok(cf.get_value("ui", "touch_layout", "") == "on", "stored as [ui] touch_layout")
+	# A file written before the setting existed: only the scale.
+	var old := ConfigFile.new()
+	old.set_value("ui", "scale", 1.5)
+	old.save(UiSettings.path)
+	UiSettings.load_settings()
+	ok(UiSettings.get_touch_layout() == "auto" and is_equal_approx(UiSettings.get_scale(), 1.5), "an old settings file loads as Auto and keeps its scale")
+	old.set_value("ui", "touch_layout", "sideways")
+	old.save(UiSettings.path)
+	UiSettings.load_settings()
+	ok(UiSettings.get_touch_layout() == "auto", "an unknown value loads as Auto")
+	UiSettings.set_touch_layout("bogus")
+	ok(UiSettings.get_touch_layout() == "auto", "and cannot be set")
+	UiSettings.set_scale(1.0)
+	app.set_ui_scale(1.0)
+	await _frames(2)
+	# The menu offers it next to Text size; a choice lays the screens out again.
+	app.show_title()
+	await _frames(2)
+	var m: Control = app.open_menu()
+	await _frames(2)
+	var texts := _texts(m, [])
+	var at := texts.find("Touch layout")
+	ok(at > texts.find("Text size") and texts.find("Text size") >= 0, "the menu has Touch layout under Text size")
+	var auto_b := _find(m, "Auto")
+	ok(auto_b != null and auto_b.get_theme_color("font_color") == Kit.ACCENT, "Auto is marked as in use")
+	ok(_find(m, "On") != null and _find(m, "Off") != null, "with On and Off beside it")
+	ok(auto_b != null and auto_b.size.y < float(UiSettings.setting("touch_target_px")) - 0.5, "the desktop's buttons are their designed size")
+	_find(m, "On").pressed.emit()
+	await _frames(3)
+	ok(UiSettings.get_touch_layout() == "on" and UiSettings.touch(), "On turns the touch layout on")
+	var m2: Node = app.current.get_children().back()
+	ok(m2 is MenuPanel and m2 != m, "the screens are laid out again and the menu reopens")
+	var on_b := _find(m2, "On")
+	ok(on_b != null and on_b.get_theme_color("font_color") == Kit.ACCENT, "showing On in use")
+	ok(on_b != null and on_b.size.y >= float(UiSettings.setting("touch_target_px")) - 0.5, "and its buttons are now a fingertip tall")
+	ok(Kit.click() == "tap", "the help says tap")
+	_find(m2, "Off").pressed.emit()
+	await _frames(3)
+	ok(UiSettings.get_touch_layout() == "off" and not UiSettings.touch() and Kit.click() == "click", "Off: the desktop layout and words")
+	# Long-press hints work on a real touch screen whatever the layout says.
+	_game()
+	await _frames(3)
+	var btn := _find(app.current, "Auto-battle")
+	var seen := await _hold(btn, float(UiSettings.setting("hold_seconds")) + 0.05)
+	ok(seen != "" and seen == btn.tooltip_text, "with the touch layout Off a hold still shows the hint")
+	app.hints.hide_hint()
+	UiSettings.set_touch_layout("auto")
+	UiSettings.force_touch = keep_touch
+	app.show_state()
+	await _frames(2)
+
+
+func _texts(n: Node, out: Array) -> Array:
+	if n is Label and (n as Label).is_visible_in_tree():
+		out.append((n as Label).text)
+	for c in n.get_children():
+		_texts(c, out)
+	return out
 
 
 ## A tap on the auto-battle toggle flips it; a hold shows its tooltip and leaves it alone.
@@ -369,6 +464,118 @@ func test_hover_preview() -> void:
 	d.battle = null
 
 
+## Godot moves an emulated mouse (InputEvent.DEVICE_ID_EMULATION) with the first finger: the
+## touch's mouse button enters the control under it, the pointer rests there after the lift, and a
+## resting motion there (Viewport.update_mouse_cursor_state sends one after a cursor change or a
+## drag) starts the engine's tooltip timer. On touch only the long-press bubble may show: no native
+## tooltip and no hover preview from a tap; the mouse keeps both.
+func test_no_native_tooltip_from_touch() -> void:
+	_game()
+	await _frames(3)
+	var host: Control = app.current
+	var probe := Button.new()
+	probe.text = "Probe"
+	probe.tooltip_text = "Probe tooltip"
+	probe.position = Vector2(300, 300)
+	probe.size = Vector2(160, 60)
+	probe.z_index = 50
+	host.add_child(probe)
+	var hover := {"in": 0, "out": 0, "seen": 0}
+	TouchHint.on_hover(probe, func(): hover["in"] += 1, func(): hover["out"] += 1)
+	probe.gui_input.connect(func(ev): if ev is InputEventMouseButton and ev.device == InputEvent.DEVICE_ID_EMULATION: hover["seen"] += 1)
+	var taps := [0]
+	probe.pressed.connect(func(): taps[0] += 1)
+	await _frames(2)
+	var at := _center(probe)
+	var delay := float(ProjectSettings.get_setting("gui/timers/tooltip_delay_sec"))
+	var popped: Array = []   # the engine's tooltip popups as they enter the tree: freed there and then?
+	var spy := func(n: Node): if n is PopupPanel and (n as Window).theme_type_variation == &"TooltipPanel": popped.append(n.is_queued_for_deletion())
+	node_added.connect(spy)
+	# A plain tap: Godot's emulated mouse button (device DEVICE_ID_EMULATION) enters the probe.
+	await _down(at)
+	await _up(at)
+	ok(hover["seen"] == 2, "the tap reached the probe as the engine's emulated mouse button (%d)" % hover["seen"])
+	ok(taps[0] == 1, "a tap clicks")
+	ok(root.gui_get_hovered_control() == probe, "the emulated pointer rests on what was tapped")
+	ok(TouchHint.finger, "the pointer is known to be a finger's")
+	ok(hover["in"] == 0, "a tap plays no hover preview")
+	root.update_mouse_cursor_state()   # the engine's own resting motion
+	var rest := InputEventMouseMotion.new()   # and one as an emulated mouse would send it
+	rest.device = InputEvent.DEVICE_ID_EMULATION
+	rest.position = _win(at)
+	Input.parse_input_event(rest)
+	await create_timer(delay + 0.3).timeout
+	ok(_tooltips(root, []).is_empty(), "no native tooltip after a tap and a resting pointer: %s" % str(_tooltips(root, [])))
+	ok(not popped.is_empty() and not popped.has(false), "the engine did pop its tooltip, and it was freed the frame it came, never drawn (%s)" % str(popped))
+	ok(hover["in"] == 0, "and still no preview")
+	# A resting motion while the finger is still down (a cursor change under a held finger).
+	popped.clear()
+	await _down(at)
+	root.update_mouse_cursor_state()
+	await create_timer(delay + 0.3).timeout
+	ok(_tooltips(root, []).is_empty() and not popped.has(false), "no native tooltip under a held finger (%s)" % str(popped))
+	await _up(at)
+	taps[0] = 0
+	# A finger dragged with the button held reaches the GUI (scrolling needs it), no tooltip.
+	var drags := [0]
+	probe.gui_input.connect(func(ev): if ev is InputEventMouseMotion and ev.device == InputEvent.DEVICE_ID_EMULATION: drags[0] += 1)
+	await _down(at)
+	await _drag(at + Vector2(3, 2), Vector2(3, 2))
+	await _drag(at + Vector2(6, 4), Vector2(3, 2))
+	ok(drags[0] >= 2, "a finger's drag still reaches the GUI as emulated motion (%d)" % drags[0])
+	await create_timer(delay + 0.3).timeout
+	ok(_tooltips(root, []).is_empty(), "no native tooltip while a finger rests on it")
+	await _up(at + Vector2(6, 4))
+	# The long press still shows its bubble and plays the preview; taking it down ends it.
+	app.hints.hide_hint()
+	await _down(at)
+	app.hints.tick(float(UiSettings.setting("hold_seconds")) + 0.05)
+	ok(app.hints.shown_text == "Probe tooltip" and hover["in"] == 1, "a hold shows the bubble and the preview")
+	await _up(at)
+	await create_timer(delay + 0.3).timeout
+	ok(_tooltips(root, []).is_empty(), "and no native tooltip beside it")
+	app.hints.hide_hint()
+	ok(hover["out"] == 1, "the preview ends with the bubble")
+	# The mouse: hover plays the preview and the engine's tooltip shows, as on the desktop.
+	var mm := InputEventMouseMotion.new()
+	mm.position = _win(at + Vector2(-200, -150))
+	Input.parse_input_event(mm)
+	await _frames(1)
+	ok(not TouchHint.finger, "a real mouse takes the pointer back")
+	ok(hover["out"] == 1, "the finger's leaving played no exit of its own")
+	mm = mm.duplicate()
+	mm.position = _win(at)
+	Input.parse_input_event(mm)
+	await _frames(1)
+	ok(hover["in"] == 2, "the mouse entering plays the preview")
+	await create_timer(delay + 0.3).timeout
+	ok(_tooltips(root, []) == ["Probe tooltip"], "and the engine's tooltip shows for the mouse: %s" % str(_tooltips(root, [])))
+	ok(popped.back() == false, "the mouse's tooltip is left alone")
+	# A touch elsewhere moves the pointer off: the mouse's preview ends once, and the tooltip goes.
+	await _down(at + Vector2(-200, -150))
+	await _up(at + Vector2(-200, -150))
+	ok(hover["out"] == 2, "a finger moving the pointer off ends the mouse's preview, once (%d)" % hover["out"])
+	await _frames(2)
+	ok(_tooltips(root, []).is_empty(), "the mouse's tooltip goes with it")
+	node_added.disconnect(spy)
+	probe.queue_free()
+	app.hints.hide_hint()
+	await _frames(2)
+
+
+## The engine's tooltip popups on screen: a PopupPanel under the control that owns the tooltip.
+func _tooltips(n: Node, out: Array) -> Array:
+	for c in n.get_children(true):
+		if c is PopupPanel and (c as Window).visible:
+			var l: Label = null
+			for x in c.get_children(true):
+				if x is Label:
+					l = x
+			out.append(l.text if l != null else "?")
+		_tooltips(c, out)
+	return out
+
+
 ## Scripts the game can reach from main.gd, following preloads.
 func _reachable() -> Array:
 	var seen := {}
@@ -397,6 +604,42 @@ func test_static_scan() -> void:
 	for p in scripts:
 		if "res://ui/" in p:
 			ok(p.begins_with("res://ui/play/"), "the game reaches only ui/play (the old prototype screens are not shipped): %s" % p)
+	# iOS forbids an app quitting itself and Android leaves by Home or Back: the one Quit in the
+	# shipped UI is the title's, behind is_mobile().
+	var quits: Array = []
+	for p in scripts:
+		var src := FileAccess.get_file_as_string(p)
+		if ".quit(" in src:
+			quits.append(p.get_file())
+	ok(quits == ["title_screen.gd"], "only the title screen can quit the game: %s" % str(quits))
+	var title_src := FileAccess.get_file_as_string("res://ui/play/title_screen.gd")
+	var at := title_src.find(".quit(")
+	ok(at > 0 and title_src.rfind("if not UiSettings.is_mobile()", at) > title_src.rfind("\n\n", at), "and only off mobile")
+
+
+## The title's Quit: there on a desktop, not on a phone or tablet.
+func test_quit_button() -> void:
+	UiSettings.force_mobile = 0
+	app.show_title()
+	await _frames(2)
+	ok(_find(app.current, "Quit") != null, "a desktop title offers Quit")
+	UiSettings.force_mobile = 1
+	app.show_title()
+	await _frames(2)
+	ok(_find(app.current, "Quit") == null, "a phone's title has no Quit")
+	ok(_find(app.current, "Settings") != null and _find(app.current, "Begin") != null, "and keeps its other buttons")
+	for mode in ["title", "game"]:
+		if mode == "game":
+			_game()
+			await _frames(2)
+		var m: Control = app.open_menu()
+		await _frames(2)
+		ok(_find(m, "Quit") == null and _find(m, "Exit") == null, "the %s menu has no Quit on a phone" % mode)
+		m.queue_free()
+		await _frames(1)
+	UiSettings.force_mobile = 0
+	app.show_title()
+	await _frames(2)
 
 
 ## Builds every screen and panel that sets a tooltip and holds a finger on each tooltip that a
@@ -641,94 +884,216 @@ func _check_inside(n: Node, room: Rect2, where: String) -> void:
 
 func _walk_inside(n: Node, room: Rect2, where: String) -> void:
 	if n is Control and (n as Control).is_visible_in_tree():
-		var r := (n as Control).get_global_rect()
-		if r.size.x > 0 and r.size.y > 0 and not room.encloses(r) and not _clipped(n):
+		var c := n as Control
+		var r := c.get_global_rect()
+		var clip := _clip_of(c)
+		if r.size.x > 0 and r.size.y > 0 and not room.encloses(r) and clip == null:
 			_outside += 1
 			if _outside <= 3:
 				print("  outside on %s: %s '%s' %s" % [where, n.get_class(), str(n.get("text")).left(30) if n.get("text") != null else "", str(r)])
+		# Inside a clipping parent that does not scroll, what sticks out is cut off for good.
+		if clip != null and not (clip is ScrollContainer) and r.size.x > 0 and r.size.y > 0 and not clip.get_global_rect().grow(1.0).encloses(r):
+			_outside += 1
+			if _outside <= 3:
+				print("  cut off on %s: %s '%s' %s in %s %s" % [where, n.get_class(), str(n.get("text")).left(30) if n.get("text") != null else "", str(r), clip.get_class(), str(clip.get_global_rect())])
+		if c is ScrollContainer:
+			_check_scrolls(c as ScrollContainer, where)
 		if UiSettings.touch() and n is BaseButton and r.size.y < float(UiSettings.setting("touch_target_px")) - 0.5:
 			_outside += 1
 			print("  small button on %s: '%s' %.0f tall" % [where, str(n.get("text")).left(30), r.size.y])
-	for c in n.get_children():
-		_walk_inside(c, room, where)
+		if UiSettings.touch() and n is TabContainer and (n as TabContainer).get_tab_bar().size.y < float(UiSettings.setting("touch_target_px")) - 0.5:
+			_outside += 1
+			print("  small tabs on %s: %.0f tall" % [where, (n as TabContainer).get_tab_bar().size.y])
+	for ch in n.get_children():
+		_walk_inside(ch, room, where)
 
 
-func _clipped(n: Node) -> bool:
+## A ScrollContainer whose content is longer than itself must scroll that way.
+func _check_scrolls(sc: ScrollContainer, where: String) -> void:
+	for ch in sc.get_children():
+		if not (ch is Control) or not (ch as Control).visible or ch is ScrollBar:
+			continue
+		var want := (ch as Control).get_combined_minimum_size()
+		if want.x > sc.size.x + 1.0 and sc.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED:
+			_outside += 1
+			print("  no sideways scroll on %s: %s wide in %s" % [where, str(want.x), str(sc.size.x)])
+		if want.y > sc.size.y + 1.0 and sc.vertical_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED:
+			_outside += 1
+			print("  no scroll down on %s: %s tall in %s" % [where, str(want.y), str(sc.size.y)])
+
+
+## The nearest parent that clips: a ScrollContainer or a control with clip_contents.
+func _clip_of(n: Node) -> Control:
 	var p := n.get_parent()
 	while p != null:
 		if p is ScrollContainer or (p is Control and (p as Control).clip_contents):
-			return true
+			return p
 		p = p.get_parent()
-	return false
+	return null
 
 
-## Every screen at 125% and 150% on a 16:9 window, touch-sized: nothing runs off the screen and
-## every button is a fingertip tall; the scale really is the window's content scale.
+const LAYOUT_SIZES := [Vector2i(1280, 720), Vector2i(1600, 720), Vector2i(2400, 1080), Vector2i(1280, 800), Vector2i(960, 540)]
+
+
+## Every screen and panel at every text size on phone, tablet and small windows, touch-sized, the
+## phone shapes with a notch and a home bar: nothing runs off the safe area or is cut off by a
+## clipping parent (what does not fit must sit in a ScrollContainer that scrolls that way), and every
+## button is a fingertip tall; the scale really is the window's content scale.
 func test_scale_layouts() -> void:
 	UiSettings.force_touch = 1
-	for s in [1.25, 1.5]:
-		app.set_ui_scale(s)
-		await _frames(3)
-		ok(is_equal_approx(root.content_scale_factor, s), "the window's content scale is %.2f" % s)
-		var vis := root.get_visible_rect().size
-		ok(vis.is_equal_approx(Vector2(1280, 720) / s), "the screens get %s of room at %d%%" % [str(vis), int(s * 100)])
-		var tag := "%d%%" % int(round(s * 100.0))
-		var room := Rect2(Vector2.ZERO, vis)
-		var menu: Node = app.current.get_children().back()
-		ok(menu is MenuPanel, "the menu reopens after the text size changes")
-		app.show_title()
-		await _frames(3)
-		_check_inside(app.frame, room, "title " + tag)
-		_game()
-		d.heir.age = maxf(d.heir.age, d.heir.family_min_age())
-		d.found_family()
-		app.show_state()
-		await _frames(3)
-		_check_inside(app.frame, room, "life screen " + tag)
-		for panel in [ShopPanel, TavernPanel, BoardPanel, FeatsPanel, SkillTreePanel, MapPanel]:
-			var p: Control = panel.new()
-			p.dynasty = d
-			p.on_change = func(): pass
-			if panel == MapPanel:
-				p.on_travel = func(_to): pass
-			app.current.add_child(p)
-			await _frames(3)
-			_check_inside(app.frame, room, "%s %s" % [panel.resource_path.get_file(), tag])
-			p.queue_free()
-			await _frames(1)
-		app.open_menu()
-		await _frames(2)
-		_check_inside(app.frame, room, "menu " + tag)
-		GameEvents.begin(d, "elven_wardens")
-		app.show_state()
-		await _frames(4)
-		_check_inside(app.frame, room, "event " + tag)
-		GameEvents.dismiss(d)
-		for i in 200:
-			d.start_hunt("hunt_hard")
-			if d.battle.enemies.size() >= 3:
-				break
-			d.battle = null
-		d.auto_battle = false
-		app.show_state()
-		await _frames(4)
-		var bv: Control = app.current
-		bv.set_auto(false)
-		await _frames(3)
-		_check_inside(app.frame, room, "battle " + tag)
-		bv._open_feats()
-		await _frames(4)
-		_check_inside(app.frame, room, "battle feats " + tag)
-		bv._close_feats()
-		d.battle = null
-		d.retire()
-		app.show_state()
-		await _frames(4)
-		_check_inside(app.frame, room, "succession " + tag)
+	for wsize in LAYOUT_SIZES:
+		root.size = wsize
+		var notch: bool = float(wsize.x) / float(wsize.y) > 2.0   # the 20:9 phones
+		app.safe_override = Rect2i(int(wsize.x * 0.04), 0, wsize.x - int(wsize.x * 0.04) - int(wsize.x * 0.02), wsize.y - int(wsize.y * 0.03)) if notch else Rect2i()
+		for s in UiSettings.scales():
+			await _layout_pass(wsize, s)
+	root.size = Vector2i(1280, 720)
+	app.safe_override = Rect2i()
 	UiSettings.force_touch = 0
 	app.set_ui_scale(1.0)
 	await _frames(2)
 	ok(is_equal_approx(root.content_scale_factor, 1.0), "back to 100%")
+	ok(app.frame.get_global_rect().is_equal_approx(Rect2(0, 0, 1280, 720)), "and to the plain window")
+
+
+func _layout_pass(wsize: Vector2i, s: float) -> void:
+	app.set_ui_scale(s)
+	await _frames(3)
+	var tag := "%dx%d %d%%" % [wsize.x, wsize.y, int(round(s * 100.0))]
+	ok(is_equal_approx(root.content_scale_factor, s), "%s: the window's content scale is %.2f" % [tag, s])
+	var vis := root.get_visible_rect().size
+	var base := Vector2(ProjectSettings.get_setting("display/window/size/viewport_width"), ProjectSettings.get_setting("display/window/size/viewport_height"))
+	var fit := minf(float(wsize.x) / base.x, float(wsize.y) / base.y)   # canvas_items, expand
+	ok(vis.is_equal_approx(Vector2(wsize) / fit / s), "%s: the screens get %s of room" % [tag, str(vis)])
+	var room := Rect2(UiSettings.insets.position, UiSettings.room(app))
+	ok(app.frame.get_global_rect().is_equal_approx(room), "%s: the screens sit in the safe area %s" % [tag, str(room)])
+	var menu: Node = app.current.get_children().back()
+	ok(menu is MenuPanel, "%s: the menu reopens after the text size changes" % tag)
+	app.show_title()
+	await _frames(3)
+	_check_inside(app.frame, room, "title " + tag)
+	app.open_menu()
+	await _frames(2)
+	_check_inside(app.frame, room, "title settings " + tag)
+	_game()
+	d.heir.age = maxf(d.heir.age, d.heir.family_min_age())
+	d.found_family()
+	app.show_state()
+	await _frames(3)
+	_check_inside(app.frame, room, "life screen " + tag)
+	for panel in [ShopPanel, TavernPanel, BoardPanel, FeatsPanel, SkillTreePanel, MapPanel, ChroniclePanel]:
+		var p: Control = panel.new()
+		p.dynasty = d
+		if panel != ChroniclePanel:
+			p.on_change = func(): pass
+		if panel == MapPanel:
+			p.on_travel = func(_to): pass
+		app.current.add_child(p)
+		await _frames(3)
+		var pname: String = panel.resource_path.get_file()
+		_check_inside(app.frame, room, "%s %s" % [pname, tag])
+		if panel == SkillTreePanel:   # the header moves aside on a short screen: the tree keeps the room
+			var frame_h: float = (p.scroll.get_parent() as Control).size.y
+			ok(frame_h >= room.size.y * 0.5, "%s: the skill tree gets half the height or more (%.0f of %.0f)" % [tag, frame_h, room.size.y])
+		if panel == ShopPanel:
+			for t in ["Temple", "Gear"]:
+				var tb := _find(p, t)
+				if tb != null:
+					tb.pressed.emit()
+					await _frames(3)
+					_check_inside(app.frame, room, "%s %s %s" % [pname, t, tag])
+		if panel == TavernPanel:
+			var sk := _find(p, "Skill tree")
+			if sk != null:
+				sk.pressed.emit()
+				await _frames(3)
+				_check_inside(app.frame, room, "tavern skill tree " + tag)
+		if panel == ChroniclePanel:
+			var tabs := _tabs(p)
+			for i in (tabs.get_tab_count() if tabs != null else 0):
+				tabs.current_tab = i
+				await _frames(2)
+				_check_inside(app.frame, room, "chronicle tab %d %s" % [i, tag])
+		p.queue_free()
+		await _frames(1)
+	app.open_menu()
+	await _frames(2)
+	_check_inside(app.frame, room, "menu " + tag)
+	GameEvents.begin(d, "elven_wardens")
+	app.show_state()
+	await _frames(4)
+	_check_inside(app.frame, room, "event " + tag)
+	GameEvents.dismiss(d)
+	await _fight(3)
+	var bv: Control = app.current
+	_check_inside(app.frame, room, "battle " + tag)
+	bv._open_feats()
+	await _frames(4)
+	_check_inside(app.frame, room, "battle feats " + tag)
+	bv._close_feats()
+	await _frames(2)
+	app.open_menu()
+	await _frames(2)
+	_check_inside(app.frame, room, "battle menu " + tag)
+	app.go_back()
+	for e in d.battle.enemies:
+		e["hp"] = 0
+	d.battle.result = "victory"
+	d.finish_battle()
+	app.show_state()
+	await _frames(4)
+	ok(_open_of(app.current, LootPanel) != null or d.loot.is_empty(), "%s: the dead wait in the loot panel" % tag)
+	_check_inside(app.frame, room, "loot " + tag)
+	d.loot = {}
+	_game("mage", 40, 12)
+	await _fight(3)
+	app.current._open_spells()
+	await _frames(3)
+	_check_inside(app.frame, room, "battle spells " + tag)
+	app.current._close_spells()
+	d.battle = null
+	d.heir.age = maxf(d.heir.age, d.heir.family_min_age())
+	if not d.heir.family_founded:
+		d.found_family()
+	d.retire()
+	app.show_state()
+	await _frames(4)
+	_check_inside(app.frame, room, "succession " + tag)
+	d.state = "ended"
+	app.show_state()
+	await _frames(4)
+	ok(app.current is EndingScreen, "%s: the ending screen" % tag)
+	_check_inside(app.frame, room, "ending " + tag)
+
+
+func _fight(foes: int) -> void:
+	for i in 200:
+		d.start_hunt("hunt_hard")
+		if d.battle.enemies.size() >= foes:
+			break
+		d.battle = null
+	d.auto_battle = false
+	app.show_state()
+	await _frames(4)
+	app.current.set_auto(false)
+	await _frames(3)
+
+
+func _tabs(n: Node) -> TabContainer:
+	if n is TabContainer:
+		return n
+	for c in n.get_children():
+		var t := _tabs(c)
+		if t != null:
+			return t
+	return null
+
+
+func _open_of(n: Node, script: Script) -> Node:
+	for c in n.get_children():
+		if c.get_script() == script and not c.is_queued_for_deletion():
+			return c
+	return null
 
 
 ## The text size changed from the menu mid-fight: the commands are laid out for the new room, the

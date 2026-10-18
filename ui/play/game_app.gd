@@ -131,7 +131,7 @@ func autosave() -> void:
 		dynasty.save_to_disk()
 
 
-# ---------------------------------------------------------------- menu and UI scale
+# ---------------------------------------------------------------- menu, UI scale and touch layout
 
 func menu_mode() -> String:
 	if current is TitleScreen or dynasty == null:
@@ -150,6 +150,17 @@ func set_ui_scale(s: float) -> void:
 	UiSettings.set_scale(s)
 	UiSettings.apply(get_window())
 	apply_safe_area()
+	_relayout()
+
+
+## The menu's Touch layout: "auto" (phones and tablets), "on" or "off".
+func set_touch_layout(t: String) -> void:
+	UiSettings.set_touch_layout(t)
+	_relayout()
+
+
+## The screens laid out again after a setting changed, with the menu open on top as before.
+func _relayout() -> void:
 	# A fight is laid out again in place (rebuilding it would lose its log); other screens are
 	# rebuilt at the new size.
 	if menu_mode() == "battle":

@@ -1,5 +1,6 @@
-## The game menu: text size, saving and the way back to the title. Opened by the life screen's
-## Menu button, the title's Settings button, or Android's back button when nothing else is open.
+## The game menu: text size, touch layout, saving and the way back to the title. Opened by the life
+## screen's Menu button, the title's Settings button, or Android's back button when nothing else is
+## open.
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
@@ -46,16 +47,22 @@ func _ready() -> void:
 	v.add_child(row)
 	for s in UiSettings.scales():
 		var sc: float = s
-		var b := Kit.button("%d%%" % int(round(sc * 100.0)), func(): app.set_ui_scale(sc), Vector2(100, 40))
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if is_equal_approx(sc, UiSettings.get_scale()):
-			b.add_theme_stylebox_override("normal", Kit.style(Color("#3d3860"), 6, Kit.ACCENT))
-			b.add_theme_color_override("font_color", Kit.ACCENT)
-		row.add_child(b)
+		_choice(row, "%d%%" % int(round(sc * 100.0)), is_equal_approx(sc, UiSettings.get_scale()), func(): app.set_ui_scale(sc))
 	var why := Kit.label("Everything on screen grows together. Phones and tablets start at %d%%." % int(round(float(UiSettings.setting("default_scale_mobile")) * 100.0)), 14, Kit.DIM)
 	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(why)
-	if UiSettings.touch():
+
+	v.add_child(Kit.label("Touch layout", 17, Kit.ACCENT))
+	var trow := HBoxContainer.new()
+	trow.add_theme_constant_override("separation", 8)
+	v.add_child(trow)
+	for tl in UiSettings.touch_layouts():
+		var mode_id: String = tl
+		_choice(trow, mode_id.capitalize(), mode_id == UiSettings.get_touch_layout(), func(): app.set_touch_layout(mode_id))
+	var twhy := Kit.label("Fingertip-sized buttons and tap / hold in the help. Auto: on phones and tablets only.", 14, Kit.DIM)
+	twhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(twhy)
+	if UiSettings.touch() or UiSettings.touch_screen():
 		var tip := Kit.label("Hold a finger on anything for its details; a quick tap acts.", 14, Kit.DIM)
 		tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(tip)
@@ -72,3 +79,13 @@ func _ready() -> void:
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 	v.add_child(note)
+
+
+## One of a row of settings buttons, the one in use marked.
+func _choice(row: HBoxContainer, text: String, on: bool, cb: Callable) -> void:
+	var b := Kit.button(text, cb, Vector2(100, 40))
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if on:
+		b.add_theme_stylebox_override("normal", Kit.style(Color("#3d3860"), 6, Kit.ACCENT))
+		b.add_theme_color_override("font_color", Kit.ACCENT)
+	row.add_child(b)
