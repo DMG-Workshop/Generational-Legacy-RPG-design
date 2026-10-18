@@ -195,7 +195,7 @@ func _offer_card(id: String) -> Control:
 	var v: VBoxContainer = shell[1]
 	var side: VBoxContainer = shell[2]
 	var u := p.offer_unit(d, id)
-	v.add_child(Kit.label("%s  -  %s %s" % [u.name, u.race()["name"], u.cls()["name"]], 17, Kit.ACCENT))
+	v.add_child(_wrap("%s  -  %s %s" % [u.name, u.race()["name"], u.cls()["name"]], 17, Kit.ACCENT))
 	var who: String = c.get("personality", "")
 	var before := _heritage(id)
 	if before != "":

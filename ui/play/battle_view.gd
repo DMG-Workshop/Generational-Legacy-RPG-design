@@ -4,6 +4,8 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const TouchHint := preload("res://ui/play/touch_hint.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
 const AREA := Color("#ff9a3c")
 
 var app: Node
@@ -38,6 +40,10 @@ var auto_button: Button
 var result_scroll: ScrollContainer = null   # the result panel's story, capped to the window
 var result_panel: Control = null
 var _auto_waiting: bool = false # an auto action is due once AUTO_PACE has passed
+var cmd_w := 600.0              # the command panel's width: narrower on a narrow screen
+var figure_scale := 1.0         # figures shrink to fit a short arena (a phone, large text)
+var bottom: HBoxContainer       # the log and the command panel
+var cmd_panel: PanelContainer
 
 const AUTO_PACE := 0.4
 
@@ -45,6 +51,7 @@ const AUTO_PACE := 0.4
 func _ready() -> void:
 	d = app.dynasty
 	b = d.battle
+	_size_commands()
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
@@ -82,8 +89,7 @@ func _ready() -> void:
 	arena.add_child(field)
 	arena.resized.connect(_layout)
 
-	var bottom := HBoxContainer.new()
-	bottom.custom_minimum_size = Vector2(0, 170)
+	bottom = HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 10)
 	root.add_child(bottom)
 	var lp := Kit.panel(Color("#1a1828"))
@@ -91,18 +97,17 @@ func _ready() -> void:
 	bottom.add_child(lp)
 	log_label = Kit.rich()
 	lp.add_child(log_label)
-	var cp := Kit.panel()
-	cp.custom_minimum_size = Vector2(600, 0)
-	bottom.add_child(cp)
+	cmd_panel = Kit.panel()
+	bottom.add_child(cmd_panel)
 	var cv := VBoxContainer.new()
-	cp.add_child(cv)
+	cmd_panel.add_child(cv)
 	hint = Kit.label("", 14, Kit.DIM)
 	hint.clip_text = true
-	hint.custom_minimum_size = Vector2(560, 0)
 	cv.add_child(hint)
 	command_box = HBoxContainer.new()
 	command_box.add_theme_constant_override("separation", 8)
 	cv.add_child(command_box)
+	_fit_bottom()
 	_build_actors()
 	_build_commands()
 	target = b.first_target()
@@ -127,6 +132,50 @@ func _foe_list() -> String:
 
 func _say(text: String) -> void:
 	log_label.append_text(GameText.group_numbers(text) + "\n")
+
+
+## The command panel's width for the room the screen has.
+func _size_commands() -> void:
+	var room := UiSettings.room(self)
+	cmd_w = clampf(room.x - 420.0, 480.0, 600.0)
+	if room.y < float(UiSettings.setting("short_height")):   # four or five columns of commands
+		cmd_w = clampf(room.x - 330.0, 480.0, 760.0)
+
+
+func _fit_bottom() -> void:
+	bottom.custom_minimum_size = Vector2(0, 170 if not _short() else 0)
+	cmd_panel.custom_minimum_size = Vector2(cmd_w, 0)
+	hint.custom_minimum_size = Vector2(cmd_w - 40.0, 0)
+
+
+## The text size changed mid-fight: the commands are laid out again for the new room (the field
+## follows on its own as the arena resizes). Open lists close, as they were placed for the old size.
+func relayout() -> void:
+	_size_commands()
+	_fit_bottom()
+	if result_shown or busy:
+		return
+	_close_spells()
+	_close_feats()
+	_close_poisons()
+	_build_commands()
+
+
+## Android's back button: drop an aim, else shut an open list. False when there is nothing to undo.
+func back() -> bool:
+	if result_shown:
+		return false
+	if not aiming.is_empty():
+		_cancel_aim()
+	elif feat_list != null:
+		_close_feats()
+	elif spell_list != null:
+		_close_spells()
+	elif poison_list != null:
+		_close_poisons()
+	else:
+		return false
+	return true
 
 
 func _unhandled_input(ev: InputEvent) -> void:
@@ -215,8 +264,7 @@ func _build_actors() -> void:
 		body.mouse_filter = Control.MOUSE_FILTER_STOP
 		var idx := i
 		body.gui_input.connect(func(ev: InputEvent): _on_foe_input(idx, ev))
-		body.mouse_entered.connect(func(): _on_foe_hover(idx, true))
-		body.mouse_exited.connect(func(): _on_foe_hover(idx, false))
+		TouchHint.on_hover(body, func(): _on_foe_hover(idx, true), func(): _on_foe_hover(idx, false))
 		root.add_child(body)
 		for ex in [0.28, 0.62]:
 			var eye := ColorRect.new()
@@ -320,9 +368,10 @@ func _px(p: Vector2) -> Vector2:
 
 ## Top-left corner that puts `node` around `center`, kept inside the arena.
 func _spot(node: Control, center: Vector2, anchor_y: float) -> Vector2:
-	var pos := center - Vector2(node.size.x * 0.5, anchor_y)
-	pos.x = clampf(pos.x, 0.0, maxf(0.0, arena.size.x - node.size.x))
-	pos.y = clampf(pos.y, 0.0, maxf(0.0, arena.size.y - node.size.y))
+	var sz := node.size * node.scale
+	var pos := center - Vector2(sz.x * 0.5, anchor_y * node.scale.y)
+	pos.x = clampf(pos.x, 0.0, maxf(0.0, arena.size.x - sz.x))
+	pos.y = clampf(pos.y, 0.0, maxf(0.0, arena.size.y - sz.y))
 	return pos
 
 
@@ -334,6 +383,10 @@ func _foe_spot(i: int) -> Vector2:
 func _layout() -> void:
 	if arena == null or hero_node == null:
 		return
+	# The field is drawn for an arena about 460 tall; a shorter one shrinks the figures to match.
+	figure_scale = clampf(arena.size.y / 460.0, 0.45, 1.0)
+	for n in [hero_node] + ally_nodes.map(func(a): return a["root"]) + enemy_nodes.map(func(e): return e["root"]):
+		(n as Control).scale = Vector2(figure_scale, figure_scale)
 	hero_node.position = _spot(hero_node, _px(b.unit_point(-1)), 90.0)
 	for i in ally_nodes.size():
 		ally_nodes[i]["root"].position = _spot(ally_nodes[i]["root"], _px(b.unit_point(i)), 64.0)
@@ -510,14 +563,10 @@ func _build_commands() -> void:
 	if not aiming.is_empty():
 		_build_aim_commands()
 		return
-	hint.text = "Commands  (click an enemy to target it)"
+	hint.text = "Commands  (%s an enemy to target it)" % Kit.click()
 	var col1 := VBoxContainer.new()
 	var col2 := VBoxContainer.new()
 	var col3 := VBoxContainer.new()
-	for c in [col1, col2, col3]:
-		c.add_theme_constant_override("separation", 6)
-		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		command_box.add_child(c)
 	col1.add_child(Kit.button("Attack", func(): _do(func(): b.attack(target))))
 	col1.add_child(Kit.button("Defend", func(): _do(func(): b.defend())))
 	var readied: Array = b.unit_feats(-1)
@@ -529,11 +578,16 @@ func _build_commands() -> void:
 	for i in b.skill_count():
 		var s := b.skill_info(i)
 		var idx := i
-		var btn := _small_button("%s (%s)" % [s["name"], b.pay_text(-1, b.skill_cost(i))], func(): _use_skill(idx))
+		var cost := b.pay_text(-1, b.skill_cost(i))
+		var one := "%s (%s)" % [s["name"], cost]
+		var two := _short() or not _fits(one, 14, (cmd_w - 40.0) / 3.0 - 20.0)
+		var btn := _small_button("%s\n%s" % [s["name"], cost] if two else one, func(): _use_skill(idx))
+		if two:   # the cost under the name: a narrow column cannot hold both on one line
+			btn.add_theme_font_size_override("font_size", 13)
+			btn.add_theme_constant_override("line_spacing", -2)
 		btn.disabled = not b.can_use_skill(i)
 		btn.tooltip_text = "%s  -  %s\n%s" % [s["name"], GameCombat.shape_text(s), GameCombat.describe(s)]
-		btn.mouse_entered.connect(func(): _show_area(s, target))
-		btn.mouse_exited.connect(func(): _show_area({}, -1))
+		TouchHint.on_hover(btn, func(): _show_area(s, target), func(): _show_area({}, -1))
 		col2.add_child(btn)
 	var kit := GamePlague.toxins_carried(d.heir).size() + GamePlague.vials_carried(d.heir).size()
 	if kit > 0 or not b.coating.is_empty():
@@ -554,6 +608,37 @@ func _build_commands() -> void:
 	pot.disabled = d.heir.potions <= 0
 	col3.add_child(pot)
 	col3.add_child(Kit.button("Flee", func(): _do(func(): b.flee())))
+	_lay_out_commands([col1, col2, col3])
+
+
+func _fits(text: String, font_size: int, width: float) -> bool:
+	return ThemeDB.fallback_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= width
+
+
+func _short() -> bool:
+	return UiSettings.room(self).y < float(UiSettings.setting("short_height"))
+
+
+## Three columns of commands; a short screen deals them into two rows instead, so the field keeps
+## its height. The order (attacks, skills, spells and escape) reads the same either way.
+func _lay_out_commands(cols: Array) -> void:
+	var per := 2 if _short() else 0
+	if per > 0:
+		var all: Array = []
+		for c in cols:
+			for btn in (c as Control).get_children():
+				c.remove_child(btn)
+				all.append(btn)
+			(c as Node).free()
+		cols = []
+		for k in all.size():
+			if k % per == 0:
+				cols.append(VBoxContainer.new())
+			cols.back().add_child(all[k])
+	for c in cols:
+		c.add_theme_constant_override("separation", 6)
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		command_box.add_child(c)
 
 
 # ---------------------------------------------------------------- auto-battle
@@ -580,7 +665,7 @@ func set_auto(on: bool) -> void:
 func _show_auto() -> void:
 	auto_button.text = "Auto-battle: %s" % ("ON" if auto else "OFF")
 	auto_button.add_theme_color_override("font_color", Kit.GOOD if auto else Kit.TEXT)
-	auto_button.tooltip_text = ("%s fights on their own, choosing as the autopilot would. Click to take over." if auto
+	auto_button.tooltip_text = ("%s fights on their own, choosing as the autopilot would. " + Kit.click().capitalize() + " to take over." if auto
 		else "Let %s fight on their own, now and in the hunts that follow.") % d.heir.name
 
 
@@ -604,7 +689,7 @@ func _auto_panel() -> void:
 	command_box.add_child(v)
 	var l := Kit.label("Every choice is the one the autopilot would make. Switch auto-battle off to give the orders yourself.", 14, Kit.TEXT)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(560, 0)
+	l.custom_minimum_size = Vector2(cmd_w - 40.0, 0)
 	v.add_child(l)
 	v.add_child(Kit.button("Take over", func(): set_auto(false), Vector2(180, 38)))
 
@@ -620,14 +705,14 @@ func _small_button(text: String, cb: Callable) -> Button:
 	var btn := Kit.button(text, cb)
 	btn.add_theme_font_size_override("font_size", 14)
 	btn.clip_text = true
-	btn.custom_minimum_size = Vector2(0, 38)
+	btn.custom_minimum_size = Vector2(0, UiSettings.tap_h(38))
 	return btn
 
 
 func _build_aim_commands() -> void:
 	var ab: Dictionary = aiming["ab"]
 	var verb := "throw" if str(aiming.get("item", "")) != "" else ("cast" if str(aiming["spell"]) != "" else "strike")
-	hint.text = "%s: click a foe to aim, click it again to %s." % [ab["name"], verb]
+	hint.text = "%s: %s a foe to aim, %s it again to %s." % [ab["name"], Kit.click(), Kit.click(), verb]
 	if GameCombat.around_self(ab):
 		hint.text = "%s strikes all around %s, wherever it is aimed." % [ab["name"], d.heir.name]
 	var v := VBoxContainer.new()
@@ -637,11 +722,11 @@ func _build_aim_commands() -> void:
 	var effect := GameFeats.describe(str(ab["feat"])) if ab.has("feat") else GameCombat.describe(ab)
 	var what := Kit.label("%s  -  %s" % [GameCombat.shape_text(ab), effect], 13, Kit.TEXT)
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	what.custom_minimum_size = Vector2(380, 0)
+	what.custom_minimum_size = Vector2(cmd_w - 220.0, 0)
 	v.add_child(what)
 	aim_info = Kit.label(_aim_text(ab, aim_at, false), 14, AREA)
 	aim_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	aim_info.custom_minimum_size = Vector2(380, 0)
+	aim_info.custom_minimum_size = Vector2(cmd_w - 220.0, 0)
 	v.add_child(aim_info)
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 6)
@@ -693,8 +778,9 @@ func _list_panel(title: String, close: Callable) -> Array:
 	root.add_child(dim)
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
-	p.position = Vector2(150, 48)
-	p.size = Vector2(980, 470)
+	var room := size if size.x > 0.0 else UiSettings.room(self)
+	p.size = Vector2(minf(980.0, room.x - 24.0), minf(470.0, room.y - 24.0))
+	p.position = Vector2((room.x - p.size.x) * 0.5, clampf(48.0, 12.0, room.y - p.size.y - 12.0))
 	root.add_child(p)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
@@ -744,8 +830,7 @@ func _spell_row(id: String) -> Control:
 	btn.clip_text = true
 	btn.disabled = not b.can_cast(id)
 	btn.tooltip_text = str(sp.get("text", ""))
-	btn.mouse_entered.connect(func(): _show_area(sp, target))
-	btn.mouse_exited.connect(func(): _show_area({}, -1))
+	TouchHint.on_hover(btn, func(): _show_area(sp, target), func(): _show_area({}, -1))
 	row.add_child(btn)
 	var el := str(sp.get("element", ""))
 	var shape := Kit.label(GameCombat.shape_text(sp), 14, Color(GameCombat.element_color(el)) if el != "" else Kit.TEXT)
@@ -753,8 +838,11 @@ func _spell_row(id: String) -> Control:
 	row.add_child(shape)
 	var what := Kit.label(GameCombat.describe(sp) + ("" if b.can_cast(id) else "  (not enough %s)" % ("HP" if b.pays_in_hp(-1) else "MP")), 13, Kit.TEXT if b.can_cast(id) else Kit.DIM)
 	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	what.clip_text = true
-	what.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if UiSettings.compact(self):   # a narrow list wraps rather than hide the end of the effect
+		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	else:
+		what.clip_text = true
+		what.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	what.tooltip_text = what.text
 	what.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(what)
@@ -806,8 +894,7 @@ func _open_poisons() -> void:
 		var what := "%s  -  %s. The thrower: %d%% risk of %s." % [GameCombat.shape_text(ab), GameCombat.describe(ab), int(round(float(v["splash"]) * 100.0)), GameDisease.disease_name(str(v["disease"]))]
 		var item: String = id
 		var row := _poison_row("Throw: %s (%d)" % [GameItems.item_name(id), GameItems.count(d.heir, id)], what, b.can_throw(id), func(): _throw(item))
-		row.get_child(0).mouse_entered.connect(func(): _show_area(ab, target))
-		row.get_child(0).mouse_exited.connect(func(): _show_area({}, -1))
+		TouchHint.on_hover(row.get_child(0), func(): _show_area(ab, target), func(): _show_area({}, -1))
 		rows.add_child(row)
 
 
@@ -870,8 +957,15 @@ func _open_feats() -> void:
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
 	top.add_child(Kit.button("Close", _close_feats, Vector2(90, 32)))
+	var scroll := ScrollContainer.new()   # a short arena cannot show four readied feats whole
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 6)
+	scroll.add_child(list)
 	for k in b.unit_feats(-1).size():
-		v.add_child(_feat_row(k, room.size.x))
+		list.add_child(_feat_row(k, room.size.x - 14.0))
 	var rec := int(GameFeats.setting("recovery_turns"))
 	var note := "Feats are learned and readied in a town or right after a rest."
 	if rec > 0:
@@ -880,6 +974,20 @@ func _open_feats() -> void:
 	foot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	foot.custom_minimum_size = Vector2(room.size.x - 24.0, 0)
 	v.add_child(foot)
+	_fit_feat_list.call_deferred(scroll, room.size.y)
+
+
+## The feat rows scroll if the list would run past the bottom of the field.
+func _fit_feat_list(scroll: ScrollContainer, room_h: float) -> void:
+	if not is_instance_valid(scroll) or not is_inside_tree():
+		return
+	await get_tree().process_frame
+	if not is_instance_valid(scroll) or feat_list == null:
+		return
+	var rows_h := (scroll.get_child(0) as Control).get_combined_minimum_size().y
+	scroll.custom_minimum_size.y = 0
+	var rest := feat_list.get_combined_minimum_size().y
+	scroll.custom_minimum_size.y = minf(rows_h, maxf(60.0, room_h - rest))
 
 
 ## Where the feat list goes: the top left of the field, up to the nearest foe still standing.
@@ -888,8 +996,9 @@ func _feat_list_room() -> Rect2:
 	var right := area.end.x - 8.0
 	for i in b.living_enemies():
 		right = minf(right, enemy_nodes[i]["root"].position.x + area.position.x - 14.0)
-	var w := clampf(right - area.position.x - 8.0, 520.0, 780.0)
-	return Rect2(area.position + Vector2(8, 8), Vector2(w, area.size.y - 16.0))
+	var w := clampf(right - area.position.x - 8.0, minf(520.0, area.size.x - 16.0), 780.0)
+	# On a short screen it may run down over the log and commands until it is closed.
+	return Rect2(area.position + Vector2(8, 8), Vector2(w, maxf(area.size.y, size.y - area.position.y) - 16.0))
 
 
 ## A readied feat: its button, whether it is ready (or why not), its area and what it does.
@@ -906,8 +1015,7 @@ func _feat_row(slot: int, width: float) -> Control:
 	btn.disabled = not b.can_use_feat(slot)
 	btn.tooltip_text = str(ab.get("description", ""))
 	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	btn.mouse_entered.connect(func(): _show_area(ab, target))
-	btn.mouse_exited.connect(func(): _show_area({}, -1))
+	TouchHint.on_hover(btn, func(): _show_area(ab, target), func(): _show_area({}, -1))
 	row.add_child(btn)
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL

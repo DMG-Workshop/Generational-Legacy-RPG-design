@@ -84,6 +84,7 @@ func _setup_new_heir(h: GameHeir) -> void:
 	h.training = {"str": 0.0, "mag": 0.0, "agi": 0.0, "vit": 0.0}
 	h.milestones_done = []
 	h.battles_won = 0
+	h.clean_streak = 0
 	h.kills = {}
 	h.children = []
 	h.spouse = null
@@ -571,6 +572,11 @@ func finish_battle() -> Array:
 			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory"))))
 			heir.gold += gold
 			heir.battles_won += 1
+			# A win that left the heir barely scratched adds to the clean run; a costly one ends it.
+			if float(heir.hp) >= float(GameData.bal("bot_hard_hunt")["clean_hp_frac"]) * float(heir.max_hp()):
+				heir.clean_streak += 1
+			else:
+				heir.clean_streak = 0
 			total_hunts += 1
 			msgs.append("Victory! +%s XP, +%s gold." % [GameText.num(xp), GameText.num(gold)])
 			if heir.gain_xp(xp) > 0:
@@ -584,12 +590,14 @@ func finish_battle() -> Array:
 			if state == "life":
 				loot = GamePlague.offer(self, b)
 		"fled":
+			heir.clean_streak = 0
 			msgs.append("%s flees from the battle." % heir.name)
 			msgs.append_array(party_msgs)
 			for m in msgs:
 				_say(m)
 			msgs.append_array(_finish_time("rest", []))
 		"defeat":
+			heir.clean_streak = 0
 			killer_id = ""
 			for e in b.enemies:
 				if e["hp"] > 0:

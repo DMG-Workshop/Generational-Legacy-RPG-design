@@ -2,6 +2,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 
 var app: Node
@@ -33,13 +34,19 @@ func _ready() -> void:
 		into += ", the first of Age %s" % GameText.num(GameAges.age_of(d.gen + 1))
 	root.add_child(_wrapped(Kit.label("Choose who carries the family name into %s. They inherit %d%% of the gold left and every potion; legacy echoes fade by 15%%." % [into, int(round(float(GameData.bal("gold_inherit_fraction")) * 100.0))], 16)))
 
+	# The cards scroll when a short screen cannot show a long-lived family whole.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	root.add_child(scroll)
 	var row := HBoxContainer.new()
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", 12)
-	root.add_child(row)
+	scroll.add_child(row)
 	# Up to four children: cards share the width instead of running off-screen.
 	var gaps := 12.0 * float(d.candidates.size() - 1)
-	var card_w := minf(360.0, (get_viewport_rect().size.x - 48.0 - gaps) / float(maxi(1, d.candidates.size())))
+	var card_w := minf(360.0, (UiSettings.room(self).x - 48.0 - gaps) / float(maxi(1, d.candidates.size())))
 	for i in d.candidates.size():
 		row.add_child(_card(i, d.candidates[i], card_w))
 

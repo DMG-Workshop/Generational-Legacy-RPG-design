@@ -3,11 +3,12 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
-const COLUMN := 760.0
+const WIDE := 760.0
 
 var dynasty: GameDynasty
 var on_change: Callable
 var body: VBoxContainer
+var column := WIDE
 
 
 func _ready() -> void:
@@ -17,11 +18,14 @@ func _ready() -> void:
 	var v := Kit.overlay(self, "The dead of your last fight")
 	var top: HBoxContainer = v.get_child(0)
 	top.get_child(top.get_child_count() - 1).visible = false   # an answer is wanted; Leave them is the way out
+	remove_meta("back_close")
+	set_meta("modal", true)
+	column = minf(WIDE, Kit.overlay_room(self) - 16.0)
 	var center := CenterContainer.new()
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(center)
 	body = VBoxContainer.new()
-	body.custom_minimum_size = Vector2(COLUMN, 0)
+	body.custom_minimum_size = Vector2(column, 0)
 	body.add_theme_constant_override("separation", 10)
 	center.add_child(body)
 	var names: Array = dynasty.loot["foes"].map(func(f): return str(f["name"]))
@@ -42,7 +46,7 @@ func _ready() -> void:
 func _wrapped(text: String, size: int, color: Color = Kit.TEXT) -> Label:
 	var l := Kit.label(text, size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(COLUMN, 0)
+	l.custom_minimum_size = Vector2(column, 0)
 	return l
 
 
@@ -50,7 +54,7 @@ func _done(lines: Array) -> void:
 	Kit.clear(body)
 	for line in lines:
 		body.add_child(_wrapped(str(line), 16, Kit.BAD if " catches " in str(line) else Kit.TEXT))
-	body.add_child(Kit.button("Continue", func(): _close(), Vector2(COLUMN, 44)))
+	body.add_child(Kit.button("Continue", func(): _close(), Vector2(column, 44)))
 	dynasty.save_to_disk()
 
 

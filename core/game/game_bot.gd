@@ -51,9 +51,34 @@ static func step(d: GameDynasty) -> bool:
 		elif (h.battles_won + h.level) % 5 == 4:
 			d.train(["str", "vit", "agi", "mag"][(h.battles_won + h.level) % 4])
 		else:
-			d.start_hunt("hunt")
+			d.start_hunt("hunt_hard" if wants_hard_hunt(d) else "hunt")
 			fight(d)
 	return d.state == "life"
+
+
+## True when the autopilot should take a Hard hunt (double rewards, harder foes) instead of a plain
+## one: only a seasoned heir at (near) full health, with potions in hand, gear worn and a run of
+## clean wins behind them (GameHeir.clean_streak: wins that left at least `clean_hp_frac` of HP, so
+## a costly Hard hunt sends the bot back to plain ones), in a place no deadlier than the rule
+## allows; and then only one hunt in `every`. The rule lives in balance.json "bot_hard_hunt"; `every` 0 turns Hard hunts off.
+## Deterministic and cheap: it reads only the heir and the place, never the RNG.
+static func wants_hard_hunt(d: GameDynasty) -> bool:
+	var r: Dictionary = GameData.bal("bot_hard_hunt")
+	var h := d.heir
+	var every := int(r["every"])
+	if every <= 0 or h.level < int(r["min_level"]) or h.potions < int(r["min_potions"]):
+		return false
+	if h.clean_streak < int(r["min_streak"]) or float(h.hp) < float(r["min_hp_frac"]) * float(h.max_hp()):
+		return false
+	var gear := 0
+	for slot in h.equipment:
+		if str(h.equipment[slot]) != "":
+			gear += 1
+	if gear < int(r["min_gear"]):
+		return false
+	if float(d.world.here().get("danger", 1.0)) > float(r["max_danger"]):
+		return false
+	return h.battles_won % every == 0
 
 
 ## A stirring legend the heir is strong enough for, with a reachable lair elsewhere.

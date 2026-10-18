@@ -3,12 +3,13 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
-const COLUMN := 900.0
+const WIDE := 900.0
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
 var body: VBoxContainer
 var sub: Label
+var column := WIDE
 
 
 func _ready() -> void:
@@ -20,6 +21,9 @@ func _ready() -> void:
 	# An event wants an answer, and every event has a way to walk away, so there is no Close.
 	var top: HBoxContainer = v.get_child(0)
 	top.get_child(top.get_child_count() - 1).visible = false
+	remove_meta("back_close")
+	set_meta("modal", true)
+	column = minf(WIDE, Kit.overlay_room(self) - 16.0)
 	sub = Kit.label("", 15, Kit.DIM)
 	v.add_child(sub)
 	v.add_child(HSeparator.new())
@@ -31,7 +35,7 @@ func _ready() -> void:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(center)
 	body = VBoxContainer.new()
-	body.custom_minimum_size = Vector2(COLUMN, 0)
+	body.custom_minimum_size = Vector2(column, 0)
 	body.add_theme_constant_override("separation", 10)
 	center.add_child(body)
 	_build()
@@ -40,7 +44,7 @@ func _ready() -> void:
 func _wrapped(text: String, size: int, color: Color = Kit.TEXT) -> Label:
 	var l := Kit.label(text, size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(COLUMN, 0)
+	l.custom_minimum_size = Vector2(column, 0)
 	return l
 
 
@@ -64,13 +68,13 @@ func _build_choices() -> void:
 	for i in choices.size():
 		var idx := i
 		var st := GameEvents.choice_status(dynasty, choices[i])
-		var b := Kit.button(GameEvents.choice_label(dynasty, i), func(): _choose(idx), Vector2(COLUMN, 46))
+		var b := Kit.button(GameEvents.choice_label(dynasty, i), func(): _choose(idx), Vector2(column, 46))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.disabled = not st["ok"]
 		b.tooltip_text = GameEvents.choice_tooltip(dynasty, i)
 		body.add_child(b)
-	var hint := Kit.label("Hover a choice to see how its bonus is made up and the odds of each result.", 13, Kit.DIM)
+	var hint := _wrapped("%s a choice to see how its bonus is made up and the odds of each result." % Kit.hover().capitalize(), 13, Kit.DIM)
 	body.add_child(hint)
 
 
@@ -112,7 +116,7 @@ func _build_result() -> void:
 	var label := "Continue"
 	if not (r.get("fight", []) as Array).is_empty() and dynasty.battle != null:
 		label = "To battle"
-	body.add_child(Kit.button(label, _continue, Vector2(COLUMN, 44)))
+	body.add_child(Kit.button(label, _continue, Vector2(column, 44)))
 
 
 func _continue() -> void:
