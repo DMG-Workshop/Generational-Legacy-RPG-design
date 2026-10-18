@@ -5,7 +5,9 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
-const NODE := Vector2(134, 44)
+const TouchHint := preload("res://ui/play/touch_hint.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
+const NODE_SIZE := Vector2(134, 44)
 const GAP := Vector2(16, 20)
 const PAD := 10.0
 const SIDE_W := 310
@@ -22,9 +24,11 @@ var body: VBoxContainer
 var canvas: Control
 var scroll: ScrollContainer
 var boxes: Dictionary = {}   # node id -> its button on the canvas
+var node_size := NODE_SIZE        # a fingertip tall on touch screens
 
 
 func _ready() -> void:
+	node_size = Vector2(NODE_SIZE.x, UiSettings.tap_h(NODE_SIZE.y))
 	var v := Kit.overlay(self, "Skill Trees")
 	body = VBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -52,16 +56,18 @@ func _build() -> void:
 		tree_id = trees[0]
 		selected = ""
 
-	var units := HBoxContainer.new()
-	units.add_theme_constant_override("separation", 6)
+	var units := HFlowContainer.new()
+	units.add_theme_constant_override("h_separation", 6)
+	units.add_theme_constant_override("v_separation", 6)
 	body.add_child(units)
 	_tab(units, "%s (heir)" % d.heir.name, who == "", func(): _pick_unit(""))
 	for m in d.party.members:
 		var mid: String = m["id"]
 		_tab(units, str(m["name"]), who == mid, func(): _pick_unit(mid))
 
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 18)
+	var top := HFlowContainer.new()   # the buttons drop below the name on a narrow screen
+	top.add_theme_constant_override("h_separation", 18)
+	top.add_theme_constant_override("v_separation", 6)
 	body.add_child(top)
 	var pts := GameSkillTree.points(u)
 	top.add_child(Kit.label("%s, %s %s, level %s" % [u.name, u.race()["name"], u.cls()["name"], GameText.num(u.level)], 17, Kit.TEXT))
@@ -87,8 +93,9 @@ func _build() -> void:
 	if why != "" and GameSkillTree.spent(u) > 0:
 		body.add_child(_wrap(why, 13, Kit.BAD))
 
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 6)
+	var tabs := HFlowContainer.new()
+	tabs.add_theme_constant_override("h_separation", 6)
+	tabs.add_theme_constant_override("v_separation", 6)
 	body.add_child(tabs)
 	for tid in trees:
 		var t: String = tid
@@ -152,7 +159,7 @@ func _pick_tree(t: String) -> void:
 
 
 func _spot(n: Dictionary) -> Vector2:
-	return Vector2(PAD + float(n["col"]) * (NODE.x + GAP.x), PAD + float(int(n["tier"]) - 1) * (NODE.y + GAP.y))
+	return Vector2(PAD + float(n["col"]) * (node_size.x + GAP.x), PAD + float(int(n["tier"]) - 1) * (node_size.y + GAP.y))
 
 
 func _draw_tree(u: GameHeir) -> void:
@@ -160,15 +167,15 @@ func _draw_tree(u: GameHeir) -> void:
 	for id in GameSkillTree.nodes_of(tree_id):
 		var n := GameSkillTree.node(id)
 		var at := _spot(n)
-		most = most.max(at + NODE)
+		most = most.max(at + node_size)
 		var nid: String = id
 		var r := GameSkillTree.rank(u, id)
 		var mx := GameSkillTree.max_rank(id)
 		var open := GameSkillTree.take_block(u, id) == ""
 		var b := Button.new()
 		b.position = at
-		b.size = NODE
-		b.custom_minimum_size = NODE
+		b.size = node_size
+		b.custom_minimum_size = node_size
 		b.text = "%s\n%d/%d%s" % [n["name"], r, mx, "  *" if GameSkillTree.inheritable(id) else ""]
 		b.clip_text = true
 		b.add_theme_font_size_override("font_size", 12)
@@ -205,7 +212,7 @@ func _draw_tree(u: GameHeir) -> void:
 			b.add_theme_color_override("font_color", Color("#e8a05a"))
 		b.tooltip_text = GameSkillTree.node_text(u, id)
 		b.pressed.connect(func(): _select(nid))
-		b.mouse_entered.connect(func(): _hover(nid))
+		TouchHint.on_hover(b, func(): _hover(nid))
 		canvas.add_child(b)
 		boxes[nid] = b
 	canvas.custom_minimum_size = most + Vector2(PAD, PAD)
@@ -214,10 +221,10 @@ func _draw_tree(u: GameHeir) -> void:
 func _draw_edges(u: GameHeir) -> void:
 	for id in boxes:
 		var n := GameSkillTree.node(id)
-		var to := _spot(n) + Vector2(NODE.x * 0.5, 0.0)
+		var to := _spot(n) + Vector2(node_size.x * 0.5, 0.0)
 		for r in n.get("requires", []):
 			var p := GameSkillTree.node(str(r))
-			var from := _spot(p) + Vector2(NODE.x * 0.5, NODE.y)
+			var from := _spot(p) + Vector2(node_size.x * 0.5, node_size.y)
 			var lit := GameSkillTree.rank(u, str(r)) > 0
 			var col := Kit.ACCENT if lit and GameSkillTree.rank(u, id) > 0 else (Color("#6a8f6a") if lit else Color("#3a3650"))
 			canvas.draw_line(from, to, col, 2.0 if lit else 1.5, true)
@@ -239,7 +246,7 @@ var side_box: VBoxContainer
 
 func _side(u: GameHeir) -> Control:
 	var p := Kit.panel(Kit.PANEL)
-	p.custom_minimum_size = Vector2(SIDE_W, 0)
+	p.custom_minimum_size = Vector2(SIDE_W if not UiSettings.compact(self) else 250, 0)
 	var sc := ScrollContainer.new()
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	p.add_child(sc)
@@ -300,7 +307,7 @@ func _show(id: String) -> void:
 		if block == "":
 			block = GameSkillTree.take_block(u, id)
 		var nid := id
-		var b := Kit.button("Learn rank %d (%d pt%s)" % [r + 1, c, "" if c == 1 else "s"], func(): _act(GameSkillTree.spend(dynasty, who, nid)), Vector2(SIDE_W - 30, 36))
+		var b := Kit.button("Learn rank %d (%d pt%s)" % [r + 1, c, "" if c == 1 else "s"], func(): _act(GameSkillTree.spend(dynasty, who, nid)), Vector2((SIDE_W if not UiSettings.compact(self) else 250) - 30, 36))
 		b.disabled = block != ""
 		b.tooltip_text = block
 		side_box.add_child(b)

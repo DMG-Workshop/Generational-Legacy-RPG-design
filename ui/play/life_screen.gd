@@ -2,6 +2,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const MapPanel := preload("res://ui/play/map_panel.gd")
 const ShopPanel := preload("res://ui/play/shop_panel.gd")
@@ -14,6 +15,7 @@ const LootPanel := preload("res://ui/play/loot_panel.gd")
 
 const COLUMN_W := 300
 const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
+const COMPACT_COLUMN_W := 270   # a narrow screen keeps one side column, holding both
 
 var app: Node
 var d: GameDynasty
@@ -21,12 +23,18 @@ var left: VBoxContainer
 var right: VBoxContainer
 var journal: RichTextLabel
 var actions: GridContainer
+var actions_scroll: ScrollContainer
 var header: Label
 var where: Label
+var column_w := COLUMN_W
+var compact := false
 
 
 func _ready() -> void:
 	d = app.dynasty
+	compact = UiSettings.compact(self)
+	if compact:
+		column_w = COMPACT_COLUMN_W
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
@@ -61,13 +69,20 @@ func _ready() -> void:
 	mid.add_child(jp)
 	journal = Kit.rich()
 	jp.add_child(journal)
+	# The actions scroll when a short screen (a phone, large text) cannot show every row.
+	actions_scroll = ScrollContainer.new()
+	actions_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	mid.add_child(actions_scroll)
 	actions = GridContainer.new()
-	actions.columns = 4
+	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var mid_w := UiSettings.room(self).x - 28.0 - (column_w + 10.0) * (1.0 if compact else 2.0)
+	actions.columns = 4 if mid_w >= 4.0 * 150.0 + 3.0 * 8.0 else 3
 	actions.add_theme_constant_override("h_separation", 8)
 	actions.add_theme_constant_override("v_separation", 8)
-	mid.add_child(actions)
+	actions_scroll.add_child(actions)
+	mid.resized.connect(_fit_actions)
 
-	right = _column(cols)
+	right = left if compact else _column(cols)
 	_refresh()
 	if d.has_pending_event():
 		_open.call_deferred(EventPanel)
@@ -78,7 +93,7 @@ func _ready() -> void:
 ## A fixed-width side panel that scrolls when a long life fills it.
 func _column(cols: HBoxContainer) -> VBoxContainer:
 	var p := Kit.panel()
-	p.custom_minimum_size = Vector2(COLUMN_W, 0)
+	p.custom_minimum_size = Vector2(column_w, 0)
 	cols.add_child(p)
 	var sc := ScrollContainer.new()
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -97,9 +112,14 @@ func _refresh() -> void:
 	where.text = "%s (%s)  -  %s  -  %s: %s" % [place["name"], place["type"], d.world.date_text(), d.world.weather()["name"], d.world.weather().get("text", "")]
 	header.tooltip_text = header.text
 	where.tooltip_text = where.text
+	Kit.clear(left)
+	Kit.clear(right)
 	_build_left()
+	if compact:
+		left.add_child(HSeparator.new())
 	_build_right()
 	_build_actions()
+	_fit_actions.call_deferred()
 	journal.text = "\n".join(d.journal.slice(maxi(0, d.journal.size() - 60)).map(_colorize))
 
 
@@ -114,7 +134,6 @@ func _colorize(line: String) -> String:
 
 
 func _build_left() -> void:
-	Kit.clear(left)
 	var h := d.heir
 	left.add_child(Kit.label(h.full_name(), 22, Kit.ACCENT))
 	var arch := ""
@@ -133,7 +152,7 @@ func _build_left() -> void:
 	left.add_child(Kit.label("Gold %s    Potions %d" % [GameText.num(h.gold), h.potions], 16, Kit.ACCENT))
 	_afflictions(h)
 	left.add_child(HSeparator.new())
-	left.add_child(Kit.label("Traits (hover for details)", 15, Kit.DIM))
+	left.add_child(Kit.label("Traits (%s for details)" % Kit.hover(), 15, Kit.DIM))
 	for id in h.all_traits():
 		var l := Kit.label(GameData.trait_name(id), 15, Kit.trait_color(id))
 		l.tooltip_text = Kit.trait_tooltip(id)
@@ -172,11 +191,10 @@ func _fit_column(col: VBoxContainer) -> void:
 	for c in col.get_children():
 		if c is Label:
 			c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			c.custom_minimum_size.x = COLUMN_TEXT_W
+			c.custom_minimum_size.x = COLUMN_TEXT_W - (COLUMN_W - column_w)
 
 
 func _build_right() -> void:
-	Kit.clear(right)
 	var h := d.heir
 	right.add_child(Kit.label("Family", 20, Kit.ACCENT))
 	if h.spouse != null:
@@ -266,11 +284,21 @@ func _build_actions() -> void:
 	_act("Auto: 10 gens", func(): _autopilot(10))
 	_act("Chronicle", func(): _chronicle())
 	_act("Save", func(): d.save_to_disk(); d._say("Game saved."); _refresh())
-	_act("Menu", func(): app.show_title())
+	_act("Menu", func(): app.open_menu())
+
+
+## The action grid shows whole when there is room; on a short screen it scrolls and leaves the
+## journal at least two fifths of the column.
+func _fit_actions() -> void:
+	if not is_instance_valid(actions_scroll) or not is_inside_tree():
+		return
+	var need := actions.get_combined_minimum_size().y
+	var col := actions_scroll.get_parent() as Control
+	actions_scroll.custom_minimum_size.y = minf(need, maxf(120.0, col.size.y * 0.6))
 
 
 func _act(text: String, cb: Callable) -> Button:
-	var b := Kit.button(text, cb, Vector2(150, 40))
+	var b := Kit.button(text, cb, Vector2(140 if actions.columns == 3 else 150, 40))
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.clip_text = true
 	if text.length() > 15:

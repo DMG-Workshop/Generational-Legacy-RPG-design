@@ -1,6 +1,8 @@
 ## Small helpers for building the code-driven UI.
 extends RefCounted
 
+const UiSettings := preload("res://ui/play/ui_settings.gd")
+
 const BG := Color("#14121c")
 const PANEL := Color("#221f30")
 const PANEL_LIGHT := Color("#2e2a42")
@@ -43,7 +45,7 @@ static func label(text: String, size: int = 16, color: Color = TEXT) -> Label:
 static func button(text: String, callback: Callable, min_size: Vector2 = Vector2(0, 38)) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = min_size
+	b.custom_minimum_size = Vector2(min_size.x, UiSettings.tap_h(min_size.y))
 	b.add_theme_font_size_override("font_size", 16)
 	b.add_theme_stylebox_override("normal", style(PANEL_LIGHT, 6, Color("#4a4466")))
 	b.add_theme_stylebox_override("hover", style(Color("#3d3860"), 6, ACCENT))
@@ -74,6 +76,16 @@ static func rich(bbcode: bool = true) -> RichTextLabel:
 	return r
 
 
+## The gap around an overlay panel: narrower on a narrow screen, where every pixel is wanted.
+static func overlay_margin(host: Control) -> Vector2:
+	return Vector2(10, 8) if UiSettings.compact(host) else Vector2(30, 24)
+
+
+## The width an overlay's contents can use.
+static func overlay_room(host: Control) -> float:
+	return UiSettings.room(host).x - 2.0 * overlay_margin(host).x - 20.0
+
+
 ## A modal overlay on `host`: dimmed backdrop, bordered panel, title row with Close.
 ## Returns the content box; the overlay itself is `box.get_meta("overlay")`.
 static func overlay(host: Control, title: String) -> VBoxContainer:
@@ -85,10 +97,11 @@ static func overlay(host: Control, title: String) -> VBoxContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", style(Color("#1a1828"), 8, ACCENT))
 	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	p.offset_left = 30
-	p.offset_right = -30
-	p.offset_top = 24
-	p.offset_bottom = -24
+	var m := overlay_margin(host)
+	p.offset_left = m.x
+	p.offset_right = -m.x
+	p.offset_top = m.y
+	p.offset_bottom = -m.y
 	host.add_child(p)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
@@ -99,8 +112,18 @@ static func overlay(host: Control, title: String) -> VBoxContainer:
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
 	top.add_child(button("Close", func(): host.queue_free(), Vector2(100, 34)))
+	host.set_meta("back_close", func(): host.queue_free())
 	v.set_meta("overlay", host)
 	return v
+
+
+## "tap" on a touch screen, "click" with a mouse; "hold" or "hover" for what shows a tooltip.
+static func click() -> String:
+	return "tap" if UiSettings.touch() else "click"
+
+
+static func hover() -> String:
+	return "hold" if UiSettings.touch() else "hover"
 
 
 static func clear(node: Node) -> void:

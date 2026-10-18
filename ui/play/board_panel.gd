@@ -125,8 +125,8 @@ func _offer_card(list: VBoxContainer, q: Dictionary) -> void:
 	v.add_child(_wrap(q.get("text", ""), 14, Kit.TEXT))
 	v.add_child(_wrap("Task: %s" % GameQuests.objective_text(q), 14, Kit.TEXT))
 	v.add_child(_wrap("Reward: %s" % GameQuests.reward_text(d, q), 14, Kit.GOOD))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	var row := HFlowContainer.new()   # the reason wraps under the button on a narrow card
+	row.add_theme_constant_override("h_separation", 10)
 	v.add_child(row)
 	var id: String = q["id"]
 	var why := d.quests.accept_block(d, id)
@@ -161,8 +161,9 @@ func _active_card(list: VBoxContainer, e: Dictionary) -> void:
 	v.add_child(_wrap(by, 13, Kit.DIM))
 	v.add_child(_wrap("Reward: %s" % GameQuests.reward_text(d, q), 14, Kit.GOOD))
 	var here: bool = d.world.location == q["giver"]
-	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 10)
+	var buttons := HFlowContainer.new()
+	buttons.add_theme_constant_override("h_separation", 10)
+	buttons.add_theme_constant_override("v_separation", 6)
 	v.add_child(buttons)
 	if complete:
 		var turn := Kit.button("Turn in", func(): _act(qs.turn_in(d, id)), Vector2(110, 32))

@@ -2,6 +2,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
 
 const TAB_NAMES := {"forge": "Forge", "store": "Store", "temple": "Temple", "black_market": "Black Market", "gear": "Gear"}
 const TAB_NOTES := {
@@ -14,6 +15,7 @@ const TAB_NOTES := {
 const TIER_COLORS := ["#e8e4f0", "#e8e4f0", "#7fb7ff", "#c58fe8", "#ffd75e"]
 const SLOT_HEADERS := {"weapon": "Weapons", "armor": "Armor", "trinket": "Trinkets", "remedy": "Remedies", "toxin": "Toxins", "vial": "Plague Vials"}
 const LEFT_W := 370
+const COMPACT_LEFT_W := 230
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
@@ -29,10 +31,16 @@ var scroll: ScrollContainer
 var rows: VBoxContainer
 var side: VBoxContainer
 var confirm_sell: String = ""   # a unique item waiting for a second click before it is sold
+var left_w := LEFT_W
+var compact := false            # a narrow screen: no side panel, the heir's numbers in one line
+var stats_line: Label
 
 
 func _ready() -> void:
 	var v := Kit.overlay(self, "Gear of %s" % dynasty.heir.name if gear_only else "Shops of %s" % dynasty.world.here()["name"])
+	compact = Kit.overlay_room(self) < 1170.0   # rows at full width plus the side panel
+	if compact:
+		left_w = COMPACT_LEFT_W
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 18)
 	v.add_child(top)
@@ -59,7 +67,14 @@ func _ready() -> void:
 	tab_row.add_child(tabs)
 	tab_note = Kit.label("", 14, Kit.DIM)
 	tab_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tab_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tab_note.custom_minimum_size.x = 120
 	tab_row.add_child(tab_note)
+	stats_line = Kit.label("", 13, Kit.TEXT)
+	stats_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stats_line.visible = compact
+	v.add_child(stats_line)
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -75,10 +90,15 @@ func _ready() -> void:
 	scroll.add_child(rows)
 	var sp := Kit.panel()
 	sp.custom_minimum_size = Vector2(300, 0)
+	sp.visible = not compact
 	body.add_child(sp)
+	var side_scroll := ScrollContainer.new()   # a short screen scrolls the worn list and stats
+	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sp.add_child(side_scroll)
 	side = VBoxContainer.new()
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	side.add_theme_constant_override("separation", 4)
-	sp.add_child(side)
+	side_scroll.add_child(side)
 
 	var shops := GameItems.shops_here(dynasty)
 	tab = shops[0] if not shops.is_empty() and not gear_only else "gear"
@@ -100,7 +120,7 @@ func _rebuild() -> void:
 	tabs.visible = not gear_only
 	for t in ([] if gear_only else GameItems.shops_here(dynasty)) + ["gear"]:
 		var tt: String = t
-		var b := Kit.button(TAB_NAMES[tt], func(): _show(tt), Vector2(110, 34))
+		var b := Kit.button(TAB_NAMES[tt], func(): _show(tt), Vector2(110 if not compact else 92, 34))
 		b.toggle_mode = true
 		b.button_pressed = tt == tab
 		tabs.add_child(b)
@@ -287,7 +307,7 @@ func _build_gear() -> void:
 			sb.tooltip_text = "No one in %s buys gear." % dynasty.world.here()["name"]
 		if confirm_sell == iid:
 			sb.text = "Sure?"
-			sb.tooltip_text = "Click again to sell the %s. It cannot be bought back." % GameItems.item_name(iid)
+			sb.tooltip_text = "%s again to sell the %s. It cannot be bought back." % [Kit.click().capitalize(), GameItems.item_name(iid)]
 		rows.add_child(_item_row(iid, "sells %sg" % GameText.num(GameItems.sell_price(dynasty, iid)), [eb, sb]))
 
 
@@ -313,6 +333,8 @@ func _consumable_row(id: String, can_sell: bool) -> PanelContainer:
 func _build_side() -> void:
 	Kit.clear(side)
 	var h := dynasty.heir
+	stats_line.text = "%s: Attack %s  Magic %s  Defense %s  Dodge %d%%  Crit %d%%  HP %s / %s  MP %s / %s  Potions %d" % [h.name, GameText.num(int(h.attack_power())), GameText.num(int(h.magic_power())), GameText.num(int(h.defense())),
+		int(round(h.dodge_chance() * 100.0)), int(round(h.crit_chance() * 100.0)), GameText.num(h.hp), GameText.num(h.max_hp()), GameText.num(h.mp), GameText.num(h.max_mp()), h.potions]
 	side.add_child(Kit.label("Worn", 18, Kit.ACCENT))
 	for slot in GameItems.SLOTS:
 		var id := GameItems.equipped(h, slot)
@@ -357,7 +379,7 @@ func _section(text: String) -> Label:
 
 func _wrap(l: Label) -> Label:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(270, 0)
+	l.custom_minimum_size = Vector2(256, 0)
 	return l
 
 
@@ -396,18 +418,18 @@ func _row(title: String, color: Color, sub: String, middle: Control, price_text:
 	p.add_child(hb)
 	var left := VBoxContainer.new()
 	left.add_theme_constant_override("separation", 0)
-	left.custom_minimum_size = Vector2(LEFT_W, 0)
+	left.custom_minimum_size = Vector2(left_w, 0)
 	left.mouse_filter = Control.MOUSE_FILTER_PASS
 	left.tooltip_text = tip
 	hb.add_child(left)
 	var t := Kit.label(title, 16, color)
 	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	t.custom_minimum_size = Vector2(LEFT_W, 0)
+	t.custom_minimum_size = Vector2(left_w, 0)
 	left.add_child(t)
 	if sub != "":
 		var s := Kit.label(sub, 12, Kit.DIM)
 		s.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		s.custom_minimum_size = Vector2(LEFT_W, 0)
+		s.custom_minimum_size = Vector2(left_w, 0)
 		left.add_child(s)
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	middle.size_flags_vertical = Control.SIZE_SHRINK_CENTER

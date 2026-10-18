@@ -29,8 +29,8 @@ func _build() -> void:
 	var d := dynasty
 	var h := d.heir
 	var pts := GameFeats.points(h)
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 24)
+	var top := HFlowContainer.new()
+	top.add_theme_constant_override("h_separation", 24)
 	body.add_child(top)
 	top.add_child(Kit.label("Feat points %s" % GameText.num(pts), 20, Kit.ACCENT))
 	top.add_child(Kit.label("Readied %d / %d" % [h.equipped_feats.size(), GameFeats.slots(h)], 20, Kit.ACCENT))
@@ -168,8 +168,8 @@ func _card(id: String, action: String, cb: Callable, block: String) -> Control:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 1)
 	row.add_child(v)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
+	var head := HFlowContainer.new()   # the tag drops under the name on a narrow card
+	head.add_theme_constant_override("h_separation", 10)
 	v.add_child(head)
 	head.add_child(Kit.label(str(f["name"]), 16, Color(kind.get("color", "#ffffff"))))
 	var tag := Kit.label("%s  -  %s  -  %d pt%s" % [kind.get("name", ""), GameFeats.shape_text(id), GameFeats.cost(id), "" if GameFeats.cost(id) == 1 else "s"], 12, Kit.DIM)
