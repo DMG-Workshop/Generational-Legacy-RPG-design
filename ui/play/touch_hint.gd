@@ -60,11 +60,31 @@ static func on_hover(c: Control, enter: Callable, exit: Callable = Callable()) -
 
 ## Who has the pointer, from the window's raw events: they come before the viewport updates hover.
 ## Emulated mouse events are a finger's; touches the engine emulates from a mouse are the mouse's.
-static func note_pointer(ev: InputEvent) -> void:
+## A mouse taking the pointer back over what a finger last touched gets no mouse_entered (the
+## control is hovered already), so its previews are played here.
+static func note_pointer(ev: InputEvent, vp: Viewport = null) -> void:
 	if ev is InputEventMouse:
+		var was := finger
 		finger = ev.device == InputEvent.DEVICE_ID_EMULATION
+		if was and not finger and vp != null:
+			_mouse_previews(vp, false, vp.get_final_transform().affine_inverse() * (ev as InputEventMouse).position)
 	elif (ev is InputEventScreenTouch or ev is InputEventScreenDrag) and ev.device != InputEvent.DEVICE_ID_EMULATION:
 		finger = true
+
+
+## Plays the enter of every hover preview the pointer rests in: those the mouse is not yet known
+## to be in (`again` false, marking them), or those it is (`again` true, after a hold's exit wiped them).
+## With `at`, only those the mouse is moving inside: one it moves off gets no enter (nor exit).
+static func _mouse_previews(vp: Viewport, again: bool, at := Vector2.INF) -> void:
+	var c := vp.gui_get_hovered_control()
+	while c != null:
+		var inside := at == Vector2.INF or Rect2(Vector2.ZERO, c.size).has_point(c.get_global_transform_with_canvas().affine_inverse() * at)
+		if inside and c.has_meta(META) and c.get_meta(MOUSE_IN, false) == again:
+			c.set_meta(MOUSE_IN, true)
+			(c.get_meta(META)[0] as Callable).call()
+		if c.top_level:
+			break
+		c = c.get_parent_control()
 
 
 func _ready() -> void:
@@ -79,7 +99,7 @@ func _ready() -> void:
 	text = Kit.label("", int(UiSettings.setting("hint_font_size")))
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bubble.add_child(text)
-	get_window().window_input.connect(note_pointer)
+	get_window().window_input.connect(func(ev: InputEvent): note_pointer(ev, get_viewport()))
 	get_tree().node_added.connect(_on_node_added)
 
 
@@ -171,6 +191,7 @@ func hide_hint() -> void:
 		var ex := _exit
 		_exit = Callable()
 		ex.call()
+		_mouse_previews(get_viewport(), true)   # a mouse still on it keeps its preview
 	_shown = false
 	shown_text = ""
 	shown_on = null

@@ -8,6 +8,7 @@ static var scale := -1.0         # -1 until read from disk
 static var touch_layout := ""    # "auto", "on" or "off"; "" until read from disk
 static var force_touch := -1     # 1 or 0 overrides touch detection (tests, screenshots)
 static var force_mobile := -1    # 1 or 0 overrides OS.has_feature("mobile") (tests, screenshots)
+static var force_touchscreen := -1   # 1 or 0 overrides DisplayServer.is_touchscreen_available() (tests)
 static var insets := Rect2()     # safe-area margins of the root UI: position = left/top, size = right/bottom
 
 
@@ -107,7 +108,9 @@ static func touch() -> bool:
 
 ## A finger can reach the screen, whatever the layout.
 static func touch_screen() -> bool:
-	return is_mobile() or DisplayServer.is_touchscreen_available()
+	if is_mobile():
+		return true
+	return force_touchscreen == 1 if force_touchscreen >= 0 else DisplayServer.is_touchscreen_available()
 
 
 ## The least height a button may have: a fingertip on touch screens, as designed elsewhere.

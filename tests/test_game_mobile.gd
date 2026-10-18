@@ -239,7 +239,14 @@ func test_touch_layout_setting() -> void:
 	UiSettings.scale = -1.0
 	ok(UiSettings.get_touch_layout() == "auto", "no settings file: the touch layout is Auto")
 	UiSettings.force_mobile = 0
-	ok(not UiSettings.touch(), "Auto on a desktop (touch screen or not): the desktop layout")
+	UiSettings.force_touchscreen = 0
+	ok(not UiSettings.touch() and not UiSettings.touch_screen(), "Auto on a desktop without a touch screen: the desktop layout")
+	UiSettings.force_touchscreen = 1
+	ok(not UiSettings.touch() and UiSettings.touch_screen(), "Auto on a touchscreen laptop: still the desktop layout")
+	UiSettings.set_touch_layout("on")
+	ok(UiSettings.touch(), "a touchscreen laptop set to On: the touch layout")
+	UiSettings.set_touch_layout("auto")
+	UiSettings.force_touchscreen = -1
 	UiSettings.force_mobile = 1
 	ok(UiSettings.touch(), "Auto on a phone: the touch layout")
 	UiSettings.set_touch_layout("off")
@@ -480,8 +487,14 @@ func test_no_native_tooltip_from_touch() -> void:
 	probe.size = Vector2(160, 60)
 	probe.z_index = 50
 	host.add_child(probe)
-	var hover := {"in": 0, "out": 0, "seen": 0}
-	TouchHint.on_hover(probe, func(): hover["in"] += 1, func(): hover["out"] += 1)
+	var hover := {"in": 0, "out": 0, "seen": 0, "live": false}
+	var enter := func():
+		hover["in"] += 1
+		hover["live"] = true
+	var leave := func():
+		hover["out"] += 1
+		hover["live"] = false
+	TouchHint.on_hover(probe, enter, leave)
 	probe.gui_input.connect(func(ev): if ev is InputEventMouseButton and ev.device == InputEvent.DEVICE_ID_EMULATION: hover["seen"] += 1)
 	var taps := [0]
 	probe.pressed.connect(func(): taps[0] += 1)
@@ -557,6 +570,36 @@ func test_no_native_tooltip_from_touch() -> void:
 	ok(hover["out"] == 2, "a finger moving the pointer off ends the mouse's preview, once (%d)" % hover["out"])
 	await _frames(2)
 	ok(_tooltips(root, []).is_empty(), "the mouse's tooltip goes with it")
+	# A touchscreen laptop: a finger taps the probe, then the mouse moves inside it. The engine sends
+	# no mouse_entered (the probe is hovered already), yet the mouse gets its preview.
+	await _tap(probe)
+	ok(not hover["live"], "the tap played no preview")
+	var mouse := InputEventMouseMotion.new()
+	mouse.position = _win(at + Vector2(4, 2))
+	Input.parse_input_event(mouse)
+	await _frames(1)
+	ok(not TouchHint.finger and hover["live"], "the mouse moving on what a finger tapped plays its preview")
+	mouse = mouse.duplicate()
+	mouse.position = _win(at + Vector2(-200, -150))
+	Input.parse_input_event(mouse)
+	await _frames(1)
+	ok(not hover["live"] and hover["in"] - hover["out"] == 0, "and leaving ends it, once (%d in, %d out)" % [hover["in"], hover["out"]])
+	# The mouse hovers the probe and a finger holds it: when the hint goes the mouse keeps its preview.
+	mouse = mouse.duplicate()
+	mouse.position = _win(at)
+	Input.parse_input_event(mouse)
+	await _frames(1)
+	await _down(at)
+	app.hints.tick(float(UiSettings.setting("hold_seconds")) + 0.05)
+	ok(app.hints.shown_text == "Probe tooltip" and hover["live"], "a hold over the mouse's hover shows the hint")
+	await _up(at)
+	app.hints.hide_hint()
+	ok(hover["live"], "the hint going leaves the preview of the mouse still on it")
+	mouse = mouse.duplicate()
+	mouse.position = _win(at + Vector2(-200, -150))
+	Input.parse_input_event(mouse)
+	await _frames(1)
+	ok(not hover["live"], "the mouse leaving ends it")
 	node_added.disconnect(spy)
 	probe.queue_free()
 	app.hints.hide_hint()
@@ -1098,6 +1141,17 @@ func _open_of(n: Node, script: Script) -> Node:
 
 ## The text size changed from the menu mid-fight: the commands are laid out for the new room, the
 ## menu reopens showing the new size, and it draws above the fight's raised lists.
+## Visible buttons of `n` (menus aside) shorter than the touch target.
+func _short_buttons(n: Node, out: Array = []) -> Array:
+	if n is MenuPanel:
+		return out
+	if n is Button and (n as Button).is_visible_in_tree() and (n as Button).size.y < float(UiSettings.setting("touch_target_px")) - 0.5:
+		out.append("%s(%.0f)" % [(n as Button).text, (n as Button).size.y])
+	for c in n.get_children():
+		_short_buttons(c, out)
+	return out
+
+
 func test_scale_mid_fight() -> void:
 	_game()
 	for i in 200:
@@ -1124,6 +1178,19 @@ func test_scale_mid_fight() -> void:
 		ok(cur != null and cur.get_theme_color("font_color") == Kit.ACCENT, "and it marks 150% as the size in use")
 		ok((menus[0] as Control).z_index > 10, "the menu draws above the fight's lists and result")
 	_check_inside(app.frame, Rect2(Vector2.ZERO, root.get_visible_rect().size), "battle after a text-size change")
+	# Touch layout On mid-fight: buttons built once (Auto-battle) grow to a fingertip too.
+	var keep_touch := UiSettings.force_touch
+	UiSettings.force_touch = -1
+	ok(_short_buttons(bv).size() > 0, "the desktop fight has buttons under a fingertip's height")
+	if menus.size() == 1:
+		_find(menus[0], "On").pressed.emit()
+		await _frames(4)
+		var short := _short_buttons(bv)
+		ok(app.current == bv and UiSettings.touch() and short.is_empty(), "Touch layout On mid-fight: every button is a fingertip tall %s" % [short])
+		_check_inside(app.frame, Rect2(Vector2.ZERO, root.get_visible_rect().size), "battle after Touch layout On")
+	UiSettings.set_touch_layout("auto")
+	UiSettings.force_touch = keep_touch
+	bv.relayout()
 	app.go_back()
 	app.set_ui_scale(1.0)
 	await _frames(2)

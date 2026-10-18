@@ -151,6 +151,7 @@ func _fit_bottom() -> void:
 ## The text size changed mid-fight: the commands are laid out again for the new room (the field
 ## follows on its own as the arena resizes). Open lists close, as they were placed for the old size.
 func relayout() -> void:
+	Kit.retap(self)   # buttons built once (Auto-battle, the result's) take the touch layout's height
 	_size_commands()
 	_fit_bottom()
 	if result_shown or busy:
