@@ -274,9 +274,16 @@ func _build_actors() -> void:
 			eye.position = Vector2(w * ex, h * 0.22)
 			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(eye)
-		var lv := Kit.label("Lv %s" % GameText.num(int(e.get("level", 1))), 13, Kit.ACCENT if str(e["name"]).begins_with("Elite") else Kit.TEXT)
-		lv.add_theme_constant_override("outline_size", 4)
-		lv.add_theme_color_override("font_outline_color", Color.BLACK)
+		var lv_text := "Lv %s" % GameText.num(int(e.get("level", 1)))
+		# Late-generation levels are long: the text shrinks to stay inside the body. It is inked
+		# against the body's colour, no outline: an outline smears once a full arena is shrunk to fit.
+		var lv_size := 13
+		var font := get_theme_default_font()
+		while lv_size > 8 and font.get_string_size(lv_text, HORIZONTAL_ALIGNMENT_LEFT, -1, lv_size).x > w - 8.0:
+			lv_size -= 1
+		var pale := Color(e["color"]).get_luminance() > 0.45
+		var elite := str(e["name"]).begins_with("Elite")
+		var lv := Kit.label(lv_text, lv_size, (Kit.ACCENT.darkened(0.6) if elite else Kit.BG) if pale else (Kit.ACCENT if elite else Kit.TEXT))
 		lv.position = Vector2(4, h - 22)
 		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(lv)

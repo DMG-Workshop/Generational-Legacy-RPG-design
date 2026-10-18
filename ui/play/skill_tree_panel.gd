@@ -18,7 +18,8 @@ const KEY := Color("#c58fe8")
 const LOCKED_EDGE := Color("#3a3650")
 const DIM_FILL := Color("#1d1b29")
 const OPEN_FILL := Color("#25452c")
-const WAITING_EDGE := Color("#4f9a55")   # Kit.GOOD, a step darker: the way is open, not the purse
+static var WAITING_EDGE := Kit.GOOD.darkened(0.28)   # the way is open, not the purse
+static var WAITING_INK := Kit.TEXT.darkened(0.2)
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the opener refreshes
@@ -224,7 +225,7 @@ func _draw_tree(u: GameHeir) -> void:
 				ink = Kit.TEXT
 			"waiting":
 				edge = WAITING_EDGE
-				ink = Kit.TEXT.darkened(0.2)
+				ink = WAITING_INK
 		if keyst and r == 0:
 			ink = KEY
 			if lk == "locked":
@@ -327,7 +328,7 @@ func _show(id: String) -> void:
 		var t := GameSkillTree.tree(tree_id)
 		side_box.add_child(_wrap(str(t["name"]), 17, Kit.ACCENT))
 		side_box.add_child(_wrap(str(t.get("description", "")), 13, Kit.DIM))
-		side_box.add_child(_wrap("Gold: taken. Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or not mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
+		side_box.add_child(_wrap("Gold: taken (choose it to see whether its next rank can be bought now). Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
 		for line in _held(u):
 			side_box.add_child(_wrap(line, 13, Kit.TEXT))
 		for line in GameSkillTree.plan_lines(dynasty, who):

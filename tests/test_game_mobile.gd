@@ -1102,6 +1102,24 @@ func _layout_pass(wsize: Vector2i, s: float) -> void:
 	app.show_state()
 	await _frames(4)
 	_check_inside(app.frame, room, "succession " + tag)
+	# A big family (orcs and halflings have up to four) with traits and a fate mark: every card and
+	# its Choose button fit beside each other.
+	d.pending_archetype = GameFate.ARCHETYPES.keys()[0]
+	for n in [3, 4]:
+		while d.candidates.size() < n:
+			d.candidates.append(GameHeir.from_dict(d.candidates[0].to_dict()))
+		for c in d.candidates:
+			for t in GameData.traits_in(["bloodline", "blessing"]).slice(0, 2):
+				if t not in c.traits:
+					c.traits.append(t)
+		app.show_state()
+		await _frames(4)
+		var picks: Array = app.current.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text.begins_with("Choose "))
+		# Side by side within the room (a short screen scrolls them down to the buttons).
+		ok(picks.size() == n and picks.all(func(b): return (b as Control).get_global_rect().position.x >= room.position.x - 1.0 and (b as Control).get_global_rect().end.x <= room.end.x + 1.0),
+			"%s: all %d heirs can be chosen" % [tag, n])
+		_check_inside(app.frame, room, "succession of %d %s" % [n, tag])
+	d.pending_archetype = ""
 	d.state = "ended"
 	app.show_state()
 	await _frames(4)

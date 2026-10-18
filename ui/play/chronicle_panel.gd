@@ -15,7 +15,8 @@ func _ready() -> void:
 	if UiSettings.touch():   # the tabs a fingertip tall, as the buttons are
 		for st in ["tab_selected", "tab_unselected", "tab_hovered", "tab_disabled"]:
 			var sb: StyleBox = tabs.get_theme_stylebox(st).duplicate()
-			var pad := maxf(0.0, (UiSettings.tap_h(0.0) - tabs.get_theme_font_size("font_size") * 1.4) * 0.5)
+			var line := tabs.get_theme_font("font").get_height(tabs.get_theme_font_size("font_size"))
+			var pad := maxf(0.0, (UiSettings.tap_h(0.0) - line) * 0.5)
 			sb.content_margin_top = pad
 			sb.content_margin_bottom = pad
 			tabs.add_theme_stylebox_override(st, sb)

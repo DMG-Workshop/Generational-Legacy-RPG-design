@@ -1018,7 +1018,45 @@ func _labels_text(n: Node, out: Array = []) -> Array:
 ## The four looks on screen, each its own: taken (gold), open (green), waiting (open but not now:
 ## a green outline on the dim fill) and locked (dim), and the side box telling why a waiting node
 ## cannot be bought now. With no points left, then mid-fight with points.
+## Each node's style on screen by look, keystones apart ("waiting/key"): every node of a look is
+## drawn the same, and as `want` says when it has that look (e.g. the heir's, for a companion).
+func _styles(panel: Control, d: GameDynasty, want: Dictionary = {}) -> Dictionary:
+	var u := GameSkillTree.unit_of(d, panel.who)
+	var out := {}
+	for id in panel.boxes:
+		if id == panel.selected:
+			continue
+		var b: Button = panel.boxes[id]
+		var lk: String = b.get_meta("look")
+		ok(lk == SkillTreePanel.look(d, u, id), "%s: %s is drawn as %s" % [u.name, id, SkillTreePanel.look(d, u, id)])
+		var st: StyleBoxFlat = b.get_theme_stylebox("normal")
+		var key := lk + ("/key" if GameSkillTree.is_keystone(id) else "")
+		var pair := [st.border_color, st.bg_color]
+		if out.has(key):
+			ok(out[key] == pair, "%s: every %s node looks the same (%s)" % [u.name, key, id])
+		else:
+			out[key] = pair
+			if want.has(key):
+				ok(want[key] == pair, "%s: a %s node looks as it does in the heir's tree" % [u.name, key])
+	return out
+
+
+func _violet(c: Color) -> bool:
+	return c.r > c.g and c.b > c.g
+
+
+func _green(c: Color) -> bool:
+	return c.g > c.r and c.g > c.b
+
+
 func _four_looks(panel: Control, d: GameDynasty) -> void:
+	# Keystones: waiting (green outline) and locked (violet outline) differ with no points to spend.
+	var keys := _styles(panel, d)
+	ok(keys.has("waiting/key") and keys.has("locked/key"), "with no points the tree shows waiting and locked keystones: %s" % str(keys.keys()))
+	if keys.has("waiting/key") and keys.has("locked/key"):
+		ok(keys["waiting/key"] != keys["locked/key"], "a waiting keystone does not look locked")
+		ok(_green(keys["waiting/key"][0]), "a waiting keystone has a green outline")
+		ok(_violet(keys["locked/key"][0]), "a locked keystone has a violet outline")
 	var by_look := {}
 	for id in panel.boxes:
 		var b: Button = panel.boxes[id]
@@ -1063,7 +1101,7 @@ func _four_looks(panel: Control, d: GameDynasty) -> void:
 		fight._build()
 		await _frames()
 		ft = " ".join(PackedStringArray(_labels_text(fight)))
-		ok(ft.find("Green outline on a dark fill: open, but not to be bought now") >= 0, "the legend names the waiting look")
+		ok(ft.find("Green outline on a dark fill: open, but not to be bought now (too few points, or mid-fight)") >= 0, "the legend names the waiting look and its reasons")
 		fight.queue_free()
 		d.battle = null
 		d.heir.tree_points = 0
@@ -1082,6 +1120,34 @@ func _four_looks(panel: Control, d: GameDynasty) -> void:
 	if open_b != null and looks.has("waiting"):
 		var st: StyleBoxFlat = open_b.get_theme_stylebox("normal")
 		ok(st.border_color == Kit.GOOD and st.bg_color != looks["waiting"][1], "open: the bright green outline on a green fill, unlike waiting")
+	var with_pts := _styles(panel, d)
+	for k in with_pts:
+		keys[k] = with_pts[k]
+	ok(keys.has("open/key"), "with points a keystone is open to buy: %s" % str(with_pts.keys()))
+	var kid := ""
+	for id in panel.boxes:
+		if panel.boxes[id].get_meta("look") == "open" and GameSkillTree.is_keystone(id):
+			kid = id
+	if kid != "":
+		GameSkillTree.spend(d, "", kid)
+		panel._build()
+		await _frames()
+		ok(panel.boxes[kid].get_meta("look") == "mastered", "a bought keystone is mastered")
+		var bought := _styles(panel, d)
+		for k in bought:
+			keys[k] = bought[k]
+	var four := ["open/key", "waiting/key", "locked/key", "mastered/key"]
+	ok(four.all(func(k): return keys.has(k)), "the four keystone looks were seen: %s" % str(keys.keys()))
+	if four.all(func(k): return keys.has(k)):
+		var pairs := four.map(func(k): return keys[k])
+		ok(four.all(func(k): return pairs.count(keys[k]) == 1), "and all four keystone looks differ: %s" % str(pairs))
+		ok(_green(keys["open/key"][0]) and keys["mastered/key"][0] == Kit.ACCENT, "open keystones are outlined green, mastered ones gold")
+	# A companion's tree draws every look as the heir's does.
+	panel._pick_unit(d.party.members[0]["id"])
+	await _frames()
+	var theirs := _styles(panel, d, keys)
+	ok(theirs.size() >= 2, "%s's tree shows its own looks: %s" % [panel.who, str(theirs.keys())])
+	panel._pick_unit("")
 	d.heir.tree_points = 0
 	panel._build()
 	await _frames()

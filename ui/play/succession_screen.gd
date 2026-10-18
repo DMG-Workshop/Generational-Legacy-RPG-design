@@ -26,7 +26,7 @@ func _ready() -> void:
 	root.add_child(_wrapped(Kit.label("Generation %s  -  %s, level %s  -  died aged %d (%s)  -  %s, %s gold left" % [GameText.num(dead["gen"]), cname, GameText.num(dead["level"]), dead["age"], dead["cause"], "1 victory" if int(dead["battles_won"]) == 1 else "%s victories" % GameText.num(dead["battles_won"]), GameText.num(dead["gold"])], 16, Kit.DIM)))
 	if d.pending_archetype != "":
 		var a: Dictionary = GameFate.ARCHETYPES[d.pending_archetype]
-		root.add_child(Kit.label("Fate has left its mark. The next heir will be a %s: %s" % [a["name"], a["desc"]], 16, Kit.BAD))
+		root.add_child(_wrapped(Kit.label("Fate has left its mark. The next heir will be a %s: %s" % [a["name"], a["desc"]], 16, Kit.BAD)))
 	var into := "generation %s" % GameText.num(d.gen + 1)
 	if d.gen + 1 == GameAges.max_generations():
 		into += ", the last of the saga"
@@ -44,9 +44,11 @@ func _ready() -> void:
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", 12)
 	scroll.add_child(row)
-	# Up to four children: cards share the width instead of running off-screen.
+	# Up to four children: cards share the width instead of running off-screen, leaving room for the
+	# scrollbar. Their text wraps so a card never grows past its share.
 	var gaps := 12.0 * float(d.candidates.size() - 1)
-	var card_w := minf(360.0, (UiSettings.room(self).x - 48.0 - gaps) / float(maxi(1, d.candidates.size())))
+	var bar := scroll.get_v_scroll_bar().get_combined_minimum_size().x
+	var card_w := minf(360.0, floorf((UiSettings.room(self).x - 48.0 - gaps - bar) / float(maxi(1, d.candidates.size()))))
 	for i in d.candidates.size():
 		row.add_child(_card(i, d.candidates[i], card_w))
 
@@ -67,25 +69,25 @@ func _card(i: int, c: GameHeir, width: float) -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
-	v.add_child(Kit.label(c.full_name(), 24, Kit.ACCENT))
+	v.add_child(_wrapped(Kit.label(c.full_name(), 24, Kit.ACCENT)))
 	v.add_child(_wrapped(Kit.label("%s %s  -  %s" % [c.race()["name"], c.cls()["name"], " & ".join(c.parent_names)], 14, Kit.DIM)))
 	v.add_child(_wrapped(Kit.label("Fate Value: %d%% (lifetime chance of major failure)" % int(round(c.fate_value * 100.0)), 15, Kit.BAD if c.fate_value > 0.2 else Kit.TEXT)))
-	v.add_child(Kit.label("Expected lifespan: ~%d years" % int(c.lifespan), 15))
+	v.add_child(_wrapped(Kit.label("Expected lifespan: ~%d years" % int(c.lifespan), 15)))
 	if not c.diseases.is_empty():
 		v.add_child(_wrapped(Kit.label("Sick: %s" % GameDisease.status_text(c), 15, Kit.BAD)))
 	v.add_child(HSeparator.new())
-	v.add_child(Kit.label("Expressed traits", 15, Kit.DIM))
+	v.add_child(_wrapped(Kit.label("Expressed traits", 15, Kit.DIM)))
 	if c.traits.is_empty():
 		v.add_child(Kit.label("none", 14, Kit.DIM))
 	for id in c.traits:
-		var l := Kit.label(GameData.trait_name(id), 16, Kit.trait_color(id))
+		var l := _wrapped(Kit.label(GameData.trait_name(id), 16, Kit.trait_color(id)))
 		l.tooltip_text = Kit.trait_tooltip(id)
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		v.add_child(l)
 	if not c.dormant.is_empty():
-		v.add_child(Kit.label("Carried dormant", 15, Kit.DIM))
+		v.add_child(_wrapped(Kit.label("Carried dormant", 15, Kit.DIM)))
 		for id in c.dormant:
-			var l2 := Kit.label("  " + GameData.trait_name(id), 14, Kit.DIM)
+			var l2 := _wrapped(Kit.label("  " + GameData.trait_name(id), 14, Kit.DIM))
 			l2.tooltip_text = Kit.trait_tooltip(id)
 			l2.mouse_filter = Control.MOUSE_FILTER_STOP
 			v.add_child(l2)
@@ -93,7 +95,10 @@ func _card(i: int, c: GameHeir, width: float) -> Control:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(spacer)
 	var idx := i
-	v.add_child(Kit.button("Choose %s" % c.name, func(): _choose(idx), Vector2(0, 46)))
+	var pick := Kit.button("Choose %s" % c.name, func(): _choose(idx), Vector2(0, 46))
+	pick.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	pick.clip_text = true
+	v.add_child(pick)
 	return p
 
 
