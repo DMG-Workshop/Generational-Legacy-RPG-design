@@ -274,6 +274,19 @@ static func changed(u: GameHeir) -> void:
 
 ## Why the unit cannot buy the next rank of a node ("" if it can).
 static func take_block(u: GameHeir, id: String) -> String:
+	var why := path_block(u, id)
+	if why != "":
+		return why
+	var n := node(id)
+	sync(u)
+	if u.tree_points < cost(id):
+		return "%s costs %d skill point%s; %s has %s." % [n["name"], cost(id), "" if cost(id) == 1 else "s", u.name, GameText.num(u.tree_points)]
+	return ""
+
+
+## Why the node's next rank is shut to the unit whatever its points ("" if the way is open: its
+## path, its rank and its keystone allow it, and only points or the moment may still stand between).
+static func path_block(u: GameHeir, id: String) -> String:
 	var n := node(id)
 	if n.is_empty():
 		return "No such skill."
@@ -288,9 +301,6 @@ static func take_block(u: GameHeir, id: String) -> String:
 		var why := _keystone_block(u, str(n["keystone"]))
 		if why != "":
 			return why
-	sync(u)
-	if u.tree_points < cost(id):
-		return "%s costs %d skill point%s; %s has %s." % [n["name"], cost(id), "" if cost(id) == 1 else "s", u.name, GameText.num(u.tree_points)]
 	return ""
 
 

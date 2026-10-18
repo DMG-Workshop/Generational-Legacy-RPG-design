@@ -1,7 +1,10 @@
 ## Skill trees: the heir's and each companion's, drawn as a graph by tier with the edges between
-## nodes. A node is taken (gold), open to buy (green) or locked (dim); keystones are violet. The
-## side box tells the chosen node's exact effects. Buying follows GameSkillTree's rules anywhere
-## but in a fight; refunding needs a town or the quiet after a rest, and gold.
+## nodes. A node is taken (gold), open to buy (green), open but not to be bought now (a green
+## outline on a dim fill: too few points, or GameSkillTree.spend_block, e.g. mid-fight) or locked
+## (dim); keystones are rounded with violet text, and a violet outline while locked. The side box
+## tells the chosen node's exact effects and why it cannot be bought now. Buying follows
+## GameSkillTree's rules anywhere but in a fight; refunding needs a town or the quiet after a rest,
+## and gold.
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
@@ -12,6 +15,10 @@ const GAP := Vector2(16, 20)
 const PAD := 10.0
 const SIDE_W := 310
 const KEY := Color("#c58fe8")
+const LOCKED_EDGE := Color("#3a3650")
+const DIM_FILL := Color("#1d1b29")
+const OPEN_FILL := Color("#25452c")
+const WAITING_EDGE := Color("#4f9a55")   # Kit.GOOD, a step darker: the way is open, not the purse
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the opener refreshes
@@ -65,12 +72,17 @@ func _build() -> void:
 		var mid: String = m["id"]
 		_tab(units, str(m["name"]), who == mid, func(): _pick_unit(mid))
 
+	# On a short screen (a phone at a large text size) the points, buttons and tree tabs move to the
+	# top of the side column, where they scroll with it, and the tree keeps the height.
+	var short := UiSettings.room(self).y < float(UiSettings.setting("short_height"))
+	var head: Array = []
 	var top := HFlowContainer.new()   # the buttons drop below the name on a narrow screen
 	top.add_theme_constant_override("h_separation", 18)
 	top.add_theme_constant_override("v_separation", 6)
-	body.add_child(top)
+	head.append(top)
 	var pts := GameSkillTree.points(u)
-	top.add_child(Kit.label("%s, %s %s, level %s" % [u.name, u.race()["name"], u.cls()["name"], GameText.num(u.level)], 17, Kit.TEXT))
+	var who_text := "%s, %s %s, level %s" % [u.name, u.race()["name"], u.cls()["name"], GameText.num(u.level)]
+	top.add_child(_wrap(who_text, 15, Kit.TEXT) if short else Kit.label(who_text, 17, Kit.TEXT))
 	top.add_child(Kit.label("Skill points %s" % GameText.num(pts), 18, Kit.ACCENT))
 	var nxt := GameSkillTree.next_point_for(u)
 	if nxt > 0:
@@ -91,18 +103,21 @@ func _build() -> void:
 	re.tooltip_text = why if why != "" else "Refund every bought rank. What the blood carries stays."
 	top.add_child(re)
 	if why != "" and GameSkillTree.spent(u) > 0:
-		body.add_child(_wrap(why, 13, Kit.BAD))
+		head.append(_wrap(why, 13, Kit.BAD))
 
 	var tabs := HFlowContainer.new()
 	tabs.add_theme_constant_override("h_separation", 6)
 	tabs.add_theme_constant_override("v_separation", 6)
-	body.add_child(tabs)
+	head.append(tabs)
 	for tid in trees:
 		var t: String = tid
 		var n := 0
 		for id in GameSkillTree.nodes_of(t):
 			n += GameSkillTree.rank(u, id)
 		_tab(tabs, "%s  (%d)" % [GameSkillTree.tree(t)["name"], n], t == tree_id, func(): _pick_tree(t))
+	if not short:
+		for h in head:
+			body.add_child(h)
 
 	var row := HBoxContainer.new()
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -121,9 +136,20 @@ func _build() -> void:
 	center.add_child(canvas)
 	_draw_tree(u)
 	canvas.draw.connect(_draw_edges.bind(u))
-	row.add_child(_side(u))
+	row.add_child(_side(u, head if short else []))
+	if short and selected != "":
+		_to_choice.call_deferred()
 	if keep.x >= 0.0:
 		_restore.call_deferred(keep)
+
+
+## A short screen's side column opens on the chosen node's box, below the points and tabs.
+func _to_choice() -> void:
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	if is_instance_valid(side_box) and side_box.get_parent().get_parent() is ScrollContainer:
+		(side_box.get_parent().get_parent() as ScrollContainer).scroll_vertical = int(side_box.position.y)
 
 
 func _restore(keep: Vector2) -> void:
@@ -171,7 +197,7 @@ func _draw_tree(u: GameHeir) -> void:
 		var nid: String = id
 		var r := GameSkillTree.rank(u, id)
 		var mx := GameSkillTree.max_rank(id)
-		var open := GameSkillTree.take_block(u, id) == ""
+		var lk := look(dynasty, u, id)
 		var b := Button.new()
 		b.position = at
 		b.size = node_size
@@ -180,24 +206,29 @@ func _draw_tree(u: GameHeir) -> void:
 		b.clip_text = true
 		b.add_theme_font_size_override("font_size", 12)
 		var keyst := GameSkillTree.is_keystone(id)
-		var edge := Color("#3a3650")
-		var fill := Color("#1d1b29")
+		var edge := LOCKED_EDGE
+		var fill := DIM_FILL
 		var ink := Kit.DIM
-		if r >= mx:
-			edge = Kit.ACCENT
-			fill = Color("#4a3c18")
-			ink = Kit.TEXT
-		elif r > 0:
-			edge = Kit.ACCENT
-			fill = Color("#33301f")
-			ink = Kit.TEXT
-		elif open:
-			edge = Kit.GOOD
-			fill = Color("#1f2a22")
-			ink = Kit.TEXT
-		if keyst:
-			edge = KEY if r == 0 else Kit.ACCENT
-			ink = KEY if r == 0 else Kit.TEXT
+		match lk:
+			"mastered":
+				edge = Kit.ACCENT
+				fill = Color("#4a3c18")
+				ink = Kit.TEXT
+			"taken":
+				edge = Kit.ACCENT
+				fill = Color("#33301f")
+				ink = Kit.TEXT
+			"open":
+				edge = Kit.GOOD
+				fill = OPEN_FILL
+				ink = Kit.TEXT
+			"waiting":
+				edge = WAITING_EDGE
+				ink = Kit.TEXT.darkened(0.2)
+		if keyst and r == 0:
+			ink = KEY
+			if lk == "locked":
+				edge = KEY.darkened(0.35)
 		if nid == selected:
 			fill = fill.lightened(0.15)
 		var st := Kit.style(fill, 7 if not keyst else 14, edge)
@@ -211,11 +242,25 @@ func _draw_tree(u: GameHeir) -> void:
 		if int(u.tree_free.get(id, 0)) > 0:
 			b.add_theme_color_override("font_color", Color("#e8a05a"))
 		b.tooltip_text = GameSkillTree.node_text(u, id)
+		b.set_meta("look", lk)
 		b.pressed.connect(func(): _select(nid))
 		TouchHint.on_hover(b, func(): _hover(nid))
 		canvas.add_child(b)
 		boxes[nid] = b
 	canvas.custom_minimum_size = most + Vector2(PAD, PAD)
+
+
+## How a node is drawn: "mastered", "taken" (some ranks), "open" (its next rank can be bought now),
+## "waiting" (the way is open but points or the moment are lacking) or "locked".
+static func look(d: GameDynasty, u: GameHeir, id: String) -> String:
+	var r := GameSkillTree.rank(u, id)
+	if r >= GameSkillTree.max_rank(id):
+		return "mastered"
+	if r > 0:
+		return "taken"
+	if GameSkillTree.path_block(u, id) != "":
+		return "locked"
+	return "open" if GameSkillTree.spend_block(d) == "" and GameSkillTree.take_block(u, id) == "" else "waiting"
 
 
 func _draw_edges(u: GameHeir) -> void:
@@ -244,16 +289,25 @@ func _select(id: String) -> void:
 var side_box: VBoxContainer
 
 
-func _side(u: GameHeir) -> Control:
+## The side column; `head` (the points, buttons and tree tabs of a short screen) above the box.
+func _side(u: GameHeir, head: Array = []) -> Control:
 	var p := Kit.panel(Kit.PANEL)
 	p.custom_minimum_size = Vector2(SIDE_W if not UiSettings.compact(self) else 250, 0)
 	var sc := ScrollContainer.new()
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	p.add_child(sc)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 6)
+	sc.add_child(col)
+	for h in head:
+		col.add_child(h)
+	if not head.is_empty():
+		col.add_child(HSeparator.new())
 	side_box = VBoxContainer.new()
 	side_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	side_box.add_theme_constant_override("separation", 6)
-	sc.add_child(side_box)
+	col.add_child(side_box)
 	side_box.set_meta("unit", u)
 	_show(selected)
 	return p
@@ -273,7 +327,7 @@ func _show(id: String) -> void:
 		var t := GameSkillTree.tree(tree_id)
 		side_box.add_child(_wrap(str(t["name"]), 17, Kit.ACCENT))
 		side_box.add_child(_wrap(str(t.get("description", "")), 13, Kit.DIM))
-		side_box.add_child(_wrap("Gold: taken. Green: open to buy. Violet: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
+		side_box.add_child(_wrap("Gold: taken. Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or not mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
 		for line in _held(u):
 			side_box.add_child(_wrap(line, 13, Kit.TEXT))
 		for line in GameSkillTree.plan_lines(dynasty, who):
@@ -306,12 +360,15 @@ func _show(id: String) -> void:
 		var block := GameSkillTree.spend_block(dynasty)
 		if block == "":
 			block = GameSkillTree.take_block(u, id)
+		var waiting := block != "" and GameSkillTree.path_block(u, id) == ""
 		var nid := id
 		var b := Kit.button("Learn rank %d (%d pt%s)" % [r + 1, c, "" if c == 1 else "s"], func(): _act(GameSkillTree.spend(dynasty, who, nid)), Vector2((SIDE_W if not UiSettings.compact(self) else 250) - 30, 36))
 		b.disabled = block != ""
 		b.tooltip_text = block
 		side_box.add_child(b)
-		if block != "":
+		if waiting:
+			side_box.add_child(_wrap("The way is open, but it cannot be bought now: %s" % block, 12, Kit.BAD))
+		elif block != "":
 			side_box.add_child(_wrap(block, 12, Kit.BAD))
 
 

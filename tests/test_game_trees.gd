@@ -3,12 +3,14 @@
 ## abilities and battle numbers, keystones changing the rule they claim, refunds (town or rest
 ## only, a fee by level), bloodline inheritance at succession (share, Fate and curses, blessings,
 ## determinism, the journal), companions' trees (hire, levels, spending, saves, old saves,
-## successors), the autopilot's path, save/load and old saves, and the Skill Tree panel.
+## successors), the autopilot's path, save/load and old saves, and the Skill Tree panel (its four
+## node looks: taken, open, waiting for points or the moment, locked).
 ## Run: godot --headless --path . -s res://tests/test_game_trees.gd
 extends SceneTree
 
 const GameApp := preload("res://ui/play/game_app.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
+const Kit := preload("res://ui/play/ui_kit.gd")
 const FIXTURES := "res://tests/fixtures/"
 
 var fails := 0
@@ -231,7 +233,18 @@ func test_prerequisites_and_costs() -> void:
 	ok(h.tree_ranks.get("w_brawn", 0) == 1 and h.tree_points == 0 and line.find("Brawn 1/3") >= 0, "buying a rank costs its point: %s" % line)
 	ok(d.journal.back() == line, "and is told in the journal")
 	ok(GameSkillTree.spend(d, "", "w_brawn").find("costs 1 skill point") >= 0, "no points, no rank")
+	# The way and the purse apart: path_block is take_block without the points.
+	ok(GameSkillTree.path_block(h, "w_brawn") == "" and GameSkillTree.take_block(h, "w_brawn") != "", "with no points Brawn's way is open but it cannot be bought")
+	ok(GameSkillTree.path_block(h, "w_iron_grip") == "", "nor Iron Grip, whose prerequisite is held")
+	ok(GameSkillTree.path_block(h, "w_juggernaut").begins_with("Needs") and GameSkillTree.path_block(h, "m_focus") != "", "a missing prerequisite or another class's tree shuts the way itself")
+	ok(SkillTreePanel.look(d, h, "w_brawn") == "taken" and SkillTreePanel.look(d, h, "w_iron_grip") == "waiting", "the panel draws a held node as taken, an unaffordable open one as waiting")
+	ok(SkillTreePanel.look(d, h, "w_juggernaut") == "locked", "and one behind a missing prerequisite as locked")
 	h.tree_points = 10
+	ok(SkillTreePanel.look(d, h, "w_iron_grip") == "open", "with points the waiting node is open")
+	d.start_hunt("hunt")
+	ok(d.battle != null and SkillTreePanel.look(d, h, "w_iron_grip") == "waiting", "mid-fight (spend_block) it waits again")
+	ok(SkillTreePanel.look(d, h, "w_juggernaut") == "locked", "while a locked node stays locked")
+	d.battle = null
 	ok(GameSkillTree.take_block(h, "w_heavy_blows") == "", "the prerequisite with a rank opens the next node")
 	ok(GameSkillTree.take_block(h, "w_iron_grip") == "", "either prerequisite is enough (Iron Grip after Brawn)")
 	for i in 3:
@@ -1002,6 +1015,78 @@ func _labels_text(n: Node, out: Array = []) -> Array:
 	return out
 
 
+## The four looks on screen, each its own: taken (gold), open (green), waiting (open but not now:
+## a green outline on the dim fill) and locked (dim), and the side box telling why a waiting node
+## cannot be bought now. With no points left, then mid-fight with points.
+func _four_looks(panel: Control, d: GameDynasty) -> void:
+	var by_look := {}
+	for id in panel.boxes:
+		var b: Button = panel.boxes[id]
+		var lk: String = b.get_meta("look")
+		if not by_look.has(lk) and not GameSkillTree.is_keystone(id):
+			by_look[lk] = b
+		ok(lk == SkillTreePanel.look(d, d.heir, id), "%s is drawn as %s" % [id, SkillTreePanel.look(d, d.heir, id)])
+	ok(by_look.has("taken") and by_look.has("waiting") and by_look.has("locked"), "with no points the tree shows taken, waiting and locked nodes: %s" % str(by_look.keys()))
+	ok(not by_look.has("open"), "and nothing open to buy")
+	var looks := {}
+	for lk in by_look:
+		var st: StyleBoxFlat = (by_look[lk] as Button).get_theme_stylebox("normal")
+		looks[lk] = [st.border_color, st.bg_color]
+	if by_look.has("waiting") and by_look.has("locked") and by_look.has("taken"):
+		ok(looks["waiting"] != looks["locked"] and looks["waiting"] != looks["taken"], "a waiting node does not look locked or taken")
+		ok(looks["waiting"][0].g > looks["waiting"][0].r and looks["waiting"][0].g > looks["waiting"][0].b, "its outline is green")
+		ok(looks["waiting"][1] == looks["locked"][1], "on the dim fill of a locked one")
+		var wid := ""
+		for id in panel.boxes:
+			if panel.boxes[id] == by_look["waiting"]:
+				wid = id
+		(by_look["waiting"] as Button).pressed.emit()
+		await _frames()
+		var text := " ".join(PackedStringArray(_labels_text(panel)))
+		ok(text.find("cannot be bought now") >= 0 and text.find("skill point") >= 0, "choosing it says why not now: too few points")
+		var learn := _button(panel, "Learn rank", false)
+		ok(learn != null and learn.disabled, "and Learn is shut")
+		ok(text.find("Green outline on a dark fill") < 0, "(the legend is the resting side box)")
+		# Mid-fight with points to spend: the open nodes wait, spend_block says why.
+		d.heir.tree_points = 5
+		d.start_hunt("hunt")
+		var fight: Control = SkillTreePanel.new()
+		fight.dynasty = d
+		fight.tree_id = panel.tree_id
+		fight.selected = wid
+		panel.get_parent().add_child(fight)
+		await _frames()
+		ok(fight.boxes[wid].get_meta("look") == "waiting", "mid-fight a node with points to buy it waits")
+		var ft := " ".join(PackedStringArray(_labels_text(fight)))
+		ok(ft.find("cannot be bought now: Not in the middle of a fight.") >= 0, "and the side box says it is the fight: %s" % ft.right(300))
+		fight.selected = ""
+		fight._build()
+		await _frames()
+		ft = " ".join(PackedStringArray(_labels_text(fight)))
+		ok(ft.find("Green outline on a dark fill: open, but not to be bought now") >= 0, "the legend names the waiting look")
+		fight.queue_free()
+		d.battle = null
+		d.heir.tree_points = 0
+		panel.selected = ""
+		panel._build()
+		await _frames()
+	# With points, open nodes show green on their own fill.
+	d.heir.tree_points = 3
+	panel._build()
+	await _frames()
+	var open_b: Button = null
+	for id in panel.boxes:
+		if panel.boxes[id].get_meta("look") == "open" and not GameSkillTree.is_keystone(id):
+			open_b = panel.boxes[id]
+	ok(open_b != null, "with points some nodes are open to buy")
+	if open_b != null and looks.has("waiting"):
+		var st: StyleBoxFlat = open_b.get_theme_stylebox("normal")
+		ok(st.border_color == Kit.GOOD and st.bg_color != looks["waiting"][1], "open: the bright green outline on a green fill, unlike waiting")
+	d.heir.tree_points = 0
+	panel._build()
+	await _frames()
+
+
 func _ui_tests() -> void:
 	var real := GameDynasty.save_path
 	GameDynasty.save_path = "user://test_trees_ui_save.json"
@@ -1071,6 +1156,7 @@ func _ui_tests() -> void:
 	_button(panel, "Spend along").pressed.emit()
 	await _frames()
 	ok(d.heir.tree_points == 0, "Spend along the path spends every point")
+	await _four_looks(panel, d)
 	_button(panel, "Close").pressed.emit()
 	await _frames()
 	# The tavern opens a companion's tree.
