@@ -1,7 +1,18 @@
 ## Touch screens have no hover. Holding a finger still on anything that has a tooltip or a hover
 ## preview shows it, in a bubble by the finger, and that touch is not a click. A quick tap still
 ## clicks and a drag scrolls the list under the finger. Mouse input is left alone, so the desktop
-## keeps its tooltips and hover exactly as before. One instance lives on the game's root.
+## keeps its tooltips and hover exactly as before. One instance lives on the game's root. It works
+## on any screen that sends touches, whatever the touch layout setting says.
+##
+## Godot moves its emulated mouse with the finger (Input.emulate_mouse_from_touch; those events carry
+## InputEvent.DEVICE_ID_EMULATION). A tap's emulated button enters the control under it and the
+## pointer rests there after the lift, so the engine's own tooltip pops up as soon as a resting
+## motion reaches it: Viewport.update_mouse_cursor_state sends one (device DEVICE_ID_INTERNAL, which
+## no script's _input sees) after a cursor change or a drag, even while the finger is still down.
+## So while a finger has the pointer the engine's tooltip popup (a PopupPanel of theme type
+## TooltipPanel) is freed the moment it enters the tree, before it is ever drawn, and hover
+## previews are not played on enter: only the long-press bubble shows. The emulated events still
+## reach the GUI, so taps click and ScrollContainer drags with the finger.
 ##
 ## Screens register hover previews through on_hover() instead of connecting mouse_entered and
 ## mouse_exited themselves, so a long press can play them too.
@@ -10,6 +21,9 @@ extends Node
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const META := "touch_hover"
+const MOUSE_IN := "touch_hover_mouse_in"
+
+static var finger := false    # the pointer was last moved by a finger, not a mouse
 
 var layer: CanvasLayer
 var bubble: PanelContainer
@@ -29,12 +43,48 @@ var _scrolling := false
 var _scroll_from := Vector2.ZERO
 
 
-## Hover preview for `c`: the mouse plays it on enter and exit, a long press on touch screens.
+## Hover preview for `c`: the mouse plays it on enter and exit, a long press on touch screens. An
+## enter made by a finger's emulated mouse plays nothing, and only an enter that played has its exit.
 static func on_hover(c: Control, enter: Callable, exit: Callable = Callable()) -> void:
-	c.mouse_entered.connect(enter)
+	c.mouse_entered.connect(func():
+		if not finger:
+			c.set_meta(MOUSE_IN, true)
+			enter.call())
 	if exit.is_valid():
-		c.mouse_exited.connect(exit)
+		c.mouse_exited.connect(func():
+			if c.get_meta(MOUSE_IN, false):
+				c.set_meta(MOUSE_IN, false)
+				exit.call())
 	c.set_meta(META, [enter, exit])
+
+
+## Who has the pointer, from the window's raw events: they come before the viewport updates hover.
+## Emulated mouse events are a finger's; touches the engine emulates from a mouse are the mouse's.
+## A mouse taking the pointer back over what a finger last touched gets no mouse_entered (the
+## control is hovered already), so its previews are played here.
+static func note_pointer(ev: InputEvent, vp: Viewport = null) -> void:
+	if ev is InputEventMouse:
+		var was := finger
+		finger = ev.device == InputEvent.DEVICE_ID_EMULATION
+		if was and not finger and vp != null:
+			_mouse_previews(vp, false, vp.get_final_transform().affine_inverse() * (ev as InputEventMouse).position)
+	elif (ev is InputEventScreenTouch or ev is InputEventScreenDrag) and ev.device != InputEvent.DEVICE_ID_EMULATION:
+		finger = true
+
+
+## Plays the enter of every hover preview the pointer rests in: those the mouse is not yet known
+## to be in (`again` false, marking them), or those it is (`again` true, after a hold's exit wiped them).
+## With `at`, only those the mouse is moving inside: one it moves off gets no enter (nor exit).
+static func _mouse_previews(vp: Viewport, again: bool, at := Vector2.INF) -> void:
+	var c := vp.gui_get_hovered_control()
+	while c != null:
+		var inside := at == Vector2.INF or Rect2(Vector2.ZERO, c.size).has_point(c.get_global_transform_with_canvas().affine_inverse() * at)
+		if inside and c.has_meta(META) and c.get_meta(MOUSE_IN, false) == again:
+			c.set_meta(MOUSE_IN, true)
+			(c.get_meta(META)[0] as Callable).call()
+		if c.top_level:
+			break
+		c = c.get_parent_control()
 
 
 func _ready() -> void:
@@ -49,6 +99,15 @@ func _ready() -> void:
 	text = Kit.label("", int(UiSettings.setting("hint_font_size")))
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bubble.add_child(text)
+	get_window().window_input.connect(func(ev: InputEvent): note_pointer(ev, get_viewport()))
+	get_tree().node_added.connect(_on_node_added)
+
+
+## The engine's tooltip, popped up by a finger's resting pointer: gone before it is drawn (the
+## viewport forgets it when it is freed). The mouse's tooltips are left alone.
+func _on_node_added(n: Node) -> void:
+	if finger and n is PopupPanel and (n as Window).theme_type_variation == &"TooltipPanel":
+		n.queue_free()
 
 
 func is_showing() -> bool:
@@ -132,6 +191,7 @@ func hide_hint() -> void:
 		var ex := _exit
 		_exit = Callable()
 		ex.call()
+		_mouse_previews(get_viewport(), true)   # a mouse still on it keeps its preview
 	_shown = false
 	shown_text = ""
 	shown_on = null

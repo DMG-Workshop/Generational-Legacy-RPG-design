@@ -80,6 +80,7 @@
    "gold": 15,
    "color": "#d8d8c8",
    "element": "shadow",
+   "tags": ["undead"],
    "swarm": true,
    "carries": [{"disease": "grave_rot", "chance": 0.001}]
   },
@@ -163,6 +164,7 @@
    "gold": 26,
    "color": "#7f8fbf",
    "element": "shadow",
+   "tags": ["undead"],
    "row": "back",
    "carries": [{"disease": "grave_rot", "chance": 0.0015}]
   },
@@ -244,6 +246,7 @@
    "gold": 22,
    "color": "#4a3a6f",
    "element": "shadow",
+   "tags": ["undead"],
    "row": "back",
    "swarm": true
   },
@@ -293,6 +296,7 @@
    "gold": 32,
    "color": "#6f3a7f",
    "element": "shadow",
+   "tags": ["undead"],
    "row": "back",
    "inflicts": [{"id": "weaken", "chance": 0.2, "turns": 2, "potency": 0.2}],
    "carries": [{"disease": "grave_rot", "chance": 0.002}]
@@ -341,6 +345,7 @@
    "gold": 40,
    "color": "#5fbfcf",
    "element": "shadow",
+   "tags": ["undead"],
    "row": "back",
    "inflicts": [{"id": "slow", "chance": 0.15, "turns": 1, "potency": 0.15}]
   },
@@ -391,6 +396,7 @@
    "gold": 18,
    "color": "#8c9a7a",
    "element": "shadow",
+   "tags": ["undead"],
    "carries": [{"disease": "grave_rot", "chance": 0.0015}, {"disease": "red_flux", "chance": 0.001}]
   },
   {
@@ -428,6 +434,7 @@
    "gold": 90,
    "color": "#bfbfa0",
    "element": "shadow",
+   "tags": ["undead"],
    "boss": true,
    "min_level": 25,
    "heirloom": "Crown of the Hollow King",

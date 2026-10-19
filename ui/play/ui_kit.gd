@@ -46,6 +46,7 @@ static func button(text: String, callback: Callable, min_size: Vector2 = Vector2
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(min_size.x, UiSettings.tap_h(min_size.y))
+	b.set_meta("tap_base", min_size.y)   # the designed height, for retap()
 	b.add_theme_font_size_override("font_size", 16)
 	b.add_theme_stylebox_override("normal", style(PANEL_LIGHT, 6, Color("#4a4466")))
 	b.add_theme_stylebox_override("hover", style(Color("#3d3860"), 6, ACCENT))
@@ -54,6 +55,15 @@ static func button(text: String, callback: Callable, min_size: Vector2 = Vector2
 	b.add_theme_color_override("font_disabled_color", Color("#5a566a"))
 	b.pressed.connect(callback)
 	return b
+
+
+## Gives every kit button under `n` the height the touch layout now asks for, for screens that
+## are laid out again in place rather than rebuilt.
+static func retap(n: Node) -> void:
+	if n is Button and n.has_meta("tap_base"):
+		n.custom_minimum_size.y = UiSettings.tap_h(float(n.get_meta("tap_base")))
+	for c in n.get_children():
+		retap(c)
 
 
 static func bar(color: Color, max_value: float, value: float, size: Vector2 = Vector2(200, 16)) -> ProgressBar:

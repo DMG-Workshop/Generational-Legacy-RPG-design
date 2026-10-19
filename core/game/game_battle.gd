@@ -25,6 +25,7 @@ var immune: Dictionary = {}    # ref -> the unit's own turns left of immunity to
 var heir_skip: bool = false    # a status cost the heir this turn; any action just lets it pass
 var casts: int = 0             # numbers each ability use; the events it causes share the number
 var uses: Dictionary = {}      # "<ref>/<ability name>" -> times used this battle
+var struck: Dictionary = {}    # refs that have landed a blow this battle (First Strike)
 var feat_ready: Dictionary = {}   # ref -> {feat id -> the round from which that unit may use it again, "*" -> after any feat}
 var fields: Array = []         # ground an ability fouled: [{name, x, y, radius, from, until, statuses, source, power, color, end}]
 var _nums: Dictionary = {}     # unit index -> unit_numbers, worked out once a battle
@@ -288,8 +289,11 @@ func _rule_dealt(ref: String) -> float:
 	return m
 
 
+## A party member's guards stacked together (a stance, a ward feat, a party blessing) never take
+## off more than half of a blow: settings.party_taken_floor.
 func _taken_mult(ref: String) -> float:
-	return maxf(0.1, 1.0 + status_mod(ref, "damage_taken"))
+	var low := 0.1 if _side(ref) == "enemy" else float(GameCombat.setting("party_taken_floor"))
+	return maxf(low, 1.0 + status_mod(ref, "damage_taken"))
 
 
 ## True while a status will cost the unit its next turn for certain (stun, freeze, sleep).
@@ -607,10 +611,44 @@ func _calc_damage(power: float, mult: float, idx: int, pierce: float, crit_bonus
 		dmg *= 1.0 + damage_bonus + float(slayer_bonus.get(e["id"], 0.0))
 	dmg *= GameCombat.element_mult(element, str(e.get("element", "")))
 	dmg *= _dealt_mult(ref_of(by)) * _taken_mult(enemy_ref(idx))
-	var crit := rng.randf() < float(unit_numbers(by)["crit"]) + crit_bonus + float(weather.get("crit", 0.0)) + status_mod(ref_of(by), "crit")
+	var nums := unit_numbers(by)
+	var opening := float(nums["first_strike"]) > 0.0 and not struck.has(ref_of(by))   # First Strike: the battle's first blow
+	struck[ref_of(by)] = true
+	var roll := rng.randf()
+	var crit := opening or roll < float(nums["crit"]) + crit_bonus + float(weather.get("crit", 0.0)) + status_mod(ref_of(by), "crit")
 	if crit:
-		dmg *= float(unit_numbers(by)["crit_mult"])
+		dmg *= float(nums["crit_mult"]) + (float(nums["first_strike"]) if opening else 0.0)
+	_spend_blow_statuses(ref_of(by))
 	return {"amount": maxi(1, int(round(dmg))), "crit": crit}
+
+
+## Dragon's Breath (a keystone rule): as the fight opens the heir exhales fire over every foe, which
+## ignores armour and never fells one (it leaves the last of its life to the first blow).
+func open_with_breath() -> void:
+	var nums := unit_numbers(-1)
+	if float(nums["breath"]) <= 0.0 or result != "":
+		return
+	var power := maxf(float(nums["str"]), float(nums["mag"])) * float(nums["breath"])
+	events = []
+	casts += 1
+	var hit: Array = []
+	for i in living_enemies():
+		var e: Dictionary = enemies[i]
+		var amount := mini(int(e["hp"]) - 1, int(round(power * GameCombat.element_mult("fire", str(e.get("element", "")))))) 
+		if amount > 0:
+			_lose_hp(enemy_ref(i), amount)
+			hit.append(i)
+	events.append({"type": "cast", "by": -1, "name": "Dragon's Breath", "cast": casts, "aoe": true, "element": "fire", "targets": hit})
+	_say("%s breathes fire over the foes." % heir.name)
+
+
+## A status with "spent_on": "blow" (hidden) rides on the next blow the unit lands and ends there.
+func _spend_blow_statuses(ref: String) -> void:
+	if not statuses.has(ref):
+		return
+	for inst in status_list(ref).duplicate():
+		if GameCombat.status_def(inst["id"]).get("spent_on", "") == "blow":
+			remove_status(ref, inst["id"], "spent")
 
 
 ## A foe's chance to slip a blow: nimble kinds more often, a slowed one less, a held one never.
@@ -703,7 +741,22 @@ static func heal_amount(caster: GameHeir, patient: GameHeir, s: Dictionary) -> i
 
 
 func can_use_skill(i: int) -> bool:
-	return result == "" and can_pay(-1, skill_cost(i))
+	return result == "" and skill_unlocked(i) and not skill_used_up(i) and can_pay(-1, skill_cost(i))
+
+
+## Whether the heir's level has opened class skill `i` (see GameSkills).
+func skill_unlocked(i: int) -> bool:
+	return GameSkills.unlocked(heir, i)
+
+
+## A once-a-battle skill the unit has already used in this fight.
+func unit_skill_used_up(by: int, i: int) -> bool:
+	var s := GameSkillTree.skill(_unit(by), i)
+	return GameSkills.is_once(s) and int(uses.get("%s/%s" % [ref_of(by), s.get("name", "")], 0)) > 0
+
+
+func skill_used_up(i: int) -> bool:
+	return unit_skill_used_up(-1, i)
 
 
 func use_skill(i: int, target: int) -> void:
@@ -863,13 +916,21 @@ func _spend_feat(by: int, id: String) -> void:
 	_say("%s costs %s %d HP." % [GameFeats.feat_name(id), u.name, cost])
 
 
-## Execute and its like strike harder at a foe already badly hurt.
-func _wound_mult(ab: Dictionary, i: int) -> float:
-	if not ab.has("vs_wounded"):
-		return 1.0
-	var w: Dictionary = ab["vs_wounded"]
+## Execute and its like strike harder at a foe already badly hurt; a bane ({"undead": 1.5}) at a
+## foe of that tag (see data/creatures).
+func _foe_mult(ab: Dictionary, i: int) -> float:
+	var m := 1.0
 	var e: Dictionary = enemies[i]
-	return float(w["mult"]) if float(e["hp"]) < float(e["max_hp"]) * float(w["below"]) else 1.0
+	if ab.has("vs_wounded"):
+		var w: Dictionary = ab["vs_wounded"]
+		if float(e["hp"]) < float(e["max_hp"]) * float(w["below"]):
+			m = float(w["mult"])
+	if ab.has("bane"):
+		var tags: Array = e.get("tags", [])
+		for tag in ab["bane"]:
+			if tag in tags:
+				m *= float(ab["bane"][tag])
+	return m
 
 
 ## Ground an area leaves fouled (caltrops, a mire): from the next round, for the turns its "field"
@@ -982,7 +1043,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 					t = first_target()
 					if t < 0:
 						break
-				var took := _hit_enemy(t, power, mult * _wound_mult(ab, t), pierce, cb, by, el, casts)
+				var took := _hit_enemy(t, power, mult * _foe_mult(ab, t), pierce, cb, by, el, casts)
 				if took >= 0:
 					dealt += took
 					landed[t] = true
@@ -993,7 +1054,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 		else:
 			for h in hits:
 				if enemies[h[0]]["hp"] > 0:
-					var took := _hit_enemy(h[0], power, mult * float(h[1]) * _wound_mult(ab, h[0]), pierce, cb, by, el, casts)
+					var took := _hit_enemy(h[0], power, mult * float(h[1]) * _foe_mult(ab, h[0]), pierce, cb, by, el, casts)
 					if took < 0:
 						missed[h[0]] = true
 					else:
@@ -1031,6 +1092,8 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 				else:
 					var ai := _index(r)
 					_heal_ally(ai, heal_amount(u, allies[ai], ab), name, by)
+		elif target >= 0 and target < allies.size() and allies[target].hp > 0:   # a single heal aimed at a companion
+			_heal_ally(target, heal_amount(u, allies[target], ab), name, by)
 		else:   # a class heal mends its user, or a companion tends the heir
 			_heal_player(heal_amount(u, heir, ab), name, by)
 	if ab.get("cleanse", false):
@@ -1376,7 +1439,9 @@ func unit_numbers(by: int) -> Dictionary:
 			"dodge": 0.0 if no_dodge else u.dodge_chance(), "def": u.defense(), "max_hp": u.max_hp(), "max_mp": u.max_mp(),
 			"no_dodge": no_dodge, "blood": GameSkillTree.has_rule(u, "blood_magic"),
 			"crit_mult": float(GameSkillTree.rule(u, "crit_mult").get("mult", 1.75)) + u.trait_total("crit_damage"),
-			"wrath": float(GameSkillTree.rule(u, "wrath").get("max", 0.0)), "dealt": 1.0 + float(glass.get("dealt", 0.0)),
+			"wrath": float(GameSkillTree.rule(u, "wrath").get("max", 0.0)),
+			"first_strike": float(GameSkillTree.rule(u, "first_strike").get("bonus", 0.0)),
+			"breath": float(GameSkillTree.rule(u, "dragon_breath").get("mult", 0.0)), "dealt": 1.0 + float(glass.get("dealt", 0.0)),
 			"taken": 1.0 + float(glass.get("taken", 0.0)), "mom": float(GameSkillTree.rule(u, "mind_over_matter").get("share", 0.0)),
 			"mom_per_mp": float(GameSkillTree.rule(u, "mind_over_matter").get("hp_per_mp", 1.0)),
 			"mp_regen": u.trait_total("mp_regen"),
@@ -1413,7 +1478,7 @@ func expected_hits(by: int, ab: Dictionary, target: int, hits: Array = [], nums:
 		if i < 0:
 			continue
 		var e: Dictionary = enemies[i]
-		var dmg := maxf(1.0, power * mult * float(h[1]) * _wound_mult(ab, i) - float(e["def"]) * (1.0 - pierce) * 0.5) * base * (1.0 - foe_dodge(i))
+		var dmg := maxf(1.0, power * mult * float(h[1]) * _foe_mult(ab, i) - float(e["def"]) * (1.0 - pierce) * 0.5) * base * (1.0 - foe_dodge(i))
 		if by < 0:
 			dmg *= 1.0 + damage_bonus + float(slayer_bonus.get(e["id"], 0.0))
 		if el != "":

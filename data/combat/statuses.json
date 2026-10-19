@@ -75,6 +75,26 @@
       "id": "haste", "name": "Haste", "tag": "HST", "color": "#ffd24a", "harmful": false,
       "mods": {"extra_action": 1.0, "dodge": 0.25}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.4,
       "text": {"apply": "{t} quickens.", "extra": "{t} moves again!", "end": "{t} slows to normal."}
+    },
+    {
+      "id": "guarded", "name": "Guarded", "tag": "GRD", "color": "#9fb4c8", "harmful": false,
+      "mods": {"damage_taken": -1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.25,
+      "text": {"apply": "{t} sets their guard.", "end": "{t} lowers their guard."}
+    },
+    {
+      "id": "focused", "name": "Focused", "tag": "FOC", "color": "#ffd27a", "harmful": false,
+      "mods": {"crit": 1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.2,
+      "text": {"apply": "{t} picks out the weak spots.", "end": "{t}'s focus slips."}
+    },
+    {
+      "id": "evasive", "name": "Evasive", "tag": "EVA", "color": "#b8e0ff", "harmful": false,
+      "mods": {"dodge": 1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.25,
+      "text": {"apply": "{t} is hard to pin down.", "end": "{t} stands still again."}
+    },
+    {
+      "id": "empowered", "name": "Empowered", "tag": "EMP", "color": "#ff9a5a", "harmful": false,
+      "mods": {"damage_dealt": 1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.2,
+      "text": {"apply": "Power surges through {t}.", "end": "{t}'s surge of power fades."}
     }
   ]
 }

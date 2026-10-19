@@ -14,10 +14,34 @@ which git ignores.
 
 On a phone the game starts at 125% text size. Change it under **Menu > Text size**
 (100%, 125%, 150%); the choice is saved on the device, not in the dynasty save.
+Every screen fits a phone at every size (checked at 1280x720, 1600x720, 2400x1080,
+1280x800 and 960x540, the 20:9 shapes with a notch): what does not fit scrolls.
+On a short screen the skill tree moves its points, buttons and tree tabs into the
+side column so the tree keeps the height.
+
+**Menu > Touch layout** (under Text size) picks the layout: **Auto** (the default)
+gives fingertip-sized buttons and "tap" / "hold" in the help on phones and tablets
+only, so a laptop with a touch screen keeps the desktop layout; **On** and **Off**
+force it either way, and a change mid-fight resizes the fight's buttons at once. It is saved beside the text size in `user://settings.cfg`
+(`[ui] touch_layout`); a settings file from before it reads as Auto.
+
 Hold a finger on anything for half a second to read what a mouse would show on
 hover (traits, skills, spells, feats, prices); a quick tap acts as a click; drag
-to scroll. The Android back button closes the top panel or opens the menu, and
-the game saves whenever it is sent to the background.
+to scroll. This works on any touch screen, whatever the touch layout says. A tap
+never pops up the engine's own tooltip or a hover preview: only the hold bubble
+shows. The mouse keeps its tooltips and hover as before, also on a laptop where
+finger and mouse take turns on the same control. The Android back button
+closes the top panel or opens the menu, and the game saves whenever it is sent to
+the background. There is no Quit button on phones and tablets (iOS does not allow
+an app to quit itself; Android apps are left with Home or Back); the desktop's
+title screen keeps it.
+
+In the skill tree a node that is open but cannot be bought now (too few points,
+or mid-fight) has a green outline on a dark fill, apart from the green nodes that
+can be bought and the dim locked ones; choosing it says why not now. Keystones
+show the same green outline while they wait and a violet one while locked. A gold
+(partly taken) node looks the same whether or not its next rank can be bought
+now; choosing it tells.
 
 ## Android, from Pop!_OS
 

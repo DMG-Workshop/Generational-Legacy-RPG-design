@@ -1,5 +1,6 @@
 ## Skill trees: nodes an heir or a companion unlocks with skill points. Each base class has a tree,
-## a hybrid draws on both its parents' trees, and every unit shares the bloodline tree. A node has
+## a hybrid draws on both its parents' trees; each starting race has a bloodline tree (a tree with
+## "race" instead of "class"), and a half race draws on both its parent races'. A node has
 ## ranks; each rank costs points and adds its effect again: core stats (flat or percent), derived
 ## bonuses read like trait effects (max_hp, luck, defense...), and upgrades to class skills, spells
 ## and feats. Keystones (data/keystones) rewrite one combat rule and carry a real drawback.
@@ -11,13 +12,15 @@
 ## tree_points (unspent), tree_level (milestones granted through this level), tree_news (points
 ## the journal has yet to tell). A companion keeps the same in its party record under "tree".
 ## Effects are worked out once per change (fx); anything that changes ranks calls changed().
+## Ranks on a tree the unit's class and race cannot use count for nothing; inherit and reshape
+## re-cast what the blood carries into the unit's own bloodline and refund what was bought.
 class_name GameSkillTree
 extends RefCounted
 
 const CORE := ["str", "mag", "agi", "vit"]
 const BONUS := ["max_hp", "max_mp", "melee_damage", "element_power", "defense", "reflexes", "luck", "crit_damage",
 	"healing_power", "resist", "mp_regen", "fire_resistance", "persuasion", "stealth", "work_gold"]
-const RULES := ["no_dodge", "wrath", "glass", "blood_magic", "mind_over_matter", "crit_mult", "party_heals"]
+const RULES := ["no_dodge", "wrath", "glass", "blood_magic", "mind_over_matter", "crit_mult", "party_heals", "first_strike", "dragon_breath"]
 const MODS := ["mult", "cost", "heal", "radius", "range", "angle", "length", "width", "turns", "cooldown", "crit", "pierce"]
 const AREA := {"radius": ["burst"], "range": ["cone"], "angle": ["cone"], "length": ["line"], "width": ["line"]}
 const NODE_KEYS := ["id", "tier", "col", "requires", "cost", "max_rank"]
@@ -32,10 +35,10 @@ static var _order: Array = []            # tree ids, data order
 static var _nodes: Dictionary = {}       # node id -> node (keystones carry their keystone's name and effect)
 static var _children: Dictionary = {}    # node id -> ids of nodes that list it as a prerequisite
 static var _keystones: Dictionary = {}
-static var _for_class: Dictionary = {}   # class id -> tree ids
-static var _paths: Dictionary = {}       # class id -> node ids in the order the autopilot buys ranks
+static var _for_class: Dictionary = {}   # "class|race" -> tree ids
+static var _paths: Dictionary = {}       # "class|race" -> node ids in the order the autopilot buys ranks
 static var _epoch: int = 0               # bumps when the data is read again, so cached effects go stale
-static var _fx_cache: Dictionary = {}    # "class|ranks|free" -> fx, cleared with the data
+static var _fx_cache: Dictionary = {}    # "class|race|ranks" -> fx, cleared with the data
 
 
 static func _index() -> void:
@@ -128,24 +131,59 @@ static func children_of(id: String) -> Array:
 	return _children.get(id, [])
 
 
-## The trees a class draws on: its own (a hybrid, its parents'), then the bloodline's.
-static func trees_for(class_id: String) -> Array:
+## The trees a class and race draw on: the class's own (a hybrid, its parents'), then the race's
+## bloodline (a half race, both its parent races'). No race ("") gives the class trees alone.
+static func trees_for(class_id: String, race_id: String = "") -> Array:
 	_index()
-	if not _for_class.has(class_id):
-		var own: Array = []
-		for tid in _order:
-			if str(_trees[tid].get("class", "")) == class_id:
-				own.append(tid)
-		if own.is_empty():
-			for p in GameData.classes.get(class_id, {}).get("parents", []):
-				for tid in _order:
-					if str(_trees[tid].get("class", "")) == str(p) and tid not in own:
-						own.append(tid)
-		for tid in _order:
-			if str(_trees[tid].get("class", "")) == "":
-				own.append(tid)
-		_for_class[class_id] = own
-	return _for_class[class_id]
+	var key := "%s|%s" % [class_id, race_id]
+	if not _for_class.has(key):
+		var own: Array = _owned("class", class_id, GameData.classes)
+		if race_id != "":
+			own.append_array(_owned("race", race_id, GameData.races))
+		_for_class[key] = own
+	return _for_class[key]
+
+
+## The trees whose `kind` ("class" or "race") is `id`, or failing that its parents'.
+static func _owned(kind: String, id: String, table: Dictionary) -> Array:
+	var out: Array = []
+	for tid in _order:
+		if _trees[tid].has(kind) and str(_trees[tid][kind]) == id:
+			out.append(tid)
+	if out.is_empty():
+		for p in table.get(id, {}).get("parents", []):
+			for tid in _order:
+				if _trees[tid].has(kind) and str(_trees[tid][kind]) == str(p) and tid not in out:
+					out.append(tid)
+	return out
+
+
+## The trees this unit draws on, by its class and race.
+static func trees_of(u: GameHeir) -> Array:
+	return trees_for(u.class_id, u.race_id)
+
+
+## Whether a tree is a bloodline (a race's) rather than a class's.
+static func is_blood(tree_id: String) -> bool:
+	return tree(tree_id).has("race")
+
+
+## The bloodline trees, data order.
+static func blood_ids() -> Array:
+	_index()
+	return _order.filter(func(t): return _trees[t].has("race"))
+
+
+## Whether the unit's class and race can use this node.
+static func usable(u: GameHeir, id: String) -> bool:
+	var n := node(id)
+	return not n.is_empty() and str(n["tree"]) in trees_of(u)
+
+
+## "Elven", "Dwarven": the people a bloodline tree belongs to, as a word before "blood" or "shape".
+static func people(tree_id: String) -> String:
+	var t := tree(tree_id)
+	return str(t.get("people", GameData.races.get(str(t.get("race", "")), {}).get("name", t.get("race", ""))))
 
 
 static func is_keystone(id: String) -> bool:
@@ -274,11 +312,26 @@ static func changed(u: GameHeir) -> void:
 
 ## Why the unit cannot buy the next rank of a node ("" if it can).
 static func take_block(u: GameHeir, id: String) -> String:
+	var why := path_block(u, id)
+	if why != "":
+		return why
+	var n := node(id)
+	sync(u)
+	if u.tree_points < cost(id):
+		return "%s costs %d skill point%s; %s has %s." % [n["name"], cost(id), "" if cost(id) == 1 else "s", u.name, GameText.num(u.tree_points)]
+	return ""
+
+
+## Why the node's next rank is shut to the unit whatever its points ("" if the way is open: its
+## path, its rank and its keystone allow it, and only points or the moment may still stand between).
+static func path_block(u: GameHeir, id: String) -> String:
 	var n := node(id)
 	if n.is_empty():
 		return "No such skill."
-	if str(n["tree"]) not in trees_for(u.class_id):
-		return "%s is not on a %s's paths." % [n["name"], u.cls()["name"]]
+	if str(n["tree"]) not in trees_of(u):
+		var t := tree(str(n["tree"]))
+		return "%s is not on a %s %s's paths: it belongs to %s%s." % [n["name"], u.race()["name"], u.cls()["name"],
+			"the %s blood, " % people(str(n["tree"])) if is_blood(str(n["tree"])) else "", t["name"]]
 	if rank(u, id) >= max_rank(id):
 		return "%s is mastered." % n["name"] if max_rank(id) > 1 else "%s already holds %s." % [u.name, n["name"]]
 	var req: Array = n.get("requires", [])
@@ -288,9 +341,6 @@ static func take_block(u: GameHeir, id: String) -> String:
 		var why := _keystone_block(u, str(n["keystone"]))
 		if why != "":
 			return why
-	sync(u)
-	if u.tree_points < cost(id):
-		return "%s costs %d skill point%s; %s has %s." % [n["name"], cost(id), "" if cost(id) == 1 else "s", u.name, GameText.num(u.tree_points)]
 	return ""
 
 
@@ -311,7 +361,7 @@ static func _keystone_block(u: GameHeir, kid: String) -> String:
 static func held_keystones(u: GameHeir) -> Array:
 	var out: Array = []
 	for id in u.tree_ranks.keys() + u.tree_free.keys():
-		if rank(u, str(id)) > 0 and is_keystone(str(id)) and str(node(str(id))["keystone"]) not in out:
+		if rank(u, str(id)) > 0 and is_keystone(str(id)) and usable(u, str(id)) and str(node(str(id))["keystone"]) not in out:
 			out.append(str(node(str(id))["keystone"]))
 	return out
 
@@ -437,7 +487,7 @@ static func fx(u: GameHeir) -> Dictionary:
 	# Sorted, so a tree read back from a save (keys in another order) sums its floats the same way.
 	var ids: Array = u.tree_ranks.keys() + u.tree_free.keys()
 	ids.sort()
-	var key := u.class_id
+	var key := "%s|%s" % [u.class_id, u.race_id]
 	for id in ids:
 		key += "|%s:%d" % [id, rank(u, str(id))]
 	if _fx_cache.has(key):
@@ -453,7 +503,7 @@ static func fx(u: GameHeir) -> Dictionary:
 		done[id] = true
 		var r := rank(u, str(id))
 		var n := node(str(id))
-		if r <= 0 or n.is_empty():
+		if r <= 0 or n.is_empty() or str(n["tree"]) not in trees_of(u):   # ranks the unit cannot use count for nothing
 			continue
 		_add_effect(f, n.get("effect", {}), float(r))
 		if n.has("keystone"):
@@ -669,19 +719,27 @@ static func _count_of(u: GameHeir, rule_: Dictionary) -> Array:
 	return out
 
 
-## At succession the child wakes with part of what the parent's blood had awakened, free: a share of
-## the parent's inheritable ranks (bought or carried), shallow nodes and first ranks first, so what
-## passes down always holds together. The last part rank is rolled on the dynasty's dice.
-static func inherit(d: GameDynasty, parent: GameHeir, child: GameHeir, msgs: Array) -> void:
+## The parent's inheritable ranks on any bloodline tree (bought or carried): id -> ranks, and their sum.
+static func _carried(parent: GameHeir) -> Dictionary:
 	var have := {}
 	var total := 0
-	for tid in _order:
-		if str(_trees[tid].get("class", "")) != "":
-			continue
+	for tid in blood_ids():
 		for id in nodes_of(tid):
 			if inheritable(id) and rank(parent, id) > 0:
 				have[id] = rank(parent, id)
 				total += int(have[id])
+	return {"have": have, "total": total}
+
+
+## At succession the child wakes with part of what the parent's blood had awakened, free: a share of
+## the parent's inheritable ranks (bought or carried), shallow nodes and first ranks first, so what
+## passes down always holds together. The last part rank is rolled on the dynasty's dice. Ranks on
+## a bloodline the child's race cannot use are re-cast, rank for rank, into the child's own (see
+## _recast): a marriage the player did not choose must not cost the house what its blood carries.
+static func inherit(d: GameDynasty, parent: GameHeir, child: GameHeir, msgs: Array) -> void:
+	var c := _carried(parent)
+	var have: Dictionary = c["have"]
+	var total := int(c["total"])
 	child.tree_free = {}
 	changed(child)
 	if total == 0:
@@ -700,7 +758,7 @@ static func inherit(d: GameDynasty, parent: GameHeir, child: GameHeir, msgs: Arr
 		for id in order:
 			if given >= n:
 				break
-			if int(have[id]) < r or int(child.tree_free.get(id, 0)) != r - 1:
+			if not usable(child, id) or int(have[id]) < r or int(child.tree_free.get(id, 0)) != r - 1:
 				continue
 			var req: Array = node(id).get("requires", [])
 			if not req.is_empty() and not req.any(func(q): return int(child.tree_free.get(str(q), 0)) > 0):
@@ -712,18 +770,159 @@ static func inherit(d: GameDynasty, parent: GameHeir, child: GameHeir, msgs: Arr
 			r += 1
 			if r > 99:
 				break
+	var direct := child.tree_free.duplicate()
+	var recast: Dictionary = _recast(child, n - given)
 	changed(child)
 	var why := "" if (s["why"] as Array).is_empty() else "; " + "; ".join(PackedStringArray(s["why"]))
+	var placed := given + _sum(recast)
 	var text: String
-	if given == 0:
+	if placed == 0:
 		text = "None of the %d rank%s %s's blood had awakened stirs in %s%s." % [total, "" if total == 1 else "s", parent.name, child.name, why]
+	elif given == 0:
+		text = "The blood remembers: %s wakes with %d of %s's %d rank%s%s." % [child.name, placed, parent.name, total, "" if total == 1 else "s", why]
 	else:
 		var parts: Array = []
 		for id in order:
-			if child.tree_free.has(id):
-				parts.append("%s %d/%d" % [node_name(id), int(child.tree_free[id]), max_rank(id)])
-		text = "The blood remembers: %s wakes with %s (%d of %s's %d rank%s%s)." % [child.name, _and_list(parts), given, parent.name, total, "" if total == 1 else "s", why]
+			if direct.has(id):
+				parts.append("%s %d/%d" % [node_name(id), int(direct[id]), max_rank(id)])
+		text = "The blood remembers: %s wakes with %s (%d of %s's %d rank%s%s)." % [child.name, _and_list(parts), placed, parent.name, total, "" if total == 1 else "s", why]
+	if not recast.is_empty():
+		var from: Array = []
+		for id in order:
+			if not usable(child, id) and people(str(node(id)["tree"])) not in from:
+				from.append(people(str(node(id)["tree"])))
+		text += " %s's %s blood takes %s shape: %s." % [child.name, _and_list(from), _shape_of(recast), _and_list(_rank_parts(child, recast))]
+	if placed < n:
+		var lost := n - placed
+		text += " %d rank%s find%s no place in %s's blood and fade%s." % [lost, "" if lost == 1 else "s", "s" if lost == 1 else "", child.name, "s" if lost == 1 else ""]
 	msgs.append(text)
+
+
+## Places `k` free ranks on the unit's own bloodline trees, along its class's path (the autopilot's
+## order, so the blood takes the shape the heir would have chosen first): a rank only where the path
+## has reached it, below the node's max, its prerequisite already carried. Returns id -> ranks placed
+## (fewer than `k` only when the unit's bloodline is full).
+static func _recast(u: GameHeir, k: int) -> Dictionary:
+	var out := {}
+	if k <= 0:
+		return out
+	var walk: Array = path_of(u.class_id, u.race_id).filter(func(id): return inheritable(id) and is_blood(str(node(id)["tree"])))
+	var grew := true
+	while k > 0 and grew:
+		grew = false
+		var seen := {}
+		for id in walk:
+			seen[id] = int(seen.get(id, 0)) + 1
+			if k <= 0:
+				break
+			if int(u.tree_free.get(id, 0)) >= int(seen[id]) or rank(u, id) >= max_rank(id):
+				continue
+			var req: Array = node(id).get("requires", [])
+			if not req.is_empty() and not req.any(func(q): return int(u.tree_free.get(str(q), 0)) > 0):
+				continue
+			u.tree_free[id] = int(u.tree_free.get(id, 0)) + 1
+			out[id] = int(out.get(id, 0)) + 1
+			k -= 1
+			grew = true
+	changed(u)
+	return out
+
+
+static func _sum(ranks: Dictionary) -> int:
+	var n := 0
+	for id in ranks:
+		n += int(ranks[id])
+	return n
+
+
+## "Elven Grace 1/3" for each node ranks were placed on, shallow first, as the node now stands.
+static func _rank_parts(u: GameHeir, placed: Dictionary) -> Array:
+	var ids: Array = placed.keys()
+	ids.sort_custom(func(a, b): return int(node(a)["tier"]) < int(node(b)["tier"]) or (int(node(a)["tier"]) == int(node(b)["tier"]) and _pos(a) < _pos(b)))
+	return ids.map(func(id): return "%s %d/%d" % [node_name(id), int(u.tree_free.get(id, 0)), max_rank(id)])
+
+
+## "Elven", or "Human and Elven" for a half race whose ranks landed on both its bloodlines.
+static func _shape_of(placed: Dictionary) -> String:
+	var names: Array = []
+	for tid in blood_ids():
+		if placed.keys().any(func(id): return str(node(id)["tree"]) == tid):
+			names.append(people(tid))
+	return _and_list(names)
+
+
+## For the succession screen, no dice: about how many ranks would pass to `child` straight
+## ("direct", on bloodlines the child shares) and how many would be re-cast into its own.
+static func inherit_preview(parent: GameHeir, child: GameHeir) -> Dictionary:
+	var c := _carried(parent)
+	var s := inherit_share(child)
+	var n := int(floor(float(c["total"]) * float(s["share"]) + 0.000001))
+	var open := 0
+	for id in c["have"]:
+		if usable(child, str(id)):
+			open += int(c["have"][id])
+	var direct := mini(n, open)
+	return {"direct": direct, "recast": n - direct, "share": float(s["share"]), "why": s["why"], "total": int(c["total"])}
+
+
+## One line for the succession screen: what of the parent's blood the child is about to wake with.
+static func preview_text(parent: GameHeir, child: GameHeir) -> String:
+	var v := inherit_preview(parent, child)
+	var direct := int(v["direct"])
+	var recast := int(v["recast"])
+	if direct + recast <= 0:
+		return "Blood: nothing yet to inherit"
+	if recast <= 0:
+		return "Blood: about %d inherited rank%s carry over" % [direct, "" if direct == 1 else "s"]
+	var shape := _and_list(trees_of(child).filter(func(t): return is_blood(t)).map(func(t): return people(t)))
+	if direct <= 0:
+		return "Blood: about %d rank%s take %s shape" % [recast, "" if recast == 1 else "s", shape]
+	return "Blood: about %d carry over, about %d take %s shape" % [direct, recast, shape]
+
+
+## Fits the unit's ranks to its class and race as they are now (a save from before bloodlines had
+## races, a companion record, any future change of race): bought ranks on trees it cannot use come
+## back as points, carried ranks are re-cast into its own bloodline. What moved is said in `msgs`.
+## Returns whether anything changed.
+static func reshape(u: GameHeir, msgs: Array) -> bool:
+	var back := {}
+	for id in u.tree_ranks.keys():
+		if not usable(u, str(id)):
+			back[id] = int(u.tree_ranks[id])
+			u.tree_ranks.erase(id)
+	var off := 0
+	var from: Array = []
+	for id in u.tree_free.keys():
+		if not usable(u, str(id)):
+			off += int(u.tree_free[id])
+			var tid := str(node(str(id))["tree"])
+			var who := people(tid) if is_blood(tid) else str(tree(tid).get("name", tid))
+			if who not in from:
+				from.append(who)
+			u.tree_free.erase(id)
+	if back.is_empty() and off == 0:
+		return false
+	var refund := _cost_of(back)
+	u.tree_points += refund
+	changed(u)
+	if off > 0:
+		var placed := _recast(u, off)
+		var text: String
+		if placed.is_empty():
+			text = "The old %s blood finds no place in %s" % [_and_list(from), u.name]
+		else:
+			text = "The old %s blood settles into its %s shape: %s" % [_and_list(from), _shape_of(placed), _and_list(_rank_parts(u, placed))]
+		var lost := off - _sum(placed)
+		if lost > 0 and not placed.is_empty():
+			text += " (%d rank%s fade%s)" % [lost, "" if lost == 1 else "s", "s" if lost == 1 else ""]
+		msgs.append(text + ".")
+	if refund > 0:
+		var parts: Array = []
+		for id in back:
+			parts.append("%s %d/%d" % [node_name(str(id)), int(back[id]), max_rank(str(id))])
+		msgs.append("%s cannot use the %s learned before; %s skill point%s come%s back." % [u.name, _and_list(parts), GameText.num(refund),
+			"" if refund == 1 else "s", "s" if refund == 1 else ""])
+	return true
 
 
 static func _pos(id: String) -> int:
@@ -757,6 +956,23 @@ static func attach(u: GameHeir, m: Dictionary) -> void:
 	var t: Dictionary = m.get("tree", {})
 	var auto := 0
 	var plan: Dictionary = t.get("plan", {})
+	if not t.is_empty():
+		# Ranks on trees this companion's class and race cannot use (a record from before bloodlines
+		# had races) come back as points; the path spends them again unless the player shaped the tree.
+		var back := {}
+		for id in t["ranks"]:
+			if str(node(str(id)).get("tree", "")) not in trees_of(u):
+				back[id] = int(t["ranks"][id])
+		for id in plan.keys():
+			if str(node(str(id)).get("tree", "")) not in trees_of(u):
+				plan.erase(id)
+		if not back.is_empty():
+			t = t.duplicate(true)
+			for id in back:
+				t["ranks"].erase(id)
+			t["points"] = int(t["points"]) + _cost_of(back)
+			if not bool(t.get("hand", false)):
+				auto += _cost_of(back)
 	if t.is_empty() or int(t["level"]) > u.level:
 		if bool(t.get("hand", false)):
 			plan = plan.duplicate()
@@ -884,12 +1100,13 @@ static func worth(id: String, class_id: String) -> float:
 ## The order in which the autopilot buys ranks for a class, worked out once: each step takes the
 ## open rank worth the most per point, a node not yet started counting half of what it opens up.
 ## Keystones that do not suit the class are left out; so is a second keystone of the same rule.
-static func path_of(class_id: String) -> Array:
+static func path_of(class_id: String, race_id: String = "") -> Array:
 	_index()
-	if _paths.has(class_id):
-		return _paths[class_id]
+	var pkey := "%s|%s" % [class_id, race_id]
+	if _paths.has(pkey):
+		return _paths[pkey]
 	var ids: Array = []
-	for tid in trees_for(class_id):
+	for tid in trees_for(class_id, race_id):
 		ids.append_array(nodes_of(tid))
 	var val := {}
 	for id in ids:
@@ -932,7 +1149,7 @@ static func path_of(class_id: String) -> Array:
 			var k := keystone(str(node(pick)["keystone"]))
 			rules[str(k.get("rule", ""))] = str(k["id"])
 		out.append(pick)
-	_paths[class_id] = out
+	_paths[pkey] = out
 	return out
 
 
@@ -945,7 +1162,7 @@ static func auto_spend(u: GameHeir, budget: int = -1) -> int:
 		return 0
 	var seen := {}
 	var bought := 0
-	for id in path_of(u.class_id):
+	for id in path_of(u.class_id, u.race_id):
 		seen[id] = int(seen.get(id, 0)) + 1
 		if rank(u, id) >= int(seen[id]) or cost(id) > left:
 			continue
@@ -993,6 +1210,11 @@ static func bot_tick(d: GameDynasty) -> void:
 static func on_years(d: GameDynasty, msgs: Array) -> void:
 	var h := d.heir
 	sync(h)
+	if h.has_meta("tree_note"):   # the old shared blood found its race's shape in a loaded save
+		var note := str(h.get_meta("tree_note"))
+		h.remove_meta("tree_note")
+		msgs.append(note)
+		d._say(note)
 	if h.tree_news <= 0:
 		return
 	var line := "%s earns %s%s." % [h.name, "a skill point" if h.tree_news == 1 else "%s skill points" % GameText.num(h.tree_news),
@@ -1029,6 +1251,11 @@ static func load_into(u: GameHeir, v: Variant) -> void:
 	# Ranks of nodes the data has since dropped, or capped lower, come back as points.
 	u.tree_points = maxi(u.tree_points, points_at(u.tree_level) - spent(u))
 	changed(u)
+	# A save from before bloodlines had races: the old shared blood takes the heir's race's shape.
+	var notes: Array = []
+	if reshape(u, notes):
+		u.tree_points = maxi(u.tree_points, points_at(u.tree_level) - spent(u))
+		u.set_meta("tree_note", " ".join(PackedStringArray(notes)))
 
 
 static func _ranks(v: Variant) -> Dictionary:
@@ -1100,9 +1327,16 @@ static func target_name(m: Dictionary, u: GameHeir = null) -> String:
 	if m.has("skill"):
 		var want := str(m["skill"])
 		var cid := u.class_id if u != null else ""
+		var same: Array = []
 		for s in GameData.classes.get(cid, {}).get("skills", []):
-			if str(s.get("id", "")) == want or str(s.get("type", "")) == want:
+			if str(s.get("id", "")) == want:
 				return str(s["name"])
+			if str(s.get("type", "")) == want:
+				same.append(str(s["name"]))
+		if same.size() == 1:
+			return same[0]
+		if same.size() > 1:
+			return "%s skills (%s and %d more)" % [want.capitalize(), same[0], same.size() - 1]
 		return {"damage": "Class strike", "heal": "Class heal"}.get(want, want)
 	if m.has("spell"):
 		return "Every spell" if str(m["spell"]) == "*" else str(GameCombat.spell(str(m["spell"])).get("name", m["spell"]))
@@ -1168,11 +1402,17 @@ static func summary_lines(d: GameDynasty) -> Array:
 	var out: Array = []
 	var pts := points(h)
 	var taken: Array = []
-	for tid in trees_for(h.class_id):
+	var carried := 0
+	for tid in trees_of(h):
 		for id in nodes_of(tid):
 			if rank(h, id) > 0:
 				taken.append(id)
+			if is_blood(tid):
+				carried += int(h.tree_free.get(id, 0))
 	out.append("%s skill point%s to spend, %d node%s taken." % [GameText.num(pts), "" if pts == 1 else "s", taken.size(), "" if taken.size() == 1 else "s"])
+	var folk := trees_of(h).filter(func(t): return is_blood(t))
+	if not folk.is_empty():
+		out.append("Blood: %s, %d rank%s carried." % [" and ".join(PackedStringArray(folk.map(func(t): return "%s - %s" % [str(GameData.races.get(str(tree(t)["race"]), {}).get("name", "")), tree(t)["name"]]))), carried, "" if carried == 1 else "s"])
 	var keys := held_keystones(h).map(func(k): return str(keystone(k)["name"]))
 	if not keys.is_empty():
 		out.append("Keystone: " + _and_list(keys))
@@ -1225,19 +1465,24 @@ static func validate() -> Array:
 			if not GameData.classes.has(str(c)):
 				out.append("keystone %s suits unknown class '%s'" % [k, c])
 	var seen := {}
-	var bloodlines := 0
+	var by_race := {}
 	for tid in _order:
 		var t: Dictionary = _trees[tid]
 		var cid := str(t.get("class", ""))
-		if cid == "":
-			bloodlines += 1
+		if t.has("class") == t.has("race"):
+			out.append("tree %s must name exactly one of class and race" % tid)
+		elif t.has("race"):
+			var rid := str(t["race"])
+			if not GameData.races.has(rid) or GameData.races[rid].has("parents"):
+				out.append("tree %s: '%s' is not a starting race" % [tid, rid])
+			by_race[rid] = int(by_race.get(rid, 0)) + 1
 		elif not GameData.classes.has(cid) or GameData.classes[cid].has("parents"):
 			out.append("tree %s: '%s' is not a base class" % [tid, cid])
 		if str(t.get("name", "")) == "":
 			out.append("tree %s has no name" % tid)
 		var users: Array = []
 		for c in GameData.classes:
-			if tid in trees_for(c):
+			if tid in trees_for(c, str(t.get("race", "human"))):
 				users.append(c)
 		var places := {}
 		var ids: Array = nodes_of(tid)
@@ -1276,16 +1521,20 @@ static func validate() -> Array:
 					out.append("%s requires %s, which is not on an earlier tier" % [what, r])
 				elif bool(n.get("inheritable", false)) and not bool(p.get("inheritable", false)):
 					out.append("%s is inheritable but its prerequisite %s is not" % [what, r])
-			if bool(n.get("inheritable", false)) and cid != "":
+			if bool(n.get("inheritable", false)) and not t.has("race"):
 				out.append("%s: only bloodline nodes are inheritable" % what)
 			if (n.get("requires", []) as Array).is_empty() and int(n.get("tier", 0)) != 1:
 				out.append("%s has no prerequisites but is not on tier 1" % what)
 			out.append_array(_effect_problems(what, n.get("effect", {}), users))
 		out.append_array(_graph_problems(tid))
-	if bloodlines != 1:
-		out.append("there must be exactly one bloodline tree (a tree with no class), not %d" % bloodlines)
+	for r in GameData.races:
+		var rp: Array = GameData.races[r].get("parents", [])
+		if rp.is_empty() and int(by_race.get(r, 0)) != 1:
+			out.append("race %s must have exactly one bloodline tree, not %d" % [r, int(by_race.get(r, 0))])
+		if trees_for("", str(r)).is_empty():
+			out.append("race %s draws on no bloodline tree" % r)
 	for c in GameData.classes:
-		if trees_for(c).size() < 2:
+		if trees_for(c, "human").size() < 2:
 			out.append("class %s draws on no class tree" % c)
 	return out
 

@@ -1,0 +1,304 @@
+{
+ "id": "blood_halfling",
+ "name": "Luck of the Hearth",
+ "race": "halfling",
+ "people": "Halfling",
+ "description": "Halfling families are lucky the way old shoes are comfortable: it has been worn in over a long time. Marked nodes pass, in part, to the next heir.",
+ "nodes": [
+  {
+   "id": "ha_nimble",
+   "name": "Nimble Fingers",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "agi": {
+      "flat": 2
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_hearth",
+   "name": "Hearth-Fed",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.02,
+     "resist": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_pipe",
+   "name": "Pipe and Tale",
+   "tier": 1,
+   "col": 4,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "persuasion": 0.04
+    }
+   }
+  },
+  {
+   "id": "ha_slip",
+   "name": "Slip Through",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "ha_nimble"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.008
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_lucky",
+   "name": "Lucky Break",
+   "tier": 2,
+   "col": 1,
+   "requires": [
+    "ha_nimble"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "luck": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_stout",
+   "name": "Stout Heart",
+   "tier": 2,
+   "col": 3,
+   "requires": [
+    "ha_hearth"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_pantry",
+   "name": "Full Pantry",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "ha_pipe"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "ha_throw",
+   "name": "Sure Throw",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "ha_slip"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.025,
+     "element_power": 0.025
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_quiet",
+   "name": "Quiet Feet",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "ha_lucky"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "stealth": 0.06
+    }
+   }
+  },
+  {
+   "id": "ha_fortune",
+   "name": "Family Fortune",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "ha_lucky",
+    "ha_stout"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.015
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_breakfast",
+   "name": "Second Breakfast",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "ha_stout"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_underfoot",
+   "name": "Underfoot",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "ha_throw"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    }
+   }
+  },
+  {
+   "id": "ha_charm",
+   "name": "Lucky Charm",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "ha_quiet"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "*",
+      "crit": 0.03
+     },
+     {
+      "skill": "damage",
+      "crit": 0.02
+     }
+    ]
+   }
+  },
+  {
+   "id": "ha_kin",
+   "name": "Kith and Kin",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "ha_fortune"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.025,
+     "defense": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_lucky_star",
+   "keystone": "lucky_star",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "ha_charm"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "ha_hearths",
+   "name": "A Hundred Hearths",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "ha_kin",
+    "ha_breakfast"
+   ],
+   "cost": 1,
+   "max_rank": 5,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "ha_saga",
+   "name": "Tales by the Fire",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "ha_hearths"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Every cousin tells it differently, and every version has you in it.",
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "luck": 0.001
+    }
+   }
+  }
+ ]
+}

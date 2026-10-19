@@ -325,6 +325,157 @@
    "text": "The house will not end here: up to +60% damage as your HP runs out.",
    "drawback": "-5% max HP.",
    "suits": []
+  },
+  {
+   "id": "elder_mind",
+   "name": "Elder Mind",
+   "rule": "mind_over_matter",
+   "params": {
+    "share": 0.35,
+    "hp_per_mp": 2.0
+   },
+   "effect": {
+    "bonus": {
+     "max_mp": 0.15
+    }
+   },
+   "text": "Centuries of discipline: 35% of each blow that gets through is paid from MP instead (2 HP per MP).",
+   "drawback": "Hard fights drain the mana your spells need.",
+   "suits": [
+    "mage",
+    "necromancer",
+    "warlock",
+    "cleric",
+    "druid",
+    "shaman",
+    "arcane_trickster"
+   ]
+  },
+  {
+   "id": "mountain_heart",
+   "name": "Mountain's Heart",
+   "rule": "no_dodge",
+   "params": {},
+   "effect": {
+    "bonus": {
+     "defense": 0.6,
+     "max_hp": 0.12
+    }
+   },
+   "text": "Stand like the mountain: +60% defense and +12% max HP.",
+   "drawback": "You never dodge.",
+   "suits": [
+    "warrior",
+    "paladin",
+    "templar",
+    "dread_knight",
+    "warden",
+    "cleric"
+   ]
+  },
+  {
+   "id": "blood_fury",
+   "name": "Blood Fury",
+   "rule": "wrath",
+   "params": {
+    "max": 0.55
+   },
+   "effect": {
+    "bonus": {
+     "healing_power": -0.2,
+     "max_hp": 0.05
+    }
+   },
+   "text": "The old fury of the clans: up to +55% damage as your HP runs out, +5% max HP.",
+   "drawback": "-20% to your own heals and potions.",
+   "suits": [
+    "warrior",
+    "duelist",
+    "warden",
+    "dread_knight",
+    "ninja"
+   ]
+  },
+  {
+   "id": "lucky_star",
+   "name": "Lucky Star",
+   "rule": "crit_mult",
+   "params": {
+    "mult": 2.3
+   },
+   "effect": {
+    "bonus": {
+     "max_hp": -0.05
+    }
+   },
+   "text": "Born under a lucky star: critical hits deal x2.3 instead of x1.75.",
+   "drawback": "-5% max HP.",
+   "suits": [
+    "rogue",
+    "ranger",
+    "ninja",
+    "duelist",
+    "monk",
+    "beastmaster"
+   ]
+  },
+  {
+   "id": "unstable_experiments",
+   "name": "Unstable Tinkering",
+   "rule": "glass",
+   "params": {
+    "dealt": 0.3,
+    "taken": 0.25
+   },
+   "effect": {},
+   "text": "Untested, brilliant and loud: +30% damage dealt.",
+   "drawback": "+25% damage taken.",
+   "suits": [
+    "mage",
+    "arcane_trickster",
+    "warlock"
+   ]
+  },
+  {
+   "id": "dragons_wrath",
+   "name": "Dragon's Wrath",
+   "rule": "dragon_breath",
+   "params": {"mult": 0.9},
+   "effect": {
+    "bonus": {
+     "max_hp": 0.05,
+     "defense": -0.1
+    }
+   },
+   "text": "The wyrm wakes with the fight: you breathe fire over every foe as it opens (about 90% of your best strike, armour ignored, never a killing blow), +5% max HP.",
+   "drawback": "-10% defense.",
+   "suits": [
+    "warrior",
+    "paladin",
+    "spellblade",
+    "dread_knight"
+   ]
+  },
+  {
+   "id": "feral_instinct",
+   "name": "Feral Instinct",
+   "rule": "first_strike",
+   "params": {"bonus": 1.5},
+   "effect": {
+    "bonus": {
+     "defense": -0.05
+    }
+   },
+   "text": "Go for the throat: the first blow you land in a battle is always a critical hit, and it hits 1.5 harder still.",
+   "drawback": "-5% defense.",
+   "suits": [
+    "rogue",
+    "ranger",
+    "monk",
+    "beastmaster",
+    "ninja",
+    "warden"
+   ]
   }
  ]
 }

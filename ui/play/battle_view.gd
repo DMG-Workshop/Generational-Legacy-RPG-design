@@ -31,6 +31,7 @@ var aiming: Dictionary = {}    # {ab, skill, spell, feat (slot or -1)} while the
 var aim_at: int = -1
 var shown: Dictionary = {}     # {ab, at}: the area drawn on the field
 var spell_list: Control = null
+var skill_list: Control = null  # every class skill: the open ones to use, the rest by the level that opens them
 var poison_list: Control = null # the toxins and vials in the pack
 var feat_list: Control = null
 var aim_info: Label = null      # the aim panel's "catches N foes" line
@@ -151,11 +152,13 @@ func _fit_bottom() -> void:
 ## The text size changed mid-fight: the commands are laid out again for the new room (the field
 ## follows on its own as the arena resizes). Open lists close, as they were placed for the old size.
 func relayout() -> void:
+	Kit.retap(self)   # buttons built once (Auto-battle, the result's) take the touch layout's height
 	_size_commands()
 	_fit_bottom()
 	if result_shown or busy:
 		return
 	_close_spells()
+	_close_skills()
 	_close_feats()
 	_close_poisons()
 	_build_commands()
@@ -171,6 +174,8 @@ func back() -> bool:
 		_close_feats()
 	elif spell_list != null:
 		_close_spells()
+	elif skill_list != null:
+		_close_skills()
 	elif poison_list != null:
 		_close_poisons()
 	else:
@@ -273,9 +278,16 @@ func _build_actors() -> void:
 			eye.position = Vector2(w * ex, h * 0.22)
 			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(eye)
-		var lv := Kit.label("Lv %s" % GameText.num(int(e.get("level", 1))), 13, Kit.ACCENT if str(e["name"]).begins_with("Elite") else Kit.TEXT)
-		lv.add_theme_constant_override("outline_size", 4)
-		lv.add_theme_color_override("font_outline_color", Color.BLACK)
+		var lv_text := "Lv %s" % GameText.num(int(e.get("level", 1)))
+		# Late-generation levels are long: the text shrinks to stay inside the body. It is inked
+		# against the body's colour, no outline: an outline smears once a full arena is shrunk to fit.
+		var lv_size := 13
+		var font := get_theme_default_font()
+		while lv_size > 8 and font.get_string_size(lv_text, HORIZONTAL_ALIGNMENT_LEFT, -1, lv_size).x > w - 8.0:
+			lv_size -= 1
+		var pale := Color(e["color"]).get_luminance() > 0.45
+		var elite := str(e["name"]).begins_with("Elite")
+		var lv := Kit.label(lv_text, lv_size, (Kit.ACCENT.darkened(0.6) if elite else Kit.BG) if pale else (Kit.ACCENT if elite else Kit.TEXT))
 		lv.position = Vector2(4, h - 22)
 		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(lv)
@@ -575,7 +587,9 @@ func _build_commands() -> void:
 	fb.disabled = readied.is_empty()
 	fb.tooltip_text = "%s's readied feats: no MP, a cooldown each." % d.heir.name if not readied.is_empty() else "%s has no feats readied." % d.heir.name
 	col1.add_child(fb)
-	for i in b.skill_count():
+	# One button per skill open from level 1; every later class skill is in the Skills list.
+	var first := mini(GameSkills.first_count(d.heir.class_id), b.skill_count())
+	for i in first:
 		var s := b.skill_info(i)
 		var idx := i
 		var cost := b.pay_text(-1, b.skill_cost(i))
@@ -589,6 +603,12 @@ func _build_commands() -> void:
 		btn.tooltip_text = "%s  -  %s\n%s" % [s["name"], GameCombat.shape_text(s), GameCombat.describe(s)]
 		TouchHint.on_hover(btn, func(): _show_area(s, target), func(): _show_area({}, -1))
 		col2.add_child(btn)
+	if b.skill_count() > first:
+		var usable := range(first, b.skill_count()).filter(func(k): return b.can_use_skill(k)).size()
+		var kb := _small_button("Skills (%d ready)" % usable, func(): _open_skills())
+		var nxt := GameSkills.next_unlock(d.heir)
+		kb.tooltip_text = "%s's later class skills%s." % [d.heir.name, "" if nxt.is_empty() else "; next: %s at level %s" % [nxt["name"], GameText.num(int(nxt["level"]))]]
+		col2.add_child(kb)
 	var kit := GamePlague.toxins_carried(d.heir).size() + GamePlague.vials_carried(d.heir).size()
 	if kit > 0 or not b.coating.is_empty():
 		var n := 0
@@ -680,6 +700,7 @@ func _build_auto_commands() -> void:
 func _auto_panel() -> void:
 	Kit.clear(command_box)
 	_close_spells()
+	_close_skills()
 	_close_feats()
 	_close_poisons()
 	hint.text = "Auto-battle: %s fights on their own." % d.heir.name
@@ -687,7 +708,7 @@ func _auto_panel() -> void:
 	v.add_theme_constant_override("separation", 8)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	command_box.add_child(v)
-	var l := Kit.label("Every choice is the one the autopilot would make. Switch auto-battle off to give the orders yourself.", 14, Kit.TEXT)
+	var l := Kit.label("Every choice is the one the autopilot would make: %s Switch auto-battle off to give the orders yourself." % GameSkills.style_text(d.heir), 14, Kit.TEXT)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size = Vector2(cmd_w - 40.0, 0)
 	v.add_child(l)
@@ -861,6 +882,74 @@ func _close_spells() -> void:
 	if spell_list != null:
 		spell_list.queue_free()
 		spell_list = null
+	_show_area({}, -1)
+
+
+# ---------------------------------------------------------------- class skill list
+
+## Every class skill past the first ones: those the heir's level has opened, to use, then the
+## rest dimmed with the level that opens each.
+func _open_skills() -> void:
+	if busy or skill_list != null:
+		return
+	var made := _list_panel("Class skills  -  %s has %s / %s MP" % [d.heir.name, GameText.num(d.heir.mp), GameText.num(d.heir.max_mp())], _close_skills)
+	skill_list = made[0]
+	var rows: VBoxContainer = made[1]
+	var locked: Array = []
+	for i in range(GameSkills.first_count(d.heir.class_id), b.skill_count()):
+		if b.skill_unlocked(i):
+			rows.add_child(_skill_row(i))
+		else:
+			locked.append(i)
+	if not locked.is_empty():
+		rows.add_child(Kit.label("Opened by level", 15, Kit.DIM))
+	for i in locked:
+		var s := b.skill_info(i)
+		var l := Kit.label("Level %s: %s  -  %s" % [GameText.num(GameSkills.level_of(s)), s["name"], GameCombat.describe(s)], 13, Kit.DIM)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		rows.add_child(l)
+
+
+func _skill_row(i: int) -> Control:
+	var s := b.skill_info(i)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var used := b.skill_used_up(i)
+	var btn := Kit.button("%s  (%s)" % [s["name"], "used" if used else b.pay_text(-1, b.skill_cost(i))], func(): _pick_skill(i), Vector2(260, 34))
+	btn.add_theme_font_size_override("font_size", 15)
+	btn.clip_text = true
+	btn.disabled = not b.can_use_skill(i)
+	btn.tooltip_text = GameCombat.describe(s)
+	TouchHint.on_hover(btn, func(): _show_area(s, target), func(): _show_area({}, -1))
+	row.add_child(btn)
+	var el := str(s.get("element", ""))
+	var shape := Kit.label(GameCombat.shape_text(s), 14, Color(GameCombat.element_color(el)) if el != "" else Kit.TEXT)
+	shape.custom_minimum_size = Vector2(96, 0)
+	row.add_child(shape)
+	var note := "" if b.can_use_skill(i) else ("  (once a battle)" if used else "  (not enough %s)" % ("HP" if b.pays_in_hp(-1) else "MP"))
+	var what := Kit.label(GameCombat.describe(s) + note, 13, Kit.TEXT if b.can_use_skill(i) else Kit.DIM)
+	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if UiSettings.compact(self):   # a narrow list wraps rather than hide the end of the effect
+		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	else:
+		what.clip_text = true
+		what.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	what.tooltip_text = what.text
+	what.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(what)
+	return row
+
+
+func _pick_skill(i: int) -> void:
+	_close_skills()
+	_use_skill(i)
+
+
+func _close_skills() -> void:
+	if skill_list != null:
+		skill_list.queue_free()
+		skill_list = null
 	_show_area({}, -1)
 
 
@@ -1047,6 +1136,7 @@ func _do(action: Callable) -> void:
 		return
 	busy = true
 	_close_spells()
+	_close_skills()
 	_close_feats()
 	_close_poisons()
 	Kit.clear(command_box)
@@ -1421,6 +1511,7 @@ func _show_result() -> void:
 	result_shown = true
 	aiming = {}
 	_close_spells()
+	_close_skills()
 	_close_feats()
 	_close_poisons()
 	Kit.clear(command_box)

@@ -6,16 +6,25 @@
     "companion_slots": 2,
     "recovery_turns": 1,
     "bot_targets": {"single": 1.0, "cone": 1.6, "burst": 1.7, "line": 1.3, "all": 2.0, "around": 1.9, "party": 1.0, "self": 1.0},
-    "bot_status_worth": {"stun": 0.6, "fear": 0.35, "slow": 0.25, "weaken": 0.2, "vulnerable": 0.25, "bleed": 0.15, "burn": 0.15, "rallied": 0.6, "shield": 0.45, "taunt": 0.4},
+    "bot_status_worth": {
+      "hidden": 0.9, "stun": 0.6, "fear": 0.35, "slow": 0.25, "weaken": 0.2, "vulnerable": 0.25, "bleed": 0.15, "burn": 0.15, "rallied": 0.6, "shield": 0.45, "taunt": 0.4,
+      "braced": 0.4, "veiled": 0.35, "keen": 0.3, "haste": 0.6},
     "bot_party_worth": 0.8,
+    "bot_class_worth": 1.25,
     "bot_min_score": 0.02,
     "bot_hp_cost_worth": 4.0,
-    "bot_taunt_min_hp": 0.6
+    "bot_taunt_min_hp": 0.6,
+    "max_universal_feats": 12,
+    "class_feats_min": 6,
+    "class_feat_by_level": 3
   },
   "kinds": {
     "physical": {"name": "Physical", "color": "#e8a05a", "text": "Weapon work: power from STR, AGI and the weapon in hand."},
     "tactical": {"name": "Tactical", "color": "#7fb7ff", "text": "Tricks of the field: holds, shouts and openings."},
-    "environmental": {"name": "Environmental", "color": "#8fd14f", "text": "The ground itself as a weapon, where the ground allows."}
+    "environmental": {"name": "Environmental", "color": "#8fd14f", "text": "The ground itself as a weapon, where the ground allows."},
+    "arcane": {"name": "Arcane", "color": "#b48cff", "text": "Spellwork worked into a blow: power from MAG, no MP spent."},
+    "divine": {"name": "Divine", "color": "#ffe9a0", "text": "Faith made into force: power from MAG, often holy."},
+    "primal": {"name": "Primal", "color": "#c9a35a", "text": "The wild in the blood: beast shapes, roots and storms."}
   },
   "weapon_kinds": {
     "blade": {"noun": "blade", "name": "Blades", "items": ["iron_sword", "steel_sword", "mithril_blade", "sunblade", "spell_saber", "notched_falchion"]},
@@ -33,6 +42,26 @@
       "id": "taunt", "name": "Taunting", "tag": "TNT", "color": "#e0605a", "harmful": false, "draws": true,
       "mods": {"damage_taken": -1.0}, "basis": "flat", "stack": "refresh", "default_turns": 2, "default_potency": 0.3,
       "text": {"apply": "{t} calls the foes out.", "end": "The foes lose interest in {t}."}
+    },
+    {
+      "id": "braced", "name": "Braced", "tag": "BRC", "color": "#a0a8b8", "harmful": false,
+      "mods": {"damage_taken": -1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.25,
+      "text": {"apply": "{t} braces for the blows.", "end": "{t} relaxes their stance."}
+    },
+    {
+      "id": "veiled", "name": "Veiled", "tag": "VEL", "color": "#c8d0e0", "harmful": false,
+      "mods": {"dodge": 1.0}, "basis": "flat", "stack": "refresh", "default_turns": 2, "default_potency": 0.3,
+      "text": {"apply": "{t} is hard to see.", "end": "{t} is in plain sight again."}
+    },
+    {
+      "id": "keen", "name": "Keen", "tag": "KEN", "color": "#ffe08a", "harmful": false,
+      "mods": {"crit": 1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.15,
+      "text": {"apply": "{t}'s eye sharpens.", "end": "{t}'s edge dulls."}
+    },
+    {
+      "id": "hidden", "name": "Hidden", "tag": "HID", "color": "#8a8fa8", "harmful": false,
+      "mods": {"crit": 1.0}, "spent_on": "blow", "basis": "flat", "stack": "refresh", "default_turns": 4, "default_potency": 1.0,
+      "text": {"apply": "{t} melts into the shadows.", "spent": "{t} bursts from hiding.", "end": "{t} is seen again."}
     }
   ],
   "feats": [
@@ -41,14 +70,14 @@
       "description": "A heavy swing that carries on through the foes beside the first.",
       "scaling": {"str": 1.0, "weapon_tier": 0.08}, "mult": 0.9,
       "target": {"shape": "cone", "angle": 60, "range": 10.5},
-      "requires": {"min_level": 1, "weapon": ["blade", "blunt"]}
+      "requires": {"min_level": 1, "classes": ["warrior"], "weapon": ["blade", "blunt"]}
     },
     {
       "id": "aimed_shot", "name": "Aimed Shot", "kind": "physical", "cost": 1, "cooldown": 2,
       "description": "Draw slow, breathe out, loose. The arrow finds the gap in the armour.",
       "scaling": {"agi": 1.1, "weapon_tier": 0.08}, "mult": 1.25, "crit_bonus": 0.3, "pierce": 0.3,
       "target": {"shape": "single"},
-      "requires": {"min_level": 1, "weapon": ["bow"]}
+      "requires": {"min_level": 1, "classes": ["ranger"], "weapon": ["bow"]}
     },
     {
       "id": "feint", "name": "Feint", "kind": "tactical", "cost": 1, "cooldown": 2,
@@ -72,7 +101,7 @@
       "scaling": {"str": 0.8}, "mult": 0.75,
       "target": {"shape": "single"},
       "statuses": [{"id": "stun", "chance": 0.6, "turns": 1}],
-      "requires": {"min_level": 3, "classes": ["warrior", "paladin", "templar", "warden", "dread_knight", "cleric"]}
+      "requires": {"min_level": 3, "classes": ["warrior", "cleric"]}
     },
     {
       "id": "taunt", "name": "Taunt", "kind": "tactical", "cost": 1, "cooldown": 4, "companion": false,
@@ -95,7 +124,7 @@
       "description": "Three quick blows before the foe can bring its guard round.",
       "scaling": {"agi": 0.7, "str": 0.3, "weapon_tier": 0.04}, "mult": 0.45, "hits": 3, "crit_bonus": 0.1,
       "target": {"shape": "single"},
-      "requires": {"min_level": 5}
+      "requires": {"min_level": 5, "classes": ["monk", "rogue"]}
     },
     {
       "id": "mire_trap", "name": "Mire Trap", "kind": "environmental", "cost": 1, "cooldown": 4,
@@ -108,20 +137,20 @@
       "requires": {"min_level": 5, "biomes": ["swamp"]}
     },
     {
-      "id": "charge", "name": "Charge", "kind": "physical", "cost": 2, "cooldown": 3,
+      "id": "charge", "name": "Charge", "kind": "physical", "cost": 2, "cooldown": 4,
       "description": "Run at the line and go through it. The foe behind feels it too.",
       "scaling": {"str": 1.0, "weapon_tier": 0.06}, "mult": 1.0,
       "target": {"shape": "line", "width": 3, "length": 18},
       "statuses": [{"id": "stun", "chance": 0.25, "turns": 1}],
-      "requires": {"min_level": 6}
+      "requires": {"min_level": 10}
     },
     {
-      "id": "rally", "name": "Rally", "kind": "tactical", "cost": 2, "cooldown": 5,
+      "id": "rally", "name": "Rally", "kind": "tactical", "cost": 2, "cooldown": 6,
       "description": "A shout that puts the heart back into everyone fighting at your side.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "party"},
       "statuses": [{"id": "rallied", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "party"}],
-      "requires": {"min_level": 6}
+      "requires": {"min_level": 20}
     },
     {
       "id": "rend", "name": "Rend", "kind": "physical", "cost": 2, "cooldown": 2,
@@ -129,7 +158,7 @@
       "scaling": {"str": 0.8, "agi": 0.2, "weapon_tier": 0.06}, "mult": 0.7,
       "target": {"shape": "single"},
       "statuses": [{"id": "bleed", "chance": 0.9, "turns": 3, "potency": 0.12}],
-      "requires": {"min_level": 8, "weapon": ["blade"]}
+      "requires": {"min_level": 8, "classes": ["warrior", "rogue"], "weapon": ["blade"]}
     },
     {
       "id": "rockslide", "name": "Rockslide", "kind": "environmental", "cost": 2, "cooldown": 4,
@@ -155,7 +184,7 @@
       "scaling": {"str": 1.1, "weapon_tier": 0.1}, "mult": 0.85, "pierce": 0.5,
       "target": {"shape": "single"},
       "statuses": [{"id": "vulnerable", "chance": 0.85, "turns": 3, "potency": 0.25}],
-      "requires": {"min_level": 10, "weapon": ["blunt"]}
+      "requires": {"min_level": 10, "classes": ["warrior"], "weapon": ["blunt"]}
     },
     {
       "id": "caltrops", "name": "Caltrops", "kind": "tactical", "cost": 2, "cooldown": 4,
@@ -164,7 +193,7 @@
       "target": {"shape": "burst", "radius": 5.0},
       "statuses": [{"id": "bleed", "chance": 0.75, "turns": 3, "potency": 0.1}, {"id": "slow", "chance": 0.35, "turns": 2, "potency": 0.2}],
       "field": {"turns": 2, "color": "#9aa4b0", "text": {"lay": "Iron spikes litter the ground under the foes.", "end": "The caltrops are trodden into the dirt."}},
-      "requires": {"min_level": 10}
+      "requires": {"min_level": 10, "classes": ["ranger"]}
     },
     {
       "id": "undertow", "name": "Undertow", "kind": "environmental", "cost": 2, "cooldown": 4,
@@ -180,7 +209,7 @@
       "description": "Loose high and fast, and let the arrows come down on the whole knot of foes.",
       "scaling": {"agi": 0.9, "str": 0.2, "weapon_tier": 0.06}, "mult": 0.8,
       "target": {"shape": "burst", "radius": 4.5, "falloff": 0.2},
-      "requires": {"min_level": 12, "weapon": ["bow"]}
+      "requires": {"min_level": 12, "classes": ["ranger"], "weapon": ["bow"]}
     },
     {
       "id": "falling_masonry", "name": "Falling Masonry", "kind": "environmental", "cost": 2, "cooldown": 4,
@@ -196,7 +225,7 @@
       "description": "Spin with the weapon held out. Everything within reach is cut, and the turn leaves you open.",
       "scaling": {"str": 0.9, "agi": 0.2, "weapon_tier": 0.08}, "mult": 1.15,
       "target": {"shape": "burst", "radius": 10.5, "center": "self"},
-      "requires": {"min_level": 18, "weapon": ["blade", "blunt"]}
+      "requires": {"min_level": 18, "classes": ["warrior"], "weapon": ["blade", "blunt"]}
     },
     {
       "id": "execute", "name": "Execute", "kind": "physical", "cost": 2, "cooldown": 3,
@@ -204,7 +233,7 @@
       "scaling": {"str": 1.0, "weapon_tier": 0.08}, "mult": 0.8,
       "vs_wounded": {"below": 0.35, "mult": 3.0},
       "target": {"shape": "single"},
-      "requires": {"min_level": 30}
+      "requires": {"min_level": 30, "classes": ["warrior"]}
     },
     {
       "id": "war_cry", "name": "War Cry", "kind": "tactical", "cost": 2, "cooldown": 5,
@@ -212,7 +241,7 @@
       "scaling": {}, "mult": 0,
       "target": {"shape": "all"},
       "statuses": [{"id": "fear", "chance": 0.45, "turns": 2, "potency": 0.5}],
-      "requires": {"min_level": 45}
+      "requires": {"min_level": 45, "classes": ["warrior"]}
     },
     {
       "id": "hold_the_line", "name": "Hold the Line", "kind": "tactical", "cost": 2, "cooldown": 5,
@@ -220,7 +249,7 @@
       "scaling": {}, "mult": 0,
       "target": {"shape": "party"},
       "statuses": [{"id": "shield", "chance": 1.0, "turns": 2, "potency": 0.12, "on": "party"}],
-      "requires": {"min_level": 70}
+      "requires": {"min_level": 40, "classes": ["cleric"]}
     },
     {
       "id": "earthshaker", "name": "Earthshaker", "kind": "physical", "cost": 3, "cooldown": 5, "hp_cost": 0.04,
@@ -228,7 +257,7 @@
       "scaling": {"str": 1.1, "weapon_tier": 0.08}, "mult": 0.7,
       "target": {"shape": "all"},
       "statuses": [{"id": "stun", "chance": 0.2, "turns": 1}],
-      "requires": {"min_level": 200}
+      "requires": {"min_level": 200, "classes": ["warrior"]}
     },
     {
       "id": "thousand_cuts", "name": "Thousand Cuts", "kind": "physical", "cost": 4, "cooldown": 5,
@@ -236,7 +265,527 @@
       "scaling": {"agi": 0.8, "str": 0.4, "weapon_tier": 0.08}, "mult": 0.8,
       "target": {"shape": "all"},
       "statuses": [{"id": "bleed", "chance": 0.6, "turns": 3, "potency": 0.1}],
-      "requires": {"min_level": 1200, "weapon": ["blade"]}
+      "requires": {"min_level": 1200, "classes": ["rogue"], "weapon": ["blade"]}
+    },
+    {
+      "id": "cheap_shot", "name": "Cheap Shot", "kind": "physical", "cost": 1, "cooldown": 3,
+      "description": "A knee, an elbow, sand in the eyes. Nobody said it would be a fair fight.",
+      "scaling": {"agi": 0.8, "str": 0.2}, "mult": 0.6, "crit_bonus": 0.15,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "stun", "chance": 0.35, "turns": 1}],
+      "requires": {"min_level": 1, "classes": ["rogue"]}
+    },
+    {
+      "id": "venom_strike", "name": "Venom Strike", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "A nick from a blade kept in a little pot of something green.",
+      "scaling": {"agi": 0.7, "str": 0.3, "weapon_tier": 0.04}, "mult": 0.55,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "poison", "chance": 0.85, "turns": 3, "potency": 0.04}],
+      "requires": {"min_level": 3, "classes": ["rogue"]}
+    },
+    {
+      "id": "ambush", "name": "Ambush", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "Strike from the blind side, where the guard is thinnest.",
+      "scaling": {"agi": 1.1, "weapon_tier": 0.06}, "mult": 1.0, "crit_bonus": 0.5,
+      "target": {"shape": "single"},
+      "requires": {"min_level": 14, "classes": ["rogue"]}
+    },
+    {
+      "id": "smoke_bomb", "name": "Smoke Bomb", "kind": "tactical", "cost": 2, "cooldown": 5, "companion": false,
+      "description": "A puff of grey smoke, and where the rogue stood there is only smoke.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 2, "potency": 0.245, "on": "self"}],
+      "requires": {"min_level": 24, "classes": ["rogue"]}
+    },
+    {
+      "id": "shadow_slip", "name": "Slip into Shadow", "kind": "tactical", "cost": 1, "cooldown": 4,
+      "description": "Vanish into the dark; the next blow lands from hiding and cannot miss its mark.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "hidden", "chance": 1.0, "turns": 4, "potency": 1.0, "on": "self"}],
+      "requires": {"min_level": 6, "classes": ["rogue"]}
+    },
+    {
+      "id": "garrote", "name": "Garrote", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "A wire from behind. The foe bleeds and can barely swing.",
+      "scaling": {"agi": 0.7, "str": 0.3, "weapon_tier": 0.04}, "mult": 0.6,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "bleed", "chance": 0.9, "turns": 3, "potency": 0.15}, {"id": "weaken", "chance": 0.6, "turns": 2, "potency": 0.25}],
+      "requires": {"min_level": 50, "classes": ["rogue"]}
+    },
+    {
+      "id": "snare_trap", "name": "Snare Trap", "kind": "tactical", "cost": 1, "cooldown": 4,
+      "description": "A loop of cord in the grass, and the foes come down in a heap.",
+      "scaling": {"agi": 0.6}, "mult": 0.2,
+      "target": {"shape": "burst", "radius": 3.5},
+      "statuses": [{"id": "slow", "chance": 0.85, "turns": 3, "potency": 0.25}],
+      "field": {"turns": 2, "color": "#a08a5a", "text": {"lay": "Snares wait in the grass under the foes.", "end": "The snares are trampled flat."}},
+      "requires": {"min_level": 3, "classes": ["ranger"]}
+    },
+    {
+      "id": "pin_down", "name": "Pin Down", "kind": "physical", "cost": 1, "cooldown": 3,
+      "description": "An arrow through the boot, into the ground.",
+      "scaling": {"agi": 0.8, "weapon_tier": 0.06}, "mult": 0.6,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "slow", "chance": 0.8, "turns": 3, "potency": 0.25}, {"id": "stun", "chance": 0.2, "turns": 1}],
+      "requires": {"min_level": 7, "classes": ["ranger"], "weapon": ["bow"]}
+    },
+    {
+      "id": "explosive_trap", "name": "Explosive Trap", "kind": "tactical", "cost": 2, "cooldown": 4,
+      "description": "Oil, flint and a tripwire. Let them walk into it.",
+      "scaling": {"agi": 0.9}, "mult": 0.8, "element": "fire",
+      "target": {"shape": "burst", "radius": 4.0},
+      "statuses": [{"id": "burn", "chance": 0.5, "turns": 3, "potency": 0.15}],
+      "field": {"turns": 2, "color": "#ff7a3a", "text": {"lay": "Fire smoulders in the trap's pit.", "end": "The trap burns out."}},
+      "requires": {"min_level": 20, "classes": ["ranger"]}
+    },
+    {
+      "id": "called_shot", "name": "Called Shot", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "Name the spot, then put the arrow there.",
+      "scaling": {"agi": 1.2, "weapon_tier": 0.08}, "mult": 1.4, "pierce": 0.5,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "vulnerable", "chance": 0.6, "turns": 3, "potency": 0.2}],
+      "requires": {"min_level": 40, "classes": ["ranger"], "weapon": ["bow"]}
+    },
+    {
+      "id": "hail_of_arrows", "name": "Hail of Arrows", "kind": "physical", "cost": 3, "cooldown": 5,
+      "description": "The sky goes dark with shafts over the whole field.",
+      "scaling": {"agi": 0.9, "str": 0.2, "weapon_tier": 0.08}, "mult": 0.75,
+      "target": {"shape": "all"},
+      "requires": {"min_level": 250, "classes": ["ranger"], "weapon": ["bow"]}
+    },
+    {
+      "id": "leg_sweep", "name": "Leg Sweep", "kind": "physical", "cost": 1, "cooldown": 3,
+      "description": "A low spinning kick that takes the feet from everyone close.",
+      "scaling": {"agi": 0.7, "str": 0.3}, "mult": 0.5,
+      "target": {"shape": "burst", "radius": 10.5, "center": "self"},
+      "statuses": [{"id": "stun", "chance": 0.2, "turns": 1}],
+      "requires": {"min_level": 1, "classes": ["monk"]}
+    },
+    {
+      "id": "stone_stance", "name": "Stone Stance", "kind": "tactical", "cost": 1, "cooldown": 5, "companion": false,
+      "description": "Root the feet, breathe low, and let the blows break on you.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}],
+      "requires": {"min_level": 3, "classes": ["monk"]}
+    },
+    {
+      "id": "pressure_point", "name": "Pressure Point", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "Two fingers to the nerve under the arm: the limb goes dead.",
+      "scaling": {"agi": 0.9}, "mult": 0.7, "pierce": 0.6,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "weaken", "chance": 0.7, "turns": 2, "potency": 0.25}],
+      "requires": {"min_level": 8, "classes": ["monk"]}
+    },
+    {
+      "id": "dragon_kick", "name": "Dragon Kick", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "A flying kick that carries through the first foe into the next.",
+      "scaling": {"str": 0.8, "agi": 0.4}, "mult": 0.95,
+      "target": {"shape": "line", "width": 3, "length": 12},
+      "statuses": [{"id": "stun", "chance": 0.3, "turns": 1}],
+      "requires": {"min_level": 16, "classes": ["monk"]}
+    },
+    {
+      "id": "wind_stance", "name": "Wind Stance", "kind": "tactical", "cost": 2, "cooldown": 5, "companion": false,
+      "description": "Move like the wind in the grass: hard to hit, quick to find the gap.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}, {"id": "keen", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "self"}],
+      "requires": {"min_level": 30, "classes": ["monk"]}
+    },
+    {
+      "id": "hundred_hands", "name": "Hundred Hands", "kind": "physical", "cost": 2, "cooldown": 4,
+      "description": "Too many blows to count, all of them where they hurt.",
+      "scaling": {"agi": 0.8, "str": 0.3}, "mult": 0.35, "hits": 6, "crit_bonus": 0.1,
+      "target": {"shape": "single"},
+      "requires": {"min_level": 80, "classes": ["monk"]}
+    },
+    {
+      "id": "touch_of_death", "name": "Touch of Death", "kind": "physical", "cost": 3, "cooldown": 5,
+      "description": "A gentle touch. The foe takes three steps and falls.",
+      "scaling": {"str": 0.6, "agi": 0.6}, "mult": 0.9, "pierce": 0.9,
+      "vs_wounded": {"below": 0.3, "mult": 4.0},
+      "target": {"shape": "single"},
+      "requires": {"min_level": 400, "classes": ["monk"]}
+    },
+    {
+      "id": "radiant_strike", "name": "Radiant Strike", "kind": "divine", "cost": 1, "cooldown": 2,
+      "description": "The mace glows on the downswing.",
+      "scaling": {"mag": 0.8, "str": 0.2}, "mult": 0.75, "element": "holy", "bane": {"undead": 1.5},
+      "target": {"shape": "single"},
+      "requires": {"min_level": 1, "classes": ["cleric"]}
+    },
+    {
+      "id": "hallowed_ground", "name": "Hallowed Ground", "kind": "divine", "cost": 2, "cooldown": 4,
+      "description": "Pray over the ground the foes stand on, and it burns them.",
+      "scaling": {"mag": 0.6}, "mult": 0.3, "element": "holy", "bane": {"undead": 1.5},
+      "target": {"shape": "burst", "radius": 4.5},
+      "statuses": [{"id": "weaken", "chance": 0.6, "turns": 2, "potency": 0.2}],
+      "field": {"turns": 2, "color": "#ffe9a0", "text": {"lay": "The ground under the foes shines with holy light.", "end": "The hallowed light fades."}},
+      "requires": {"min_level": 8, "classes": ["cleric"]}
+    },
+    {
+      "id": "aegis_of_faith", "name": "Aegis of Faith", "kind": "divine", "cost": 1, "cooldown": 4, "companion": false,
+      "description": "A prayer half-spoken, and blows turn aside.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 2, "potency": 0.245, "on": "self"}],
+      "requires": {"min_level": 14, "classes": ["cleric"]}
+    },
+    {
+      "id": "turn_undead", "name": "Turn Undead", "kind": "divine", "cost": 2, "cooldown": 4,
+      "description": "Raise the holy symbol and speak the words. The foes falter and fall back.",
+      "scaling": {"mag": 0.5}, "mult": 0.4, "element": "holy", "bane": {"undead": 2.0},
+      "target": {"shape": "cone", "angle": 90, "range": 14},
+      "statuses": [{"id": "fear", "chance": 0.6, "turns": 2, "potency": 0.5}],
+      "requires": {"min_level": 24, "classes": ["cleric"]}
+    },
+    {
+      "id": "divine_judgement", "name": "Divine Judgement", "kind": "divine", "cost": 2, "cooldown": 4,
+      "description": "A single blow with the weight of heaven behind it.",
+      "scaling": {"mag": 1.2, "str": 0.2}, "mult": 1.3, "element": "holy", "bane": {"undead": 1.5},
+      "target": {"shape": "single"},
+      "statuses": [{"id": "stun", "chance": 0.3, "turns": 1}],
+      "requires": {"min_level": 90, "classes": ["cleric"]}
+    },
+    {
+      "id": "sunburst", "name": "Sunburst", "kind": "divine", "cost": 3, "cooldown": 5,
+      "description": "Light breaks over the whole field like a second dawn.",
+      "scaling": {"mag": 1.0}, "mult": 0.7, "element": "holy", "bane": {"undead": 1.5},
+      "target": {"shape": "all"},
+      "requires": {"min_level": 300, "classes": ["cleric"]}
+    },
+    {
+      "id": "arcane_strike", "name": "Arcane Strike", "kind": "arcane", "cost": 1, "cooldown": 2,
+      "description": "A blow carried on a spark of raw magic; armour hardly slows it.",
+      "scaling": {"mag": 0.8, "str": 0.2}, "mult": 0.8, "pierce": 0.3,
+      "target": {"shape": "single"},
+      "requires": {"min_level": 1, "classes": ["mage"]}
+    },
+    {
+      "id": "flame_brand", "name": "Flame Brand", "kind": "arcane", "cost": 1, "cooldown": 2,
+      "description": "Fire runs down the staff and into the foe.",
+      "scaling": {"mag": 0.7}, "mult": 0.6, "element": "fire",
+      "target": {"shape": "single"},
+      "statuses": [{"id": "burn", "chance": 0.6, "turns": 3, "potency": 0.12}],
+      "requires": {"min_level": 3, "classes": ["mage"]}
+    },
+    {
+      "id": "rime_strike", "name": "Rime Strike", "kind": "arcane", "cost": 1, "cooldown": 3,
+      "description": "Frost blooms where the blow lands, and the foe stiffens.",
+      "scaling": {"mag": 0.8}, "mult": 0.7, "element": "frost",
+      "target": {"shape": "single"},
+      "statuses": [{"id": "slow", "chance": 0.7, "turns": 2, "potency": 0.2}, {"id": "freeze", "chance": 0.15, "turns": 1}],
+      "requires": {"min_level": 8, "classes": ["mage"]}
+    },
+    {
+      "id": "arcane_barrier", "name": "Arcane Barrier", "kind": "arcane", "cost": 2, "cooldown": 5, "companion": false,
+      "description": "A shell of shimmering force, cast in a breath.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "shield", "chance": 1.0, "turns": 2, "potency": 0.18, "on": "self"}],
+      "requires": {"min_level": 14, "classes": ["mage"]}
+    },
+    {
+      "id": "arcane_detonation", "name": "Arcane Detonation", "kind": "arcane", "cost": 2, "cooldown": 4,
+      "description": "Let the stored power go all at once, in every direction.",
+      "scaling": {"mag": 1.0}, "mult": 0.9,
+      "target": {"shape": "burst", "radius": 10.5, "center": "self"},
+      "requires": {"min_level": 24, "classes": ["mage"]}
+    },
+    {
+      "id": "overload", "name": "Overload", "kind": "arcane", "cost": 2, "cooldown": 3, "hp_cost": 0.03,
+      "description": "Push the spell past what the body should carry. It hurts both of you.",
+      "scaling": {"mag": 1.3}, "mult": 1.5, "crit_bonus": 0.2, "element": "lightning",
+      "target": {"shape": "single"},
+      "requires": {"min_level": 60, "classes": ["mage"]}
+    },
+    {
+      "id": "time_warp", "name": "Time Warp", "kind": "arcane", "cost": 3, "cooldown": 6,
+      "description": "For a few heartbeats the party moves and the world does not.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "party"},
+      "statuses": [{"id": "haste", "chance": 1.0, "turns": 2, "potency": 0.35, "on": "party"}],
+      "requires": {"min_level": 250, "classes": ["mage"]}
+    },
+    {
+      "id": "bone_shard", "name": "Bone Shard", "kind": "arcane", "cost": 1, "cooldown": 2,
+      "description": "A splinter of old bone, flung hard enough to go through mail.",
+      "scaling": {"mag": 0.9}, "mult": 0.7, "pierce": 0.4, "element": "shadow",
+      "target": {"shape": "single"},
+      "requires": {"min_level": 1, "classes": ["necromancer"]}
+    },
+    {
+      "id": "life_leech", "name": "Life Leech", "kind": "arcane", "cost": 1, "cooldown": 2,
+      "description": "Touch the foe and drink a little of what keeps it standing.",
+      "scaling": {"mag": 0.8}, "mult": 0.55, "element": "shadow", "drain": 0.5,
+      "target": {"shape": "single"},
+      "requires": {"min_level": 3, "classes": ["necromancer"]}
+    },
+    {
+      "id": "bone_cage", "name": "Bone Cage", "kind": "arcane", "cost": 1, "cooldown": 3,
+      "description": "Ribs burst from the ground and close around the foe.",
+      "scaling": {"mag": 0.6}, "mult": 0.3,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "slow", "chance": 0.9, "turns": 3, "potency": 0.25}, {"id": "stun", "chance": 0.25, "turns": 1}],
+      "requires": {"min_level": 8, "classes": ["necromancer"]}
+    },
+    {
+      "id": "bone_armor", "name": "Bone Armor", "kind": "arcane", "cost": 2, "cooldown": 5, "companion": false,
+      "description": "Plates of bone knit over the skin.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "shield", "chance": 1.0, "turns": 2, "potency": 0.2, "on": "self"}],
+      "requires": {"min_level": 14, "classes": ["necromancer"]}
+    },
+    {
+      "id": "plague_wind", "name": "Plague Wind", "kind": "arcane", "cost": 2, "cooldown": 4,
+      "description": "Breathe out the grave's air over the foes.",
+      "scaling": {"mag": 0.6}, "mult": 0.4,
+      "target": {"shape": "cone", "angle": 70, "range": 14},
+      "statuses": [{"id": "poison", "chance": 0.7, "turns": 3, "potency": 0.03}],
+      "requires": {"min_level": 24, "classes": ["necromancer"]}
+    },
+    {
+      "id": "doom_mark", "name": "Mark of Doom", "kind": "arcane", "cost": 2, "cooldown": 3,
+      "description": "A sign drawn in the air over the foe. Death takes note.",
+      "scaling": {"mag": 0.6}, "mult": 0.5, "element": "shadow",
+      "target": {"shape": "single"},
+      "statuses": [{"id": "vulnerable", "chance": 1.0, "turns": 3, "potency": 0.3}, {"id": "fear", "chance": 0.3, "turns": 2, "potency": 0.5}],
+      "requires": {"min_level": 60, "classes": ["necromancer"]}
+    },
+    {
+      "id": "grave_eruption", "name": "Grave Eruption", "kind": "arcane", "cost": 3, "cooldown": 5, "hp_cost": 0.04,
+      "description": "The dead under the field rise for one moment, and pull.",
+      "scaling": {"mag": 0.9}, "mult": 0.7, "element": "shadow", "drain": 0.2,
+      "target": {"shape": "all"},
+      "requires": {"min_level": 250, "classes": ["necromancer"]}
+    },
+    {
+      "id": "thorn_whip", "name": "Thorn Whip", "kind": "primal", "cost": 1, "cooldown": 2,
+      "description": "A lash of living briar that tears as it pulls away.",
+      "scaling": {"mag": 0.7, "str": 0.2}, "mult": 0.7, "element": "nature",
+      "target": {"shape": "single"},
+      "statuses": [{"id": "bleed", "chance": 0.4, "turns": 3, "potency": 0.08}],
+      "requires": {"min_level": 1, "classes": ["druid"]}
+    },
+    {
+      "id": "bear_swipe", "name": "Bear Swipe", "kind": "primal", "cost": 1, "cooldown": 3,
+      "description": "For a moment the druid's arm is a bear's, and it swings wide.",
+      "scaling": {"str": 0.6, "mag": 0.4}, "mult": 0.9,
+      "target": {"shape": "cone", "angle": 90, "range": 10.5},
+      "requires": {"min_level": 3, "classes": ["druid"]}
+    },
+    {
+      "id": "barkskin", "name": "Barkskin", "kind": "primal", "cost": 1, "cooldown": 5, "companion": false,
+      "description": "The skin hardens and browns like old oak.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}],
+      "requires": {"min_level": 8, "classes": ["druid"]}
+    },
+    {
+      "id": "root_snare", "name": "Root Snare", "kind": "primal", "cost": 2, "cooldown": 4,
+      "description": "Roots come up through the ground and hold the foes fast.",
+      "scaling": {"mag": 0.5}, "mult": 0.25, "element": "nature",
+      "target": {"shape": "burst", "radius": 4.0},
+      "statuses": [{"id": "slow", "chance": 0.9, "turns": 3, "potency": 0.25}],
+      "field": {"turns": 2, "color": "#5f8f3a", "text": {"lay": "Roots writhe in the ground under the foes.", "end": "The roots sink back into the earth."}},
+      "requires": {"min_level": 14, "classes": ["druid"]}
+    },
+    {
+      "id": "wolf_pounce", "name": "Wolf Pounce", "kind": "primal", "cost": 2, "cooldown": 3,
+      "description": "A leap with a wolf's jaws at the end of it.",
+      "scaling": {"str": 0.5, "agi": 0.5}, "mult": 1.0, "crit_bonus": 0.3,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "bleed", "chance": 0.5, "turns": 3, "potency": 0.1}],
+      "requires": {"min_level": 24, "classes": ["druid"]}
+    },
+    {
+      "id": "swarm", "name": "Swarm", "kind": "primal", "cost": 2, "cooldown": 4,
+      "description": "Call every biting, stinging thing in the land to the foes.",
+      "scaling": {"mag": 0.7}, "mult": 0.6, "element": "nature",
+      "target": {"shape": "burst", "radius": 5.0},
+      "statuses": [{"id": "poison", "chance": 0.7, "turns": 3, "potency": 0.03}],
+      "requires": {"min_level": 60, "classes": ["druid"]}
+    },
+    {
+      "id": "force_of_nature", "name": "Force of Nature", "kind": "primal", "cost": 3, "cooldown": 5,
+      "description": "The land itself rises against the foes.",
+      "scaling": {"mag": 1.0}, "mult": 0.7, "element": "nature",
+      "target": {"shape": "all"},
+      "statuses": [{"id": "stun", "chance": 0.2, "turns": 1}],
+      "requires": {"min_level": 250, "classes": ["druid"]}
+    },
+    {
+      "id": "spellstrike", "name": "Spellstrike", "kind": "arcane", "cost": 1, "cooldown": 2,
+      "description": "Cut and cast in the same motion: the blade carries the spell in.",
+      "scaling": {"str": 0.6, "mag": 0.6, "weapon_tier": 0.06}, "mult": 0.9, "pierce": 0.4, "element": "fire",
+      "target": {"shape": "single"},
+      "requires": {"min_level": 10, "classes": ["spellblade"]}
+    },
+    {
+      "id": "runeblade_storm", "name": "Runeblade Storm", "kind": "arcane", "cost": 2, "cooldown": 4,
+      "description": "Every rune on the blade flares at once as it spins.",
+      "scaling": {"str": 0.6, "mag": 0.6}, "mult": 1.0, "element": "lightning",
+      "target": {"shape": "burst", "radius": 10.5, "center": "self"},
+      "requires": {"min_level": 90, "classes": ["spellblade"]}
+    },
+    {
+      "id": "smiting_blow", "name": "Smiting Blow", "kind": "divine", "cost": 1, "cooldown": 3,
+      "description": "A blow struck in the name of something higher.",
+      "scaling": {"str": 0.7, "mag": 0.5}, "mult": 1.0, "element": "holy", "bane": {"undead": 1.5},
+      "target": {"shape": "single"},
+      "statuses": [{"id": "stun", "chance": 0.25, "turns": 1}],
+      "requires": {"min_level": 10, "classes": ["paladin"]}
+    },
+    {
+      "id": "aura_of_courage", "name": "Aura of Courage", "kind": "divine", "cost": 2, "cooldown": 5,
+      "description": "Stand near the paladin and fear has no hold on you.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "party"},
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "party"}],
+      "requires": {"min_level": 60, "classes": ["paladin"]}
+    },
+    {
+      "id": "parry", "name": "Parry", "kind": "tactical", "cost": 1, "cooldown": 4, "companion": false,
+      "description": "Read the blow, meet it on the flat, let it slide past.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 2, "potency": 0.245, "on": "self"}],
+      "requires": {"min_level": 10, "classes": ["duelist"]}
+    },
+    {
+      "id": "flourish", "name": "Flourish", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "Three quick cuts and a bow; the crowd would cheer.",
+      "scaling": {"str": 0.6, "agi": 0.6, "weapon_tier": 0.06}, "mult": 0.5, "hits": 3, "crit_bonus": 0.2,
+      "target": {"shape": "single"},
+      "requires": {"min_level": 50, "classes": ["duelist"]}
+    },
+    {
+      "id": "phantom_strike", "name": "Phantom Strike", "kind": "arcane", "cost": 1, "cooldown": 2,
+      "description": "The blow comes from a copy that is not there.",
+      "scaling": {"mag": 0.5, "agi": 0.5}, "mult": 0.9, "crit_bonus": 0.3, "element": "shadow",
+      "target": {"shape": "single"},
+      "requires": {"min_level": 10, "classes": ["arcane_trickster"]}
+    },
+    {
+      "id": "mind_fog", "name": "Mind Fog", "kind": "arcane", "cost": 2, "cooldown": 5,
+      "description": "A grey haze in the foes' heads: they forget what they were doing.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "burst", "radius": 4.0},
+      "statuses": [{"id": "fear", "chance": 0.4, "turns": 2, "potency": 0.5}, {"id": "weaken", "chance": 0.4, "turns": 2, "potency": 0.2}],
+      "requires": {"min_level": 45, "classes": ["arcane_trickster"]}
+    },
+    {
+      "id": "soul_cleave", "name": "Soul Cleave", "kind": "arcane", "cost": 1, "cooldown": 3,
+      "description": "A swing that cuts the spirit along with the flesh.",
+      "scaling": {"str": 0.6, "mag": 0.5, "weapon_tier": 0.06}, "mult": 0.8, "element": "shadow", "drain": 0.25,
+      "target": {"shape": "cone", "angle": 90, "range": 10.5},
+      "requires": {"min_level": 10, "classes": ["dread_knight"]}
+    },
+    {
+      "id": "dread_aura", "name": "Dread Aura", "kind": "arcane", "cost": 2, "cooldown": 5,
+      "description": "The cold of the grave rolls off the knight's armour.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "all"},
+      "statuses": [{"id": "fear", "chance": 0.3, "turns": 2, "potency": 0.5}, {"id": "weaken", "chance": 0.3, "turns": 2, "potency": 0.2}],
+      "requires": {"min_level": 60, "classes": ["dread_knight"]}
+    },
+    {
+      "id": "eldritch_lash", "name": "Eldritch Lash", "kind": "arcane", "cost": 1, "cooldown": 2,
+      "description": "A whip of something from beyond, that leaves the foe open.",
+      "scaling": {"mag": 1.0}, "mult": 0.8, "element": "shadow",
+      "target": {"shape": "single"},
+      "statuses": [{"id": "vulnerable", "chance": 0.5, "turns": 2, "potency": 0.2}],
+      "requires": {"min_level": 10, "classes": ["warlock"]}
+    },
+    {
+      "id": "pact_of_pain", "name": "Pact of Pain", "kind": "arcane", "cost": 2, "cooldown": 3, "hp_cost": 0.06,
+      "description": "Pay the patron in blood and it strikes for you.",
+      "scaling": {"mag": 1.2}, "mult": 1.5, "element": "shadow",
+      "target": {"shape": "single"},
+      "requires": {"min_level": 60, "classes": ["warlock"]}
+    },
+    {
+      "id": "storm_strike", "name": "Storm Strike", "kind": "primal", "cost": 1, "cooldown": 2,
+      "description": "Lightning rides the weapon into the foe.",
+      "scaling": {"str": 0.4, "mag": 0.6}, "mult": 0.9, "element": "lightning",
+      "target": {"shape": "single"},
+      "statuses": [{"id": "stun", "chance": 0.2, "turns": 1}],
+      "requires": {"min_level": 10, "classes": ["shaman"]}
+    },
+    {
+      "id": "totem_of_wrath", "name": "Totem of Wrath", "kind": "primal", "cost": 2, "cooldown": 5,
+      "description": "A carved pole hammered into the ground; the spirits in it are angry.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "party"},
+      "statuses": [{"id": "rallied", "chance": 1.0, "turns": 3, "potency": 0.2, "on": "party"}],
+      "requires": {"min_level": 60, "classes": ["shaman"]}
+    },
+    {
+      "id": "beast_charge", "name": "Beast Charge", "kind": "primal", "cost": 1, "cooldown": 3,
+      "description": "The pack goes through the foes' line together.",
+      "scaling": {"str": 0.5, "agi": 0.5}, "mult": 0.8,
+      "target": {"shape": "line", "width": 3, "length": 14},
+      "statuses": [{"id": "slow", "chance": 0.5, "turns": 2, "potency": 0.2}],
+      "requires": {"min_level": 10, "classes": ["beastmaster"]}
+    },
+    {
+      "id": "feral_frenzy", "name": "Feral Frenzy", "kind": "primal", "cost": 2, "cooldown": 4,
+      "description": "Tooth, claw and blade, too fast to follow.",
+      "scaling": {"agi": 0.7, "str": 0.4}, "mult": 0.45, "hits": 4,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "bleed", "chance": 0.3, "turns": 3, "potency": 0.08}],
+      "requires": {"min_level": 60, "classes": ["beastmaster"]}
+    },
+    {
+      "id": "shuriken", "name": "Shuriken", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "A star of steel from the sleeve, thrown before the foe sees the hand move.",
+      "scaling": {"agi": 1.0}, "mult": 0.6, "crit_bonus": 0.25,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "bleed", "chance": 0.3, "turns": 3, "potency": 0.08}],
+      "requires": {"min_level": 10, "classes": ["ninja"]}
+    },
+    {
+      "id": "shadow_dash", "name": "Shadow Dash", "kind": "physical", "cost": 2, "cooldown": 3,
+      "description": "Through the foes' line and out the other side, cutting all the way.",
+      "scaling": {"agi": 0.9, "weapon_tier": 0.06}, "mult": 0.9, "crit_bonus": 0.2,
+      "target": {"shape": "line", "width": 2.5, "length": 18},
+      "requires": {"min_level": 50, "classes": ["ninja"]}
+    },
+    {
+      "id": "ki_smite", "name": "Ki Smite", "kind": "divine", "cost": 1, "cooldown": 2,
+      "description": "Breath, faith and a fist, all landing at once.",
+      "scaling": {"str": 0.5, "mag": 0.5}, "mult": 0.9, "pierce": 0.5, "element": "holy", "bane": {"undead": 1.5},
+      "target": {"shape": "single"},
+      "requires": {"min_level": 10, "classes": ["templar"]}
+    },
+    {
+      "id": "unbroken_vow", "name": "Unbroken Vow", "kind": "divine", "cost": 2, "cooldown": 5, "companion": false,
+      "description": "Speak the vow again and stand on it.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}, {"id": "keen", "chance": 1.0, "turns": 3, "potency": 0.2, "on": "self"}],
+      "requires": {"min_level": 60, "classes": ["templar"]}
+    },
+    {
+      "id": "guardian_strike", "name": "Guardian Strike", "kind": "physical", "cost": 1, "cooldown": 2,
+      "description": "A blow that drives the foe back from those behind you.",
+      "scaling": {"str": 0.9, "weapon_tier": 0.06}, "mult": 0.9,
+      "target": {"shape": "single"},
+      "statuses": [{"id": "weaken", "chance": 0.6, "turns": 2, "potency": 0.2}],
+      "requires": {"min_level": 10, "classes": ["warden"]}
+    },
+    {
+      "id": "rooted_stand", "name": "Rooted Stand", "kind": "tactical", "cost": 2, "cooldown": 5,
+      "description": "Plant your feet like the old trees; the party stands with you.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "party"},
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "party"}],
+      "requires": {"min_level": 60, "classes": ["warden"]}
     }
   ]
 }

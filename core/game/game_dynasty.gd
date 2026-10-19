@@ -520,6 +520,7 @@ func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle.weather = world.weather().get("combat", {})
 	battle.biomes = world.here().get("biomes", [])
 	battle.add_allies(party.battle_allies(self))
+	battle.open_with_breath()
 	battle_kind = kind
 	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
 	return battle
@@ -532,7 +533,7 @@ func _make_enemy(c: Dictionary, power: float, reward: float, level: int) -> Dict
 	return {
 		"id": c["id"], "name": c["name"], "level": level, "hp": hp, "max_hp": hp,
 		"atk": float(c["atk"]) * s, "def": float(c["defense"]) * s, "agi": c["agi"],
-		"color": c["color"], "element": c.get("element", ""), "boss": c.get("boss", false),
+		"color": c["color"], "element": c.get("element", ""), "tags": c.get("tags", []), "boss": c.get("boss", false),
 		"xp": int(round(float(c["xp"]) * reward * GameData.xp_level_scale(level))),
 		"gold": int(round(float(c["gold"]) * GameData.enemy_scale(gen) * reward)),
 		"heirloom": c.get("heirloom", ""), "bonus": c.get("bonus", 0.0),
@@ -651,6 +652,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		heir.spell_news = []
 		msgs.append(learned)
 		_say(learned)
+	GameSkills.on_years(self, msgs)
 	GameFeats.on_years(self, msgs)
 	GameSkillTree.on_years(self, msgs)
 	heir.age += years

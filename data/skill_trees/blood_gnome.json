@@ -1,0 +1,309 @@
+{
+ "id": "blood_gnome",
+ "name": "Gears and Wits",
+ "race": "gnome",
+ "people": "Gnomish",
+ "description": "Gnome families pass down workshops, notebooks and a certain look in the eye when something is broken. Marked nodes pass, in part, to the next heir.",
+ "nodes": [
+  {
+   "id": "gn_tinker",
+   "name": "Tinker's Hands",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "mag": {
+      "flat": 1
+     },
+     "agi": {
+      "flat": 1
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_wits",
+   "name": "Bright Wits",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_mp": 0.04
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_trade",
+   "name": "Clockwork Trade",
+   "tier": 1,
+   "col": 4,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.12
+    }
+   }
+  },
+  {
+   "id": "gn_lenses",
+   "name": "Ground Lenses",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "gn_tinker"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "luck": 0.008
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_gadget",
+   "name": "Gadgeteer",
+   "tier": 2,
+   "col": 1,
+   "requires": [
+    "gn_tinker"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "*",
+      "mult": 0.03
+     }
+    ]
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_spark",
+   "name": "Spark-Craft",
+   "tier": 2,
+   "col": 3,
+   "requires": [
+    "gn_wits"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.035
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_patents",
+   "name": "Patents",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "gn_trade"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "gn_springs",
+   "name": "Sprung Armour",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "gn_lenses"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.05,
+     "max_hp": 0.015
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_quick_fix",
+   "name": "Quick Fix",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "gn_gadget"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_genius",
+   "name": "Family Genius",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "gn_gadget",
+    "gn_spark"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.015
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_battery",
+   "name": "Mana Battery",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "gn_spark"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "mp_regen": 0.005
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_spares",
+   "name": "Spare Parts",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "gn_springs"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.05
+    }
+   }
+  },
+  {
+   "id": "gn_overclock",
+   "name": "Overclock",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "gn_quick_fix"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "*",
+      "cost": -0.04
+     },
+     {
+      "skill": "damage",
+      "cost": -0.04
+     }
+    ]
+   }
+  },
+  {
+   "id": "gn_hardy",
+   "name": "Small but Hardy",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "gn_genius"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_unstable",
+   "keystone": "unstable_experiments",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "gn_overclock"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "gn_masters",
+   "name": "Guild of Masters",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "gn_hardy",
+    "gn_battery"
+   ],
+   "cost": 1,
+   "max_rank": 5,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "gn_saga",
+   "name": "The Grand Design",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "gn_masters"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "The plans fill a wall now. Someone in the family will finish them.",
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "max_mp": 0.005
+    }
+   }
+  }
+ ]
+}

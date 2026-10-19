@@ -1,0 +1,305 @@
+{
+ "id": "blood_beastkin",
+ "name": "Instinct",
+ "race": "beastkin",
+ "people": "Beastkin",
+ "description": "Beastkin do not learn the hunt; they remember it, and their cubs remember it sooner. Marked nodes pass, in part, to the next heir.",
+ "nodes": [
+  {
+   "id": "bk_claws",
+   "name": "Sharp Claws",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "str": {
+      "flat": 1
+     },
+     "agi": {
+      "flat": 1
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_nose",
+   "name": "Keen Nose",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.006
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_pack",
+   "name": "Pack Ties",
+   "tier": 1,
+   "col": 4,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "persuasion": 0.03
+    }
+   }
+  },
+  {
+   "id": "bk_pelt",
+   "name": "Thick Pelt",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "bk_claws"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.02,
+     "defense": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_hunter",
+   "name": "Born Hunter",
+   "tier": 2,
+   "col": 1,
+   "requires": [
+    "bk_claws"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_spirit",
+   "name": "Spirit Animal",
+   "tier": 2,
+   "col": 3,
+   "requires": [
+    "bk_nose"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.025,
+     "healing_power": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_forager",
+   "name": "Forager",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "bk_pack"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "bk_lick",
+   "name": "Lick the Wounds",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "bk_pelt"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.04,
+     "max_hp": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_pounce",
+   "name": "Pounce",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "bk_hunter"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "*",
+      "crit": 0.03
+     }
+    ]
+   }
+  },
+  {
+   "id": "bk_wild",
+   "name": "Wild Heart",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "bk_hunter",
+    "bk_spirit"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.015
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_danger",
+   "name": "Danger Sense",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "bk_spirit"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_howl",
+   "name": "Howl at the Moon",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "bk_lick"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "luck": 0.008
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_frenzy",
+   "name": "Frenzy",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "bk_pounce"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "crit_damage": 0.1
+    }
+   }
+  },
+  {
+   "id": "bk_alpha",
+   "name": "Alpha's Line",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "bk_wild"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.02,
+     "melee_damage": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_feral",
+   "keystone": "feral_instinct",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "bk_frenzy"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "bk_elders",
+   "name": "Totem Elders",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "bk_alpha",
+    "bk_howl"
+   ],
+   "cost": 1,
+   "max_rank": 5,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "bk_saga",
+   "name": "Tracks Across Ages",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "bk_elders"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "The young ones follow your old trails without knowing why.",
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "reflexes": 0.001
+    }
+   }
+  }
+ ]
+}

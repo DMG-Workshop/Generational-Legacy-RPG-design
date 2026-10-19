@@ -3,6 +3,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
 
 var dynasty: GameDynasty
 
@@ -11,6 +12,14 @@ func _ready() -> void:
 	var v := Kit.overlay(self, "Chronicle of House %s" % dynasty.dynasty_name)
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if UiSettings.touch():   # the tabs a fingertip tall, as the buttons are
+		for st in ["tab_selected", "tab_unselected", "tab_hovered", "tab_disabled"]:
+			var sb: StyleBox = tabs.get_theme_stylebox(st).duplicate()
+			var line := tabs.get_theme_font("font").get_height(tabs.get_theme_font_size("font_size"))
+			var pad := maxf(0.0, (UiSettings.tap_h(0.0) - line) * 0.5)
+			sb.content_margin_top = pad
+			sb.content_margin_bottom = pad
+			tabs.add_theme_stylebox_override(st, sb)
 	v.add_child(tabs)
 
 	var lin := Kit.rich()

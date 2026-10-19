@@ -1,0 +1,317 @@
+{
+ "id": "blood_elf",
+ "name": "The Long Memory",
+ "race": "elf",
+ "people": "Elven",
+ "description": "Elves remember. What one generation learned, the next half-recalls as if from a dream. Marked nodes pass, in part, to the next heir.",
+ "nodes": [
+  {
+   "id": "el_grace",
+   "name": "Elven Grace",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "agi": {
+      "flat": 1
+     },
+     "mag": {
+      "flat": 1
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_memory",
+   "name": "Long Memory",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_mp": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_song",
+   "name": "Old Songs",
+   "tier": 1,
+   "col": 4,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "persuasion": 0.03
+    }
+   }
+  },
+  {
+   "id": "el_keen",
+   "name": "Keen Senses",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "el_grace"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_moonblade",
+   "name": "Moonlit Blades",
+   "tier": 2,
+   "col": 1,
+   "requires": [
+    "el_grace"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_arcana",
+   "name": "Elder Arcana",
+   "tier": 2,
+   "col": 3,
+   "requires": [
+    "el_memory"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.04
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_lore",
+   "name": "Loremaster",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "el_song"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "el_ageless",
+   "name": "Ageless Body",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "el_keen"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.025,
+     "resist": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_quiet",
+   "name": "Quiet Step",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "el_moonblade"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "stealth": 0.05,
+     "reflexes": 0.005
+    }
+   }
+  },
+  {
+   "id": "el_centuries",
+   "name": "Years of Practice",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "el_moonblade",
+    "el_arcana"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.015
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_starwell",
+   "name": "Starwell",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "el_arcana"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "mp_regen": 0.005
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_grove",
+   "name": "Ward of the Grove",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "el_ageless"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_silver",
+   "name": "Silver Arrows",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "el_quiet"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "crit_damage": 0.08
+    }
+   }
+  },
+  {
+   "id": "el_reverie",
+   "name": "Reverie",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "el_centuries"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "resist": 0.03,
+     "max_mp": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_farsight",
+   "name": "Farsight",
+   "tier": 4,
+   "col": 3,
+   "requires": [
+    "el_centuries"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "luck": 0.01
+    }
+   }
+  },
+  {
+   "id": "el_elder_mind",
+   "keystone": "elder_mind",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "el_silver"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "el_first_age",
+   "name": "Heirs of First Age",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "el_reverie",
+    "el_grove"
+   ],
+   "cost": 1,
+   "max_rank": 5,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "el_saga",
+   "name": "Song Without End",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "el_first_age"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "The elves still sing of a house that is not yet finished.",
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "max_mp": 0.005
+    }
+   }
+  }
+ ]
+}

@@ -1,8 +1,9 @@
 {
- "id": "bloodline",
- "name": "The Blood of the House",
- "class": "",
- "description": "What runs in the family. Marked nodes pass, in part, to the next heir.",
+ "id": "blood_human",
+ "name": "The Restless Blood",
+ "race": "human",
+ "people": "Human",
+ "description": "Humans make up in drive what they lack in years; every generation starts a little further on. Marked nodes pass, in part, to the next heir.",
  "nodes": [
   {
    "id": "b_vigor",

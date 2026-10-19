@@ -39,6 +39,7 @@ var equipment: Dictionary = {"weapon": "", "armor": "", "trinket": ""}   # slot 
 var inventory: Array = []    # item ids carried but not worn
 var spells: Array = []       # spell ids known (see GameCombat)
 var spell_news: Array = []   # spells learned since the dynasty last announced them
+var skill_news: Array = []   # class skill ids opened since the dynasty last announced them (see GameSkills)
 var diseases: Array = []     # [{id, stage, years_in_stage, source}]: see GameDisease
 var tainted_gear: Array = [] # bargain gear still hiding a sickness until it is first worn
 var disease_level: int = 1   # level up to which the level-milestone sickness rolls are done
@@ -216,6 +217,7 @@ func gain_xp(amount: int) -> int:
 	var mult := maxf(0.1, 1.0 + float(archetype_bonus.get("xp", 0.0)) + trait_total("xp_gain"))
 	xp += int(round(float(amount) * mult))
 	var gained := 0
+	var was := level
 	while level < cap and xp >= xp_to_next():
 		xp -= xp_to_next()
 		level += 1
@@ -226,6 +228,7 @@ func gain_xp(amount: int) -> int:
 		xp = 0
 	if gained > 0:
 		spell_news.append_array(learn_spells())
+		skill_news.append_array(GameSkills.between(class_id, was, level))
 		GameFeats.sync(self)
 		GameSkillTree.sync(self)
 	return gained
@@ -267,7 +270,7 @@ func to_dict() -> Dictionary:
 		"archetype_bonus": archetype_bonus, "training": training, "family_founded": family_founded,
 		"extra_life_used": extra_life_used, "battles_won": battles_won, "clean_streak": clean_streak, "kills": kills,
 		"parent_names": parent_names, "heirloom_bonus": heirloom_bonus, "children": kids,
-		"equipment": equipment, "inventory": inventory, "spells": spells, "spell_news": spell_news,
+		"equipment": equipment, "inventory": inventory, "spells": spells, "spell_news": spell_news, "skill_news": skill_news,
 		"diseases": diseases, "tainted_gear": tainted_gear, "disease_level": disease_level,
 		"known_feats": known_feats, "equipped_feats": equipped_feats, "feat_points": feat_points,
 		"feat_level": feat_level, "feat_news": feat_news, "downtime": downtime, "skill_tree": GameSkillTree.to_dict(self),
@@ -307,6 +310,10 @@ static func from_dict(d: Dictionary) -> GameHeir:
 		h.level += 1
 	if not d.has("spells"):   # saves from before the spellbook: the heir knows what their level allows
 		h.learn_spells()
+	# Saves from before class skills opened by level: the journal tells once what this level has
+	# already opened.
+	var known := GameSkills.unlocked_ids(h.class_id, h.level)
+	h.skill_news = Array(d["skill_news"]).filter(func(id): return id in known) if d.has("skill_news") else GameSkills.between(h.class_id, 1, h.level)
 	h.disease_level = int(d.get("disease_level", h.level))
 	GameFeats.load_into(h, d)
 	GameSkillTree.load_into(h, d.get("skill_tree"))
