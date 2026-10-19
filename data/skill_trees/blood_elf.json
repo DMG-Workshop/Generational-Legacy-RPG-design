@@ -158,7 +158,7 @@
   },
   {
    "id": "el_centuries",
-   "name": "Centuries of Practice",
+   "name": "Years of Practice",
    "tier": 3,
    "col": 2,
    "requires": [
@@ -273,7 +273,7 @@
   },
   {
    "id": "el_first_age",
-   "name": "Heirs of the First Age",
+   "name": "Heirs of First Age",
    "tier": 5,
    "col": 2,
    "requires": [

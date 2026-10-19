@@ -142,7 +142,7 @@
   },
   {
    "id": "dw_mountain",
-   "name": "Mountain's Patience",
+   "name": "Mountain Patience",
    "tier": 3,
    "col": 0,
    "requires": [
@@ -176,7 +176,7 @@
   },
   {
    "id": "dw_ancestors",
-   "name": "Halls of the Ancestors",
+   "name": "Halls of Ancestors",
    "tier": 3,
    "col": 2,
    "requires": [

@@ -36,6 +36,7 @@ func _init() -> void:
 	test_keystones()
 	test_respec()
 	test_inheritance()
+	test_node_names_fit()
 	test_race_blood()
 	test_companions()
 	test_companion_saves()
@@ -752,6 +753,13 @@ func test_inheritance() -> void:
 
 ## Nodes of another race's blood count for nothing; a child of another race takes what the parent's
 ## blood carried in its own bloodline's shape; an old save's shared blood is cut to the heir's race.
+func test_node_names_fit() -> void:
+	# a node button clips its label past about 19 characters
+	for t in GameSkillTree.tree_ids():
+		for n in GameSkillTree.tree(t)["nodes"]:
+			ok(str(n["name"]).length() <= 19, "%s: the name '%s' fits its button" % [t, n["name"]])
+
+
 func test_race_blood() -> void:
 	var dw := _unit("warrior", 500, "dwarf")
 	_give(dw, {"dw_stoneblood": 3, "b_vigor": 3})

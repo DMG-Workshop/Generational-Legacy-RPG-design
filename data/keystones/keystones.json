@@ -421,7 +421,7 @@
   },
   {
    "id": "unstable_experiments",
-   "name": "Unstable Experiments",
+   "name": "Unstable Tinkering",
    "rule": "glass",
    "params": {
     "dealt": 0.3,
