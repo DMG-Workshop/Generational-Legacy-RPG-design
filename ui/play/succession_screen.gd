@@ -73,6 +73,7 @@ func _card(i: int, c: GameHeir, width: float) -> Control:
 	v.add_child(_wrapped(Kit.label("%s %s  -  %s" % [c.race()["name"], c.cls()["name"], " & ".join(c.parent_names)], 14, Kit.DIM)))
 	v.add_child(_wrapped(Kit.label("Fate Value: %d%% (lifetime chance of major failure)" % int(round(c.fate_value * 100.0)), 15, Kit.BAD if c.fate_value > 0.2 else Kit.TEXT)))
 	v.add_child(_wrapped(Kit.label("Expected lifespan: ~%d years" % int(c.lifespan), 15)))
+	v.add_child(_wrapped(Kit.label(GameSkillTree.preview_text(d.heir, c), 14, Kit.DIM)))
 	if not c.diseases.is_empty():
 		v.add_child(_wrapped(Kit.label("Sick: %s" % GameDisease.status_text(c), 15, Kit.BAD)))
 	v.add_child(HSeparator.new())
