@@ -135,7 +135,7 @@ func _refresh() -> void:
 		if cid in parents:
 			var other: String = parents[1] if parents[0] == cid else parents[0]
 			hybrids.append("%s (with a %s)" % [GameData.classes[id]["name"], GameData.classes[other]["name"]])
-	class_desc.text = "%s  Skills: %s" % [c["description"], ", ".join(c["skills"].map(func(s): return s["name"]))]
+	class_desc.text = "%s  Skills: %s." % [c["description"], GameSkills.plan_text(cid)]
 	if not hybrids.is_empty():
 		class_desc.text += "\nChildren with another class may become: %s." % ", ".join(hybrids)
 	var r: Dictionary = GameData.races[race_ids[race_pick.selected]]

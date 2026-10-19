@@ -156,16 +156,21 @@ func _skills(u: GameHeir) -> String:
 	var parts: Array = []
 	var skills: Array = u.cls()["skills"]
 	for i in skills.size():
+		if not GameSkills.unlocked(u, i):
+			continue
 		var s: Dictionary = skills[i]
 		var what: String
 		if s["type"] == "heal":
 			what = "heals %d%%" % int(round(float(s["pct_max_hp"]) * 100.0))
+		elif float(s.get("mult", 0.0)) <= 0.0:
+			what = GameCombat.shape_text(s).to_lower() + " " + s["type"]
 		else:
 			what = "x%.1f" % float(s["mult"])
 			if int(s.get("hits", 1)) > 1:
 				what = "%d hits x%.1f" % [int(s["hits"]), float(s["mult"])]
 		parts.append("%s (%s, %s MP)" % [s["name"], what, GameText.num(GameBattle.unit_skill_cost(u, i))])
-	return "Skills: " + ", ".join(parts)
+	var nxt := GameSkills.next_unlock(u)
+	return "Skills: " + ", ".join(parts) + ("" if nxt.is_empty() else "; next at level %s" % GameText.num(int(nxt["level"])))
 
 
 ## Who held this role before the one now at the table, if anyone.

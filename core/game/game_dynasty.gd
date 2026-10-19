@@ -651,6 +651,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 		heir.spell_news = []
 		msgs.append(learned)
 		_say(learned)
+	GameSkills.on_years(self, msgs)
 	GameFeats.on_years(self, msgs)
 	GameSkillTree.on_years(self, msgs)
 	heir.age += years
