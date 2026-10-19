@@ -48,6 +48,11 @@ func _init() -> void:
 	test_caster_dry_and_potions()
 	test_areas_on_packs()
 	test_determinism()
+	test_tends_allies()
+	test_undead()
+	test_stealth()
+	test_openers()
+	test_every_skill_gets_used()
 	print("skills tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -215,7 +220,7 @@ func test_news() -> void:
 	var back := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(raw)))
 	ok(back.heir.skill_news == ["sweeping_blow", "iron_stance", "sundering_strike"], "an old save's heir has news of the skills its level opened: %s" % str(back.heir.skill_news))
 	var told := back._pass_years(0.1, [])
-	ok(told.any(func(m): return str(m) == "Tess can now use Sweeping Blow and Iron Stance and Sundering Strike (class skills)."), "told once on the first years: %s" % str(told))
+	ok(told.any(func(m): return str(m) == "Tess can now use Sweeping Blow, Iron Stance and Sundering Strike (class skills)."), "told once on the first years: %s" % str(told))
 	ok(not back._pass_years(0.1, []).any(func(m): return "can now use" in str(m)), "and never again")
 	# A save with news keeps it; a saved level-1 child has none.
 	o.heir.skill_news = ["iron_stance"]
@@ -386,7 +391,7 @@ func test_class_mix() -> void:
 				ok(float(m["attack"]) <= 0.15, "a caster rarely swings its staff: %d%%" % int(float(m["attack"]) * 100.0))
 			"martial":
 				ok(float(m["spell"]) == 0.0 and float(m["magic_skill"]) == 0.0, "a fighter casts nothing (%s)" % text)
-				ok(steel >= 0.85, "a fighter fights with steel: %d%%" % int(steel * 100.0))
+				ok(steel >= 0.8, "a fighter fights with steel (stances and wards are the rest): %d%%" % int(steel * 100.0))
 				if int(m["feats_readied"]) > 0:
 					ok(float(m["feat_weapon"]) + float(m["feat_magic"]) >= 0.08, "a fighter with feats uses them: %d%% (%s)" % [int((float(m["feat_weapon"]) + float(m["feat_magic"])) * 100.0), text])
 			"hybrid":
@@ -463,3 +468,176 @@ func test_determinism() -> void:
 			d.battle = null
 		runs.append(plans)
 	ok(runs[0] == runs[1] and not runs[0].is_empty(), "the same seed gives the same plans")
+
+
+# ---------------------------------------------------------------- identity of the autopilot
+
+## A cleric (style heal_below) mends a hurt companion before it strikes, even with the heir hale; a
+## class without the style does not.
+func test_tends_allies() -> void:
+	for cid in ["cleric", "druid", "warrior"]:
+		var mended := 0
+		var fights := 6
+		for s in fights:
+			var d := _dyn(cid, 40, 300 + s)
+			var b := _battle(d, 3, "wolf" if s % 2 == 0 else "skeleton")
+			b.add_allies([GameParty.build_unit("bren_cask", 30, 1)])
+			b.allies[0].hp = maxi(1, int(float(b.allies[0].max_hp()) * 0.15))
+			var p := GameTactics.choose(b, -1)
+			if p.get("act", "") == "ability" and p["ab"].has("pct_max_hp") and int(p.get("target", -2)) == 0:
+				GameTactics.act(b, p)
+				if b.events.any(func(e): return e.get("type", "") == "heal" and e.get("side", "") == "ally" and int(e.get("amount", 0)) > 0):
+					mended += 1
+			d.battle = null
+		if float(GameSkills.style(cid)["heal_below"]) > 0.0:
+			ok(mended == fights, "%s mends the hurt companion first, in every fight (%d of %d)" % [cid, mended, fights])
+		else:
+			ok(mended == 0, "%s does not stop to mend a companion (%d)" % [cid, mended])
+
+
+## Holy work bites undead harder (creatures carry tags; abilities a "bane"), so a cleric turns to
+## it against skeletons: the same blow is worth more, and the autopilot reaches for holy things.
+func test_undead() -> void:
+	ok(GameCombat.creature_def("skeleton").get("tags", []).has("undead") and GameCombat.creature_def("ghoul").get("tags", []).has("undead"), "skeletons and ghouls are tagged undead")
+	ok(not GameCombat.creature_def("wolf").has("tags"), "a wolf is not")
+	var d := _dyn("cleric", 40, 5)
+	var bs := _battle(d, 1, "skeleton")
+	var smite: Dictionary = GameSkillTree.skill(d.heir, 0)
+	var vs_bone := 0.0
+	for h in bs.expected_hits(-1, smite, 0):
+		vs_bone += float(h[1])
+	var plain := smite.duplicate()
+	plain.erase("bane")
+	var no_bane := 0.0
+	for h in bs.expected_hits(-1, plain, 0):
+		no_bane += float(h[1])
+	ok(vs_bone > no_bane * 1.3, "Smite does more to a skeleton with its bane than without (%.0f vs %.0f)" % [vs_bone, no_bane])
+	d.battle = null
+	var holy := {}
+	for foe in ["wolf", "skeleton"]:
+		var n := 0
+		var h := 0
+		for s in 8:
+			var d2 := _dyn("cleric", 60, 400 + s)
+			d2.heir.downtime = true
+			GameFeats.bot_tick(d2)
+			var b := _battle(d2, 3, foe)
+			var g := 0
+			while not b.is_over() and g < 60:
+				g += 1
+				var p := GameTactics.auto_turn(b)
+				if p.get("act", "") == "ability" and str(p["ab"].get("element", "")) == "holy":
+					h += 1
+				n += 1
+			d2.battle = null
+		holy[foe] = float(h) / float(maxi(1, n))
+	ok(float(holy["skeleton"]) > float(holy["wolf"]), "a cleric works more holy ability against skeletons than wolves (%d%% vs %d%%)" % [int(float(holy["skeleton"]) * 100.0), int(float(holy["wolf"]) * 100.0)])
+	var turn: Dictionary = GameFeats.def("turn_undead")
+	ok(float(turn.get("bane", {}).get("undead", 1.0)) >= 1.5, "Turn Undead has a bane against the undead")
+
+
+## Hiding: the next blow from the shadows is a certain crit and ends the hiding.
+func test_stealth() -> void:
+	var d := _dyn("rogue", 30, 9)
+	var b := _battle(d, 1, "bandit")
+	_sturdy(b)
+	d.heir.equipped_feats = ["shadow_slip"]
+	d.heir.known_feats = ["shadow_slip"]
+	b.use_feat(0, 0)
+	ok(b.has_status("heir", "hidden"), "Slip into Shadow hides the rogue")
+	var crits := 0
+	var before := b.turn
+	b.attack(0)
+	for e in b.events:
+		if e.get("type", "") == "damage" and bool(e.get("crit", false)):
+			crits += 1
+	ok(crits == 1, "the first blow from hiding is a crit (%d)" % crits)
+	ok(not b.has_status("heir", "hidden"), "and it ends the hiding")
+	ok(b.turn > before, "the battle went on")
+	ok(GameFeats.def("shadow_slip").get("requires", {}).get("classes", []) == ["rogue"], "Slip into Shadow is the rogue's own")
+	d.battle = null
+
+
+## The rogue opens with poison, then stealth, and then strikes; a warrior opens with its stance.
+## Only where the fight is worth preparing for.
+func test_openers() -> void:
+	var first := {}
+	var second := {}
+	for s in 8:
+		var d := _dyn("rogue", 20, 500 + s)
+		d.heir.downtime = true
+		d.heir.known_feats = []
+		d.heir.feat_points = 5
+		GameFeats.bot_tick(d)
+		var b := _battle(d, 1, "ogre")
+		for e in b.enemies:
+			e["hp"] = 60000
+			e["max_hp"] = 60000
+			e["atk"] = 1.0
+		var p1 := GameTactics.auto_turn(b)
+		var p2 := GameTactics.auto_turn(b)
+		var n1 := str(p1.get("ab", {}).get("name", p1["act"]))
+		var n2 := str(p2.get("ab", {}).get("name", p2["act"]))
+		first[n1] = int(first.get(n1, 0)) + 1
+		second[n2] = int(second.get(n2, 0)) + 1
+		d.battle = null
+	ok(int(first.get("Envenom", 0)) == 8, "a rogue opens a long fight with Envenom: %s" % str(first))
+	ok(int(second.get("Slip into Shadow", 0)) == 8, "then slips into shadow: %s" % str(second))
+	var d3 := _dyn("warrior", 30, 3)
+	var b3 := _battle(d3, 1, "ogre")
+	for e in b3.enemies:
+		e["hp"] = 60000
+		e["max_hp"] = 60000
+		e["atk"] = 1.0
+	ok(str(GameTactics.auto_turn(b3).get("ab", {}).get("name", "")) == "Iron Stance", "a warrior sets its stance first in a long fight")
+	d3.battle = null
+	# A fight over in a round is not opened with a stance.
+	var d4 := _dyn("warrior", 60, 3)
+	var b4 := _battle(d4, 1, "slime")
+	ok(str(GameTactics.auto_turn(b4).get("ab", {}).get("name", "")) != "Iron Stance", "a trivial fight is not opened with a stance")
+	d4.battle = null
+	for cid in GameData.classes:
+		for id in GameSkills.style(cid)["opener"]:
+			ok(GameSkills.list(cid).any(func(sk): return str(sk["id"]) == str(id)) or not GameFeats.def(str(id)).is_empty(), "%s: opener %s exists" % [cid, id])
+
+
+## Over seeded fights of every sort, the autopilot reaches for each class skill that is not a
+## heal, so no skill is dead data. Fights run at the level the skill opens at and a little above it.
+func test_every_skill_gets_used() -> void:
+	var scen := [["wolf", 1, 1.0], ["wolf", 3, 2.5], ["bandit", 3, 4.0], ["ogre", 1, 3.0], ["stone_golem", 1, 4.0], ["skeleton", 3, 3.0],
+		["wolf", 5, 5.0], ["bandit", 1, 6.0], ["wolf", 3, 1.0], ["bandit", 3, 1.0], ["ogre", 1, 1.0], ["stone_golem", 1, 1.5],
+		["skeleton", 3, 1.5], ["wolf", 5, 1.5], ["bandit", 1, 2.0], ["ogre", 3, 2.0], ["wolf", 1, 1.0]]
+	for cid in GameData.classes:
+		var used := {}
+		var levels := {}
+		for sk in GameSkills.list(cid):
+			levels[GameSkills.level_of(sk)] = true
+			levels[int(GameSkills.level_of(sk) * 1.6) + 2] = true
+		for lv in levels:
+			for sc in scen:
+				for s in 3:
+					var d := GameDynasty.new_game(100 + s, "P", cid, "faetouched", "human")
+					d.pending_event = {}
+					d.heir.level = lv
+					d.heir.spells = []
+					d.heir.learn_spells()
+					d.heir.downtime = true
+					GameSkillTree.bot_tick(d)
+					GameFeats.bot_tick(d)
+					d.heir.full_heal()
+					var foes: Array = []
+					for i in int(sc[1]):
+						foes.append(d._make_enemy(GameCombat.creature_def(str(sc[0])), float(sc[2]), 1.0, d.heir.level))
+					d._begin_battle(foes, "hunt")
+					var g := 0
+					while not d.battle.is_over() and g < 60:
+						g += 1
+						var p := GameTactics.auto_turn(d.battle)
+						if p.get("act", "") == "ability":
+							used[str(p["ab"].get("name", "?"))] = true
+					d.battle = null
+		var dead: Array = []
+		for sk in GameSkills.list(cid):
+			if str(sk["type"]) != "heal" and not used.has(str(sk["name"])):
+				dead.append(str(sk["name"]))
+		ok(dead.is_empty(), "%s: every strike, control and stance gets used by the autopilot; never chosen: %s" % [cid, str(dead)])

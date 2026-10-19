@@ -6,7 +6,9 @@
 ## or haste spares what it softens. MP spent is priced by what the unit's main skill would have
 ## done with it, dearer as MP runs low. Areas count each foe they catch. Each unit fights in its
 ## class's style (GameSkills.weights): casters lead with spells and magic, fighters with steel and
-## feats. Only class skills its level has opened are weighed. No rolls of its own.
+## feats. Only class skills its level has opened are weighed. A class's style may also ask it to
+## mend a hurt party member early (heal_below), to open a battle with set moves (opener), and every
+## class rotates a little between its moves, so each of its skills gets used. No rolls of its own.
 class_name GameTactics
 extends RefCounted
 
@@ -75,6 +77,9 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 		var group := _pick_heal(opts, true)
 		if not group.is_empty() and group["ab"].get("party", false):
 			return _plan(group, -1)
+	var care := _tend(b, by, opts)
+	if not care.is_empty():
+		return care
 	if _affliction(b, "heir") >= float(GameCombat.setting("bot_cleanse_threat")):
 		for o in opts:
 			if o["ab"].get("cleanse", false):
@@ -141,9 +146,10 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 				"mp_back": mp_back, "hp": float(o.get("hp", 0))})
 	if main >= 0:
 		ctx["mp_price"] = maxf(0.0, main_v - blow) / float(maxi(1, GameBattle.unit_skill_cost(me, main)))
+	var variety := GameSkills.variety(me)
 	for c in cands:
 		if float(c["value"]) > 0.0:
-			c["value"] = float(c["value"]) * float(w.get(GameSkills.category(c["plan"]), 1.0))
+			c["value"] = float(c["value"]) * float(w.get(GameSkills.category(c["plan"]), 1.0)) / (1.0 + variety * _times_used(b, by, c["plan"]))
 	var price := float(ctx["mp_price"]) * float(ctx["scarcity"]) * float(w["mp_price"])
 	var floor_price := -1.0   # worked out only if a blessing or a curse is in the running
 	var margin := float(GameCombat.setting("bot_other_margin"))
@@ -159,7 +165,88 @@ static func choose(b: GameBattle, by: int) -> Dictionary:
 			score /= margin
 		c["score"] = score
 		best = _keep_better(best, c)
+	var opening := _opener(b, by, opts, ctx)
+	if not opening.is_empty() and _share_felled(b, by, best["plan"], ctx) < float(GameCombat.setting("bot_opener_skip_share")):
+		return opening
 	return best["plan"]
+
+
+## How often the unit has used this plan's ability in the battle so far (a plain blow: never counted).
+static func _times_used(b: GameBattle, by: int, plan: Dictionary) -> int:
+	if str(plan.get("act", "")) != "ability":
+		return 0
+	return int(b.uses.get("%s/%s" % [GameBattle.ref_of(by), plan["ab"].get("name", "")], 0))
+
+
+## An heir whose class looks after its party (style heal_below) mends the most hurt member once they fall
+## under that share of HP, before it does anything else: a single heal aimed at them, or the party
+## heal when two or more are hurt that badly. Returns {} when nobody is that hurt or no heal can be paid.
+static func _tend(b: GameBattle, by: int, opts: Array) -> Dictionary:
+	var care := float(GameSkills.style(b.unit(by).class_id)["heal_below"])
+	if care <= 0.0 or by >= 0:
+		return {}   # a companion tends the heir by the plain rule only
+	var worst := -2
+	var worst_frac := 1.0
+	var hurt := 0
+	for who in [-1] + b.conscious_allies():
+		# The heir's own wounds wait a little longer: the plain rule above mends them below bot_heal_below.
+		var line := care * float(GameCombat.setting("bot_tend_self")) if who == -1 else care
+		var f := _frac(b.unit(who).hp, int(b.unit_numbers(who)["max_hp"]))
+		if f < line:
+			hurt += 1
+			if f < worst_frac:
+				worst_frac = f
+				worst = who
+	if worst == -2:
+		return {}
+	var heal := _pick_heal(opts, hurt >= 2)
+	if heal.is_empty():
+		return {}
+	return _plan(heal, worst)
+
+
+## The share of the foes' remaining HP a plan is expected to take off this turn (0 for anything that
+## does not strike).
+static func _share_felled(b: GameBattle, by: int, plan: Dictionary, ctx: Dictionary) -> float:
+	var ab: Dictionary = plan.get("ab", {}) if str(plan.get("act", "")) == "ability" else {}
+	if str(plan.get("act", "")) in ["pass", "potion"] or (not ab.is_empty() and not GameCombat.aims_at_foe(ab)):
+		return 0.0
+	var t := int(plan.get("target", -1))
+	var hits: Array = [] if ab.is_empty() else GameCombat.footprint(ab, ctx["origin"], t, ctx["points"])
+	var dealt := 0.0
+	for h in b.expected_hits(by, ab, t, hits, ctx["nums"]):
+		dealt += minf(float(h[1]), float(b.enemies[h[0]]["hp"]))
+	var left := 0.0
+	for i in ctx["living"]:
+		left += float(b.enemies[i]["hp"])
+	return dealt / maxf(1.0, left)
+
+
+## The heir's opening moves (style opener: skill or feat ids, in order): while the battle is young,
+## the first of them not yet used and ready is played, if the fight looks costly enough to prepare for
+## (the HP it would cost at the foes' pace, as a share of max HP: settings.bot_opener_min_danger) and
+## a round of their blows costs no more than settings.bot_opener_max_pace of it.
+static func _opener(b: GameBattle, by: int, opts: Array, ctx: Dictionary) -> Dictionary:
+	var list: Array = GameSkills.style(b.unit(by).class_id)["opener"]
+	if by >= 0 or list.is_empty() or b.turn >= list.size():
+		return {}   # a hireling just fights
+	var pace := float(ctx["total"]) / float(maxi(1, int(b.unit_numbers(-1)["max_hp"])))   # a round of the foes' blows
+	if pace * float(ctx["turns"]) < float(GameCombat.setting("bot_opener_min_danger")) or pace > float(GameCombat.setting("bot_opener_max_pace")):
+		return {}   # a fight that costs little is not worth a round of preparing, one that bites hard allows none
+	for id in list:
+		for o in opts:
+			var is_feat := str(o.get("feat", "")) != ""
+			if str(o["feat"] if is_feat else o["ab"].get("id", "")) != str(id) or (not is_feat and int(o["skill"]) < 0):
+				continue
+			if _times_used(b, by, _plan(o, -1)) > 0:
+				break   # played already: on to the next
+			var ab: Dictionary = o["ab"]
+			if GameCombat.aims_at_foe(ab):
+				return _plan(o, int(ctx["blows"][0]))
+			if _blessing_value(b, by, ab, ctx) == -INF:
+				break   # its status is on already
+			return _plan(o, -1)
+	return {}
 
 
 ## While the heir is below settings.bot_reserve_heal_below and the unit's class heal can still be
@@ -494,7 +581,8 @@ static func _blessing_value(b: GameBattle, by: int, ab: Dictionary, ctx: Diction
 				var dodge := 0.0 if bool(n["no_dodge"]) else clampf(float(n["dodge"]) + b.status_mod(GameBattle.ref_of(who), "dodge"), 0.0, 1.0)
 				v += pot * float(mods["dodge"]) * incoming * (1.0 - dodge)
 			elif float(mods.get("crit", 0.0)) > 0.0:
-				v += pot * float(mods["crit"]) * (float(b.unit_numbers(who)["crit_mult"]) - 1.0) * strike * turns
+				var span := 1.0 if def.get("spent_on", "") == "blow" else turns   # hiding lasts for one blow
+				v += minf(1.0, pot * float(mods["crit"])) * (float(b.unit_numbers(who)["crit_mult"]) - 1.0) * strike * span
 	return v
 
 

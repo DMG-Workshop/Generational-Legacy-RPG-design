@@ -2,8 +2,10 @@
 ## data/classes/classes.json grows with the heir: each entry opens at its "level" (1 when it has
 ## none), and the first ones, open from level 1, keep the places saves and plans index them by.
 ## A skill with "once" may be used once a battle. A class's "style" ({kind: martial, caster or
-## hybrid, lean 0..1}) tells the autopilot which of its actions to lean on; without one it follows
-## the stat of the class's first strike. The weights per kind of action live in formations.json
+## hybrid, lean 0..1, heal_below 0..1: mend a party member under that share of HP first, opener:
+## ids of skills or feats to open a battle with, variety: how fast a move cools with use}) tells the
+## autopilot which of its actions to lean on; without one it follows the stat of the class's first
+## strike. The weights per kind of action live in formations.json
 ## (settings.bot_styles). No rendering and no rolls here.
 ##
 ## State on a GameHeir: skill_news, the ids of class skills opened since the journal last told
@@ -108,7 +110,8 @@ static func news_text(h: GameHeir, ids: Array) -> String:
 	if ids.is_empty():
 		return ""
 	var names: Array = ids.map(func(id): return skill_name(h.class_id, str(id)))
-	return "%s can now use %s (class skill%s)." % [h.name, " and ".join(names), "" if names.size() == 1 else "s"]
+	var list: String = names[0] if names.size() == 1 else "%s and %s" % [", ".join(PackedStringArray(names.slice(0, -1))), names[-1]]
+	return "%s can now use %s (class skill%s)." % [h.name, list, "" if names.size() == 1 else "s"]
 
 
 ## Tells the skills opened since last time, once (from GameDynasty._pass_years).
@@ -134,7 +137,14 @@ static func style(class_id: String) -> Dictionary:
 			if str(s.get("type", "")) == "damage":
 				kind = {"mag": "caster", "both": "hybrid"}.get(str(s.get("stat", "str")), "martial")
 				break
-	return {"kind": kind, "lean": float(st.get("lean", -1.0))}
+	return {"kind": kind, "lean": float(st.get("lean", -1.0)), "heal_below": float(st.get("heal_below", 0.0)),
+		"opener": st.get("opener", []), "variety": float(st.get("variety", -1.0))}
+
+
+## How much a unit's liking for a move cools with each use of it in one battle (see GameTactics).
+static func variety(u: GameHeir) -> float:
+	var v := float(style(u.class_id)["variety"])
+	return v if v >= 0.0 else float(GameCombat.setting("bot_variety"))
 
 
 ## How far a unit leans toward spellcraft, 0 (all steel) to 1 (all spell). A martial class is 0
@@ -313,6 +323,11 @@ static func validate() -> Array:
 				out.append("class %s: style kind must be one of %s" % [cid, ", ".join(KINDS)])
 			if st.has("lean") and (float(st["lean"]) < 0.0 or float(st["lean"]) > 1.0):
 				out.append("class %s: style lean must be within 0..1" % cid)
+			if st.has("heal_below") and (float(st["heal_below"]) <= 0.0 or float(st["heal_below"]) > 1.0):
+				out.append("class %s: style heal_below must be within 0..1" % cid)
+			for id in st.get("opener", []):
+				if not all.any(func(s): return str(s.get("id", "")) == str(id)) and not GameFeats.def(str(id)).has("name"):
+					out.append("class %s: style opener '%s' is neither a class skill nor a feat" % [cid, id])
 		sigs.sort()
 		var mark := "|".join(sigs)
 		if marks.has(mark):

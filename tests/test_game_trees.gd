@@ -34,6 +34,7 @@ func _init() -> void:
 	test_battle_numbers()
 	test_upgrades_in_battle()
 	test_keystones()
+	test_race_keystones()
 	test_respec()
 	test_inheritance()
 	test_node_names_fit()
@@ -751,15 +752,15 @@ func test_inheritance() -> void:
 
 # ---------------------------------------------------------------- bloodline by race
 
-## Nodes of another race's blood count for nothing; a child of another race takes what the parent's
-## blood carried in its own bloodline's shape; an old save's shared blood is cut to the heir's race.
+## A node button clips its label past about 19 characters.
 func test_node_names_fit() -> void:
-	# a node button clips its label past about 19 characters
 	for t in GameSkillTree.tree_ids():
 		for n in GameSkillTree.tree(t)["nodes"]:
 			ok(str(n["name"]).length() <= 19, "%s: the name '%s' fits its button" % [t, n["name"]])
 
 
+## Nodes of another race's blood count for nothing; a child of another race takes what the parent's
+## blood carried in its own bloodline's shape; an old save's shared blood is cut to the heir's race.
 func test_race_blood() -> void:
 	var dw := _unit("warrior", 500, "dwarf")
 	_give(dw, {"dw_stoneblood": 3, "b_vigor": 3})
@@ -1389,3 +1390,60 @@ func _ui_tests() -> void:
 	ok(_labels_text(panel).any(func(t): return str(t).find("level 5,000") >= 0), "a level-5,000 heir's tree opens")
 	GameDynasty.save_path = real
 	_done()
+
+
+## Race capstones with rules of their own: the beastkin's first blow of a battle is a certain crit,
+## the dragonborn breathes fire over the foes as a fight opens; no two races share a rule but the
+## wrath of men and orcs, and a keystone's rule is its own (no third race repeats one).
+func test_race_keystones() -> void:
+	var by_rule := {}
+	for tid in GameSkillTree.tree_ids():
+		var t := GameSkillTree.tree(tid)
+		if not t.has("race"):
+			continue
+		for id in GameSkillTree.nodes_of(tid):
+			if GameSkillTree.is_keystone(id):
+				var rule := str(GameSkillTree.keystone(str(GameSkillTree.node(id)["keystone"]))["rule"])
+				by_rule[rule] = by_rule.get(rule, []) + [str(t["race"])]
+	for rule in by_rule:
+		ok((by_rule[rule] as Array).size() <= 2, "the rule %s is borne by at most two races: %s" % [rule, str(by_rule[rule])])
+	ok(not (by_rule.get("wrath", []) as Array).has("dragonborn") and not (by_rule.get("crit_mult", []) as Array).has("beastkin"), "dragonborn and beastkin have capstones of their own")
+	var first_crits := 0
+	var later := 0
+	var later_crits := 0
+	for s in 20:
+		var d := GameDynasty.new_game(700 + s, "Tess", "rogue", "faetouched", "beastkin")
+		d.pending_event = {}
+		d.heir.level = 80
+		GameSkillTree.start(d.heir)
+		_give(d.heir, {"bk_feral": 1})
+		d.heir.full_heal()
+		var b := _battle(d)
+		_sturdy(b)
+		for n in 6:
+			b.events = []
+			b.attack(0)
+			for e in b.events:
+				if e.get("type", "") == "damage" and e.get("side", "") == "enemy":
+					if n == 0:
+						first_crits += 1 if bool(e["crit"]) else 0
+					else:
+						later += 1
+						later_crits += 1 if bool(e["crit"]) else 0
+		d.battle = null
+	ok(first_crits == 20, "First Strike: the first blow is a crit every time (%d of 20)" % first_crits)
+	ok(later > 0 and float(later_crits) / float(later) < 0.7, "and the blows after it are ordinary (%d of %d crit)" % [later_crits, later])
+	var dd := GameDynasty.new_game(71, "Tess", "warrior", "faetouched", "dragonborn")
+	dd.pending_event = {}
+	dd.heir.level = 80
+	GameSkillTree.start(dd.heir)
+	_give(dd.heir, {"dr_dragons_wrath": 1})
+	dd.heir.full_heal()
+	var bb := _battle(dd, 3, "ogre")
+	ok(bb.enemies.all(func(e): return e["hp"] < e["max_hp"] and e["hp"] >= 1), "Dragon's Breath scorches every foe as the fight opens and fells none")
+	ok(bb.turn == 0 and bb.result == "", "and costs no turn")
+	var hh := _dyn("warrior", 80, 71)
+	var hb := _battle(hh, 3, "ogre")
+	ok(hb.enemies.all(func(e): return e["hp"] == e["max_hp"]), "an heir without the keystone breathes nothing")
+	dd.battle = null
+	hh.battle = null

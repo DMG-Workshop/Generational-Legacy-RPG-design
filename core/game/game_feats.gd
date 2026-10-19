@@ -22,7 +22,8 @@ const KEYS := ["name", "kind", "description", "scaling", "mult", "target", "cool
 const NEVER := ["mp", "mana", "pct_max_hp", "party", "cleanse", "group", "learn"]   # spell and healing keys
 const STATUS_KEYS := ["name", "tag", "color", "stack", "basis", "default_turns", "default_potency", "text"]
 const SETTING_KEYS := ["start_points", "point_levels", "slot_levels", "companion_slots", "recovery_turns", "bot_targets",
-	"bot_status_worth", "bot_party_worth", "bot_min_score", "bot_hp_cost_worth", "bot_taunt_min_hp"]
+	"bot_status_worth", "bot_party_worth", "bot_min_score", "bot_hp_cost_worth", "bot_taunt_min_hp",
+	"max_universal_feats", "class_feats_min", "class_feat_by_level"]
 
 static var _src: Dictionary = {}
 static var _defs: Dictionary = {}
@@ -751,10 +752,19 @@ static func bot_tick(d: GameDynasty) -> void:
 	if h.has_meta("feat_bot") and h.get_meta("feat_bot") == _bot_key(h, biomes, party):
 		return
 	var n := slots(h)
+	# The feats its class opens a battle with (style opener) come first, whatever they score.
+	var opening: Array = GameSkills.style(h.class_id)["opener"].filter(func(id): return not def(str(id)).is_empty() and requirement_block(h, str(id)) == "")
+	for id in opening:
+		if id not in h.known_feats and learn_block(h, id) == "":
+			learn(d, id)
 	for id in ranked(h, biomes, party, false, false).slice(0, n):
 		if id not in h.known_feats and learn_block(h, id) == "":
 			learn(d, id)
-	var best: Array = ranked(h, biomes, party, false, true).slice(0, n)
+	var best: Array = opening.filter(func(id): return id in h.known_feats)
+	for id in ranked(h, biomes, party, false, true):
+		if id not in best:
+			best.append(id)
+	best = best.slice(0, n)
 	if best != h.equipped_feats:
 		h.equipped_feats = best
 	h.set_meta("feat_bot", _bot_key(h, biomes, party).duplicate(true))
@@ -898,12 +908,13 @@ static func validate() -> Array:
 	return out
 
 
-## Every class has a craft of its own: a base class at least 6 feats, one of them a blow it can
-## strike by level 3 with no weapon asked (for a ranger, a trap), a hybrid at least
-## one feat of its own; and only a few feats are left open to every class.
+## Every class has a craft of its own: a base class at least settings.class_feats_min feats, one of
+## them a blow it can strike by level settings.class_feat_by_level with no weapon asked (for a
+## ranger, a trap), a hybrid at least one feat of its own; and only settings.max_universal_feats
+## are left open to every class.
 static func _class_problems() -> Array:
 	var out: Array = []
-	var cap := 12
+	var cap := int(setting("max_universal_feats"))
 	if universal_feats().size() > cap:
 		out.append("%d feats are open to every class; at most %d may be" % [universal_feats().size(), cap])
 	for cid in GameData.classes:
@@ -913,10 +924,12 @@ static func _class_problems() -> Array:
 			if own.is_empty():
 				out.append("hybrid class %s has no feat of its own" % cid)
 			continue
-		if own.size() < 6:
-			out.append("class %s is taught only %d feats of its own; it needs at least 6" % [cid, own.size()])
-		var first := own.filter(func(id): return float(def(id).get("mult", 0.0)) > 0.0 and int(requires(id).get("min_level", 1)) <= 3 \
+		var least := int(setting("class_feats_min"))
+		if own.size() < least:
+			out.append("class %s is taught only %d feats of its own; it needs at least %d" % [cid, own.size(), least])
+		var by := int(setting("class_feat_by_level"))
+		var first := own.filter(func(id): return float(def(id).get("mult", 0.0)) > 0.0 and int(requires(id).get("min_level", 1)) <= by \
 			and (requires(id).get("weapon", []) as Array).is_empty())
 		if first.is_empty():
-			out.append("class %s has no damaging feat by level 3 that asks for no weapon" % cid)
+			out.append("class %s has no damaging feat by level %d that asks for no weapon" % [cid, by])
 	return out

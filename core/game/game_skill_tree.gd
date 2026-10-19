@@ -20,7 +20,7 @@ extends RefCounted
 const CORE := ["str", "mag", "agi", "vit"]
 const BONUS := ["max_hp", "max_mp", "melee_damage", "element_power", "defense", "reflexes", "luck", "crit_damage",
 	"healing_power", "resist", "mp_regen", "fire_resistance", "persuasion", "stealth", "work_gold"]
-const RULES := ["no_dodge", "wrath", "glass", "blood_magic", "mind_over_matter", "crit_mult", "party_heals"]
+const RULES := ["no_dodge", "wrath", "glass", "blood_magic", "mind_over_matter", "crit_mult", "party_heals", "first_strike", "dragon_breath"]
 const MODS := ["mult", "cost", "heal", "radius", "range", "angle", "length", "width", "turns", "cooldown", "crit", "pierce"]
 const AREA := {"radius": ["burst"], "range": ["cone"], "angle": ["cone"], "length": ["line"], "width": ["line"]}
 const NODE_KEYS := ["id", "tier", "col", "requires", "cost", "max_rank"]

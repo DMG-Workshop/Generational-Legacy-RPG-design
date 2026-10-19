@@ -14,6 +14,11 @@
     "bot_style_lean": [0.3, 0.7],
     "bot_reserve_heal_below": 0.5,
     "bot_finish_attack_from": 0.75,
+    "bot_variety": 0.4,
+    "bot_tend_self": 0.7,
+    "bot_opener_min_danger": 0.3,
+    "bot_opener_skip_share": 0.5,
+    "bot_opener_max_pace": 0.5,
     "party_taken_floor": 0.5
   },
   "field": {

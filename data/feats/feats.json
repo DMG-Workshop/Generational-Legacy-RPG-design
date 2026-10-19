@@ -6,13 +6,17 @@
     "companion_slots": 2,
     "recovery_turns": 1,
     "bot_targets": {"single": 1.0, "cone": 1.6, "burst": 1.7, "line": 1.3, "all": 2.0, "around": 1.9, "party": 1.0, "self": 1.0},
-    "bot_status_worth": {"stun": 0.6, "fear": 0.35, "slow": 0.25, "weaken": 0.2, "vulnerable": 0.25, "bleed": 0.15, "burn": 0.15, "rallied": 0.6, "shield": 0.45, "taunt": 0.4,
+    "bot_status_worth": {
+      "hidden": 0.9, "stun": 0.6, "fear": 0.35, "slow": 0.25, "weaken": 0.2, "vulnerable": 0.25, "bleed": 0.15, "burn": 0.15, "rallied": 0.6, "shield": 0.45, "taunt": 0.4,
       "braced": 0.4, "veiled": 0.35, "keen": 0.3, "haste": 0.6},
     "bot_party_worth": 0.8,
     "bot_class_worth": 1.25,
     "bot_min_score": 0.02,
     "bot_hp_cost_worth": 4.0,
-    "bot_taunt_min_hp": 0.6
+    "bot_taunt_min_hp": 0.6,
+    "max_universal_feats": 12,
+    "class_feats_min": 6,
+    "class_feat_by_level": 3
   },
   "kinds": {
     "physical": {"name": "Physical", "color": "#e8a05a", "text": "Weapon work: power from STR, AGI and the weapon in hand."},
@@ -53,6 +57,11 @@
       "id": "keen", "name": "Keen", "tag": "KEN", "color": "#ffe08a", "harmful": false,
       "mods": {"crit": 1.0}, "basis": "flat", "stack": "refresh", "default_turns": 3, "default_potency": 0.15,
       "text": {"apply": "{t}'s eye sharpens.", "end": "{t}'s edge dulls."}
+    },
+    {
+      "id": "hidden", "name": "Hidden", "tag": "HID", "color": "#8a8fa8", "harmful": false,
+      "mods": {"crit": 1.0}, "spent_on": "blow", "basis": "flat", "stack": "refresh", "default_turns": 4, "default_potency": 1.0,
+      "text": {"apply": "{t} melts into the shadows.", "spent": "{t} bursts from hiding.", "end": "{t} is seen again."}
     }
   ],
   "feats": [
@@ -128,20 +137,20 @@
       "requires": {"min_level": 5, "biomes": ["swamp"]}
     },
     {
-      "id": "charge", "name": "Charge", "kind": "physical", "cost": 2, "cooldown": 3,
+      "id": "charge", "name": "Charge", "kind": "physical", "cost": 2, "cooldown": 4,
       "description": "Run at the line and go through it. The foe behind feels it too.",
       "scaling": {"str": 1.0, "weapon_tier": 0.06}, "mult": 1.0,
       "target": {"shape": "line", "width": 3, "length": 18},
       "statuses": [{"id": "stun", "chance": 0.25, "turns": 1}],
-      "requires": {"min_level": 6}
+      "requires": {"min_level": 10}
     },
     {
-      "id": "rally", "name": "Rally", "kind": "tactical", "cost": 2, "cooldown": 5,
+      "id": "rally", "name": "Rally", "kind": "tactical", "cost": 2, "cooldown": 6,
       "description": "A shout that puts the heart back into everyone fighting at your side.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "party"},
       "statuses": [{"id": "rallied", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "party"}],
-      "requires": {"min_level": 6}
+      "requires": {"min_level": 20}
     },
     {
       "id": "rend", "name": "Rend", "kind": "physical", "cost": 2, "cooldown": 2,
@@ -290,6 +299,14 @@
       "requires": {"min_level": 24, "classes": ["rogue"]}
     },
     {
+      "id": "shadow_slip", "name": "Slip into Shadow", "kind": "tactical", "cost": 1, "cooldown": 4,
+      "description": "Vanish into the dark; the next blow lands from hiding and cannot miss its mark.",
+      "scaling": {}, "mult": 0,
+      "target": {"shape": "self"},
+      "statuses": [{"id": "hidden", "chance": 1.0, "turns": 4, "potency": 1.0, "on": "self"}],
+      "requires": {"min_level": 6, "classes": ["rogue"]}
+    },
+    {
       "id": "garrote", "name": "Garrote", "kind": "physical", "cost": 2, "cooldown": 3,
       "description": "A wire from behind. The foe bleeds and can barely swing.",
       "scaling": {"agi": 0.7, "str": 0.3, "weapon_tier": 0.04}, "mult": 0.6,
@@ -396,14 +413,14 @@
     {
       "id": "radiant_strike", "name": "Radiant Strike", "kind": "divine", "cost": 1, "cooldown": 2,
       "description": "The mace glows on the downswing.",
-      "scaling": {"mag": 0.8, "str": 0.2}, "mult": 0.75, "element": "holy",
+      "scaling": {"mag": 0.8, "str": 0.2}, "mult": 0.75, "element": "holy", "bane": {"undead": 1.5},
       "target": {"shape": "single"},
       "requires": {"min_level": 1, "classes": ["cleric"]}
     },
     {
       "id": "hallowed_ground", "name": "Hallowed Ground", "kind": "divine", "cost": 2, "cooldown": 4,
       "description": "Pray over the ground the foes stand on, and it burns them.",
-      "scaling": {"mag": 0.6}, "mult": 0.3, "element": "holy",
+      "scaling": {"mag": 0.6}, "mult": 0.3, "element": "holy", "bane": {"undead": 1.5},
       "target": {"shape": "burst", "radius": 4.5},
       "statuses": [{"id": "weaken", "chance": 0.6, "turns": 2, "potency": 0.2}],
       "field": {"turns": 2, "color": "#ffe9a0", "text": {"lay": "The ground under the foes shines with holy light.", "end": "The hallowed light fades."}},
@@ -420,7 +437,7 @@
     {
       "id": "turn_undead", "name": "Turn Undead", "kind": "divine", "cost": 2, "cooldown": 4,
       "description": "Raise the holy symbol and speak the words. The foes falter and fall back.",
-      "scaling": {"mag": 0.5}, "mult": 0.4, "element": "holy",
+      "scaling": {"mag": 0.5}, "mult": 0.4, "element": "holy", "bane": {"undead": 2.0},
       "target": {"shape": "cone", "angle": 90, "range": 14},
       "statuses": [{"id": "fear", "chance": 0.6, "turns": 2, "potency": 0.5}],
       "requires": {"min_level": 24, "classes": ["cleric"]}
@@ -428,7 +445,7 @@
     {
       "id": "divine_judgement", "name": "Divine Judgement", "kind": "divine", "cost": 2, "cooldown": 4,
       "description": "A single blow with the weight of heaven behind it.",
-      "scaling": {"mag": 1.2, "str": 0.2}, "mult": 1.3, "element": "holy",
+      "scaling": {"mag": 1.2, "str": 0.2}, "mult": 1.3, "element": "holy", "bane": {"undead": 1.5},
       "target": {"shape": "single"},
       "statuses": [{"id": "stun", "chance": 0.3, "turns": 1}],
       "requires": {"min_level": 90, "classes": ["cleric"]}
@@ -436,7 +453,7 @@
     {
       "id": "sunburst", "name": "Sunburst", "kind": "divine", "cost": 3, "cooldown": 5,
       "description": "Light breaks over the whole field like a second dawn.",
-      "scaling": {"mag": 1.0}, "mult": 0.7, "element": "holy",
+      "scaling": {"mag": 1.0}, "mult": 0.7, "element": "holy", "bane": {"undead": 1.5},
       "target": {"shape": "all"},
       "requires": {"min_level": 300, "classes": ["cleric"]}
     },
@@ -619,7 +636,7 @@
     {
       "id": "smiting_blow", "name": "Smiting Blow", "kind": "divine", "cost": 1, "cooldown": 3,
       "description": "A blow struck in the name of something higher.",
-      "scaling": {"str": 0.7, "mag": 0.5}, "mult": 1.0, "element": "holy",
+      "scaling": {"str": 0.7, "mag": 0.5}, "mult": 1.0, "element": "holy", "bane": {"undead": 1.5},
       "target": {"shape": "single"},
       "statuses": [{"id": "stun", "chance": 0.25, "turns": 1}],
       "requires": {"min_level": 10, "classes": ["paladin"]}
@@ -742,7 +759,7 @@
     {
       "id": "ki_smite", "name": "Ki Smite", "kind": "divine", "cost": 1, "cooldown": 2,
       "description": "Breath, faith and a fist, all landing at once.",
-      "scaling": {"str": 0.5, "mag": 0.5}, "mult": 0.9, "pierce": 0.5, "element": "holy",
+      "scaling": {"str": 0.5, "mag": 0.5}, "mult": 0.9, "pierce": 0.5, "element": "holy", "bane": {"undead": 1.5},
       "target": {"shape": "single"},
       "requires": {"min_level": 10, "classes": ["templar"]}
     },

@@ -5,15 +5,15 @@
       "description": "Sturdy front-liner. Hits hard, takes a beating.",
       "base": {"hp": 70, "mp": 10, "str": 9, "mag": 2, "agi": 4, "vit": 7},
       "growth": {"hp": 11, "mp": 1, "str": 2.2, "mag": 0.3, "agi": 0.8, "vit": 1.6},
-      "style": {"kind": "martial"},
+      "style": {"kind": "martial", "opener": ["warlords_roar", "iron_stance"]},
       "skills": [
         {"id": "power_strike", "name": "Power Strike", "type": "damage", "level": 1, "stat": "str", "mult": 1.9, "mp": 4},
         {"id": "second_wind", "name": "Second Wind", "type": "heal", "level": 1, "pct_max_hp": 0.35, "mp": 6},
-        {"id": "sweeping_blow", "name": "Sweeping Blow", "type": "damage", "level": 5, "stat": "str", "mult": 1.15, "mp": 7, "target": {"shape": "cone", "angle": 90, "range": 10.5}, "is_aoe": true},
-        {"id": "iron_stance", "name": "Iron Stance", "type": "buff", "level": 12, "mp": 7, "target": {"shape": "self"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}]},
-        {"id": "sundering_strike", "name": "Sundering Strike", "type": "damage", "level": 28, "stat": "str", "mult": 1.5, "mp": 8, "pierce": 0.6, "statuses": [{"id": "vulnerable", "chance": 0.75, "turns": 3, "potency": 0.2}]},
-        {"id": "crushing_blow", "name": "Crushing Blow", "type": "damage", "level": 60, "stat": "str", "mult": 2.6, "mp": 12, "statuses": [{"id": "stun", "chance": 0.35, "turns": 1}]},
-        {"id": "warlords_roar", "name": "Warlord's Roar", "type": "buff", "level": 180, "mp": 15, "target": {"shape": "party"}, "statuses": [{"id": "empowered", "chance": 1.0, "turns": 3, "potency": 0.2, "on": "party"}, {"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "party"}]}
+        {"id": "sweeping_blow", "name": "Sweeping Blow", "type": "damage", "level": 5, "stat": "str", "mult": 1.15, "mp": 6, "target": {"shape": "cone", "angle": 90, "range": 10.5}, "is_aoe": true},
+        {"id": "iron_stance", "name": "Iron Stance", "type": "buff", "level": 12, "mp": 6, "target": {"shape": "self"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}]},
+        {"id": "sundering_strike", "name": "Sundering Strike", "type": "damage", "level": 28, "stat": "str", "mult": 1.5, "mp": 6, "pierce": 0.6, "statuses": [{"id": "vulnerable", "chance": 0.75, "turns": 3, "potency": 0.2}]},
+        {"id": "crushing_blow", "name": "Crushing Blow", "type": "damage", "level": 60, "stat": "str", "mult": 2.6, "mp": 7, "statuses": [{"id": "stun", "chance": 0.35, "turns": 1}]},
+        {"id": "warlords_roar", "name": "Warlord's Roar", "type": "buff", "level": 180, "mp": 8, "target": {"shape": "party"}, "statuses": [{"id": "empowered", "chance": 1.0, "turns": 3, "potency": 0.2, "on": "party"}, {"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "party"}]}
       ]
     },
     {
@@ -21,14 +21,14 @@
       "description": "Glass cannon. Spells ignore half of enemy defense.",
       "base": {"hp": 46, "mp": 34, "str": 3, "mag": 10, "agi": 4, "vit": 3},
       "growth": {"hp": 7, "mp": 4, "str": 0.4, "mag": 2.4, "agi": 0.8, "vit": 0.9},
-      "style": {"kind": "caster"},
+      "style": {"kind": "caster", "opener": ["arcane_focus"]},
       "skills": [
         {"id": "firebolt", "name": "Firebolt", "type": "damage", "level": 1, "stat": "mag", "mult": 2.3, "mp": 6, "pierce": 0.5, "element": "fire"},
         {"id": "mend", "name": "Mend", "type": "heal", "level": 1, "pct_max_hp": 0.25, "mp": 6},
         {"id": "frost_lance", "name": "Frost Lance", "type": "damage", "level": 4, "stat": "mag", "mult": 1.6, "mp": 7, "element": "frost", "pierce": 0.3, "target": {"shape": "line", "width": 2.5, "length": 18}, "statuses": [{"id": "slow", "chance": 0.35, "turns": 2, "potency": 0.2}], "is_aoe": true},
         {"id": "arcane_missiles", "name": "Arcane Missiles", "type": "damage", "level": 12, "stat": "mag", "mult": 0.65, "hits": 4, "mp": 10, "pierce": 0.3, "crit_bonus": 0.1},
         {"id": "arcane_focus", "name": "Arcane Focus", "type": "buff", "level": 26, "mp": 0, "once": true, "target": {"shape": "self"}, "statuses": [{"id": "focused", "chance": 1.0, "turns": 2, "potency": 0.25, "on": "self"}], "mana": true},
-        {"id": "ignite", "name": "Ignite", "type": "damage", "level": 55, "stat": "mag", "mult": 0.9, "mp": 12, "element": "fire", "target": {"shape": "burst", "radius": 4.0}, "statuses": [{"id": "burn", "chance": 0.8, "turns": 3, "potency": 0.2}], "is_aoe": true},
+        {"id": "ignite", "name": "Ignite", "type": "damage", "level": 55, "stat": "mag", "mult": 1.2, "mp": 10, "element": "fire", "target": {"shape": "burst", "radius": 4.0}, "statuses": [{"id": "burn", "chance": 0.8, "turns": 3, "potency": 0.2}], "is_aoe": true},
         {"id": "arcane_cataclysm", "name": "Arcane Cataclysm", "type": "damage", "level": 200, "stat": "mag", "mult": 1.5, "mp": 20, "pierce": 0.5, "target": {"shape": "all"}, "is_aoe": true}
       ]
     },
@@ -37,7 +37,7 @@
       "description": "Fast and lucky. Strikes twice, often critically.",
       "base": {"hp": 56, "mp": 16, "str": 7, "mag": 2, "agi": 10, "vit": 4},
       "growth": {"hp": 8.5, "mp": 1.5, "str": 1.6, "mag": 0.3, "agi": 2.0, "vit": 1.1},
-      "style": {"kind": "martial"},
+      "style": {"kind": "martial", "opener": ["envenom", "shadow_slip"]},
       "skills": [
         {"id": "backstab", "name": "Twin Fangs", "type": "damage", "level": 1, "stat": "str", "mult": 1.0, "mp": 4, "hits": 2, "crit_bonus": 0.25},
         {"id": "shadow_step", "name": "Shadow Step", "type": "heal", "level": 1, "pct_max_hp": 0.2, "mp": 5},
@@ -45,7 +45,7 @@
         {"id": "blinding_powder", "name": "Blinding Powder", "type": "control", "level": 12, "stat": "str", "mult": 0.3, "mp": 7, "statuses": [{"id": "weaken", "chance": 0.7, "turns": 2, "potency": 0.25}, {"id": "slow", "chance": 0.4, "turns": 2, "potency": 0.2}], "target": {"shape": "burst", "radius": 4.0}, "is_aoe": true},
         {"id": "evasion", "name": "Evasion", "type": "buff", "level": 25, "mp": 5, "target": {"shape": "self"}, "statuses": [{"id": "evasive", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}, {"id": "focused", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "self"}]},
         {"id": "eviscerate", "name": "Eviscerate", "type": "damage", "level": 55, "stat": "str", "mult": 1.1, "mp": 9, "crit_bonus": 0.3, "vs_wounded": {"below": 0.4, "mult": 2.5}},
-        {"id": "death_mark", "name": "Death Mark", "type": "control", "level": 170, "stat": "str", "mult": 0.5, "mp": 10, "statuses": [{"id": "vulnerable", "chance": 1.0, "turns": 3, "potency": 0.35}, {"id": "bleed", "chance": 0.9, "turns": 3, "potency": 0.12}]}
+        {"id": "death_mark", "name": "Death Mark", "type": "control", "level": 170, "stat": "str", "mult": 0.5, "mp": 7, "statuses": [{"id": "vulnerable", "chance": 1.0, "turns": 3, "potency": 0.35}, {"id": "bleed", "chance": 0.9, "turns": 3, "potency": 0.12}]}
       ]
     },
     {
@@ -53,15 +53,15 @@
       "description": "Holy fighter with strong healing.",
       "base": {"hp": 60, "mp": 26, "str": 5, "mag": 8, "agi": 4, "vit": 6},
       "growth": {"hp": 9, "mp": 3, "str": 1.1, "mag": 2.0, "agi": 0.8, "vit": 1.3},
-      "style": {"kind": "caster"},
+      "style": {"kind": "caster", "heal_below": 0.6, "opener": ["divine_favor", "sanctify"]},
       "skills": [
-        {"id": "smite", "name": "Smite", "type": "damage", "level": 1, "stat": "mag", "mult": 1.9, "mp": 5, "element": "holy"},
+        {"id": "smite", "name": "Smite", "type": "damage", "level": 1, "stat": "mag", "mult": 1.9, "mp": 5, "element": "holy", "bane": {"undead": 1.5}},
         {"id": "heal", "name": "Heal", "type": "heal", "level": 1, "pct_max_hp": 0.5, "mp": 7},
-        {"id": "judgement", "name": "Judgement", "type": "control", "level": 5, "stat": "mag", "mult": 1.4, "mp": 7, "statuses": [{"id": "weaken", "chance": 0.6, "turns": 2, "potency": 0.2}], "element": "holy"},
+        {"id": "judgement", "name": "Judgement", "type": "control", "level": 5, "stat": "mag", "mult": 1.4, "mp": 7, "statuses": [{"id": "weaken", "chance": 0.6, "turns": 2, "potency": 0.2}], "element": "holy", "bane": {"undead": 1.5}},
         {"id": "sanctify", "name": "Sanctify", "type": "buff", "level": 14, "mp": 9, "target": {"shape": "party"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "party"}]},
-        {"id": "holy_nova", "name": "Holy Nova", "type": "damage", "level": 30, "stat": "mag", "mult": 0.9, "mp": 10, "element": "holy", "target": {"shape": "burst", "radius": 10.5, "center": "self"}, "statuses": [{"id": "stun", "chance": 0.15, "turns": 1}], "is_aoe": true},
+        {"id": "holy_nova", "name": "Holy Nova", "type": "damage", "level": 30, "stat": "mag", "mult": 0.9, "mp": 10, "element": "holy", "bane": {"undead": 1.5}, "target": {"shape": "burst", "radius": 10.5, "center": "self"}, "statuses": [{"id": "stun", "chance": 0.15, "turns": 1}], "is_aoe": true},
         {"id": "divine_favor", "name": "Divine Favor", "type": "buff", "level": 70, "mp": 13, "target": {"shape": "party"}, "statuses": [{"id": "empowered", "chance": 1.0, "turns": 3, "potency": 0.2, "on": "party"}]},
-        {"id": "final_judgement", "name": "Final Judgement", "type": "damage", "level": 160, "stat": "mag", "mult": 3.0, "mp": 15, "element": "holy", "pierce": 0.4, "vs_wounded": {"below": 0.3, "mult": 1.6}}
+        {"id": "final_judgement", "name": "Final Judgement", "type": "damage", "level": 160, "stat": "mag", "mult": 3.0, "mp": 15, "element": "holy", "bane": {"undead": 1.5}, "pierce": 0.4, "vs_wounded": {"below": 0.3, "mult": 1.6}}
       ]
     },
     {
@@ -70,15 +70,15 @@
       "base": {"hp": 58, "mp": 14, "str": 7, "mag": 2, "agi": 9, "vit": 5},
       "growth": {"hp": 9, "mp": 1.5, "str": 1.7, "mag": 0.3, "agi": 1.8, "vit": 1.1},
       "favored_weapon": "bow",
-      "style": {"kind": "martial"},
+      "style": {"kind": "martial", "opener": ["hunters_mark"]},
       "skills": [
         {"id": "volley", "name": "Volley", "type": "damage", "level": 1, "stat": "str", "mult": 2.0, "mp": 5, "target": {"shape": "cone", "angle": 60, "range": 18}, "is_aoe": true},
         {"id": "field_dressing", "name": "Field Dressing", "type": "heal", "level": 1, "pct_max_hp": 0.3, "mp": 5},
         {"id": "piercing_arrow", "name": "Piercing Arrow", "type": "damage", "level": 5, "stat": "str", "mult": 1.3, "mp": 7, "pierce": 0.5, "target": {"shape": "line", "width": 2, "length": 20}, "is_aoe": true},
         {"id": "hunters_mark", "name": "Hunter's Mark", "type": "control", "level": 12, "stat": "str", "mult": 0.4, "mp": 5, "statuses": [{"id": "vulnerable", "chance": 1.0, "turns": 3, "potency": 0.25}]},
         {"id": "explosive_arrow", "name": "Explosive Arrow", "type": "damage", "level": 26, "stat": "str", "mult": 1.1, "mp": 8, "element": "fire", "target": {"shape": "burst", "radius": 4.0}, "statuses": [{"id": "burn", "chance": 0.4, "turns": 3, "potency": 0.12}], "is_aoe": true},
-        {"id": "deadeye_shot", "name": "Deadeye Shot", "type": "damage", "level": 60, "stat": "str", "mult": 3.0, "mp": 12, "crit_bonus": 0.4, "pierce": 0.3},
-        {"id": "arrow_storm", "name": "Arrow Storm", "type": "damage", "level": 180, "stat": "str", "mult": 1.0, "mp": 15, "target": {"shape": "all"}, "is_aoe": true}
+        {"id": "deadeye_shot", "name": "Deadeye Shot", "type": "damage", "level": 60, "stat": "str", "mult": 3.0, "mp": 8, "crit_bonus": 0.4, "pierce": 0.3},
+        {"id": "arrow_storm", "name": "Arrow Storm", "type": "damage", "level": 180, "stat": "str", "mult": 1.0, "mp": 7, "target": {"shape": "all"}, "is_aoe": true}
       ]
     },
     {
@@ -86,7 +86,7 @@
       "description": "Disciplined fighter. Palm strikes ignore most armor.",
       "base": {"hp": 64, "mp": 18, "str": 7, "mag": 4, "agi": 8, "vit": 6},
       "growth": {"hp": 10, "mp": 2, "str": 1.7, "mag": 0.6, "agi": 1.6, "vit": 1.4},
-      "style": {"kind": "martial"},
+      "style": {"kind": "martial", "opener": ["tiger_stance", "crane_stance"]},
       "skills": [
         {"id": "palm_strike", "name": "Palm Strike", "type": "damage", "level": 1, "stat": "str", "mult": 1.6, "pierce": 0.6, "mp": 4},
         {"id": "inner_peace", "name": "Inner Peace", "type": "heal", "level": 1, "pct_max_hp": 0.4, "mp": 6},
@@ -94,7 +94,7 @@
         {"id": "crane_stance", "name": "Crane Stance", "type": "buff", "level": 12, "mp": 5, "target": {"shape": "self"}, "statuses": [{"id": "evasive", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}]},
         {"id": "stunning_fist", "name": "Stunning Fist", "type": "damage", "level": 26, "stat": "str", "mult": 1.2, "mp": 8, "pierce": 0.6, "statuses": [{"id": "stun", "chance": 0.5, "turns": 1}]},
         {"id": "tiger_stance", "name": "Tiger Stance", "type": "buff", "level": 55, "mp": 8, "target": {"shape": "self"}, "statuses": [{"id": "empowered", "chance": 1.0, "turns": 3, "potency": 0.25, "on": "self"}]},
-        {"id": "quivering_palm", "name": "Quivering Palm", "type": "damage", "level": 160, "stat": "str", "mult": 1.0, "mp": 13, "pierce": 0.8, "vs_wounded": {"below": 0.3, "mult": 4.0}}
+        {"id": "quivering_palm", "name": "Quivering Palm", "type": "damage", "level": 160, "stat": "str", "mult": 2.2, "mp": 9, "pierce": 0.8, "vs_wounded": {"below": 0.3, "mult": 4.0}}
       ]
     },
     {
@@ -102,14 +102,14 @@
       "description": "Death mage. Soul Drain heals you for half the damage.",
       "base": {"hp": 48, "mp": 30, "str": 3, "mag": 10, "agi": 4, "vit": 4},
       "growth": {"hp": 7.5, "mp": 3.5, "str": 0.4, "mag": 2.3, "agi": 0.7, "vit": 1.0},
-      "style": {"kind": "caster"},
+      "style": {"kind": "caster", "opener": ["plague_touch"]},
       "skills": [
         {"id": "soul_drain", "name": "Soul Drain", "type": "damage", "level": 1, "stat": "mag", "mult": 1.7, "drain": 0.5, "mp": 6, "element": "shadow"},
         {"id": "bone_ward", "name": "Bone Ward", "type": "heal", "level": 1, "pct_max_hp": 0.3, "mp": 6},
         {"id": "bone_spear", "name": "Bone Spear", "type": "damage", "level": 5, "stat": "mag", "mult": 1.6, "mp": 8, "element": "shadow", "pierce": 0.6, "target": {"shape": "line", "width": 2.5, "length": 18}, "is_aoe": true},
         {"id": "plague_touch", "name": "Plague Touch", "type": "control", "level": 12, "stat": "mag", "mult": 0.8, "mp": 7, "statuses": [{"id": "poison", "chance": 0.9, "turns": 4, "potency": 0.05}, {"id": "vulnerable", "chance": 0.4, "turns": 2, "potency": 0.2}]},
         {"id": "death_coil", "name": "Death Coil", "type": "damage", "level": 28, "stat": "mag", "mult": 2.0, "mp": 9, "element": "shadow", "drain": 0.3, "statuses": [{"id": "fear", "chance": 0.3, "turns": 2, "potency": 0.5}]},
-        {"id": "corpse_bloom", "name": "Corpse Bloom", "type": "damage", "level": 60, "stat": "mag", "mult": 1.0, "mp": 13, "element": "shadow", "target": {"shape": "burst", "radius": 5.0}, "statuses": [{"id": "poison", "chance": 0.6, "turns": 3, "potency": 0.03}], "is_aoe": true},
+        {"id": "corpse_bloom", "name": "Corpse Bloom", "type": "damage", "level": 60, "stat": "mag", "mult": 1.3, "mp": 13, "element": "shadow", "target": {"shape": "burst", "radius": 5.0}, "statuses": [{"id": "poison", "chance": 0.6, "turns": 3, "potency": 0.03}], "is_aoe": true},
         {"id": "soul_harvest", "name": "Soul Harvest", "type": "damage", "level": 200, "stat": "mag", "mult": 0.9, "mp": 19, "element": "shadow", "drain": 0.25, "target": {"shape": "all"}, "is_aoe": true}
       ]
     },
@@ -118,7 +118,7 @@
       "description": "Nature caster. Thorns lash down a line of foes; strong regrowth.",
       "base": {"hp": 58, "mp": 26, "str": 5, "mag": 8, "agi": 5, "vit": 6},
       "growth": {"hp": 9, "mp": 3, "str": 1.0, "mag": 2.0, "agi": 0.9, "vit": 1.3},
-      "style": {"kind": "caster"},
+      "style": {"kind": "caster", "heal_below": 0.5, "opener": ["wolf_form", "bear_form"]},
       "skills": [
         {"id": "thornlash", "name": "Thornlash", "type": "damage", "level": 1, "stat": "mag", "mult": 1.9, "mp": 5, "element": "nature", "target": {"shape": "line", "width": 3, "length": 18}, "is_aoe": true},
         {"id": "regrowth", "name": "Regrowth", "type": "heal", "level": 1, "pct_max_hp": 0.45, "mp": 7},
@@ -126,7 +126,7 @@
         {"id": "bear_form", "name": "Bear Form", "type": "buff", "level": 12, "mp": 8, "target": {"shape": "self"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}, {"id": "shield", "chance": 1.0, "turns": 3, "potency": 0.1, "on": "self"}]},
         {"id": "wolf_form", "name": "Wolf Form", "type": "buff", "level": 28, "mp": 8, "target": {"shape": "self"}, "statuses": [{"id": "empowered", "chance": 1.0, "turns": 3, "potency": 0.25, "on": "self"}, {"id": "evasive", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "self"}]},
         {"id": "hurricane", "name": "Hurricane", "type": "damage", "level": 60, "stat": "mag", "mult": 1.1, "mp": 13, "element": "nature", "target": {"shape": "cone", "angle": 90, "range": 16}, "statuses": [{"id": "slow", "chance": 0.4, "turns": 2, "potency": 0.2}], "is_aoe": true},
-        {"id": "wrath_of_the_wild", "name": "Wrath of the Wild", "type": "damage", "level": 200, "stat": "mag", "mult": 1.0, "mp": 19, "element": "nature", "target": {"shape": "all"}, "statuses": [{"id": "stun", "chance": 0.15, "turns": 1}], "is_aoe": true}
+        {"id": "wrath_of_the_wild", "name": "Wrath of the Wild", "type": "damage", "level": 200, "stat": "mag", "mult": 1.0, "mp": 17, "element": "nature", "target": {"shape": "all"}, "statuses": [{"id": "stun", "chance": 0.15, "turns": 1}], "is_aoe": true}
       ]
     },
     {
@@ -134,7 +134,7 @@
       "description": "Steel wrapped in arcane fire. (Hybrid: born to a Warrior and a Mage.)",
       "base": {"hp": 61, "mp": 23, "str": 6, "mag": 6, "agi": 4, "vit": 5},
       "growth": {"hp": 9.45, "mp": 2.62, "str": 1.37, "mag": 1.42, "agi": 0.84, "vit": 1.31},
-      "style": {"kind": "hybrid", "lean": 0.5},
+      "style": {"kind": "hybrid", "lean": 0.5, "opener": ["spell_parry"]},
       "skills": [
         {"id": "arcane_edge", "name": "Arcane Edge", "type": "damage", "level": 1, "stat": "both", "mult": 2.0, "mp": 5, "pierce": 0.35},
         {"id": "mana_shield", "name": "Mana Shield", "type": "heal", "level": 1, "pct_max_hp": 0.3, "mp": 6},
@@ -149,14 +149,14 @@
       "description": "Holy knight: heavy blows and the strongest heals. (Hybrid: born to a Warrior and a Cleric.)",
       "base": {"hp": 68, "mp": 19, "str": 7, "mag": 5, "agi": 4, "vit": 7},
       "growth": {"hp": 10.5, "mp": 2.1, "str": 1.73, "mag": 1.21, "agi": 0.84, "vit": 1.52},
-      "style": {"kind": "hybrid", "lean": 0.4},
+      "style": {"kind": "hybrid", "lean": 0.4, "heal_below": 0.4, "opener": ["aura_of_devotion", "divine_shield"]},
       "skills": [
-        {"id": "holy_strike", "name": "Holy Strike", "type": "damage", "level": 1, "stat": "both", "mult": 1.9, "mp": 5, "element": "holy"},
+        {"id": "holy_strike", "name": "Holy Strike", "type": "damage", "level": 1, "stat": "both", "mult": 1.9, "mp": 5, "element": "holy", "bane": {"undead": 1.5}},
         {"id": "lay_on_hands", "name": "Lay on Hands", "type": "heal", "level": 1, "pct_max_hp": 0.55, "mp": 8},
-        {"id": "consecrate", "name": "Consecrate", "type": "control", "level": 6, "stat": "both", "mult": 0.8, "mp": 9, "statuses": [{"id": "vulnerable", "chance": 0.5, "turns": 2, "potency": 0.15}], "element": "holy", "target": {"shape": "burst", "radius": 4.5}, "field": {"turns": 2, "color": "#ffe9a0", "text": {"lay": "Holy light soaks into the ground under the foes.", "end": "The hallowed ground fades."}}, "is_aoe": true},
+        {"id": "consecrate", "name": "Consecrate", "type": "control", "level": 6, "stat": "both", "mult": 0.8, "mp": 9, "statuses": [{"id": "vulnerable", "chance": 0.5, "turns": 2, "potency": 0.15}], "element": "holy", "bane": {"undead": 1.5}, "target": {"shape": "burst", "radius": 4.5}, "field": {"turns": 2, "color": "#ffe9a0", "text": {"lay": "Holy light soaks into the ground under the foes.", "end": "The hallowed ground fades."}}, "is_aoe": true},
         {"id": "divine_shield", "name": "Divine Shield", "type": "buff", "level": 16, "mp": 9, "target": {"shape": "self"}, "statuses": [{"id": "shield", "chance": 1.0, "turns": 3, "potency": 0.3, "on": "self"}]},
-        {"id": "avengers_charge", "name": "Avenger's Charge", "type": "damage", "level": 40, "stat": "both", "mult": 1.3, "mp": 10, "element": "holy", "target": {"shape": "line", "width": 3, "length": 18}, "statuses": [{"id": "stun", "chance": 0.25, "turns": 1}], "is_aoe": true},
-        {"id": "aura_of_devotion", "name": "Aura of Devotion", "type": "buff", "level": 110, "mp": 15, "target": {"shape": "party"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.14, "on": "party"}, {"id": "regen", "chance": 1.0, "turns": 3, "potency": 0.04, "on": "party"}]}
+        {"id": "avengers_charge", "name": "Avenger's Charge", "type": "damage", "level": 40, "stat": "both", "mult": 1.3, "mp": 10, "element": "holy", "bane": {"undead": 1.5}, "target": {"shape": "line", "width": 3, "length": 18}, "statuses": [{"id": "stun", "chance": 0.25, "turns": 1}], "is_aoe": true},
+        {"id": "aura_of_devotion", "name": "Aura of Devotion", "type": "buff", "level": 110, "mp": 12, "target": {"shape": "party"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.14, "on": "party"}, {"id": "regen", "chance": 1.0, "turns": 3, "potency": 0.04, "on": "party"}]}
       ]
     },
     {
@@ -164,14 +164,14 @@
       "description": "Fast blade, double strikes that often crit. (Hybrid: born to a Warrior and a Rogue.)",
       "base": {"hp": 66, "mp": 14, "str": 8, "mag": 2, "agi": 7, "vit": 6},
       "growth": {"hp": 10.24, "mp": 1.31, "str": 2.0, "mag": 0.32, "agi": 1.47, "vit": 1.42},
-      "style": {"kind": "martial"},
+      "style": {"kind": "martial", "opener": ["en_garde"]},
       "skills": [
         {"id": "riposte", "name": "Riposte Flurry", "type": "damage", "level": 1, "stat": "str", "mult": 1.1, "mp": 4, "hits": 2, "crit_bonus": 0.2},
         {"id": "second_wind", "name": "Second Wind", "type": "heal", "level": 1, "pct_max_hp": 0.3, "mp": 6},
         {"id": "lunge", "name": "Lunge", "type": "damage", "level": 6, "stat": "str", "mult": 1.7, "mp": 5, "pierce": 0.4, "crit_bonus": 0.1},
         {"id": "en_garde", "name": "En Garde", "type": "buff", "level": 16, "mp": 7, "target": {"shape": "self"}, "statuses": [{"id": "evasive", "chance": 1.0, "turns": 3, "potency": 0.175, "on": "self"}, {"id": "focused", "chance": 1.0, "turns": 3, "potency": 0.2, "on": "self"}]},
-        {"id": "coup_de_grace", "name": "Coup de Grace", "type": "damage", "level": 40, "stat": "str", "mult": 1.0, "mp": 9, "crit_bonus": 0.25, "vs_wounded": {"below": 0.4, "mult": 3.0}},
-        {"id": "blade_dance", "name": "Blade Dance", "type": "damage", "level": 110, "stat": "str", "mult": 1.0, "mp": 12, "target": {"shape": "burst", "radius": 10.5, "center": "self"}, "statuses": [{"id": "bleed", "chance": 0.5, "turns": 3, "potency": 0.1}], "is_aoe": true}
+        {"id": "coup_de_grace", "name": "Coup de Grace", "type": "damage", "level": 40, "stat": "str", "mult": 1.0, "mp": 7, "crit_bonus": 0.25, "vs_wounded": {"below": 0.4, "mult": 3.0}},
+        {"id": "blade_dance", "name": "Blade Dance", "type": "damage", "level": 110, "stat": "str", "mult": 1.3, "mp": 8, "target": {"shape": "burst", "radius": 10.5, "center": "self"}, "statuses": [{"id": "bleed", "chance": 0.5, "turns": 3, "potency": 0.1}], "is_aoe": true}
       ]
     },
     {
@@ -179,7 +179,7 @@
       "description": "Illusions and phantom blades. (Hybrid: born to a Mage and a Rogue.)",
       "base": {"hp": 54, "mp": 26, "str": 5, "mag": 6, "agi": 7, "vit": 4},
       "growth": {"hp": 8.14, "mp": 2.89, "str": 1.05, "mag": 1.42, "agi": 1.47, "vit": 1.05},
-      "style": {"kind": "hybrid", "lean": 0.6},
+      "style": {"kind": "hybrid", "lean": 0.6, "opener": ["mirror_image"]},
       "skills": [
         {"id": "phantom_blades", "name": "Phantom Blades", "type": "damage", "level": 1, "stat": "both", "mult": 1.9, "mp": 6, "crit_bonus": 0.15, "pierce": 0.3, "target": {"shape": "cone", "angle": 70, "range": 18}, "is_aoe": true},
         {"id": "blink", "name": "Blink", "type": "heal", "level": 1, "pct_max_hp": 0.25, "mp": 5},
@@ -194,14 +194,14 @@
       "description": "Armored in death; every cleave feeds on its victims. (Hybrid: born to a Warrior and a Necromancer.)",
       "base": {"hp": 62, "mp": 21, "str": 6, "mag": 6, "agi": 4, "vit": 6},
       "growth": {"hp": 9.71, "mp": 2.36, "str": 1.37, "mag": 1.36, "agi": 0.79, "vit": 1.37},
-      "style": {"kind": "hybrid", "lean": 0.5},
+      "style": {"kind": "hybrid", "lean": 0.5, "opener": ["bone_plate"]},
       "skills": [
         {"id": "grave_cleave", "name": "Grave Cleave", "type": "damage", "level": 1, "stat": "both", "mult": 1.5, "mp": 6, "drain": 0.35, "element": "shadow", "target": {"shape": "cone", "angle": 90, "range": 10.5}, "is_aoe": true},
         {"id": "unholy_vigor", "name": "Unholy Vigor", "type": "heal", "level": 1, "pct_max_hp": 0.3, "mp": 6},
         {"id": "death_grip", "name": "Death Grip", "type": "control", "level": 6, "stat": "both", "mult": 1.2, "mp": 7, "statuses": [{"id": "slow", "chance": 0.7, "turns": 3, "potency": 0.2}, {"id": "fear", "chance": 0.2, "turns": 2, "potency": 0.5}], "element": "shadow"},
         {"id": "bone_plate", "name": "Bone Plate", "type": "buff", "level": 16, "mp": 9, "target": {"shape": "self"}, "statuses": [{"id": "shield", "chance": 1.0, "turns": 3, "potency": 0.25, "on": "self"}, {"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.07, "on": "self"}]},
         {"id": "reaping_strike", "name": "Reaping Strike", "type": "damage", "level": 40, "stat": "both", "mult": 1.8, "mp": 10, "element": "shadow", "drain": 0.6},
-        {"id": "army_of_dread", "name": "Army of Dread", "type": "control", "level": 110, "stat": "both", "mult": 0.7, "mp": 15, "statuses": [{"id": "fear", "chance": 0.35, "turns": 2, "potency": 0.5}], "element": "shadow", "target": {"shape": "all"}, "is_aoe": true}
+        {"id": "army_of_dread", "name": "Army of Dread", "type": "control", "level": 110, "stat": "both", "mult": 1.25, "mp": 11, "statuses": [{"id": "fear", "chance": 0.35, "turns": 2, "potency": 0.5}], "element": "shadow", "target": {"shape": "all"}, "is_aoe": true}
       ]
     },
     {
@@ -209,7 +209,7 @@
       "description": "Pacts with dark powers: devastating hexes. (Hybrid: born to a Mage and a Necromancer.)",
       "base": {"hp": 49, "mp": 34, "str": 3, "mag": 10, "agi": 4, "vit": 4},
       "growth": {"hp": 7.61, "mp": 3.94, "str": 0.42, "mag": 2.47, "agi": 0.79, "vit": 1.0},
-      "style": {"kind": "caster"},
+      "style": {"kind": "caster", "opener": ["agony"]},
       "skills": [
         {"id": "hex_bolt", "name": "Hex Bolt", "type": "damage", "level": 1, "stat": "mag", "mult": 2.4, "mp": 7, "pierce": 0.5, "element": "shadow"},
         {"id": "siphon_life", "name": "Siphon Life", "type": "damage", "level": 1, "stat": "mag", "mult": 1.2, "mp": 6, "drain": 0.8, "element": "shadow"},
@@ -224,14 +224,14 @@
       "description": "Spirits of storm and healing answer the call. (Hybrid: born to a Cleric and a Druid.)",
       "base": {"hp": 62, "mp": 27, "str": 5, "mag": 8, "agi": 5, "vit": 6},
       "growth": {"hp": 9.45, "mp": 3.15, "str": 1.1, "mag": 2.1, "agi": 0.89, "vit": 1.37},
-      "style": {"kind": "caster"},
+      "style": {"kind": "caster", "heal_below": 0.5, "opener": ["spirit_link"]},
       "skills": [
         {"id": "storm_call", "name": "Storm Call", "type": "damage", "level": 1, "stat": "mag", "mult": 2.05, "mp": 6, "pierce": 0.3, "element": "lightning", "target": {"shape": "burst", "radius": 4.0}, "is_aoe": true},
         {"id": "spirit_mend", "name": "Spirit Mend", "type": "heal", "level": 1, "pct_max_hp": 0.5, "mp": 7},
         {"id": "earth_shock", "name": "Earth Shock", "type": "damage", "level": 6, "stat": "mag", "mult": 1.5, "mp": 7, "element": "earth", "statuses": [{"id": "stun", "chance": 0.25, "turns": 1}]},
         {"id": "spirit_link", "name": "Spirit Link", "type": "buff", "level": 16, "mp": 12, "target": {"shape": "party"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "party"}, {"id": "empowered", "chance": 1.0, "turns": 3, "potency": 0.1, "on": "party"}]},
         {"id": "lava_burst", "name": "Lava Burst", "type": "damage", "level": 40, "stat": "mag", "mult": 2.2, "mp": 10, "element": "fire", "pierce": 0.4, "statuses": [{"id": "burn", "chance": 0.5, "turns": 3, "potency": 0.15}]},
-        {"id": "thunderstorm", "name": "Thunderstorm", "type": "damage", "level": 110, "stat": "mag", "mult": 0.9, "mp": 18, "element": "lightning", "target": {"shape": "all"}, "statuses": [{"id": "stun", "chance": 0.15, "turns": 1}], "is_aoe": true}
+        {"id": "thunderstorm", "name": "Thunderstorm", "type": "damage", "level": 110, "stat": "mag", "mult": 1.6, "mp": 14, "element": "lightning", "target": {"shape": "all"}, "statuses": [{"id": "stun", "chance": 0.15, "turns": 1}], "is_aoe": true}
       ]
     },
     {
@@ -239,7 +239,7 @@
       "description": "Fights alongside a pack of wild beasts. (Hybrid: born to a Ranger and a Druid.)",
       "base": {"hp": 61, "mp": 21, "str": 6, "mag": 5, "agi": 7, "vit": 6},
       "growth": {"hp": 9.45, "mp": 2.36, "str": 1.42, "mag": 1.21, "agi": 1.42, "vit": 1.26},
-      "style": {"kind": "hybrid", "lean": 0.4},
+      "style": {"kind": "hybrid", "lean": 0.4, "opener": ["call_of_the_wild", "hawk_eye"]},
       "skills": [
         {"id": "pack_hunt", "name": "Pack Hunt", "type": "damage", "level": 1, "stat": "both", "mult": 2.1, "mp": 6, "target": {"shape": "burst", "radius": 5.0, "falloff": 0.3}, "is_aoe": true},
         {"id": "wild_remedy", "name": "Wild Remedy", "type": "heal", "level": 1, "pct_max_hp": 0.4, "mp": 6},
@@ -254,14 +254,14 @@
       "description": "Four-hit flurries from the shadows. (Hybrid: born to a Monk and a Rogue.)",
       "base": {"hp": 63, "mp": 18, "str": 7, "mag": 3, "agi": 9, "vit": 5},
       "growth": {"hp": 9.71, "mp": 1.84, "str": 1.73, "mag": 0.47, "agi": 1.89, "vit": 1.31},
-      "style": {"kind": "martial"},
+      "style": {"kind": "martial", "opener": ["vanish"]},
       "skills": [
         {"id": "shadow_flurry", "name": "Shadow Flurry", "type": "damage", "level": 1, "stat": "str", "mult": 0.7, "mp": 6, "hits": 4, "crit_bonus": 0.2},
         {"id": "smoke_veil", "name": "Smoke Veil", "type": "heal", "level": 1, "pct_max_hp": 0.25, "mp": 5},
         {"id": "shuriken_fan", "name": "Shuriken Fan", "type": "damage", "level": 6, "stat": "str", "mult": 0.9, "mp": 7, "target": {"shape": "cone", "angle": 70, "range": 16}, "statuses": [{"id": "bleed", "chance": 0.3, "turns": 3, "potency": 0.08}], "is_aoe": true},
         {"id": "vanish", "name": "Vanish", "type": "buff", "level": 16, "mp": 7, "target": {"shape": "self"}, "statuses": [{"id": "evasive", "chance": 1.0, "turns": 2, "potency": 0.28, "on": "self"}]},
         {"id": "assassinate", "name": "Assassinate", "type": "damage", "level": 40, "stat": "str", "mult": 1.2, "mp": 10, "crit_bonus": 0.35, "pierce": 0.3, "vs_wounded": {"below": 0.35, "mult": 3.0}},
-        {"id": "shadow_clone", "name": "Shadow Clone Strike", "type": "damage", "level": 110, "stat": "str", "mult": 0.55, "hits": 6, "mp": 13, "crit_bonus": 0.2}
+        {"id": "shadow_clone", "name": "Shadow Clone Strike", "type": "damage", "level": 110, "stat": "str", "mult": 0.55, "hits": 6, "mp": 11, "crit_bonus": 0.2}
       ]
     },
     {
@@ -269,14 +269,14 @@
       "description": "Warrior-monk of the faith: blows that pierce armor. (Hybrid: born to a Cleric and a Monk.)",
       "base": {"hp": 65, "mp": 23, "str": 6, "mag": 6, "agi": 6, "vit": 6},
       "growth": {"hp": 9.97, "mp": 2.62, "str": 1.47, "mag": 1.37, "agi": 1.26, "vit": 1.42},
-      "style": {"kind": "hybrid", "lean": 0.5},
+      "style": {"kind": "hybrid", "lean": 0.5, "heal_below": 0.4, "opener": ["vow_of_iron"]},
       "skills": [
-        {"id": "judgement_palm", "name": "Judgement Palm", "type": "damage", "level": 1, "stat": "both", "mult": 1.7, "mp": 6, "pierce": 0.5, "element": "holy"},
+        {"id": "judgement_palm", "name": "Judgement Palm", "type": "damage", "level": 1, "stat": "both", "mult": 1.7, "mp": 6, "pierce": 0.5, "element": "holy", "bane": {"undead": 1.5}},
         {"id": "sanctuary", "name": "Sanctuary", "type": "heal", "level": 1, "pct_max_hp": 0.5, "mp": 7},
-        {"id": "radiant_kick", "name": "Radiant Kick", "type": "damage", "level": 6, "stat": "both", "mult": 1.0, "hits": 2, "mp": 7, "element": "holy", "pierce": 0.4},
+        {"id": "radiant_kick", "name": "Radiant Kick", "type": "damage", "level": 6, "stat": "both", "mult": 1.0, "hits": 2, "mp": 7, "element": "holy", "bane": {"undead": 1.5}, "pierce": 0.4},
         {"id": "vow_of_iron", "name": "Vow of Iron", "type": "buff", "level": 16, "mp": 8, "target": {"shape": "self"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}, {"id": "shield", "chance": 1.0, "turns": 3, "potency": 0.1, "on": "self"}]},
-        {"id": "sacred_ground", "name": "Sacred Ground", "type": "control", "level": 40, "stat": "both", "mult": 0.7, "mp": 10, "statuses": [{"id": "weaken", "chance": 0.5, "turns": 2, "potency": 0.2}], "element": "holy", "target": {"shape": "burst", "radius": 4.5}, "field": {"turns": 2, "color": "#ffe9a0", "text": {"lay": "The ground under the foes is made holy.", "end": "The sacred ground fades."}}, "is_aoe": true},
-        {"id": "heavens_fist", "name": "Heaven's Fist", "type": "damage", "level": 110, "stat": "both", "mult": 2.6, "mp": 14, "element": "holy", "pierce": 0.8, "statuses": [{"id": "stun", "chance": 0.3, "turns": 1}]}
+        {"id": "sacred_ground", "name": "Sacred Ground", "type": "control", "level": 40, "stat": "both", "mult": 0.7, "mp": 10, "statuses": [{"id": "weaken", "chance": 0.5, "turns": 2, "potency": 0.2}], "element": "holy", "bane": {"undead": 1.5}, "target": {"shape": "burst", "radius": 4.5}, "field": {"turns": 2, "color": "#ffe9a0", "text": {"lay": "The ground under the foes is made holy.", "end": "The sacred ground fades."}}, "is_aoe": true},
+        {"id": "heavens_fist", "name": "Heaven's Fist", "type": "damage", "level": 110, "stat": "both", "mult": 2.6, "mp": 14, "element": "holy", "bane": {"undead": 1.5}, "pierce": 0.8, "statuses": [{"id": "stun", "chance": 0.3, "turns": 1}]}
       ]
     },
     {
@@ -284,14 +284,14 @@
       "description": "Guardian of the wilds: cleaves sweep the front rank. (Hybrid: born to a Warrior and a Ranger.)",
       "base": {"hp": 67, "mp": 13, "str": 8, "mag": 2, "agi": 7, "vit": 6},
       "growth": {"hp": 10.5, "mp": 1.31, "str": 2.05, "mag": 0.32, "agi": 1.37, "vit": 1.42},
-      "style": {"kind": "martial"},
+      "style": {"kind": "martial", "opener": ["wild_stand", "thornguard"]},
       "skills": [
         {"id": "hunters_cleave", "name": "Hunter's Cleave", "type": "damage", "level": 1, "stat": "str", "mult": 1.75, "mp": 4, "target": {"shape": "cone", "angle": 90, "range": 10.5}, "is_aoe": true},
         {"id": "bulwark_breath", "name": "Bulwark Breath", "type": "heal", "level": 1, "pct_max_hp": 0.35, "mp": 6},
         {"id": "pinning_shot", "name": "Pinning Shot", "type": "control", "level": 6, "stat": "str", "mult": 1.2, "mp": 5, "statuses": [{"id": "slow", "chance": 0.8, "turns": 3, "potency": 0.25}]},
         {"id": "thornguard", "name": "Thornguard", "type": "buff", "level": 16, "mp": 8, "target": {"shape": "self"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.175, "on": "self"}, {"id": "regen", "chance": 1.0, "turns": 3, "potency": 0.04, "on": "self"}]},
-        {"id": "barbed_volley", "name": "Barbed Volley", "type": "damage", "level": 40, "stat": "str", "mult": 1.0, "mp": 9, "target": {"shape": "burst", "radius": 5.0}, "statuses": [{"id": "bleed", "chance": 0.5, "turns": 3, "potency": 0.08}], "is_aoe": true},
-        {"id": "wild_stand", "name": "Wild Stand", "type": "buff", "level": 110, "mp": 14, "target": {"shape": "party"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.14, "on": "party"}, {"id": "empowered", "chance": 1.0, "turns": 3, "potency": 0.1, "on": "party"}]}
+        {"id": "barbed_volley", "name": "Barbed Volley", "type": "damage", "level": 40, "stat": "str", "mult": 1.0, "mp": 5, "target": {"shape": "burst", "radius": 5.0}, "statuses": [{"id": "bleed", "chance": 0.5, "turns": 3, "potency": 0.08}], "is_aoe": true},
+        {"id": "wild_stand", "name": "Wild Stand", "type": "buff", "level": 110, "mp": 8, "target": {"shape": "party"}, "statuses": [{"id": "guarded", "chance": 1.0, "turns": 3, "potency": 0.14, "on": "party"}, {"id": "empowered", "chance": 1.0, "turns": 3, "potency": 0.1, "on": "party"}]}
       ]
     }
   ]

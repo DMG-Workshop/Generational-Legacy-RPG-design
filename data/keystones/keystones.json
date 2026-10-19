@@ -439,17 +439,15 @@
   {
    "id": "dragons_wrath",
    "name": "Dragon's Wrath",
-   "rule": "wrath",
-   "params": {
-    "max": 0.5
-   },
+   "rule": "dragon_breath",
+   "params": {"mult": 0.9},
    "effect": {
     "bonus": {
      "max_hp": 0.05,
      "defense": -0.1
     }
    },
-   "text": "The wyrm wakes when you bleed: up to +50% damage as your HP runs out, +5% max HP.",
+   "text": "The wyrm wakes with the fight: you breathe fire over every foe as it opens (about 90% of your best strike, armour ignored, never a killing blow), +5% max HP.",
    "drawback": "-10% defense.",
    "suits": [
     "warrior",
@@ -461,17 +459,15 @@
   {
    "id": "feral_instinct",
    "name": "Feral Instinct",
-   "rule": "crit_mult",
-   "params": {
-    "mult": 2.4
-   },
+   "rule": "first_strike",
+   "params": {"bonus": 1.5},
    "effect": {
     "bonus": {
-     "defense": -0.1
+     "defense": -0.05
     }
    },
-   "text": "Go for the throat: critical hits deal x2.4 instead of x1.75.",
-   "drawback": "-10% defense.",
+   "text": "Go for the throat: the first blow you land in a battle is always a critical hit, and it hits 1.5 harder still.",
+   "drawback": "-5% defense.",
    "suits": [
     "rogue",
     "ranger",
