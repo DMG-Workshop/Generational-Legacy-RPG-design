@@ -1,4 +1,6 @@
-## Feats: the data and its checks, power from STR, AGI and the weapon's tier at level 1 and 5000,
+## Feats: the data and its checks, feats by class (own, a hybrid's parents', the few open to all;
+## gates, companions, the autopilot's lives, old saves' class migration), MAG scaling and drain,
+## power from STR, AGI and the weapon's tier at level 1 and 5000,
 ## the battle pipeline (turn, no MP, cooldowns, HP costs, statuses, taunt, rally), areas, feats of
 ## the ground by biome, feat points and slots at their milestones, loadout rules (a town or right
 ## after a rest; slots, duplicates, requirements, unknown ids), companions' loadouts, the
@@ -39,6 +41,12 @@ func _init() -> void:
 	test_new_heir_starts_over()
 	test_loadout_rules()
 	test_validation()
+	test_class_feats()
+	test_class_gates()
+	test_mag_and_drain()
+	test_class_companions()
+	test_class_bot_lives()
+	test_class_migration()
 	test_companions()
 	test_companion_choices()
 	test_tactics()
@@ -122,7 +130,7 @@ func test_data() -> void:
 	ok(errs.is_empty(), "the feat data validates: %s" % str(errs))
 	ok(GameCombat.validate().is_empty(), "the combat data still validates with the feats' statuses: %s" % str(GameCombat.validate()))
 	var ids := GameFeats.ids()
-	ok(ids.size() >= 20 and ids.size() <= 30, "about two dozen feats (%d)" % ids.size())
+	ok(ids.size() >= 80 and ids.size() <= 110, "about ninety feats (%d)" % ids.size())
 	var kinds := {}
 	var shapes := {}
 	for id in ids:
@@ -185,7 +193,7 @@ static func _has_status(f: Dictionary, id: String) -> bool:
 
 func test_broken_data() -> void:
 	var broken := {"id": "test_broken", "name": "Broken", "kind": "magical", "description": "x", "cost": 0, "cooldown": -1, "mp": 3,
-		"scaling": {"mag": 1.0}, "mult": 1.0, "hp_cost": 0.9, "companion": "no",
+		"scaling": {"vit": 1.0}, "mult": 1.0, "hp_cost": 0.9, "companion": "no", "drain": 1.5,
 		"target": {"shape": "party", "center": "self"},
 		"statuses": [{"id": "no_such_status"}, {"id": "stun", "on": "everyone"}],
 		"vs_wounded": {"below": 1.5, "mult": 0.5}, "field": {"turns": 2},
@@ -193,7 +201,7 @@ func test_broken_data() -> void:
 	GameData.feats["feats"].append(broken)
 	GameFeats.reindex()
 	var errs := GameFeats.validate()
-	for want in ["unknown kind", "never uses 'mp'", "scaling 'mag'", "neither STR nor AGI", "not aimed at a foe", "cost must be",
+	for want in ["unknown kind", "never uses 'mp'", "scaling 'vit'", "none of STR, AGI or MAG", "drain is a share", "not aimed at a foe", "cost must be",
 			"hp_cost", "companion is true or false", "unknown status", "only a burst can be centred", "vs_wounded", "is on 'everyone'",
 			"min_level", "unknown class", "unknown weapon kind", "biome 'moon'", "environmental feats, and only they",
 			"a field is left by a burst"]:
@@ -650,7 +658,8 @@ func test_validation() -> void:
 	ok(GameFeats.equip(d, "cleave").find("already readied") >= 0 and h.equipped_feats.count("cleave") == 1, "or readied twice")
 	ok(GameFeats.equip(d, "charge").find("not learned") >= 0, "an unlearned feat cannot be readied")
 	ok(GameFeats.learn(d, "execute").begins_with("Needs level 30"), "the level is enforced: %s" % GameFeats.learn(d, "execute"))
-	ok(GameFeats.learn(d, "aimed_shot").find("bow in hand") >= 0, "the weapon is enforced: %s" % GameFeats.learn(d, "aimed_shot"))
+	ok(GameFeats.learn(d, "sunder").find("mace in hand") >= 0, "the weapon is enforced: %s" % GameFeats.learn(d, "sunder"))
+	ok(GameFeats.learn(d, "aimed_shot").begins_with("Taught only to a Ranger"), "the class comes before the weapon: %s" % GameFeats.learn(d, "aimed_shot"))
 	var m := _dyn("mage", 12, 85)
 	ok(GameFeats.learn(m, "shield_bash").begins_with("Taught only to a Warrior"), "the class is enforced: %s" % GameFeats.learn(m, "shield_bash"))
 	ok(GameFeats.learn(d, "unequip") == "No such feat.", "a feat is only what the data names")
@@ -663,7 +672,7 @@ func test_validation() -> void:
 	ok(learned.find("learns Hamstring (") >= 0 and "hamstring" not in h.equipped_feats, "learned with every slot full, a feat waits set aside: %s" % learned)
 	ok(GameFeats.equip(d, "hamstring").find("slots are full") >= 0, "the slot limit is enforced")
 	h.feat_points = 0
-	ok(GameFeats.learn(d, "flurry").find("costs 1 feat point") >= 0, "without points nothing is learned: %s" % GameFeats.learn(d, "flurry"))
+	ok(GameFeats.learn(d, "taunt").find("costs 1 feat point") >= 0, "without points nothing is learned: %s" % GameFeats.learn(d, "taunt"))
 	ok(left > 0 and h.feat_points == 0, "points never go below zero")
 	# A readied feat that asks for another weapon stays readied, but cannot be used with this one.
 	d.heir.equipment["weapon"] = "longbow"
@@ -673,6 +682,219 @@ func test_validation() -> void:
 
 
 # ---------------------------------------------------------------- companions
+
+# ---------------------------------------------------------------- feats by class
+
+const UNIVERSAL := ["feint", "pommel_strike", "taunt", "hamstring", "mire_trap", "charge", "rally", "rockslide", "brushfire",
+	"undertow", "falling_masonry"]
+
+
+func _base_classes() -> Array:
+	return GameData.classes.keys().filter(func(c): return not GameData.classes[c].has("parents"))
+
+
+func test_class_feats() -> void:
+	ok(GameFeats.universal_feats() == UNIVERSAL, "the feats open to every class are exactly the tactical basics and the ground's: %s" % str(GameFeats.universal_feats()))
+	var seen := {}
+	for id in GameFeats.ids():
+		ok(not seen.has(id), "feat id %s is used once" % id)
+		seen[id] = true
+	ok(GameData.classes.size() == 19, "19 classes to give feats to (%d)" % GameData.classes.size())
+	for cid in GameData.classes:
+		var mine := GameFeats.class_feats(cid)
+		ok(mine.size() >= 6, "%s can learn %d feats of a class's own" % [cid, mine.size()])
+		ok(mine.all(func(id): return id not in UNIVERSAL), "%s's class feats are not the open ones" % cid)
+		var c: Dictionary = GameData.classes[cid]
+		if not c.has("parents"):
+			var own := GameFeats.feats_from(cid, cid)
+			ok(own.size() >= 6 and own.size() <= 9, "base class %s has %d feats of its own" % [cid, own.size()])
+			var lvs: Array = own.map(func(id): return int(GameFeats.requires(id)["min_level"]))
+			ok(lvs.min() == 1 or lvs.min() <= 3, "%s's craft starts by level 3 (%s)" % [cid, str(lvs)])
+			ok(lvs.max() >= 200, "%s's craft reaches into the late game (%s)" % [cid, str(lvs)])
+		else:
+			var own := GameFeats.feats_from(cid, cid)
+			ok(own.size() >= 1 and own.size() <= 2, "hybrid %s has its signature feats: %s" % [cid, str(own)])
+			for p in c["parents"]:
+				var from := GameFeats.feats_from(str(p), str(p))
+				ok(from.all(func(id): return id in mine), "hybrid %s learns every %s feat" % [cid, p])
+				ok(GameFeats.feats_from(cid, str(p)).size() > 0, "hybrid %s lists feats from the %s" % [cid, p])
+	# A class with no craft of its own is reported.
+	GameData.classes["test_base"] = {"id": "test_base", "name": "Tester"}
+	GameData.classes["test_hybrid"] = {"id": "test_hybrid", "name": "Mixed Tester", "parents": ["warrior", "mage"]}
+	var errs := GameFeats.validate()
+	ok(errs.has("class test_base is taught only 0 feats of its own; it needs at least 6") and errs.has("class test_base has no damaging feat by level 3 that asks for no weapon"), "a base class with no feats is reported: %s" % str(errs))
+	ok(errs.has("hybrid class test_hybrid has no feat of its own"), "and a hybrid with none of its own")
+	GameData.classes.erase("test_base")
+	GameData.classes.erase("test_hybrid")
+	ok(GameFeats.validate().is_empty(), "and the real data is sound again")
+	# Two parents' crafts and a signature of its own.
+	var sb := GameFeats.class_feats("spellblade")
+	ok("cleave" in sb and "arcane_strike" in sb and "spellstrike" in sb, "a spellblade has Cleave, Arcane Strike and Spellstrike")
+	var nj := GameFeats.class_feats("ninja")
+	ok("flurry" in nj and "cheap_shot" in nj and "leg_sweep" in nj and "shuriken" in nj, "a ninja has Flurry, Cheap Shot, Leg Sweep and Shuriken")
+	ok("cleave" not in GameFeats.class_feats("ninja") and "spellstrike" not in GameFeats.class_feats("paladin"), "and nothing of other houses")
+	# Two base classes never share their whole craft.
+	var bases := _base_classes()
+	for i in bases.size():
+		for k in range(i + 1, bases.size()):
+			ok(GameFeats.feats_from(bases[i], bases[i]) != GameFeats.feats_from(bases[k], bases[k]), "%s and %s have their own feats" % [bases[i], bases[k]])
+	# The feats panel lists only what the class may learn, grouped.
+	var d := _dyn("spellblade", 20, 140)
+	var groups: Array = FeatsPanel.learn_groups(d.heir)
+	ok(groups.map(func(g): return g["title"]) == ["Spellblade feats", "From the Warrior", "From the Mage", "Open to every class", "Of the land"], "a spellblade's feats in their groups: %s" % str(groups.map(func(g): return g["title"])))
+	var listed := {}
+	for g in groups:
+		for id in g["ids"]:
+			ok(not listed.has(id), "%s is listed once" % id)
+			listed[id] = true
+	ok(listed.size() == GameFeats.class_feats("spellblade").size() + UNIVERSAL.size() and not listed.has("flurry") and not listed.has("radiant_strike"), "only what a spellblade may learn is listed (%d)" % listed.size())
+	ok(GameFeats.next_class_feat(d.heir) == "Arcane Detonation at level 24", "the next class feat is told: %s" % GameFeats.next_class_feat(d.heir))
+	ok(FeatsPanel.summary_lines(d).has("Next class feat: Arcane Detonation at level 24"), "and on the life screen: %s" % str(FeatsPanel.summary_lines(d)))
+	d.heir.level = 99999
+	d.heir.known_feats = GameFeats.class_feats("spellblade").duplicate()
+	ok(GameFeats.next_class_feat(d.heir) == "", "with every class feat known, nothing is next")
+
+
+func test_class_gates() -> void:
+	var m := _dyn("mage", 30, 141, "oak_staff")
+	ok(GameFeats.learn(m, "cleave").begins_with("Taught only to a Warrior"), "a mage is not taught Cleave: %s" % GameFeats.learn(m, "cleave"))
+	ok(GameFeats.learn(m, "arcane_strike").find("learns Arcane Strike") >= 0, "a mage is taught Arcane Strike")
+	ok(GameFeats.learn(m, "feint").find("learns Feint") >= 0, "and the feats open to all")
+	var w := _dyn("warrior", 30, 142, "steel_sword")
+	ok(GameFeats.learn(w, "arcane_strike").begins_with("Taught only to a Mage"), "a warrior is not taught Arcane Strike: %s" % GameFeats.learn(w, "arcane_strike"))
+	var p := _dyn("paladin", 30, 143, "iron_mace")
+	ok(GameFeats.learn_block(p.heir, "shield_bash") == "" and GameFeats.learn_block(p.heir, "radiant_strike") == "", "a paladin may learn Shield Bash and Radiant Strike")
+	ok(GameFeats.learn_block(p.heir, "smiting_blow") == "" and GameFeats.learn_block(p.heir, "spellstrike").begins_with("Taught only to a Spellblade"), "its own Smiting Blow, not a spellblade's Spellstrike")
+	# Level and weapon still apply on top.
+	var r := _dyn("ranger", 45, 144, "")
+	ok(GameFeats.learn_block(r.heir, "called_shot").begins_with("Needs a bow"), "Called Shot needs a bow: %s" % GameFeats.learn_block(r.heir, "called_shot"))
+	r.heir.equipment["weapon"] = "longbow"
+	ok(GameFeats.learn_block(r.heir, "called_shot") == "", "with a bow and the level, it can be learned")
+	r.heir.level = 10
+	ok(GameFeats.learn_block(r.heir, "called_shot").begins_with("Needs level 40"), "the level comes first")
+	ok(GameFeats.requirement_parts("smiting_blow").has("Paladin"), "the class is told among the requirements: %s" % str(GameFeats.requirement_parts("smiting_blow")))
+
+
+func test_mag_and_drain() -> void:
+	var d := _dyn("mage", 40, 145)
+	var h := d.heir
+	var sc: Dictionary = GameFeats.def("arcane_strike")["scaling"]
+	var want := h.magic_power() * float(sc["mag"]) + h.attack_power() * float(sc.get("str", 0.0))
+	ok(is_equal_approx(GameFeats.power(h, "arcane_strike"), want), "Arcane Strike is MAG and a little STR (%.1f vs %.1f)" % [GameFeats.power(h, "arcane_strike"), want])
+	var before := GameFeats.power(h, "arcane_strike")
+	h.training["mag"] = float(h.training.get("mag", 0.0)) + 50.0
+	var by_mag := GameFeats.power(h, "arcane_strike") - before
+	h.training["mag"] -= 50.0
+	h.training["str"] = float(h.training.get("str", 0.0)) + 50.0
+	var by_str := GameFeats.power(h, "arcane_strike") - before
+	h.training["str"] -= 50.0
+	ok(by_mag > 0.0 and by_str > 0.0 and by_mag > by_str * 3.0, "MAG raises it far more than STR (%.1f vs %.1f)" % [by_mag, by_str])
+	ok(GameFeats.scaling_text("arcane_strike") == "STR x0.2, MAG x0.8", "MAG is told: %s" % GameFeats.scaling_text("arcane_strike"))
+	ok(GameFeats.describe("life_leech").find("drains 50%") >= 0, "drain is told: %s" % GameFeats.describe("life_leech"))
+	# A hurt necromancer drinks back what Life Leech deals.
+	var n := _dyn("necromancer", 20, 146)
+	_ready_feats(n, ["life_leech"])
+	var b := _battle(n, 1, "goblin")
+	_sturdy(b)
+	n.heir.hp = int(n.heir.max_hp() * 0.3)
+	var hp := n.heir.hp
+	b.use_feat(0, 0)
+	var dealt: int = b.events.filter(func(ev): return ev["type"] == "damage" and ev["side"] == "enemy").reduce(func(t, ev): return t + int(ev.get("amount", 0)), 0)
+	ok(dealt > 0 and n.heir.hp > hp, "Life Leech heals the necromancer (%d -> %d after %d dealt)" % [hp, n.heir.hp, dealt])
+	n.battle = null
+
+
+func test_class_companions() -> void:
+	for cid in _base_classes():
+		for lv in [10, 60, 300]:
+			var u := GameHeir.new()
+			u.class_id = cid
+			u.race_id = "human"
+			u.level = lv
+			u.gen = 1
+			GameFeats.ready_companion(u, ["plains", "forest"], 3)
+			for id in u.equipped_feats:
+				ok(GameFeats.class_may(cid, id), "a %s hireling readies only what its class is taught (%s)" % [cid, id])
+				ok((GameFeats.requires(id).get("weapon", []) as Array).is_empty(), "a %s hireling takes no feat that asks for a weapon (%s)" % [cid, id])
+			if lv >= 60 and cid != "ranger":
+				ok(u.equipped_feats.any(func(id): return id in GameFeats.class_feats(cid)), "a %s hireling at level %d carries its class's craft: %s" % [cid, lv, str(u.equipped_feats)])
+
+
+## Three generations of the autopilot for each base class: every heir learns feats, and only ones
+## their own class is taught (hybrid heirs born of a marriage included).
+func test_class_bot_lives() -> void:
+	var learned := {}
+	for k in _base_classes().size():
+		var cid: String = _base_classes()[k]
+		var d := GameDynasty.new_game(300 + k, "", cid, "faetouched", "human")
+		var bad: Array = []
+		var guard := 0
+		while d.gen <= 3 and d.state != "ended" and guard < 3000:
+			guard += 1
+			if d.state == "succession":
+				d.choose_heir(0)
+				continue
+			if d.state != "life":
+				break
+			GameBot.step(d)
+			if d.state == "life":
+				for id in d.heir.known_feats:
+					if not GameFeats.class_may(d.heir.class_id, id):
+						bad.append("%s/%s" % [d.heir.class_id, id])
+				if d.heir.class_id == cid and not d.heir.known_feats.is_empty():
+					learned[cid] = d.heir.known_feats.duplicate()
+		ok(bad.is_empty(), "%s house: every known feat is one the heir's class is taught: %s" % [cid, str(bad)])
+		ok(d.gen > 1, "%s house: generations pass (%d)" % [cid, d.gen])
+		ok(learned.has(cid), "%s house: a %s heir learns feats: %s" % [cid, cid, str(learned.get(cid, []))])
+		if learned.has(cid):
+			ok((learned[cid] as Array).any(func(id): return id in GameFeats.class_feats(cid)), "%s house: among them its class's own: %s" % [cid, str(learned[cid])])
+	# The same seed learns the same feats.
+	var runs: Array = []
+	for r in 2:
+		var d := GameDynasty.new_game(333, "", "necromancer", "faetouched", "human")
+		for i in 250:
+			if d.state == "succession":
+				d.choose_heir(0)
+			elif d.state == "life":
+				GameBot.step(d)
+		runs.append([d.heir.known_feats.duplicate(), d.heir.equipped_feats.duplicate(), d.heir.feat_points])
+	ok(runs[0] == runs[1] and not (runs[0][0] as Array).is_empty(), "the same seed learns the same feats: %s" % str(runs[0]))
+
+
+## Saves from before feats were bound to classes: what the heir's class is not taught is forgotten
+## and refunded, and the journal tells it once.
+func test_class_migration() -> void:
+	var d := _dyn("mage", 30, 147)
+	var raw: Dictionary = JSON.parse_string(JSON.stringify(d.to_dict()))
+	raw["heir"]["known_feats"] = ["cleave", "charge", "flurry"]
+	raw["heir"]["equipped_feats"] = ["cleave", "charge", "flurry"]
+	raw["heir"]["feat_points"] = 1
+	var e := GameDynasty.from_dict(raw)
+	var h := e.heir
+	ok(h.known_feats == ["charge"] and h.equipped_feats == ["charge"], "a mage keeps only Charge of Cleave, Charge and Flurry: %s" % str(h.known_feats))
+	ok(h.feat_points == 1 + GameFeats.cost("cleave") + GameFeats.cost("flurry"), "Cleave's and Flurry's points come back (%d)" % h.feat_points)
+	var msgs: Array = []
+	GameFeats.on_years(e, msgs)
+	var want := "With the old drills set aside, %s forgets Cleave and Flurry, which no Mage is taught (2 feat points back)." % h.name
+	ok(msgs.size() >= 1 and msgs[0] == want and e.journal.has(want), "the journal tells it: %s" % str(msgs))
+	msgs = []
+	GameFeats.on_years(e, msgs)
+	ok(not msgs.any(func(l): return str(l).find("old drills") >= 0), "once")
+	ok(JSON.stringify(GameDynasty.from_dict(JSON.parse_string(JSON.stringify(e.to_dict()))).to_dict()) == JSON.stringify(e.to_dict()), "the migrated save round-trips")
+	# A warrior's old save keeps what a warrior is taught.
+	var w := _dyn("warrior", 30, 148, "steel_sword")
+	var wr: Dictionary = JSON.parse_string(JSON.stringify(w.to_dict()))
+	wr["heir"]["known_feats"] = ["cleave", "charge"]
+	wr["heir"]["equipped_feats"] = ["cleave"]
+	var x := GameDynasty.from_dict(wr)
+	ok(x.heir.known_feats == ["cleave", "charge"] and x.heir.equipped_feats == ["cleave"] and x.heir.feat_points == int(wr["heir"]["feat_points"]) and not x.heir.has_meta("feat_forgot"), "a warrior keeps Cleave")
+	# A hybrid keeps its parents' feats.
+	var s := _dyn("spellblade", 30, 149)
+	var sr: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	sr["heir"]["known_feats"] = ["cleave", "arcane_strike", "spellstrike", "flurry"]
+	var y := GameDynasty.from_dict(sr)
+	ok(y.heir.known_feats == ["cleave", "arcane_strike", "spellstrike"], "a spellblade keeps the Warrior's, the Mage's and its own, not Flurry: %s" % str(y.heir.known_feats))
+
 
 func test_companions() -> void:
 	var seen := {}
@@ -823,7 +1045,8 @@ func test_bot() -> void:
 			"ranger":
 				ok("aimed_shot" in h.equipped_feats, "the ranger with a bow readies Aimed Shot: %s" % str(h.equipped_feats))
 			"mage":
-				ok(dmg.is_empty(), "the mage leaves weapon work alone: %s" % str(h.equipped_feats))
+				ok(not dmg.is_empty() and dmg.all(func(id): return float(GameFeats.def(id)["scaling"].get("mag", 0.0)) > float(GameFeats.def(id)["scaling"].get("str", 0.0)) + float(GameFeats.def(id)["scaling"].get("agi", 0.0))),
+					"the mage readies spellwork, not weapon work: %s" % str(h.equipped_feats))
 		# Nothing changes where loadouts may not change.
 		d.world.visit("whisperwood")
 		d.heir.level += 30
@@ -894,14 +1117,15 @@ func test_save_load() -> void:
 	raw["heir"]["known_feats"] = ["cleave", "gone_feat", "cleave", "charge", "feint", "flurry", "rally"]
 	raw["heir"]["equipped_feats"] = ["gone_feat", "cleave", "cleave", "charge", "feint", "flurry", "rally", "hamstring"]
 	var f := GameDynasty.from_dict(raw)
-	ok(f.heir.known_feats == ["cleave", "charge", "feint", "flurry", "rally"], "unknown and doubled feats are dropped: %s" % str(f.heir.known_feats))
+	ok(f.heir.known_feats == ["cleave", "charge", "feint", "rally"], "unknown, doubled and other classes' feats are dropped: %s" % str(f.heir.known_feats))
+	ok(f.heir.feat_points == int(raw["heir"]["feat_points"]) + GameFeats.cost("flurry"), "a warrior's old Flurry is refunded (%d)" % f.heir.feat_points)
 	ok(f.heir.equipped_feats.size() == GameFeats.slots(f.heir) and f.heir.equipped_feats.all(func(id): return id in f.heir.known_feats), "only known feats are readied, no more than the slots: %s" % str(f.heir.equipped_feats))
-	# Readied feats the heir's level or class no longer allows (the data changed) stay known, set aside.
-	raw["heir"]["known_feats"] = ["thousand_cuts", "shield_bash", "cleave"]
-	raw["heir"]["equipped_feats"] = ["thousand_cuts", "shield_bash", "cleave"]
-	raw["heir"]["class_id"] = "mage"
+	# Readied feats the heir's level no longer allows (the data changed) stay known, set aside.
+	raw["heir"]["known_feats"] = ["earthshaker", "shield_bash", "cleave"]
+	raw["heir"]["equipped_feats"] = ["earthshaker", "shield_bash", "cleave"]
 	var m := GameDynasty.from_dict(raw)
-	ok(m.heir.known_feats == ["thousand_cuts", "shield_bash", "cleave"] and m.heir.equipped_feats == ["cleave"], "a readied feat beyond the heir's level or class is set aside on load: %s" % str(m.heir.equipped_feats))
+	ok(m.heir.known_feats == ["earthshaker", "shield_bash", "cleave"] and m.heir.equipped_feats == ["shield_bash", "cleave"], "a readied feat beyond the heir's level is set aside on load: %s" % str(m.heir.equipped_feats))
+	ok(m.heir.feat_points == int(raw["heir"]["feat_points"]) and not m.heir.has_meta("feat_forgot"), "a feat beyond the level is never refunded")
 	# A save from before feats.
 	var old: Dictionary = JSON.parse_string(j)
 	for key in ["known_feats", "equipped_feats", "feat_points", "feat_level", "feat_news", "downtime"]:
