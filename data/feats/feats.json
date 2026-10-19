@@ -9,7 +9,7 @@
     "bot_status_worth": {"stun": 0.6, "fear": 0.35, "slow": 0.25, "weaken": 0.2, "vulnerable": 0.25, "bleed": 0.15, "burn": 0.15, "rallied": 0.6, "shield": 0.45, "taunt": 0.4,
       "braced": 0.4, "veiled": 0.35, "keen": 0.3, "haste": 0.6},
     "bot_party_worth": 0.8,
-    "bot_class_worth": 1.1,
+    "bot_class_worth": 1.25,
     "bot_min_score": 0.02,
     "bot_hp_cost_worth": 4.0,
     "bot_taunt_min_hp": 0.6
@@ -286,7 +286,7 @@
       "description": "A puff of grey smoke, and where the rogue stood there is only smoke.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
-      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 2, "potency": 0.35, "on": "self"}],
+      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 2, "potency": 0.245, "on": "self"}],
       "requires": {"min_level": 24, "classes": ["rogue"]}
     },
     {
@@ -351,7 +351,7 @@
       "description": "Root the feet, breathe low, and let the blows break on you.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
-      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.3, "on": "self"}],
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}],
       "requires": {"min_level": 3, "classes": ["monk"]}
     },
     {
@@ -375,7 +375,7 @@
       "description": "Move like the wind in the grass: hard to hit, quick to find the gap.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
-      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 3, "potency": 0.3, "on": "self"}, {"id": "keen", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "self"}],
+      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}, {"id": "keen", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "self"}],
       "requires": {"min_level": 30, "classes": ["monk"]}
     },
     {
@@ -414,7 +414,7 @@
       "description": "A prayer half-spoken, and blows turn aside.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
-      "statuses": [{"id": "braced", "chance": 1.0, "turns": 2, "potency": 0.35, "on": "self"}],
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 2, "potency": 0.245, "on": "self"}],
       "requires": {"min_level": 14, "classes": ["cleric"]}
     },
     {
@@ -566,7 +566,7 @@
       "description": "The skin hardens and browns like old oak.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
-      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.3, "on": "self"}],
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}],
       "requires": {"min_level": 8, "classes": ["druid"]}
     },
     {
@@ -629,7 +629,7 @@
       "description": "Stand near the paladin and fear has no hold on you.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "party"},
-      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "party"}],
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "party"}],
       "requires": {"min_level": 60, "classes": ["paladin"]}
     },
     {
@@ -637,7 +637,7 @@
       "description": "Read the blow, meet it on the flat, let it slide past.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
-      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 2, "potency": 0.35, "on": "self"}],
+      "statuses": [{"id": "veiled", "chance": 1.0, "turns": 2, "potency": 0.245, "on": "self"}],
       "requires": {"min_level": 10, "classes": ["duelist"]}
     },
     {
@@ -751,7 +751,7 @@
       "description": "Speak the vow again and stand on it.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
-      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.3, "on": "self"}, {"id": "keen", "chance": 1.0, "turns": 3, "potency": 0.2, "on": "self"}],
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.21, "on": "self"}, {"id": "keen", "chance": 1.0, "turns": 3, "potency": 0.2, "on": "self"}],
       "requires": {"min_level": 60, "classes": ["templar"]}
     },
     {
@@ -767,7 +767,7 @@
       "description": "Plant your feet like the old trees; the party stands with you.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "party"},
-      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.15, "on": "party"}],
+      "statuses": [{"id": "braced", "chance": 1.0, "turns": 3, "potency": 0.105, "on": "party"}],
       "requires": {"min_level": 60, "classes": ["warden"]}
     }
   ]

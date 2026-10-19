@@ -842,7 +842,11 @@ func test_class_bot_lives() -> void:
 					if not GameFeats.class_may(d.heir.class_id, id):
 						bad.append("%s/%s" % [d.heir.class_id, id])
 				if d.heir.class_id == cid and not d.heir.known_feats.is_empty():
-					learned[cid] = d.heir.known_feats.duplicate()
+					var seen: Array = learned.get(cid, [])
+					for id in d.heir.known_feats:
+						if id not in seen:
+							seen.append(id)
+					learned[cid] = seen
 		ok(bad.is_empty(), "%s house: every known feat is one the heir's class is taught: %s" % [cid, str(bad)])
 		ok(d.gen > 1, "%s house: generations pass (%d)" % [cid, d.gen])
 		ok(learned.has(cid), "%s house: a %s heir learns feats: %s" % [cid, cid, str(learned.get(cid, []))])

@@ -34,7 +34,7 @@
   "defeat_gold_loss": 0.5,
   "defeat_years": 2,
   "hunt_rewards": {"hunt": {"scale": 1.08, "reward": 1.0, "min": 1, "max": 2, "level_min": 0.9, "level_max": 1.1, "elite_chance": 0.08}, "hunt_hard": {"scale": 1.44, "reward": 2.0, "min": 2, "max": 3, "level_min": 1.0, "level_max": 1.2, "elite_chance": 0.15}},
-  "bot_hard_hunt": {"every": 2, "min_level": 40, "min_hp_frac": 0.95, "min_potions": 3, "min_gear": 2, "min_streak": 12, "clean_hp_frac": 0.9, "max_danger": 1.0},
+  "bot_hard_hunt": {"every": 2, "min_level": 40, "min_hp_frac": 0.95, "min_potions": 3, "min_gear": 2, "min_streak": 8, "clean_hp_frac": 0.9, "max_danger": 1.2},
   "level_cap": 99999,
   "midlife_fraction": 0.5,
   "family_after_years": 3,
@@ -60,6 +60,7 @@
   "prayer_fate_drop": 0.02,
   "bot_gold_reserve_potions": 4,
   "bot_upgrade_margin": 0.03,
+  "bot_favored_weapon_bonus": 0.15,
   "bot_pray_fate": 0.12,
   "bot_gear_weights": {
     "melee": {"melee_damage": 1.0, "strength": 1.0, "element_power": 0.1, "divine_magic_power": 0.1, "luck": 0.8, "reflexes": 1.2, "defense": 0.5, "max_hp": 0.8, "max_mp": 0.05, "xp_gain": 0.6, "healing_power": 0.3, "fire_resistance": 0.15, "persuasion": 0.2},

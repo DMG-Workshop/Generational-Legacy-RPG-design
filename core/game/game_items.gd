@@ -338,17 +338,32 @@ static func pray(d: GameDynasty) -> String:
 
 # ---------------------------------------------------------------- autopilot
 
+## The weapon kinds a class (or either parent of a hybrid) is drawn to: its favored_weapon.
+static func favored_weapons(class_id: String) -> Array:
+	var c: Dictionary = GameData.classes.get(class_id, {})
+	var out: Array = []
+	if c.has("favored_weapon"):
+		out.append(str(c["favored_weapon"]))
+	for p in c.get("parents", []):
+		out.append_array(favored_weapons(str(p)))
+	return out
+
+
 ## "melee" or "magic": whichever the heir hits harder with.
 static func fighting_style(h: GameHeir) -> String:
 	return "magic" if h.magic_power() > h.attack_power() else "melee"
 
 
 ## How much an item helps a fighter of `style` (bot_gear_weights in balance.json). "" scores 0.
-static func gear_score(id: String, style: String) -> float:
+## A weapon of the kind the class's own feats ask for (classes.json favored_weapon, or a parent's)
+## earns bot_favored_weapon_bonus on top, so a ranger takes up a bow and keeps its bow feats.
+static func gear_score(id: String, style: String, h: GameHeir = null) -> float:
 	if id == "":
 		return 0.0
 	var weights: Dictionary = GameData.bal("bot_gear_weights").get(style, {})
 	var s := 0.0
+	if h != null and slot_of(id) == "weapon" and GameFeats.weapon_kind(id) != "" and GameFeats.weapon_kind(id) in favored_weapons(h.class_id):
+		s += float(GameData.bal("bot_favored_weapon_bonus"))
 	for e in item_def(id).get("effects", []):
 		s += float(e["value"]) * float(weights.get(e["stat"], 0.0))
 	return s
@@ -372,11 +387,11 @@ static func bot_tick(d: GameDynasty) -> void:
 	var displaced: Array = []   # gear the bot itself replaced; anything else in the pack is left alone
 	for slot in SLOTS:
 		var best := ""
-		var best_score := gear_score(equipped(h, slot), style) + margin
+		var best_score := gear_score(equipped(h, slot), style, h) + margin
 		for id in h.inventory:
-			if slot_of(id) == slot and not GameDisease.is_bargain(id) and gear_score(id, style) > best_score:
+			if slot_of(id) == slot and not GameDisease.is_bargain(id) and gear_score(id, style, h) > best_score:
 				best = id
-				best_score = gear_score(id, style)
+				best_score = gear_score(id, style, h)
 		if best != "":
 			displaced.append(equipped(h, slot))
 			d._say(equip(d, best))
@@ -388,11 +403,11 @@ static func bot_tick(d: GameDynasty) -> void:
 		wares.append_array(stock(d, s))
 	for slot in SLOTS:
 		var best := ""
-		var best_score := gear_score(equipped(h, slot), style) + margin
+		var best_score := gear_score(equipped(h, slot), style, h) + margin
 		for id in wares:
 			if slot_of(id) != slot or owns(h, id) or GameDisease.is_bargain(id):
 				continue
-			var sc := gear_score(id, style)
+			var sc := gear_score(id, style, h)
 			if sc > best_score and h.gold - price(d, id) >= reserve:
 				best = id
 				best_score = sc

@@ -37,6 +37,7 @@ func _init() -> void:
 	_test_save_load()
 	_test_succession()
 	_test_bot()
+	_test_bot_favored_weapon()
 	_test_high_gen()
 	print("%d checks, %d failures" % [checks, failures])
 	print("ALL PASS" if failures == 0 else "TESTS FAILED")
@@ -378,6 +379,25 @@ func _test_succession() -> void:
 	_check(GameItems.prayer_price(d) < price_before, "temple prices reset for a new heir")
 	var g := _roundtrip(d)
 	_check(g.heir.equipment == c.equipment, "inherited gear survives save/load")
+
+
+func _test_bot_favored_weapon() -> void:
+	for cid in ["ranger", "warden", "beastmaster"]:
+		var d := _fresh(cid)
+		var h := d.heir
+		h.equipment = {"weapon": "iron_sword", "armor": "", "trinket": ""}
+		h.inventory = []
+		h.gold = 20000
+		d.world.visit("kingshold")
+		GameItems.bot_tick(d)
+		_check(GameFeats.weapon_kind(h.equipment["weapon"]) == "bow", "%s bot takes up a bow (%s)" % [cid, h.equipment["weapon"]])
+	var w := _fresh("warrior")
+	w.heir.equipment = {"weapon": "", "armor": "", "trinket": ""}
+	w.heir.inventory = []
+	w.heir.gold = 20000
+	w.world.visit("kingshold")
+	GameItems.bot_tick(w)
+	_check(GameFeats.weapon_kind(w.heir.equipment["weapon"]) != "bow", "a warrior bot does not")
 
 
 func _test_bot() -> void:
