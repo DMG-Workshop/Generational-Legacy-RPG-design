@@ -205,6 +205,8 @@ func _build_right() -> void:
 	else:
 		right.add_child(Kit.label("Unmarried. Without children, distant cousins inherit with weaker blood.", 14, Kit.DIM))
 	_section("Gear", ShopPanel.summary_lines(d))
+	var every: Array = GameSkills.list(h.class_id).map(func(s): return "Level %s  %s: %s" % [GameText.num(GameSkills.level_of(s)), s["name"], GameCombat.describe(s)])
+	_section("Class skills", GameSkills.summary_lines(h), "\n".join(every))
 	_section("Feats", FeatsPanel.summary_lines(d))
 	_section("Skill trees", SkillTreePanel.summary_lines(d))
 	_section("Companions", TavernPanel.summary_lines(d))
@@ -224,13 +226,17 @@ func _sick(m: GameHeir) -> String:
 	return "" if m.diseases.is_empty() else "\n   sick: %s" % GameDisease.status_text(m)
 
 
-func _section(title: String, lines: Array) -> void:
+func _section(title: String, lines: Array, tip: String = "") -> void:
 	if lines.is_empty():
 		return
 	right.add_child(HSeparator.new())
 	right.add_child(Kit.label(title, 20, Kit.ACCENT))
 	for line in lines:
-		right.add_child(Kit.label(str(line), 13, Kit.TEXT))
+		var l := Kit.label(str(line), 13, Kit.TEXT)
+		if tip != "":
+			l.tooltip_text = tip
+			l.mouse_filter = Control.MOUSE_FILTER_PASS
+		right.add_child(l)
 
 
 func _build_actions() -> void:

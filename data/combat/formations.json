@@ -6,7 +6,15 @@
     "bot_heal_below": 0.25,
     "bot_party_heal_below": 0.4,
     "foe_dodge_per_agi": 0.005,
-    "foe_dodge_max": 0.15
+    "foe_dodge_max": 0.15,
+    "bot_styles": {
+      "martial": {"attack": 1.0, "weapon_skill": 1.1, "magic_skill": 0.8, "both_skill": 1.1, "spell": 0.8, "feat_weapon": 1.1, "feat_magic": 0.9, "support": 1.0, "mp_price": 1.0},
+      "caster": {"attack": 0.4, "weapon_skill": 0.75, "magic_skill": 1.15, "both_skill": 1.15, "spell": 1.25, "feat_weapon": 0.6, "feat_magic": 1.15, "support": 1.0, "mp_price": 0.6}
+    },
+    "bot_style_lean": [0.3, 0.7],
+    "bot_reserve_heal_below": 0.5,
+    "bot_finish_attack_from": 0.75,
+    "party_taken_floor": 0.5
   },
   "field": {
     "heir": [0.0, 0.0],

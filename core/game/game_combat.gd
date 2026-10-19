@@ -107,6 +107,7 @@ static func validate() -> Array:
 		var span: Array = formation()["packs"]["kinds"][kind]["size"]
 		if int(span[1]) > room or int(span[0]) > int(span[1]):
 			out.append("pack %s: size %s does not fit the %d places in the rows" % [kind, str(span), room])
+	out.append_array(GameSkills.validate())
 	return out
 
 

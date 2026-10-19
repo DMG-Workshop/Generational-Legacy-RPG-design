@@ -288,8 +288,11 @@ func _rule_dealt(ref: String) -> float:
 	return m
 
 
+## A party member's guards stacked together (a stance, a ward feat, a party blessing) never take
+## off more than half of a blow: settings.party_taken_floor.
 func _taken_mult(ref: String) -> float:
-	return maxf(0.1, 1.0 + status_mod(ref, "damage_taken"))
+	var low := 0.1 if _side(ref) == "enemy" else float(GameCombat.setting("party_taken_floor"))
+	return maxf(low, 1.0 + status_mod(ref, "damage_taken"))
 
 
 ## True while a status will cost the unit its next turn for certain (stun, freeze, sleep).
@@ -703,7 +706,22 @@ static func heal_amount(caster: GameHeir, patient: GameHeir, s: Dictionary) -> i
 
 
 func can_use_skill(i: int) -> bool:
-	return result == "" and can_pay(-1, skill_cost(i))
+	return result == "" and skill_unlocked(i) and not skill_used_up(i) and can_pay(-1, skill_cost(i))
+
+
+## Whether the heir's level has opened class skill `i` (see GameSkills).
+func skill_unlocked(i: int) -> bool:
+	return GameSkills.unlocked(heir, i)
+
+
+## A once-a-battle skill the unit has already used in this fight.
+func unit_skill_used_up(by: int, i: int) -> bool:
+	var s := GameSkillTree.skill(_unit(by), i)
+	return GameSkills.is_once(s) and int(uses.get("%s/%s" % [ref_of(by), s.get("name", "")], 0)) > 0
+
+
+func skill_used_up(i: int) -> bool:
+	return unit_skill_used_up(-1, i)
 
 
 func use_skill(i: int, target: int) -> void:
