@@ -66,28 +66,52 @@ func _build() -> void:
 		var block := why if why != "" else GameFeats.equip_block(h, fid)
 		mine.add_child(_card(fid, "Ready", func(): _act(GameFeats.equip(d, fid)), block))
 
-	var open: Array = []
-	var later: Array = []
-	for id in GameFeats.ids():
-		if id in h.known_feats:
+	# Only what this class may ever learn: its own craft (a hybrid's own, then each parent's), the
+	# feats open to every class, and the land's. Within a group, what can be learned now comes first.
+	var any := false
+	for g in learn_groups(h):
+		var ids: Array = (g["ids"] as Array).filter(func(id): return id not in h.known_feats)
+		if ids.is_empty():
 			continue
-		if GameFeats.requirement_block(h, id) == "":
+		others.add_child(Kit.label(str(g["title"]), 16, Kit.ACCENT))
+		var later: Array = []
+		for id in ids:
+			var fid: String = id
+			var c := GameFeats.cost(fid)
+			var price := "Learn (%d pt%s)" % [c, "" if c == 1 else "s"]
+			if GameFeats.requirement_block(h, fid) != "":
+				later.append(fid)
+				continue
+			any = true
+			var block := why if why != "" else GameFeats.learn_block(h, fid)
+			others.add_child(_card(fid, price, func(): _act(GameFeats.learn(d, fid)), block))
+		for id in later:
+			var c := GameFeats.cost(id)
+			others.add_child(_card(id, "Learn (%d pt%s)" % [c, "" if c == 1 else "s"], Callable(), GameFeats.requirement_block(h, id)))
+	if not any:
+		others.add_child(_wrap("Nothing more to learn for now.", 14, Kit.DIM))
+	_restore_scroll.call_deferred(keep)
+
+
+## The feats a class may learn in the order the panel lists them: [{title, ids}]. "Mage feats";
+## for a hybrid "Spellblade feats", "From the Warrior", "From the Mage"; then "Open to every
+## class" and "Of the land" (the ground's feats).
+static func learn_groups(h: GameHeir) -> Array:
+	var cid := h.class_id
+	var cname := str(GameData.classes.get(cid, {}).get("name", cid))
+	var out: Array = [{"title": "%s feats" % cname, "ids": GameFeats.feats_from(cid, cid)}]
+	for p in GameData.classes.get(cid, {}).get("parents", []):
+		out.append({"title": "From the %s" % str(GameData.classes.get(p, {}).get("name", p)), "ids": GameFeats.feats_from(cid, str(p))})
+	var open: Array = []
+	var land: Array = []
+	for id in GameFeats.universal_feats():
+		if (GameFeats.requires(id).get("biomes", []) as Array).is_empty():
 			open.append(id)
 		else:
-			later.append(id)
-	if open.is_empty():
-		others.add_child(_wrap("Nothing more to learn for now.", 14, Kit.DIM))
-	for id in open:
-		var fid: String = id
-		var block := why if why != "" else GameFeats.learn_block(h, fid)
-		var c := GameFeats.cost(fid)
-		others.add_child(_card(fid, "Learn (%d pt%s)" % [c, "" if c == 1 else "s"], func(): _act(GameFeats.learn(d, fid)), block))
-	if not later.is_empty():
-		others.add_child(Kit.label("Not yet", 16, Kit.ACCENT))
-	for id in later:
-		var c := GameFeats.cost(id)
-		others.add_child(_card(id, "Learn (%d pt%s)" % [c, "" if c == 1 else "s"], Callable(), GameFeats.requirement_block(h, id)))
-	_restore_scroll.call_deferred(keep)
+			land.append(id)
+	out.append({"title": "Open to every class", "ids": open})
+	out.append({"title": "Of the land", "ids": land})
+	return out
 
 
 func _open_text(d: GameDynasty) -> String:
@@ -96,7 +120,7 @@ func _open_text(d: GameDynasty) -> String:
 	return "Rested: feats can be learned and readied until the next thing that takes time."
 
 
-## "Next feat point at level 13. A third slot opens at level 10."
+## "Next feat point at level 13.  Slot 3 opens at level 10.  Next class feat: Rime Strike at level 8."
 func _next_text(h: GameHeir) -> String:
 	var parts: Array = []
 	var p := GameFeats.next_point_level(h.level)
@@ -105,6 +129,9 @@ func _next_text(h: GameHeir) -> String:
 	var s := GameFeats.next_slot(h.level)
 	if not s.is_empty():
 		parts.append("Slot %d opens at level %s." % [int(s[1]), GameText.num(int(s[0]))])
+	var nc := GameFeats.next_class_feat(h)
+	if nc != "":
+		parts.append("Next class feat: %s." % nc)
 	return "  ".join(PackedStringArray(parts))
 
 
@@ -217,4 +244,7 @@ static func summary_lines(d: GameDynasty) -> Array:
 	var pts := GameFeats.points(h)
 	if pts > 0:
 		out.append("%s feat point%s to spend" % [GameText.num(pts), "" if pts == 1 else "s"])
+	var nc := GameFeats.next_class_feat(h)
+	if nc != "":
+		out.append("Next class feat: %s" % nc)
 	return out

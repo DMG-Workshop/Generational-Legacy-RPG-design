@@ -1,11 +1,13 @@
 ## Feats: martial techniques an heir learns with feat points and readies in a few slots. A feat is
 ## an ability like a class skill or a spell and runs through GameBattle's one pipeline, but it
 ## never costs MP: it waits out a cooldown, and a few take a share of the user's own HP. Power
-## comes from STR and AGI by the feat's weights, each landing as hard as a plain blow of that stat
-## (trait, gear and heirloom bonuses included), raised by the tier of the weapon in hand (bare
-## hands are tier 0). Environmental feats need the ground the battle is fought on. Points come at
-## level milestones and slots open at others; loadouts change only in a town or right after a rest.
-## Content and tuning live in data/feats/feats.json.
+## comes from STR, AGI and MAG by the feat's weights, each landing as hard as a plain blow or spell
+## of that stat (trait, gear and heirloom bonuses included), raised by the tier of the weapon in
+## hand (bare hands are tier 0). Most feats belong to a class (`requires.classes`): a hybrid learns
+## its own and both parents' feats; a feat with no classes is open to all. Environmental feats need
+## the ground the battle is fought on. Points come at level milestones and slots open at others;
+## loadouts change only in a town or right after a rest. Content and tuning live in
+## data/feats/feats.json.
 ##
 ## State on a GameHeir: known_feats, equipped_feats (slot order), feat_points (unspent),
 ## feat_level (milestones granted through this level), feat_news (milestone levels the journal has
@@ -15,9 +17,9 @@
 class_name GameFeats
 extends RefCounted
 
-const SCALING_KEYS := ["str", "agi", "weapon_tier"]
+const SCALING_KEYS := ["str", "agi", "mag", "weapon_tier"]
 const KEYS := ["name", "kind", "description", "scaling", "mult", "target", "cooldown", "cost", "requires"]
-const NEVER := ["mp", "mana", "pct_max_hp", "party", "cleanse", "drain", "group", "learn"]   # spell and healing keys
+const NEVER := ["mp", "mana", "pct_max_hp", "party", "cleanse", "group", "learn"]   # spell and healing keys
 const STATUS_KEYS := ["name", "tag", "color", "stack", "basis", "default_turns", "default_potency", "text"]
 const SETTING_KEYS := ["start_points", "point_levels", "slot_levels", "companion_slots", "recovery_turns", "bot_targets",
 	"bot_status_worth", "bot_party_worth", "bot_min_score", "bot_hp_cost_worth", "bot_taunt_min_hp"]
@@ -134,20 +136,23 @@ static func weapon_text(kinds: Array) -> String:
 
 
 ## What one unit brings to every feat, worked out once: a plain blow's power, that power per point
-## of STR (so AGI is weighed the same way), AGI, the weapon's tier, and the unit's best blow.
+## of STR (so AGI is weighed the same way), AGI, a spell's power (for MAG), the weapon's tier, and
+## the unit's best blow.
 static func numbers(u: GameHeir) -> Dictionary:
 	var atk := u.attack_power()
-	return {"atk": atk, "per": atk / maxf(0.0001, u.stat("str")), "agi": u.stat("agi"), "tier": weapon_tier(u),
-		"best": maxf(atk, u.magic_power())}
+	var mag := u.magic_power()
+	return {"atk": atk, "per": atk / maxf(0.0001, u.stat("str")), "agi": u.stat("agi"), "mag": mag, "tier": weapon_tier(u),
+		"best": maxf(atk, mag)}
 
 
 static func _power(n: Dictionary, f: Dictionary) -> float:
 	var sc: Dictionary = f.get("scaling", {})
-	var p := float(n["atk"]) * float(sc.get("str", 0.0)) + float(n["per"]) * float(n["agi"]) * float(sc.get("agi", 0.0))
+	var p := float(n["atk"]) * float(sc.get("str", 0.0)) + float(n["per"]) * float(n["agi"]) * float(sc.get("agi", 0.0)) \
+		+ float(n.get("mag", 0.0)) * float(sc.get("mag", 0.0))
 	return p * (1.0 + float(sc.get("weapon_tier", 0.0)) * float(n["tier"]))
 
 
-## A feat's power for a unit: STR and AGI by the feat's weights, raised by the weapon's tier.
+## A feat's power for a unit: STR, AGI and MAG by the feat's weights, raised by the weapon's tier.
 static func power(u: GameHeir, id: String) -> float:
 	return _power(numbers(u), def(id))
 
@@ -285,10 +290,25 @@ static func news_text(h: GameHeir, news: Array) -> String:
 	return "%s %s (%s to spend)." % [h.name, " and ".join(PackedStringArray(parts)), GameText.num(h.feat_points)]
 
 
-## Time passes: the quiet after a rest is over, and feat milestones reached are told.
+## "With the old drills set aside, Tess forgets Cleave and Flurry, which no Mage is taught (2 feat
+## points back)." for the feats a loaded save knew that the heir's class is not taught.
+static func forgot_text(h: GameHeir, names: Array, back: int) -> String:
+	var list: String = names[0] if names.size() == 1 else "%s and %s" % [", ".join(PackedStringArray(names.slice(0, -1))), names[-1]]
+	return "With the old drills set aside, %s forgets %s, which no %s is taught (%s feat point%s back)." % [h.name, list,
+		str(GameData.classes.get(h.class_id, {}).get("name", h.class_id)), GameText.num(back), "" if back == 1 else "s"]
+
+
+## Time passes: the quiet after a rest is over, the feats a loaded save's class is not taught are
+## told forgotten (once), and feat milestones reached are told.
 static func on_years(d: GameDynasty, msgs: Array) -> void:
 	var h := d.heir
 	h.downtime = false
+	if h.has_meta("feat_forgot"):
+		var f: Dictionary = h.get_meta("feat_forgot")
+		h.remove_meta("feat_forgot")
+		var note := forgot_text(h, f["names"], int(f["points"]))
+		msgs.append(note)
+		d._say(note)
 	sync(h)
 	if h.feat_news.is_empty():
 		return
@@ -309,6 +329,57 @@ static func classes_text(classes: Array) -> String:
 	return "%s or %s" % [", ".join(PackedStringArray(names.slice(0, -1))), names[-1]]
 
 
+## Whether a class may learn a feat taught to `classes`: one of them, or a hybrid with a parent
+## among them. An empty list is open to every class.
+static func _class_ok(class_id: String, classes: Array) -> bool:
+	if classes.is_empty() or class_id in classes:
+		return true
+	for p in GameData.classes.get(class_id, {}).get("parents", []):
+		if p in classes:
+			return true
+	return false
+
+
+## Whether a class may ever learn a feat (level, weapon and ground aside).
+static func class_may(class_id: String, id: String) -> bool:
+	return _class_ok(class_id, requires(id).get("classes", []))
+
+
+## The feats a class is taught as its own (a hybrid: its own and both parents'), in data order.
+static func class_feats(class_id: String) -> Array:
+	_index()
+	return _order.filter(func(id): return not (requires(id).get("classes", []) as Array).is_empty() and class_may(class_id, id))
+
+
+## The feats open to every class, the ground's own among them.
+static func universal_feats() -> Array:
+	_index()
+	return _order.filter(func(id): return (requires(id).get("classes", []) as Array).is_empty())
+
+
+## A hybrid's class feats told apart by where they come from: those that list the class itself
+## (`from` == class_id), or those it has only through the parent `from`.
+static func feats_from(class_id: String, from: String) -> Array:
+	var out: Array = []
+	for id in class_feats(class_id):
+		var cs: Array = requires(id).get("classes", [])
+		if (class_id in cs) if from == class_id else (from in cs and class_id not in cs):
+			out.append(id)
+	return out
+
+
+## "Rime Strike at level 8": the heir's next class feat by level, or "" when none is left.
+static func next_class_feat(h: GameHeir) -> String:
+	var best := ""
+	var at := 0
+	for id in class_feats(h.class_id):
+		var lv := int(requires(id).get("min_level", 1))
+		if lv > h.level and id not in h.known_feats and (best == "" or lv < at):
+			best = id
+			at = lv
+	return "" if best == "" else "%s at level %s" % [feat_name(best), GameText.num(at)]
+
+
 ## Level, class and weapon: what a feat asks of whoever learns or readies it ("" when met).
 static func requirement_block(h: GameHeir, id: String) -> String:
 	var why := rank_block(h, id)
@@ -326,7 +397,7 @@ static func rank_block(h: GameHeir, id: String) -> String:
 	if h.level < int(req.get("min_level", 1)):
 		return "Needs level %s." % GameText.num(int(req.get("min_level", 1)))
 	var classes: Array = req.get("classes", [])
-	if not classes.is_empty() and h.class_id not in classes:
+	if not _class_ok(h.class_id, classes):
 		return "Taught only to a %s." % classes_text(classes)
 	return ""
 
@@ -466,20 +537,34 @@ static func unequip(d: GameDynasty, id: String) -> String:
 
 ## A saved loadout read back into `h`: feats that still exist, readied ones among those known, of
 ## the heir's level and class (the data may have changed since), and no more than the slots allow.
-## A save from before feats grants the points of the heir's level.
+## A known feat the heir's class is not taught (saves from before feats were bound to classes) is
+## forgotten and its points given back, and the journal tells it at the next passing of time; one
+## above the heir's level stays known. A save from before feats grants the points of the heir's level.
 static func load_into(h: GameHeir, v: Dictionary) -> void:
 	if not v.has("feat_points"):
 		start(h)
 		return
 	h.known_feats = []
+	var forgot: Array = []
+	var back := 0
 	for id in v.get("known_feats", []):
-		if not def(str(id)).is_empty() and str(id) not in h.known_feats:
-			h.known_feats.append(str(id))
+		var fid := str(id)
+		if def(fid).is_empty() or fid in h.known_feats or fid in forgot:
+			continue
+		if not class_may(h.class_id, fid):
+			forgot.append(fid)
+			back += cost(fid)
+			continue
+		h.known_feats.append(fid)
 	h.equipped_feats = []
 	for id in v.get("equipped_feats", []):
 		if str(id) in h.known_feats and str(id) not in h.equipped_feats and h.equipped_feats.size() < slots(h) and rank_block(h, str(id)) == "":
 			h.equipped_feats.append(str(id))
-	h.feat_points = int(v.get("feat_points", 0))
+	h.feat_points = int(v.get("feat_points", 0)) + back
+	if not forgot.is_empty():
+		h.set_meta("feat_forgot", {"names": forgot.map(func(id): return feat_name(id)), "points": back})
+	elif h.has_meta("feat_forgot"):
+		h.remove_meta("feat_forgot")
 	h.feat_level = int(v.get("feat_level", h.level))
 	h.feat_news = Array(v.get("feat_news", [])).map(func(x): return int(x))
 	h.downtime = bool(v.get("downtime", false))
@@ -499,7 +584,7 @@ static func _pct(v: float) -> String:
 static func scaling_text(id: String) -> String:
 	var sc: Dictionary = def(id).get("scaling", {})
 	var parts: Array = []
-	for k in ["str", "agi"]:
+	for k in ["str", "agi", "mag"]:
 		if float(sc.get(k, 0.0)) > 0.0:
 			parts.append("%s x%s" % [k.to_upper(), _num(float(sc[k]))])
 	if float(sc.get("weapon_tier", 0.0)) > 0.0:
@@ -573,10 +658,13 @@ static func shape_text(id: String) -> String:
 
 ## What a feat is worth to a unit for each turn of its cooldown, measured in the unit's own best
 ## blow (STR or MAG, whichever hits harder): one use is its damage over the foes its shape usually
-## catches plus flat worths for its statuses, less the blow it takes the place of and the HP it
-## costs. Below zero, a plain blow does better. A feat for other ground is worth nothing. So is,
+## catches plus flat worths for its statuses, less the plain blow it takes the place of (a feat is
+## free, so it stands in for the free blow: a caster's staff, not a spell) and the HP it costs.
+## Below zero, a plain blow does better. A feat for other ground is worth nothing. So is,
 ## to a companion, a feat that strikes no one (rallies and taunts are the heir's to call) or one
-## the data keeps from hirelings. `party` counts the heir and companions.
+## the data keeps from hirelings. A class's own feat counts bot_class_worth times over, so at equal
+## power the autopilot takes up its class's craft before what any class may learn. `party` counts
+## the heir and companions.
 static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, companion: bool = false) -> float:
 	_index()
 	var r: Dictionary = _worth.get(id, {})
@@ -587,12 +675,14 @@ static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, comp
 		use += float(r["party"]) * (1.0 + float(party - 1) * float(setting("bot_party_worth")))
 	if float(r["hit"]) > 0.0:
 		use += _power(n, _defs[id]) * float(r["hit"]) / maxf(1.0, float(n["best"])) * float(r["reach"])
-	return (use - float(r["price"])) / float(r["wait"])
+	var blow := float(n["atk"]) / maxf(1.0, float(n["best"]))
+	var s := (use - blow - float(r["price"])) / float(r["wait"])
+	return s * float(settings().get("bot_class_worth", 1.0)) if s > 0.0 and r["classed"] else s
 
 
 ## What score() needs of a feat that no unit changes: the foes its shape usually catches, its blow
 ## per point of power (a foe spends about `below` of its life wounded, for Execute), the worth of
-## its statuses by whom they land on, its HP price and the turns of its cycle.
+## its statuses by whom they land on, the price of the HP it takes and the turns of its cycle.
 static func _worth_of(f: Dictionary) -> Dictionary:
 	var s: Dictionary = _src.get("settings", {})
 	var worth: Dictionary = s.get("bot_status_worth", {})
@@ -606,8 +696,9 @@ static func _worth_of(f: Dictionary) -> Dictionary:
 		on[who] = float(on.get(who, 0.0)) + float(worth.get(str(st.get("id", "")), 0.1)) * float(st.get("chance", 1.0))
 	return {"reach": float(s.get("bot_targets", {}).get("around" if GameCombat.around_self(f) else GameCombat.shape(f), 1.0)),
 		"hit": hit, "foes": on["target"], "party": on["party"], "self": on["self"],
-		"price": 1.0 + float(f.get("hp_cost", 0.0)) * float(s.get("bot_hp_cost_worth", 0.0)),
+		"price": float(f.get("hp_cost", 0.0)) * float(s.get("bot_hp_cost_worth", 0.0)),
 		"wait": float(1 + int(f.get("cooldown", 0))), "biomes": f.get("requires", {}).get("biomes", []),
+		"classed": not (f.get("requires", {}).get("classes", []) as Array).is_empty(),
 		"hireling": f.get("companion", true) is bool and f.get("companion", true) and float(f.get("mult", 0.0)) > 0.0}
 
 
@@ -671,7 +762,7 @@ static func bot_tick(d: GameDynasty) -> void:
 
 ## Everything the autopilot's choice of feats depends on (live; duplicate it to keep it).
 static func _bot_key(h: GameHeir, biomes: Array, party: int) -> Array:
-	return [h.level, h.feat_points, h.equipment, h.training, h.traits, h.diseases, h.heirloom_bonus, h.known_feats, h.equipped_feats, biomes, party,
+	return [h.class_id, h.level, h.feat_points, h.equipment, h.training, h.traits, h.diseases, h.heirloom_bonus, h.known_feats, h.equipped_feats, biomes, party,
 		h.tree_ranks, h.tree_free]
 
 
@@ -730,10 +821,14 @@ static func validate() -> Array:
 		var sc: Dictionary = f.get("scaling", {})
 		for k in sc:
 			if k not in SCALING_KEYS or float(sc[k]) < 0.0:
-				out.append("feat %s: scaling '%s' must be one of str, agi, weapon_tier and not negative" % [id, k])
+				out.append("feat %s: scaling '%s' must be one of str, agi, mag, weapon_tier and not negative" % [id, k])
 		var mult := float(f.get("mult", 0.0))
-		if mult > 0.0 and float(sc.get("str", 0.0)) + float(sc.get("agi", 0.0)) <= 0.0:
-			out.append("feat %s deals damage but scales with neither STR nor AGI" % id)
+		if mult > 0.0 and float(sc.get("str", 0.0)) + float(sc.get("agi", 0.0)) + float(sc.get("mag", 0.0)) <= 0.0:
+			out.append("feat %s deals damage but scales with none of STR, AGI or MAG" % id)
+		if float(sc.get("mag", 0.0)) > 0.0 and str(f.get("kind", "")) == "environmental":
+			out.append("feat %s: the ground's feats are worked with the body; MAG has no part in them" % id)
+		if f.has("drain") and (float(f["drain"]) <= 0.0 or float(f["drain"]) > 1.0 or mult <= 0.0):
+			out.append("feat %s: drain is a share of the damage dealt, above 0 and at most 1" % id)
 		if mult <= 0.0 and (f.get("statuses", []) as Array).is_empty():
 			out.append("feat %s does nothing: no damage and no statuses" % id)
 		if mult > 0.0 and not GameCombat.aims_at_foe(f):
@@ -782,6 +877,7 @@ static func validate() -> Array:
 			out.append("feat %s: environmental feats, and only they, need biomes" % id)
 		if env and str(f.get("terrain", "")) == "":
 			out.append("feat %s: an environmental feat names its ground in 'terrain'" % id)
+	out.append_array(_class_problems())
 	var kinded := {}
 	for k in wk:
 		if str(wk[k].get("noun", "")) == "":
@@ -799,4 +895,28 @@ static func validate() -> Array:
 		for key in STATUS_KEYS:
 			if not st.has(key):
 				out.append("status %s has no %s" % [st.get("id", "?"), key])
+	return out
+
+
+## Every class has a craft of its own: a base class at least 6 feats, one of them a blow it can
+## strike by level 3 with no weapon asked (for a ranger, a trap), a hybrid at least
+## one feat of its own; and only a few feats are left open to every class.
+static func _class_problems() -> Array:
+	var out: Array = []
+	var cap := 12
+	if universal_feats().size() > cap:
+		out.append("%d feats are open to every class; at most %d may be" % [universal_feats().size(), cap])
+	for cid in GameData.classes:
+		var c: Dictionary = GameData.classes[cid]
+		var own := _order.filter(func(id): return cid in requires(id).get("classes", []))
+		if c.has("parents"):
+			if own.is_empty():
+				out.append("hybrid class %s has no feat of its own" % cid)
+			continue
+		if own.size() < 6:
+			out.append("class %s is taught only %d feats of its own; it needs at least 6" % [cid, own.size()])
+		var first := own.filter(func(id): return float(def(id).get("mult", 0.0)) > 0.0 and int(requires(id).get("min_level", 1)) <= 3 \
+			and (requires(id).get("weapon", []) as Array).is_empty())
+		if first.is_empty():
+			out.append("class %s has no damaging feat by level 3 that asks for no weapon" % cid)
 	return out
