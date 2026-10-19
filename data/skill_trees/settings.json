@@ -162,7 +162,14 @@
   }
  },
  "trees": [
-  "bloodline",
+  "blood_human",
+  "blood_elf",
+  "blood_dwarf",
+  "blood_orc",
+  "blood_halfling",
+  "blood_gnome",
+  "blood_dragonborn",
+  "blood_beastkin",
   "warrior",
   "mage",
   "rogue",

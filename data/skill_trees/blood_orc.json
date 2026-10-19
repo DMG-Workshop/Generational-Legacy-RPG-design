@@ -1,0 +1,302 @@
+{
+ "id": "blood_orc",
+ "name": "Fury and Scars",
+ "race": "orc",
+ "people": "Orcish",
+ "description": "Orc lives are short and loud. The scars of the parents are the strength of the children. Marked nodes pass, in part, to the next heir.",
+ "nodes": [
+  {
+   "id": "or_thew",
+   "name": "Tusk and Thew",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "str": {
+      "flat": 2
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_scars",
+   "name": "Old Scars",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.025
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_glare",
+   "name": "War-Glare",
+   "tier": 1,
+   "col": 4,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "persuasion": 0.04
+    }
+   }
+  },
+  {
+   "id": "or_hide",
+   "name": "Thick Hide",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "or_scars"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "defense": 0.04,
+     "resist": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_rage",
+   "name": "Blood-Rage",
+   "tier": 2,
+   "col": 1,
+   "requires": [
+    "or_thew"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.035
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_bones",
+   "name": "Bone-Shaman's Gift",
+   "tier": 2,
+   "col": 3,
+   "requires": [
+    "or_thew",
+    "or_scars"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.025,
+     "healing_power": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_raider",
+   "name": "Raider",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "or_glare"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "or_unbowed",
+   "name": "Unbowed",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "or_hide"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "resist": 0.04
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_savage",
+   "name": "Savage Blows",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "or_rage"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "crit_damage": 0.1
+    }
+   }
+  },
+  {
+   "id": "or_hot_blood",
+   "name": "Hot Blood",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "or_rage",
+    "or_bones"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.015
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_endure",
+   "name": "Endurance",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "or_bones"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_feast",
+   "name": "Victor's Feast",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "or_unbowed"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.06
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_warband",
+   "name": "Warband's Charge",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "or_savage"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "*",
+      "mult": 0.04
+     }
+    ]
+   }
+  },
+  {
+   "id": "or_spirits",
+   "name": "Ancestor-Spirits",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "or_hot_blood"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.005,
+     "luck": 0.005
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_blood_fury",
+   "keystone": "blood_fury",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "or_warband"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "or_chiefs",
+   "name": "Line of Chieftains",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "or_spirits",
+    "or_feast"
+   ],
+   "cost": 1,
+   "max_rank": 5,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "or_saga",
+   "name": "The Red Saga",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "or_chiefs"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Told loud, around a big fire, with the best parts made bigger every time.",
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "melee_damage": 0.005
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,322 @@
+{
+ "id": "blood_dwarf",
+ "name": "Stone and Forge",
+ "race": "dwarf",
+ "people": "Dwarven",
+ "description": "Dwarven blood is slow to change and slower to forget: stone in the bones, fire in the hands. Marked nodes pass, in part, to the next heir.",
+ "nodes": [
+  {
+   "id": "dw_stoneblood",
+   "name": "Stone in the Blood",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "vit": {
+      "flat": 2
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_forge",
+   "name": "Forge-Born",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "str": {
+      "flat": 1
+     }
+    },
+    "bonus": {
+     "max_hp": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_cellars",
+   "name": "Deep Cellars",
+   "tier": 1,
+   "col": 4,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.08
+    }
+   }
+  },
+  {
+   "id": "dw_granite",
+   "name": "Granite Hide",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "dw_stoneblood"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_anvil",
+   "name": "Anvil Arms",
+   "tier": 2,
+   "col": 1,
+   "requires": [
+    "dw_forge"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_heat",
+   "name": "Forge-Heat",
+   "tier": 2,
+   "col": 2,
+   "requires": [
+    "dw_forge"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "fire_resistance": 0.1
+    }
+   }
+  },
+  {
+   "id": "dw_runes",
+   "name": "Rune-Lore",
+   "tier": 2,
+   "col": 3,
+   "requires": [
+    "dw_forge"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.025,
+     "resist": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_hoard",
+   "name": "The Hoard",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "dw_cellars"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "dw_mountain",
+   "name": "Mountain's Patience",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "dw_granite"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.025
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_oath",
+   "name": "Oathbound",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "dw_anvil"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "resist": 0.05
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_ancestors",
+   "name": "Halls of the Ancestors",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "dw_anvil",
+    "dw_runes"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.015
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_brew",
+   "name": "Stout Brew",
+   "tier": 3,
+   "col": 4,
+   "requires": [
+    "dw_hoard"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "healing_power": 0.05
+    }
+   }
+  },
+  {
+   "id": "dw_delver",
+   "name": "Deep Delver",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "dw_mountain"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "defense": 0.04,
+     "max_hp": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_hammerfall",
+   "name": "Hammerfall",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "dw_oath"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "*",
+      "mult": 0.04
+     }
+    ]
+   }
+  },
+  {
+   "id": "dw_grudge",
+   "name": "Long Grudge",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "dw_ancestors"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.02,
+     "element_power": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_mountain_heart",
+   "keystone": "mountain_heart",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "dw_hammerfall"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "dw_kings",
+   "name": "Under-King's Line",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "dw_grudge",
+    "dw_delver"
+   ],
+   "cost": 1,
+   "max_rank": 5,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dw_saga",
+   "name": "Carved in Stone",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "dw_kings"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Your name goes on the wall with the others, a little deeper than most.",
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "defense": 0.005
+    }
+   }
+  }
+ ]
+}

@@ -59,7 +59,7 @@ func _build() -> void:
 	boxes = {}
 	var d := dynasty
 	var u := _unit()
-	var trees := GameSkillTree.trees_for(u.class_id)
+	var trees := GameSkillTree.trees_of(u)
 	if tree_id not in trees:
 		tree_id = trees[0]
 		selected = ""
@@ -115,7 +115,8 @@ func _build() -> void:
 		var n := 0
 		for id in GameSkillTree.nodes_of(t):
 			n += GameSkillTree.rank(u, id)
-		_tab(tabs, "%s  (%d)" % [GameSkillTree.tree(t)["name"], n], t == tree_id, func(): _pick_tree(t))
+		var tab_name := "%s blood: %s" % [GameSkillTree.people(t), GameSkillTree.tree(t)["name"]] if GameSkillTree.is_blood(t) else str(GameSkillTree.tree(t)["name"])
+		_tab(tabs, "%s  (%d)" % [tab_name, n], t == tree_id, func(): _pick_tree(t))
 	if not short:
 		for h in head:
 			body.add_child(h)
@@ -328,7 +329,7 @@ func _show(id: String) -> void:
 		var t := GameSkillTree.tree(tree_id)
 		side_box.add_child(_wrap(str(t["name"]), 17, Kit.ACCENT))
 		side_box.add_child(_wrap(str(t.get("description", "")), 13, Kit.DIM))
-		side_box.add_child(_wrap("Gold: taken (choose it to see whether its next rank can be bought now). Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
+		side_box.add_child(_wrap("Gold: taken (choose it to see whether its next rank can be bought now). Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir. A child of another race takes it in that race's shape." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
 		for line in _held(u):
 			side_box.add_child(_wrap(line, 13, Kit.TEXT))
 		for line in GameSkillTree.plan_lines(dynasty, who):

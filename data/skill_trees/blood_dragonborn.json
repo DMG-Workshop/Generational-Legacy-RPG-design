@@ -1,0 +1,312 @@
+{
+ "id": "blood_dragonborn",
+ "name": "Breath and Scales",
+ "race": "dragonborn",
+ "people": "Draconic",
+ "description": "A dragon's gift thins with every generation, unless the blood is fed with deeds. Marked nodes pass, in part, to the next heir.",
+ "nodes": [
+  {
+   "id": "dr_scales",
+   "name": "Scaled Hide",
+   "tier": 1,
+   "col": 1,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "defense": 0.05,
+     "max_hp": 0.005
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_ember",
+   "name": "Ember Heart",
+   "tier": 1,
+   "col": 3,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "stats": {
+     "str": {
+      "flat": 1
+     },
+     "mag": {
+      "flat": 1
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_hoard",
+   "name": "Hoard-Lust",
+   "tier": 1,
+   "col": 4,
+   "requires": [],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "work_gold": 0.1
+    }
+   }
+  },
+  {
+   "id": "dr_fireproof",
+   "name": "Fire-Proof",
+   "tier": 2,
+   "col": 0,
+   "requires": [
+    "dr_scales"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "fire_resistance": 0.12,
+     "resist": 0.02
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_claws",
+   "name": "Dragon Claws",
+   "tier": 2,
+   "col": 1,
+   "requires": [
+    "dr_scales"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "melee_damage": 0.03
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_breath",
+   "name": "Breath of the Line",
+   "tier": 2,
+   "col": 3,
+   "requires": [
+    "dr_ember"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "element_power": 0.035
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_presence",
+   "name": "Draconic Presence",
+   "tier": 2,
+   "col": 4,
+   "requires": [
+    "dr_hoard"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "persuasion": 0.05
+    }
+   }
+  },
+  {
+   "id": "dr_wings",
+   "name": "Vestigial Wings",
+   "tier": 3,
+   "col": 0,
+   "requires": [
+    "dr_fireproof"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "reflexes": 0.008
+    }
+   }
+  },
+  {
+   "id": "dr_might",
+   "name": "Wyrm Might",
+   "tier": 3,
+   "col": 1,
+   "requires": [
+    "dr_claws"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "max_hp": 0.025
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_blood",
+   "name": "Dragon's Blood",
+   "tier": 3,
+   "col": 2,
+   "requires": [
+    "dr_claws",
+    "dr_breath"
+   ],
+   "cost": 1,
+   "max_rank": 4,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.015
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_inferno",
+   "name": "Inner Inferno",
+   "tier": 3,
+   "col": 3,
+   "requires": [
+    "dr_breath"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "spell": "*",
+      "mult": 0.03
+     },
+     {
+      "skill": "damage",
+      "mult": 0.02
+     }
+    ]
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_bulwark",
+   "name": "Scale Bulwark",
+   "tier": 4,
+   "col": 0,
+   "requires": [
+    "dr_might"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "bonus": {
+     "defense": 0.04,
+     "max_hp": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_roar",
+   "name": "Dread Roar",
+   "tier": 4,
+   "col": 1,
+   "requires": [
+    "dr_might"
+   ],
+   "cost": 1,
+   "max_rank": 2,
+   "effect": {
+    "abilities": [
+     {
+      "feat": "*",
+      "mult": 0.04
+     }
+    ]
+   }
+  },
+  {
+   "id": "dr_elder",
+   "name": "Elder Wyrm",
+   "tier": 4,
+   "col": 2,
+   "requires": [
+    "dr_blood"
+   ],
+   "cost": 1,
+   "max_rank": 3,
+   "effect": {
+    "bonus": {
+     "resist": 0.03,
+     "max_hp": 0.01
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_dragons_wrath",
+   "keystone": "dragons_wrath",
+   "tier": 5,
+   "col": 1,
+   "requires": [
+    "dr_roar"
+   ],
+   "cost": 2,
+   "max_rank": 1
+  },
+  {
+   "id": "dr_ancients",
+   "name": "Brood of Ancients",
+   "tier": 5,
+   "col": 2,
+   "requires": [
+    "dr_elder",
+    "dr_bulwark"
+   ],
+   "cost": 1,
+   "max_rank": 5,
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    }
+   },
+   "inheritable": true
+  },
+  {
+   "id": "dr_saga",
+   "name": "Song of the Wyrm",
+   "tier": 6,
+   "col": 2,
+   "requires": [
+    "dr_ancients"
+   ],
+   "cost": 1,
+   "max_rank": 10,
+   "text": "Somewhere a dragon hears your name and lifts its head.",
+   "effect": {
+    "stats": {
+     "all": {
+      "pct": 0.01
+     }
+    },
+    "bonus": {
+     "fire_resistance": 0.005
+    }
+   }
+  }
+ ]
+}

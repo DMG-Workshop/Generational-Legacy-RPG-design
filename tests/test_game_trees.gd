@@ -36,6 +36,7 @@ func _init() -> void:
 	test_keystones()
 	test_respec()
 	test_inheritance()
+	test_race_blood()
 	test_companions()
 	test_companion_saves()
 	test_bot()
@@ -62,10 +63,11 @@ func _dyn(cls: String = "warrior", level: int = 1, seed_val: int = 41) -> GameDy
 	return d
 
 
-func _unit(cls: String, level: int = 3000) -> GameHeir:
+func _unit(cls: String, level: int = 3000, race: String = "human") -> GameHeir:
 	var u := GameHeir.new()
 	u.name = "Probe"
 	u.class_id = cls
+	u.race_id = race
 	u.level = level
 	u.learn_spells()
 	GameSkillTree.start(u)
@@ -113,23 +115,46 @@ func test_data() -> void:
 	for tid in GameSkillTree.tree_ids():
 		var t := GameSkillTree.tree(tid)
 		var n := GameSkillTree.nodes_of(tid).size()
-		ok(n >= 20 and n <= 35, "tree %s has %d nodes (20 to 35)" % [tid, n])
+		ok(n >= (16 if t.has("race") else 20) and n <= 35, "tree %s has %d nodes (class trees 20 to 35, bloodlines 16 to 35)" % [tid, n])
 		var keys := GameSkillTree.nodes_of(tid).filter(func(id): return GameSkillTree.is_keystone(id))
 		ok(keys.size() >= 1 and keys.size() <= 3, "tree %s has a few keystones (%d)" % [tid, keys.size()])
-		if str(t["class"]) != "":
+		if t.has("class"):
 			classes_with_trees += 1
 			ok(GameSkillTree.nodes_of(tid).all(func(id): return not GameSkillTree.inheritable(id)), "class tree %s passes nothing down" % tid)
 		else:
 			ok(GameSkillTree.nodes_of(tid).filter(func(id): return GameSkillTree.inheritable(id)).size() >= 4, "the bloodline tree has inheritable nodes")
 	ok(classes_with_trees == GameData.starting_ids(GameData.classes).size(), "one tree per base class (%d)" % classes_with_trees)
 	for c in GameData.classes:
-		var trees := GameSkillTree.trees_for(c)
+		var trees := GameSkillTree.trees_for(c, "dwarf")
 		var parents: Array = GameData.classes[c].get("parents", [])
-		ok(trees.back() == "bloodline", "%s shares the bloodline tree" % c)
+		ok(trees.back() == "blood_dwarf", "%s draws on its race's bloodline tree" % c)
+		ok(GameSkillTree.trees_for(c).size() == trees.size() - 1, "%s draws on class trees alone without a race" % c)
 		if parents.is_empty():
 			ok(trees.size() == 2 and str(GameSkillTree.tree(trees[0])["class"]) == c, "%s draws on its own tree" % c)
 		else:
 			ok(trees.size() == 3 and str(GameSkillTree.tree(trees[0])["class"]) in parents and str(GameSkillTree.tree(trees[1])["class"]) in parents, "hybrid %s draws on its parents' trees: %s" % [c, str(trees)])
+	# One bloodline tree per starting race, each unlike the others; a half race draws on both parents'.
+	var blood_ids: Array = GameSkillTree.blood_ids()
+	for r in GameData.races:
+		var rp: Array = GameData.races[r].get("parents", [])
+		var rt: Array = GameSkillTree.trees_for("", str(r))
+		ok(rt.size() == maxi(1, rp.size()), "race %s resolves %d bloodline tree(s)" % [r, maxi(1, rp.size())])
+		if not rp.is_empty():
+			ok(rp.all(func(x): return "blood_" + str(x) in rt), "half race %s draws on both its parents' bloodlines: %s" % [r, str(rt)])
+	var seen_ids := {}
+	var shared := 0
+	for tid in blood_ids:
+		ok(GameSkillTree.nodes_of(tid).filter(func(id): return GameSkillTree.inheritable(id)).size() >= 6, "bloodline %s has inheritable nodes" % tid)
+		ok(GameSkillTree.nodes_of(tid).any(func(id): return GameSkillTree.is_keystone(id)), "bloodline %s has its own keystone" % tid)
+		for id in GameSkillTree.nodes_of(tid):
+			if seen_ids.has(id):
+				shared += 1
+			seen_ids[id] = true
+	ok(shared == 0 and blood_ids.size() == 8, "eight bloodlines, no node shared (%d)" % blood_ids.size())
+	var names := {}
+	for tid in blood_ids:
+		names[GameSkillTree.tree(tid)["name"]] = true
+	ok(names.size() == blood_ids.size(), "each bloodline has its own name")
 	for k in GameSkillTree.keystone_ids():
 		var ks := GameSkillTree.keystone(k)
 		ok(str(ks["rule"]) in GameSkillTree.RULES and str(ks["drawback"]) != "", "keystone %s bends a known rule and names its price" % k)
@@ -138,24 +163,30 @@ func test_data() -> void:
 ## validate() catches each kind of broken data; the real data is put back after.
 func test_broken_data() -> void:
 	var real: Dictionary = GameData.skill_trees
+	var w: int = real["trees"].find_custom(func(t): return str(t.get("class", "")) == "warrior")
 	var real_keys: Dictionary = GameData.keystones
 	var cases := {
-		"unknown prerequisite": func(t): t["trees"][1]["nodes"][2]["requires"] = ["nowhere"],
+		"unknown prerequisite": func(t): t["trees"][w]["nodes"][2]["requires"] = ["nowhere"],
 		"cycle": func(t):
-			t["trees"][1]["nodes"][0]["requires"] = [t["trees"][1]["nodes"][2]["id"]]
-			t["trees"][1]["nodes"][0]["tier"] = 3,
-		"unreachable": func(t): t["trees"][1]["nodes"][4]["requires"] = [t["trees"][1]["nodes"][4]["id"]],
-		"unknown spell": func(t): t["trees"][2]["nodes"][3]["effect"] = {"abilities": [{"spell": "no_such_spell", "mult": 0.1}]},
-		"field that means nothing": func(t): t["trees"][2]["nodes"][3]["effect"] = {"abilities": [{"spell": "cone_of_frost", "radius": 1}]},
-		"unknown bonus": func(t): t["trees"][1]["nodes"][0]["effect"] = {"bonus": {"flying": 0.1}},
-		"unknown keystone": func(t): t["trees"][1]["nodes"][15]["keystone"] = "nope",
-		"inheritable class node": func(t): t["trees"][1]["nodes"][0]["inheritable"] = true,
-		"duplicate id": func(t): t["trees"][1]["nodes"][1]["id"] = t["trees"][1]["nodes"][0]["id"],
-		"same spot": func(t): t["trees"][1]["nodes"][1]["col"] = t["trees"][1]["nodes"][0]["col"],
+			t["trees"][w]["nodes"][0]["requires"] = [t["trees"][w]["nodes"][2]["id"]]
+			t["trees"][w]["nodes"][0]["tier"] = 3,
+		"unreachable": func(t): t["trees"][w]["nodes"][4]["requires"] = [t["trees"][w]["nodes"][4]["id"]],
+		"unknown spell": func(t): t["trees"][w + 1]["nodes"][3]["effect"] = {"abilities": [{"spell": "no_such_spell", "mult": 0.1}]},
+		"field that means nothing": func(t): t["trees"][w + 1]["nodes"][3]["effect"] = {"abilities": [{"spell": "cone_of_frost", "radius": 1}]},
+		"unknown bonus": func(t): t["trees"][w]["nodes"][0]["effect"] = {"bonus": {"flying": 0.1}},
+		"unknown keystone": func(t): t["trees"][w]["nodes"][15]["keystone"] = "nope",
+		"inheritable class node": func(t): t["trees"][w]["nodes"][0]["inheritable"] = true,
+		"duplicate id": func(t): t["trees"][w]["nodes"][1]["id"] = t["trees"][w]["nodes"][0]["id"],
+		"race tree with a class": func(t): t["trees"][0]["class"] = "warrior",
+		"race tree of a half race": func(t): t["trees"][0]["race"] = "half_elf",
+		"two trees for a race": func(t): t["trees"][1]["race"] = "human",
+		"no tree for a race": func(t): t["trees"].remove_at(0),
+		"inheritable class node 2": func(t): t["trees"][w]["nodes"][0]["inheritable"] = true,
+		"same spot": func(t): t["trees"][w]["nodes"][1]["col"] = t["trees"][w]["nodes"][0]["col"],
 		"bands short of the cap": func(t): t["settings"]["point_bands"] = [[30, 3], [90, 6]],
-		"skill of another class": func(t): t["trees"][1]["nodes"][2]["effect"] = {"abilities": [{"skill": "firebolt", "mult": 0.1}]},
+		"skill of another class": func(t): t["trees"][w]["nodes"][2]["effect"] = {"abilities": [{"skill": "firebolt", "mult": 0.1}]},
 	}
-	ok(str(real["trees"][1]["class"]) == "warrior" and str(real["trees"][2]["class"]) == "mage", "the cases below edit the warrior and mage trees")
+	ok(str(real["trees"][w]["class"]) == "warrior" and str(real["trees"][w + 1]["class"]) == "mage", "the cases below edit the warrior and mage trees")
 	for what in cases:
 		var t: Dictionary = real.duplicate(true)
 		cases[what].call(t)
@@ -227,7 +258,7 @@ func test_prerequisites_and_costs() -> void:
 	var d := _dyn("warrior", 1, 11)
 	var h := d.heir
 	ok(GameSkillTree.take_block(h, "w_heavy_blows").begins_with("Needs Brawn"), "a node needs a prerequisite: %s" % GameSkillTree.take_block(h, "w_heavy_blows"))
-	ok(GameSkillTree.take_block(h, "m_focus").find("not on a Warrior's paths") >= 0, "another class's tree is shut: %s" % GameSkillTree.take_block(h, "m_focus"))
+	ok(GameSkillTree.take_block(h, "m_focus").find("not on a Human Warrior's paths") >= 0, "another class's tree is shut: %s" % GameSkillTree.take_block(h, "m_focus"))
 	ok(GameSkillTree.take_block(h, "nope") == "No such skill.", "unknown nodes are refused")
 	var line := GameSkillTree.spend(d, "", "w_brawn")
 	ok(h.tree_ranks.get("w_brawn", 0) == 1 and h.tree_points == 0 and line.find("Brawn 1/3") >= 0, "buying a rank costs its point: %s" % line)
@@ -279,8 +310,7 @@ func test_prerequisites_and_costs() -> void:
 # ---------------------------------------------------------------- effects
 
 func _user_of(tid: String) -> String:
-	var c := str(GameSkillTree.tree(tid)["class"])
-	return c if c != "" else "warrior"
+	return str(GameSkillTree.tree(tid).get("class", "warrior"))
 
 
 ## Every node of every tree does what it says for a unit of a class that uses it.
@@ -288,11 +318,12 @@ func test_every_node() -> void:
 	var counted := 0
 	for tid in GameSkillTree.tree_ids():
 		var cls := _user_of(tid)
+		var folk := str(GameSkillTree.tree(tid).get("race", "human"))
 		for id in GameSkillTree.nodes_of(tid):
 			var n := GameSkillTree.node(id)
 			var e: Dictionary = n.get("effect", {})
-			var plain := _unit(cls)
-			var u := _unit(cls)
+			var plain := _unit(cls, 3000, folk)
+			var u := _unit(cls, 3000, folk)
 			_give(u, {id: GameSkillTree.max_rank(id)})
 			var r := float(GameSkillTree.max_rank(id))
 			var good := true
@@ -657,7 +688,7 @@ func _succeed(d: GameDynasty, archetype: String = "", traits: Array = []) -> Gam
 
 func _inheritable_total(u: GameHeir) -> int:
 	var n := 0
-	for id in GameSkillTree.nodes_of("bloodline"):
+	for id in GameSkillTree.nodes_of("blood_human"):
 		if GameSkillTree.inheritable(id):
 			n += GameSkillTree.rank(u, id)
 	return n
@@ -715,6 +746,100 @@ func test_inheritance() -> void:
 	var z := _dyn("warrior", 1, 64)
 	var zc := _succeed(z)
 	ok(zc.tree_free.is_empty() and not z.journal.any(func(l): return str(l).begins_with("The blood remembers")), "an heir whose parent awakened nothing starts bare")
+
+
+# ---------------------------------------------------------------- bloodline by race
+
+## Nodes of another race's blood count for nothing; a child of another race takes what the parent's
+## blood carried in its own bloodline's shape; an old save's shared blood is cut to the heir's race.
+func test_race_blood() -> void:
+	var dw := _unit("warrior", 500, "dwarf")
+	_give(dw, {"dw_stoneblood": 3, "b_vigor": 3})
+	ok(GameSkillTree.usable(dw, "dw_stoneblood") and not GameSkillTree.usable(dw, "b_vigor"), "a dwarf uses the dwarf blood, not the human")
+	var plain := _unit("warrior", 500, "dwarf")
+	var f := GameSkillTree.fx(dw)
+	var f0 := GameSkillTree.fx(plain)
+	ok(float(f["flat"].get("vit", 0.0)) > float(f0["flat"].get("vit", 0.0)), "dwarf ranks add their effect")
+	var only_human := _unit("warrior", 500, "dwarf")
+	_give(only_human, {"b_vigor": 3})
+	ok(JSON.stringify(GameSkillTree.fx(only_human)) == JSON.stringify(f0), "human-blood ranks on a dwarf count for nothing")
+	ok(GameSkillTree.path_block(dw, "b_hardy").find("belongs to") >= 0, "and cannot be bought: %s" % GameSkillTree.path_block(dw, "b_hardy"))
+	var hd := _unit("warrior", 500, "half_dragon")
+	ok(GameSkillTree.usable(hd, "b_vigor") and GameSkillTree.usable(hd, "dr_blood"), "a half-dragon uses both parents' blood")
+	ok(GameSkillTree.path_of("warrior", "dwarf").any(func(id): return id.begins_with("dw_")) and not GameSkillTree.path_of("warrior", "dwarf").any(func(id): return id.begins_with("b_")), "a dwarf warrior's path mixes warrior and dwarf nodes")
+	ok(GameSkillTree.path_of("warrior", "dwarf") != GameSkillTree.path_of("warrior", "elf"), "paths differ by race")
+	# Succession across races: same count as inheritance from a same-race child, none lost.
+	var d := _dyn("warrior", 1, 61)
+	_parent_with_blood(d)
+	var parent := d.heir
+	var total := _inheritable_total(parent)
+	var same := _unit("warrior", 1, "human")
+	var elf := _unit("warrior", 1, "elf")
+	var m1: Array = []
+	var m2: Array = []
+	var d1 := _dyn("warrior", 1, 61)
+	var d2 := _dyn("warrior", 1, 61)
+	GameSkillTree.inherit(d1, parent, same, m1)
+	GameSkillTree.inherit(d2, parent, elf, m2)
+	var n_same := _sum_free(same)
+	var n_elf := _sum_free(elf)
+	ok(n_same > 0 and n_elf == n_same, "a child of another race carries as many ranks (%d human, %d elf of %d)" % [n_same, n_elf, total])
+	ok(elf.tree_free.keys().all(func(id): return GameSkillTree.usable(elf, id)), "all of them on the elf's own blood: %s" % str(elf.tree_free))
+	ok(str(m2[0]).find("Human blood takes Elven shape") >= 0, "and the journal says so: %s" % str(m2[0]))
+	ok(GameSkillTree.inherit_preview(parent, elf)["recast"] > 0 and GameSkillTree.inherit_preview(parent, elf)["direct"] == 0, "the succession preview shows ranks taking Elven shape")
+	ok(GameSkillTree.preview_text(parent, elf).find("Elven shape") >= 0 and GameSkillTree.preview_text(parent, same).find("carry over") >= 0, "preview lines: %s / %s" % [GameSkillTree.preview_text(parent, elf), GameSkillTree.preview_text(parent, same)])
+	ok(GameSkillTree.preview_text(_unit("warrior", 1), elf).find("nothing yet") >= 0, "a parent with no blood has nothing to pass")
+	var hh := _unit("warrior", 1, "half_elf")
+	var m3: Array = []
+	GameSkillTree.inherit(_dyn("warrior", 1, 61), parent, hh, m3)
+	ok(_sum_free(hh) == n_same and hh.tree_free.keys().all(func(id): return GameSkillTree.usable(hh, id)), "a half-elf takes the human share straight, the rest in elf shape")
+	# The same dice give the same child.
+	var elf2 := _unit("warrior", 1, "elf")
+	GameSkillTree.inherit(_dyn("warrior", 1, 61), parent, elf2, [])
+	ok(elf2.tree_free == elf.tree_free, "re-casting is deterministic")
+	# A race change on a living unit: bought ranks come back as points, carried ones are re-cast.
+	var u := _unit("warrior", 500, "human")
+	u.tree_points = 0
+	_give(u, {"b_vigor": 2})
+	u.tree_free = {"b_vigor": 1, "b_old_blood": 1}
+	GameSkillTree.changed(u)
+	u.race_id = "dwarf"
+	var notes: Array = []
+	var points := u.tree_points
+	ok(GameSkillTree.reshape(u, notes), "reshape reports a change")
+	ok(u.tree_ranks.is_empty() and u.tree_points == points + 2 * GameSkillTree.cost("b_vigor"), "bought human ranks are refunded as points (%d)" % u.tree_points)
+	ok(_sum_free(u) == 2 and u.tree_free.keys().all(func(id): return GameSkillTree.usable(u, id)), "carried ranks are re-cast: %s" % str(u.tree_free))
+	ok(notes.size() == 2 and str(notes[0]).find("Dwarven shape") >= 0, "and told: %s" % str(notes))
+	ok(not GameSkillTree.reshape(u, []), "a unit that fits is left alone")
+	# An old save: a dwarf heir with the shared bloodline's ranks.
+	var sd := GameDynasty.new_game(77, "Old", "warrior", "faetouched", "dwarf")
+	sd.heir.level = 200
+	GameSkillTree.start(sd.heir)
+	sd.heir.tree_points = 0
+	sd.heir.tree_ranks = {"b_vigor": 3, "w_brawn": 2}
+	sd.heir.tree_free = {"b_vigor": 1}
+	var raw := sd.heir.to_dict()
+	raw["skill_tree"]["points"] = 0
+	var loaded := GameHeir.from_dict(JSON.parse_string(JSON.stringify(raw)))
+	ok(not loaded.tree_ranks.has("b_vigor") and loaded.tree_ranks.get("w_brawn", 0) == 2, "an old dwarf heir loses the shared blood's bought ranks, keeps its class ranks")
+	ok(loaded.tree_points >= 3 * GameSkillTree.cost("b_vigor"), "the points come back (%d)" % loaded.tree_points)
+	ok(not loaded.tree_free.has("b_vigor") and _sum_free(loaded) == 1 and loaded.has_meta("tree_note"), "the carried rank is re-cast, with a note")
+	var hum := GameDynasty.new_game(77, "Old", "warrior", "faetouched", "human")
+	hum.heir.level = 200
+	GameSkillTree.start(hum.heir)
+	hum.heir.tree_points = 0
+	hum.heir.tree_ranks = {"b_vigor": 3}
+	var hl := GameHeir.from_dict(JSON.parse_string(JSON.stringify(hum.heir.to_dict())))
+	ok(hl.tree_ranks == {"b_vigor": 3} and not hl.has_meta("tree_note"), "a human save is untouched")
+	var jd := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(sd.to_dict())))
+	ok(jd.heir.tree_ranks.get("w_brawn", 0) == 2, "a dynasty round-trips with its race trees")
+
+
+func _sum_free(u: GameHeir) -> int:
+	var n := 0
+	for id in u.tree_free:
+		n += int(u.tree_free[id])
+	return n
 
 
 # ---------------------------------------------------------------- companions
@@ -848,8 +973,13 @@ func test_companion_saves() -> void:
 # ---------------------------------------------------------------- the autopilot
 
 func test_bot() -> void:
+	var combos: Array = []
 	for c in GameData.classes:
-		var path := GameSkillTree.path_of(c)
+		for r in GameData.races:
+			combos.append([c, r])
+	for cr in combos:
+		var c: String = cr[0]
+		var path := GameSkillTree.path_of(c, cr[1])
 		var seen := {}
 		var good := true
 		var rules := {}
@@ -861,7 +991,7 @@ func test_bot() -> void:
 				var k := GameSkillTree.keystone(str(GameSkillTree.node(id)["keystone"]))
 				good = good and c in k.get("suits", []) and not rules.has(k["rule"])
 				rules[k["rule"]] = true
-		ok(good and path.size() > 60, "%s: the path respects prerequisites, ranks and keystones that suit it (%d ranks)" % [c, path.size()])
+		ok(good and path.size() > 60, "%s %s: the path respects prerequisites, ranks and keystones that suit it (%d ranks)" % [cr[1], c, path.size()])
 	var mage_keys: Array = GameSkillTree.path_of("mage").filter(func(id): return GameSkillTree.is_keystone(id))
 	ok(mage_keys == ["m_glass_cannon"], "a Mage's path takes Glass Cannon and no keystone that does not suit it: %s" % str(mage_keys))
 	ok(not GameSkillTree.path_of("monk").any(func(id): return GameSkillTree.is_keystone(id)), "a Monk's path takes no keystone: none suits it")
@@ -1188,7 +1318,7 @@ func _ui_tests() -> void:
 	ok(_labels_text(panel).any(func(t): return str(t).find("Tess takes Brawn") >= 0), "and says so")
 	var locked := _button(panel, "Juggernaut", false)
 	ok(locked != null and locked.tooltip_text.find("Needs a rank") >= 0, "a locked keystone says what it needs")
-	_button(panel, "The Blood").pressed.emit()
+	_button(panel, "Human blood").pressed.emit()
 	await _frames()
 	ok(_button(panel, "Ancestral Vigor") != null, "the bloodline tab shows the house's tree")
 	_button(panel, "Bren").pressed.emit()
