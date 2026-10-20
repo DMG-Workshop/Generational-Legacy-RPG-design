@@ -257,7 +257,7 @@ func test_every_skill_runs() -> void:
 				var hp0 := b.heir.hp
 				var what := "%s %s on %d" % [cid, real["id"], n]
 				ok(b.can_use_skill(i), "%s: usable at level %d" % [what, d.heir.level])
-				b.use_skill(i, 0)
+				b.use_skill(i, -1 if real.has("pct_max_hp") and not real.get("party", false) else 0)   # a single heal aimed at the heir, not at the companion
 				all[i] = real
 				count += 1
 				ok(b.events.any(func(ev): return ev["type"] == "cast" and ev["name"] == real["name"]), what + ": cast")
