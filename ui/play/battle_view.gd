@@ -7,6 +7,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const AREA := Color("#ff9a3c")
+const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
 
 var app: Node
 var d: GameDynasty
@@ -584,6 +585,8 @@ func _build_commands() -> void:
 	var readied: Array = b.unit_feats(-1)
 	var ready := range(readied.size()).filter(func(k): return b.can_use_feat(k)).size()
 	var fb := Kit.button("Feats (%d ready)" % ready if not readied.is_empty() else "Feats", func(): _open_feats())
+	if not readied.is_empty():
+		fb.set_meta("compact", "Feats (%d)" % ready)
 	fb.disabled = readied.is_empty()
 	fb.tooltip_text = "%s's readied feats: no MP, a cooldown each." % d.heir.name if not readied.is_empty() else "%s has no feats readied." % d.heir.name
 	col1.add_child(fb)
@@ -606,6 +609,7 @@ func _build_commands() -> void:
 	if b.skill_count() > first:
 		var usable := range(first, b.skill_count()).filter(func(k): return b.can_use_skill(k)).size()
 		var kb := _small_button("Skills (%d ready)" % usable, func(): _open_skills())
+		kb.set_meta("compact", "Skills (%d)" % usable)
 		var nxt := GameSkills.next_unlock(d.heir)
 		kb.tooltip_text = "%s's later class skills%s." % [d.heir.name, "" if nxt.is_empty() else "; next: %s at level %s" % [nxt["name"], GameText.num(int(nxt["level"]))]]
 		col2.add_child(kb)
@@ -659,6 +663,63 @@ func _lay_out_commands(cols: Array) -> void:
 		c.add_theme_constant_override("separation", 6)
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		command_box.add_child(c)
+	_fit_commands.call_deferred()
+
+
+## The columns share the command panel's width, and a narrow window or a big text size leaves some
+## too little: clipped, "Skills (3 ready)" reads "Skills (3 re". Once laid out, if the text does
+## not all fit, the commands that have a compact wording take it, then every command's font
+## shrinks a point at a time (down to MIN_COMMAND_FONT); then each column is kept as wide as its
+## widest text needs, the spare room shared out as before.
+func _fit_commands() -> void:
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	var cols: Array = command_box.get_children().filter(func(c): return c is Container and is_instance_valid(c))
+	if cols.is_empty():
+		return
+	var buttons: Array = []
+	for c in cols:
+		buttons.append_array((c as Node).get_children().filter(func(x): return x is Button))
+	var base := {}
+	for btn in buttons:
+		(btn as Button).clip_text = true
+		base[btn] = (btn as Button).get_theme_font_size("font_size")
+	var room := command_box.size.x - float(command_box.get_theme_constant("separation")) * float(cols.size() - 1)
+	if room <= 0.0:
+		return
+	var shrink := 0
+	var compact := false
+	while true:
+		var total := 0.0
+		for c in cols:
+			total += _column_need(c)
+		if total <= room or shrink > 16:
+			break
+		if not compact:
+			compact = true
+			for btn in buttons:
+				if (btn as Button).has_meta("compact"):
+					(btn as Button).text = str((btn as Button).get_meta("compact"))
+			continue
+		shrink += 1
+		for btn in buttons:
+			(btn as Button).add_theme_font_size_override("font_size", maxi(MIN_COMMAND_FONT, int(base[btn]) - shrink))
+	for c in cols:
+		(c as Control).custom_minimum_size.x = _column_need(c)
+
+
+## The width a column of commands needs to show every text whole.
+func _column_need(col: Node) -> float:
+	var need := 0.0
+	for btn in col.get_children():
+		if btn is Button:
+			var widest := 0.0
+			for line in (btn as Button).text.split("\n"):
+				widest = maxf(widest, ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, (btn as Button).get_theme_font_size("font_size")).x)
+			need = maxf(need, widest + (btn as Button).get_theme_stylebox("normal").get_minimum_size().x + 2.0)
+	return need
 
 
 # ---------------------------------------------------------------- auto-battle

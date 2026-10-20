@@ -74,6 +74,7 @@ func _run() -> void:
 	await test_pause_saves()
 	await test_safe_area()
 	await test_scale_layouts()
+	await test_command_text_fits()
 	await test_scale_mid_fight()
 	print("mobile tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -1155,6 +1156,54 @@ func _open_of(n: Node, script: Script) -> Node:
 		if c.get_script() == script and not c.is_queued_for_deletion():
 			return c
 	return null
+
+
+## Buttons under `n` whose text does not fit: the longest line is wider than the room inside the
+## button (a clipping button shows "Skills (3 re"), or the button sticks out of `within`.
+func _clipped(n: Node, within: Rect2, out: Array = []) -> Array:
+	if n is Button and (n as Button).is_visible_in_tree():
+		var btn := n as Button
+		var font := btn.get_theme_font("font")
+		var size_px := btn.get_theme_font_size("font_size")
+		var inner := btn.size.x - btn.get_theme_stylebox("normal").get_minimum_size().x
+		var longest := 0.0
+		for line in btn.text.split("\n"):
+			longest = maxf(longest, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x)
+		if longest > inner + 0.5:
+			out.append("'%s' needs %.0f of %.0f" % [btn.text.replace("\n", " / "), longest, inner])
+		elif not within.grow(1.0).encloses(btn.get_global_rect()):
+			out.append("'%s' sticks out %s of %s" % [btn.text.replace("\n", " / "), str(btn.get_global_rect()), str(within)])
+	for c in n.get_children():
+		_clipped(c, within, out)
+	return out
+
+
+## The battle commands (Attack, the class skills, Skills (n ready), Feats, Spells, Poisons, Potion,
+## Flee) show their whole text at the small windows and every text size, for a caster, a martial
+## and a hybrid, with feats readied, later skills and a toxin in the pack.
+func test_command_text_fits() -> void:
+	UiSettings.force_touch = 1
+	for wsize in [Vector2i(960, 540), Vector2i(1280, 720), Vector2i(1600, 720)]:
+		root.size = wsize
+		for s in UiSettings.scales():
+			app.set_ui_scale(s)
+			await _frames(3)
+			for cls in ["mage", "warrior", "rogue", "paladin", "spellblade"]:
+				_game(cls, 120, 31)
+				d.heir.potions = 7
+				await _fight(3)
+				var bv: Control = app.current
+				var tag := "%dx%d %d%% %s" % [wsize.x, wsize.y, int(round(s * 100.0)), cls]
+				var buttons: Array = bv.command_box.find_children("*", "Button", true, false).filter(func(x): return (x as Button).is_visible_in_tree())
+				var texts: Array = buttons.map(func(x): return (x as Button).text)
+				ok(buttons.size() >= 4, "%s: the commands are shown (%s)" % [tag, ", ".join(texts).replace("\n", " / ")])
+				var bad := _clipped(bv.command_box, bv.cmd_panel.get_global_rect())
+				ok(bad.is_empty(), "%s: no command text is cut off %s" % [tag, str(bad)])
+				d.battle = null
+	root.size = Vector2i(1280, 720)
+	UiSettings.force_touch = 0
+	app.set_ui_scale(1.0)
+	await _frames(2)
 
 
 ## The text size changed from the menu mid-fight: the commands are laid out for the new room, the
