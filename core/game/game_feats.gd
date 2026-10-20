@@ -22,7 +22,7 @@ const KEYS := ["name", "kind", "description", "scaling", "mult", "target", "cool
 const NEVER := ["mp", "mana", "pct_max_hp", "party", "cleanse", "group", "learn"]   # spell and healing keys
 const STATUS_KEYS := ["name", "tag", "color", "stack", "basis", "default_turns", "default_potency", "text"]
 const SETTING_KEYS := ["start_points", "point_levels", "slot_levels", "companion_slots", "recovery_turns", "bot_targets",
-	"bot_status_worth", "bot_party_worth", "bot_min_score", "bot_hp_cost_worth", "bot_taunt_min_hp",
+	"bot_status_worth", "bot_role_decay", "bot_party_worth", "bot_min_score", "bot_hp_cost_worth", "bot_taunt_min_hp",
 	"max_universal_feats", "class_feats_min", "class_feat_by_level"]
 
 static var _src: Dictionary = {}
@@ -663,7 +663,8 @@ static func shape_text(id: String) -> String:
 ## free, so it stands in for the free blow: a caster's staff, not a spell) and the HP it costs.
 ## Below zero, a plain blow does better. A feat for other ground is worth nothing. So is,
 ## to a companion, a feat that strikes no one (rallies and taunts are the heir's to call) or one
-## the data keeps from hirelings. A class's own feat counts bot_class_worth times over, so at equal
+## the data keeps from hirelings. A feat's own `bot_worth` is added flat (for a job the formula
+## underrates: wards, stances, holds). A class's own feat counts bot_class_worth times over, so at equal
 ## power the autopilot takes up its class's craft before what any class may learn. `party` counts
 ## the heir and companions.
 static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, companion: bool = false) -> float:
@@ -677,7 +678,7 @@ static func score(n: Dictionary, id: String, biomes: Array, party: int = 1, comp
 	if float(r["hit"]) > 0.0:
 		use += _power(n, _defs[id]) * float(r["hit"]) / maxf(1.0, float(n["best"])) * float(r["reach"])
 	var blow := float(n["atk"]) / maxf(1.0, float(n["best"]))
-	var s := (use - blow - float(r["price"])) / float(r["wait"])
+	var s := (use - blow - float(r["price"])) / float(r["wait"]) + float(r["bonus"])
 	return s * float(settings().get("bot_class_worth", 1.0)) if s > 0.0 and r["classed"] else s
 
 
@@ -696,7 +697,7 @@ static func _worth_of(f: Dictionary) -> Dictionary:
 		var who := str(st.get("on", "target"))
 		on[who] = float(on.get(who, 0.0)) + float(worth.get(str(st.get("id", "")), 0.1)) * float(st.get("chance", 1.0))
 	return {"reach": float(s.get("bot_targets", {}).get("around" if GameCombat.around_self(f) else GameCombat.shape(f), 1.0)),
-		"hit": hit, "foes": on["target"], "party": on["party"], "self": on["self"],
+		"hit": hit, "bonus": float(f.get("bot_worth", 0.0)), "foes": on["target"], "party": on["party"], "self": on["self"],
 		"price": float(f.get("hp_cost", 0.0)) * float(s.get("bot_hp_cost_worth", 0.0)),
 		"wait": float(1 + int(f.get("cooldown", 0))), "biomes": f.get("requires", {}).get("biomes", []),
 		"classed": not (f.get("requires", {}).get("classes", []) as Array).is_empty(),
@@ -717,7 +718,45 @@ static func ranked(u: GameHeir, biomes: Array, party: int, companion: bool, know
 		if s >= least and requirement_block(u, id) == "":
 			picks.append([id, s, k])
 	picks.sort_custom(func(a, b): return float(a[1]) > float(b[1]) or (float(a[1]) == float(b[1]) and int(a[2]) < int(b[2])))
-	return picks.map(func(p): return p[0])
+	return _varied(picks).map(func(p): return p[0])
+
+
+## Variety: a feat doing the same job as one already picked counts for settings.bot_role_decay
+## less each time, so a loadout covers a single-target blow, an area, a hold and a ward instead of
+## four blows of one kind. `picks` is [[id, score, order]], best first; the result is reordered.
+static func _varied(picks: Array) -> Array:
+	var decay := float(setting("bot_role_decay"))
+	if decay >= 1.0:
+		return picks
+	var out: Array = []
+	var seen := {}
+	var left := picks.duplicate()
+	while not left.is_empty():
+		var best := 0
+		var best_v := -INF
+		for i in left.size():
+			var v := float(left[i][1])
+			v = v * pow(decay, int(seen.get(_role(str(left[i][0])), 0))) if v > 0.0 else v
+			if v > best_v:
+				best_v = v
+				best = i
+		var r := _role(str(left[best][0]))
+		seen[r] = int(seen.get(r, 0)) + 1
+		out.append(left[best])
+		left.remove_at(best)
+	return out
+
+
+## What a feat is for, for the variety rule: one of single, area, control, party, self, debuff.
+static func _role(id: String) -> String:
+	var f: Dictionary = _defs.get(id, {})
+	var shape := GameCombat.shape(f)
+	var mult := float(f.get("mult", 0.0))
+	if mult <= 0.0:
+		return "party" if shape == "party" else ("self" if shape == "self" else "debuff")
+	if mult < 0.5 and not (f.get("statuses", []) as Array).is_empty():
+		return "control"
+	return "single" if shape == "single" else "area"
 
 
 ## A companion's loadout for one battle: the blows a fighter of its class and level would carry on
@@ -847,6 +886,8 @@ static func validate() -> Array:
 			out.append("feat %s: cost must be at least 1 point and cooldown at least 0 turns" % id)
 		if float(f.get("hp_cost", 0.0)) < 0.0 or float(f.get("hp_cost", 0.0)) > 0.5:
 			out.append("feat %s: hp_cost is a share of max HP from 0 to 0.5" % id)
+		if float(f.get("bot_worth", 0.0)) < 0.0 or float(f.get("bot_worth", 0.0)) > 0.5:
+			out.append("feat %s: bot_worth is the autopilot's flat bonus to its worth, from 0 to 0.5" % id)
 		if f.has("companion") and typeof(f["companion"]) != TYPE_BOOL:
 			out.append("feat %s: companion is true or false" % id)
 		out.append_array(GameCombat._ability_problems("feat " + id, f))
