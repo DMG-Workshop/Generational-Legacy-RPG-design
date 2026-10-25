@@ -30,7 +30,7 @@
   "train_xp": 14,
   "echo_decay": 0.85,
   "echo_min_strength": 0.05,
-  "death_chance_on_defeat": 0.45,
+  "death_chance_on_defeat": 0.5,
   "defeat_gold_loss": 0.5,
   "defeat_years": 2,
   "hunt_rewards": {"hunt": {"scale": 1.08, "reward": 1.0, "min": 1, "max": 2, "level_min": 0.9, "level_max": 1.1, "elite_chance": 0.08}, "hunt_hard": {"scale": 1.44, "reward": 2.0, "min": 2, "max": 3, "level_min": 1.0, "level_max": 1.2, "elite_chance": 0.15}},
