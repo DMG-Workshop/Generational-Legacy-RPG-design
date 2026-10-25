@@ -4,7 +4,7 @@
       "id": "warrior", "name": "Warrior", "color": "#c0504d", "starting": true,
       "description": "Sturdy front-liner. Hits hard, takes a beating.",
       "base": {"hp": 70, "mp": 10, "str": 9, "mag": 2, "agi": 4, "vit": 7},
-      "growth": {"hp": 9.2, "mp": 1, "str": 2.2, "mag": 0.3, "agi": 0.8, "vit": 1.6},
+      "growth": {"hp": 8.0, "mp": 1, "str": 2.2, "mag": 0.3, "agi": 0.8, "vit": 1.3},
       "style": {"kind": "martial", "opener": ["warlords_roar", "iron_stance"]},
       "skills": [
         {"id": "power_strike", "name": "Power Strike", "type": "damage", "level": 1, "stat": "str", "mult": 1.9, "mp": 4},
@@ -20,7 +20,7 @@
       "id": "mage", "name": "Mage", "color": "#4f81bd", "starting": true,
       "description": "Glass cannon. Spells ignore half of enemy defense.",
       "base": {"hp": 46, "mp": 34, "str": 3, "mag": 10, "agi": 4, "vit": 3},
-      "growth": {"hp": 8.5, "mp": 4, "str": 0.4, "mag": 2.4, "agi": 0.8, "vit": 0.9},
+      "growth": {"hp": 9.0, "mp": 4, "str": 0.4, "mag": 2.4, "agi": 0.8, "vit": 0.9},
       "style": {"kind": "caster", "opener": ["arcane_focus"]},
       "skills": [
         {"id": "firebolt", "name": "Firebolt", "type": "damage", "level": 1, "stat": "mag", "mult": 2.3, "mp": 6, "pierce": 0.5, "element": "fire"},
@@ -68,7 +68,7 @@
       "id": "ranger", "name": "Ranger", "color": "#4e9a6b", "starting": true,
       "description": "Agile archer. Volleys rake every foe in a cone.",
       "base": {"hp": 58, "mp": 14, "str": 7, "mag": 2, "agi": 9, "vit": 5},
-      "growth": {"hp": 8.5, "mp": 1.5, "str": 1.7, "mag": 0.3, "agi": 1.8, "vit": 1.1},
+      "growth": {"hp": 8.0, "mp": 1.5, "str": 1.7, "mag": 0.3, "agi": 1.8, "vit": 1.1},
       "favored_weapon": "bow",
       "style": {"kind": "martial", "opener": ["hunters_mark"]},
       "skills": [
@@ -208,7 +208,7 @@
       "id": "warlock", "name": "Warlock", "color": "#9b4fb0", "starting": false, "parents": ["mage", "necromancer"],
       "description": "Pacts with dark powers: devastating hexes. (Hybrid: born to a Mage and a Necromancer.)",
       "base": {"hp": 49, "mp": 34, "str": 3, "mag": 10, "agi": 4, "vit": 4},
-      "growth": {"hp": 8.6, "mp": 3.94, "str": 0.42, "mag": 2.47, "agi": 0.79, "vit": 1.0},
+      "growth": {"hp": 9.0, "mp": 3.94, "str": 0.42, "mag": 2.47, "agi": 0.79, "vit": 1.0},
       "style": {"kind": "caster", "opener": ["agony"]},
       "skills": [
         {"id": "hex_bolt", "name": "Hex Bolt", "type": "damage", "level": 1, "stat": "mag", "mult": 2.4, "mp": 7, "pierce": 0.5, "element": "shadow"},
