@@ -596,6 +596,10 @@ func test_openers() -> void:
 	var b4 := _battle(d4, 1, "slime")
 	ok(str(GameTactics.auto_turn(b4).get("ab", {}).get("name", "")) != "Iron Stance", "a trivial fight is not opened with a stance")
 	d4.battle = null
+	# The rogue keeps both opening moves, but only plays them where the foes' round is cheap: its own, tighter pace limit.
+	var rp := float(GameSkills.style("rogue")["opener_max_pace"])
+	ok(rp > 0.0 and rp < float(GameCombat.setting("bot_opener_max_pace")), "the rogue's stealth opener has a tighter pace limit than the default: %s" % str(rp))
+	ok(GameSkills.style("rogue")["opener"] == ["envenom", "shadow_slip"], "the rogue still opens with poison, then stealth")
 	for cid in GameData.classes:
 		for id in GameSkills.style(cid)["opener"]:
 			ok(GameSkills.list(cid).any(func(sk): return str(sk["id"]) == str(id)) or not GameFeats.def(str(id)).is_empty(), "%s: opener %s exists" % [cid, id])
