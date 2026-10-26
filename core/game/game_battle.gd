@@ -33,6 +33,11 @@ var _gear: Dictionary = {}     # unit index -> {feat id -> why its weapon or thi
 var coating: Dictionary = {}   # {item, hits}: a toxin on the heir's blade (see GamePlague)
 var exposures: Array = []      # [{disease, chance, source}]: what the heir risked, rolled once the battle is settled
 var _blade: bool = false       # the heir's blows now come from the blade, so a coating rides on them
+var round_on: bool = false     # a GameRound is running: the heir's action no longer plays the rest of the round itself
+var round_acted: bool = false  # the heir's slot was used (acted or passed) while round_on
+var round_marks: bool = false  # tell round, act and foes markers in `events` (only inside GameRound.resolve)
+var round_cmds: Dictionary = {}   # ally index -> plan the player chose for this round; absent = the class's own choice
+var braced: Dictionary = {}    # ref -> true: a companion braced this round (see GameRound, settings.brace_taken)
 
 
 func _init(p_heir: GameHeir, p_enemies: Array, p_rng: RandomNumberGenerator) -> void:
@@ -97,7 +102,8 @@ func is_over() -> bool:
 
 ## Every action starts here. A heir who lost the turn to a status just lets it pass.
 func _begin_action() -> bool:
-	events = []
+	if not round_on:
+		events = []   # a queued round keeps one list for the whole round
 	if result != "":
 		return false
 	if heir_skip:
@@ -1243,6 +1249,27 @@ func _valid_target(t: int) -> int:
 	return first_target()
 
 
+## GameRound's way in: from here until end_round() the heir's actions only do their own part, and
+## the events of the whole round collect in one list (with round, act and foes markers).
+func begin_round() -> void:
+	events = []
+	round_on = true
+	round_acted = false
+	round_marks = true
+
+
+## Plays the rest of the round after the heir's slot: companions (with the plans the player chose,
+## by ally index; the others decide for themselves), then the foes, regeneration and the heir's
+## status tick. The one exit from round mode; nothing else may leave round_on set.
+func end_round(ally_plans: Dictionary) -> void:
+	round_on = false
+	if result == "":   # a successful flee already ended the fight
+		round_cmds = ally_plans
+		_end_player_turn()
+	round_cmds = {}
+	round_marks = false
+
+
 func _won() -> bool:
 	if living_enemies().is_empty():
 		result = "victory"
@@ -1252,6 +1279,9 @@ func _won() -> bool:
 
 
 func _end_player_turn() -> void:
+	if round_on:
+		round_acted = true   # the party and foe phase waits for end_round()
+		return
 	if _won():
 		return
 	for ai in conscious_allies():
@@ -1260,6 +1290,8 @@ func _end_player_turn() -> void:
 		_ally_turn(ai)
 		if _won():
 			return
+	if round_marks:
+		events.append({"type": "foes"})
 	for i in living_enemies():
 		if enemies[i]["hp"] <= 0:
 			continue
@@ -1271,6 +1303,7 @@ func _end_player_turn() -> void:
 		if _won():
 			return
 	defending = false
+	braced.clear()
 	if not fields.is_empty():
 		_wear_fields()
 	turn += 1
@@ -1298,22 +1331,51 @@ func _ally_turn(ai: int) -> void:
 	var ref := ref_of(ai)
 	if not _start_turn(ref):
 		return
+	if round_marks:
+		events.append({"type": "act", "by": ai, "manual": round_cmds.has(ai)})
 	_ally_act(ai)
 	if result == "" and not living_enemies().is_empty() and _extra_action(ref):
 		_ally_act(ai)
 
 
-## A companion's turn, chosen by GameTactics: mend the heir when they are badly hurt, cleanse,
-## hold the most dangerous foe, or strike where it does the most.
+## A companion's turn: the plan the player chose for it this round (see GameRound), else decided by
+## GameTactics: mend the heir when they are badly hurt, cleanse, hold the most dangerous foe, or
+## strike where it does the most. A haste bonus action is always the class's own choice.
 func _ally_act(ai: int) -> void:
+	var plan := {}
+	if round_cmds.has(ai):
+		plan = GameRound.plan_for(self, ai, round_cmds[ai])
+		round_cmds.erase(ai)
+		if plan.is_empty():   # no longer possible at its turn: the class decides
+			_say("%s improvises." % allies[ai].name)
+			if round_marks:
+				events.append({"type": "act", "by": ai, "manual": false, "fallback": true})
+	if plan.is_empty():
+		plan = GameTactics.choose(self, ai)
+	_ally_do(ai, plan)
+
+
+func _ally_do(ai: int, plan: Dictionary) -> void:
 	var a: GameHeir = allies[ai]
-	var plan := GameTactics.choose(self, ai)
 	match str(plan.get("act", "attack")):
 		"ability":
 			_pay(ai, int(plan.get("mp", plan["cost"])))
 			if str(plan.get("feat", "")) != "":
 				_spend_feat(ai, str(plan["feat"]))
 			resolve_ability(ai, plan["ab"], int(plan["target"]))
+		"defend":
+			braced[ref_of(ai)] = true
+			var mp_pct := float(GameRound.setting("defend_mp_pct"))
+			a.mp = mini(a.max_mp(), a.mp + int(ceil(float(a.max_mp()) * mp_pct)))
+			events.append({"type": "defend", "by": ai})
+			_say("%s braces for impact." % a.name)
+		"potion":
+			if heir.potions > 0:   # the house's stock, shared; the plan was checked just before
+				heir.potions -= 1
+				var amt := int(round(float(a.max_hp()) * float(GameData.bal("potion_heal_pct")) * (1.0 + a.trait_total("healing_power"))))
+				_heal_ally(ai, amt, "Potion")
+		"pass":
+			_say(str(plan.get("text", "%s holds back." % a.name)))
 		_:
 			_hit_enemy(_valid_target(int(plan.get("target", focus))), float(unit_numbers(ai)["str"]), 1.0, 0.0, 0.0, ai)
 
@@ -1383,6 +1445,8 @@ func _enemy_hit_ally(i: int, ai: int) -> void:
 	if e["element"] == "fire":
 		dmg *= 1.0 - clampf(a.trait_total("fire_resistance"), 0.0, 0.8)
 	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult(ref) * (1.0 + _shatter(ref)) * float(nums["taken"])
+	if braced.has(ref):
+		dmg *= float(GameRound.setting("brace_taken"))
 	var amount := maxi(1, int(round(dmg)))
 	var absorbed := mini(amount, _ward(ref))
 	absorbed += _mind_over_matter(ai, amount - absorbed)

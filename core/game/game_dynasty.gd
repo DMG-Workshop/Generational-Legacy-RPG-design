@@ -33,6 +33,8 @@ var shop_state: Dictionary = {}      # owned by GameItems: temple services used 
 var ages := GameAges.new()           # per-Age summaries of older heirs, and the saga's greatest
 var auto_battle: bool = false        # the player's choice: hunts fight themselves (see GameTactics.auto_turn)
 var loot: Dictionary = {}            # the dead of the last victory, until searched or left (see GamePlague)
+var auto_party: Dictionary = {}      # the player's Auto switches for party command rounds: {heir?, companion_default?} (see GameRound)
+var command_round: GameRound = null  # the battle's command round, made on first use (see battle_round)
 
 
 static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
@@ -469,6 +471,16 @@ func _child_race(a: String, b: String) -> String:
 	return a if rng.randf() < 0.5 else b
 
 
+## The battle's party command round (see GameRound), made when first asked for and dropped with the
+## battle. Autopilots never ask for it.
+func battle_round() -> GameRound:
+	if battle == null:
+		return null
+	if command_round == null or command_round.b != battle:
+		command_round = GameRound.open(battle, auto_party, party)
+	return command_round
+
+
 ## Starts a hunt battle. kind: "hunt" or "hunt_hard".
 func start_hunt(kind: String) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")[kind]
@@ -544,6 +556,7 @@ func _make_enemy(c: Dictionary, power: float, reward: float, level: int) -> Dict
 func finish_battle() -> Array:
 	var b := battle
 	battle = null
+	command_round = null
 	var msgs: Array = []
 	if b == null:
 		return msgs
@@ -810,7 +823,7 @@ func choose_heir(index: int) -> Array:
 # ---------------------------------------------------------------- save / load
 
 func to_dict() -> Dictionary:
-	return {
+	var out := {
 		"version": 1, "seed": seed_value, "rng_state": str(rng.state), "dynasty_name": dynasty_name,
 		"gen": gen, "heir": heir.to_dict(), "state": state, "history": history, "echoes": echoes,
 		"heirlooms": heirlooms, "slain_bosses": slain_bosses, "pending_archetype": pending_archetype,
@@ -820,6 +833,9 @@ func to_dict() -> Dictionary:
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
 		"shop_state": shop_state, "ages": ages.to_dict(), "auto_battle": auto_battle, "loot": loot,
 	}
+	if not auto_party.is_empty():   # only once the player has set a switch: older saves and fresh ones stay alike
+		out["auto_party"] = auto_party
+	return out
 
 
 static func from_dict(d: Dictionary) -> GameDynasty:
@@ -858,6 +874,11 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
 	g.auto_battle = bool(d.get("auto_battle", false))
+	var ap = d.get("auto_party", {})
+	if typeof(ap) == TYPE_DICTIONARY:
+		for k in ["heir", "companion_default"]:
+			if ap.has(k):
+				g.auto_party[k] = bool(ap[k])
 	g.loot = GamePlague.load_loot(d.get("loot", {})) if g.state == "life" else {}
 	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
 		GameAges.end_saga(g, [])

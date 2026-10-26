@@ -1,0 +1,17 @@
+{
+  "settings": {
+    "party_order": "fixed",
+    "default_auto": {"heir": false, "companion": false},
+    "flee_covers_party": true,
+    "confirm_single": false,
+    "ally_defend": true,
+    "defend_mp_pct": 0.15,
+    "brace_taken": 0.5,
+    "potion_for_companions": true,
+    "chip_texts": {
+      "short_chars": 10,
+      "tiny_chars": 5,
+      "abbrev": {"attack": "Atk", "defend": "Def", "potion": "Pot", "flee": "Flee", "auto": "Auto", "held": "Held", "ko": "Down", "empty": "Pick", "cover": "Cover"}
+    }
+  }
+}

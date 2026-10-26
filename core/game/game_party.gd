@@ -5,8 +5,9 @@
 class_name GameParty
 extends RefCounted
 
-# [{id, name, hp, mp, level, gen, due, battles, hired_gen, diseases}] - due is upkeep owed but not yet
-# paid; diseases is the companion's sickness (see GameDisease), shared with their unit.
+# [{id, name, hp, mp, level, gen, due, battles, hired_gen, diseases, auto?}] - due is upkeep owed but not yet
+# paid; diseases is the companion's sickness (see GameDisease), shared with their unit; auto (only once the
+# player has set it) is the Auto switch for party command rounds (see GameRound).
 var members: Array = []
 # companion id -> {name, status, gen, first_gen, battles, fallen: [names], line, past: [...],
 #                  born?, rolled?, back_year?}
@@ -660,12 +661,15 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 		if typeof(raw) != TYPE_DICTIONARY or def(str(raw.get("id", ""))).is_empty() or p.has_member(str(raw["id"])):
 			continue
 		var id: String = str(raw["id"])
-		p.members.append({
+		var m := {
 			"id": id, "name": str(raw.get("name", def(id)["name"])), "hp": int(raw.get("hp", 1)), "mp": int(raw.get("mp", 0)),
 			"level": int(raw.get("level", 1)), "gen": int(raw.get("gen", 1)), "due": float(raw.get("due", 0.0)),
 			"battles": int(raw.get("battles", 0)), "hired_gen": int(raw.get("hired_gen", 1)),
 			"diseases": GameDisease.load_list(raw.get("diseases", [])), "tree": GameSkillTree.load_member(raw.get("tree")),
-		})
+		}
+		if raw.has("auto"):   # the player's Auto switch for this companion (see GameRound); absent = never set
+			m["auto"] = bool(raw["auto"])
+		p.members.append(m)
 	var h = v.get("history", {})
 	if typeof(h) != TYPE_DICTIONARY:
 		h = {}
