@@ -46,11 +46,19 @@ static func load_settings() -> void:
 
 
 ## One saved value, or `fallback` without a file or the key.
-static func _stored(key: String, fallback: Variant) -> Variant:
+static func stored(key: String, fallback: Variant) -> Variant:
 	var cf := ConfigFile.new()
 	if cf.load(path) != OK:
 		return fallback
 	return cf.get_value("ui", key, fallback)
+
+
+## One value written to the file, keeping the rest.
+static func store(key: String, value: Variant) -> bool:
+	var cf := ConfigFile.new()
+	cf.load(path)
+	cf.set_value("ui", key, value)
+	return cf.save(path) == OK
 
 
 static func save_settings() -> bool:
@@ -63,7 +71,7 @@ static func save_settings() -> bool:
 
 static func get_scale() -> float:
 	if scale < 0.0:
-		scale = nearest(float(_stored("scale", default_scale())))
+		scale = nearest(float(stored("scale", default_scale())))
 	return scale
 
 
@@ -82,7 +90,7 @@ static func touch_layouts() -> Array:
 
 static func get_touch_layout() -> String:
 	if touch_layout == "":
-		var t := str(_stored("touch_layout", "auto"))   # files from before the setting have no key
+		var t := str(stored("touch_layout", "auto"))   # files from before the setting have no key
 		touch_layout = t if t in touch_layouts() else "auto"
 	return touch_layout
 

@@ -25,6 +25,13 @@ only, so a laptop with a touch screen keeps the desktop layout; **On** and **Off
 force it either way, and a change mid-fight resizes the fight's buttons at once. It is saved beside the text size in `user://settings.cfg`
 (`[ui] touch_layout`); a settings file from before it reads as Auto.
 
+The life screen's two autopilot buttons ("Auto: this life", "Auto: 10 gens") each wait
+after use: 60 and 300 seconds of real time (`data/ui/mobile.json`), greyed out with the time
+left on the button ("Auto: 10 gens (4:32)") while play by hand carries on. The wait is kept
+in `user://settings.cfg` (`[ui] autopilot_life_ready_at`, `autopilot_gens_ready_at`, Unix
+time; capped to one cooldown from now, absent in older files), so closing the game does not
+skip it. Only the buttons wait; GameBot and the balance harness do not.
+
 Hold a finger on anything for half a second to read what a mouse would show on
 hover (traits, skills, spells, feats, prices); a quick tap acts as a click; drag
 to scroll. This works on any touch screen, whatever the touch layout says. A tap
