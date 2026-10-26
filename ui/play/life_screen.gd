@@ -12,6 +12,7 @@ const EventPanel := preload("res://ui/play/event_panel.gd")
 const FeatsPanel := preload("res://ui/play/feats_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const LootPanel := preload("res://ui/play/loot_panel.gd")
+const Cooldown := preload("res://ui/play/autopilot_cooldown.gd")
 
 const COLUMN_W := 300
 const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
@@ -28,6 +29,8 @@ var header: Label
 var where: Label
 var column_w := COLUMN_W
 var compact := false
+var cool_buttons := {}   # autopilot id -> its button, rebuilt with the actions
+var cool_timer: Timer     # ticks the countdown text once a second while a cooldown runs
 
 
 func _ready() -> void:
@@ -83,6 +86,10 @@ func _ready() -> void:
 	mid.resized.connect(_fit_actions)
 
 	right = left if compact else _column(cols)
+	cool_timer = Timer.new()
+	cool_timer.wait_time = 1.0
+	cool_timer.timeout.connect(tick_cooldowns)
+	add_child(cool_timer)
 	_refresh()
 	if d.has_pending_event():
 		_open.call_deferred(EventPanel)
@@ -241,6 +248,7 @@ func _section(title: String, lines: Array, tip: String = "") -> void:
 
 func _build_actions() -> void:
 	Kit.clear(actions)
+	cool_buttons = {}
 	var h := d.heir
 	var boss := d.available_boss()
 	_act("Hunt", func(): _hunt("hunt"))
@@ -286,8 +294,9 @@ func _build_actions() -> void:
 	fam.tooltip_text = "Requires age %d+ and no family yet. Children inherit traits from both parents." % int(h.family_min_age())
 	var ret := _act("Retire", func(): _do(func(): return d.retire()))
 	ret.disabled = not d.can_retire()
-	_act("Auto: this life", func(): _autopilot(1))
-	_act("Auto: 10 gens", func(): _autopilot(10))
+	_auto_button("life", "Auto: this life", "Plays a whole life on autopilot.", 1)
+	_auto_button("gens", "Auto: 10 gens", "Plays ten generations on autopilot.", 10)
+	tick_cooldowns()
 	_act("Chronicle", func(): _chronicle())
 	_act("Save", func(): d.save_to_disk(); d._say("Game saved."); _refresh())
 	_act("Menu", func(): app.open_menu())
@@ -371,7 +380,40 @@ func _legend() -> void:
 		app.show_state()
 
 
-func _autopilot(generations: int) -> void:
+## An autopilot button; its cooldown text and state are kept by tick_cooldowns.
+func _auto_button(id: String, text: String, what: String, generations: int) -> void:
+	var b := _act(text, func(): _autopilot(id, generations))
+	b.add_theme_font_size_override("font_size", 13)   # the same size ready and counting down
+	b.set_meta("cool_text", text)
+	b.set_meta("cool_tip", what)
+	cool_buttons[id] = b
+
+
+## Updates the autopilot buttons' text, tooltip and disabled state in place; the timer stops once
+## no cooldown is left.
+func tick_cooldowns() -> void:
+	for id in cool_buttons:
+		var b: Button = cool_buttons[id]
+		if not is_instance_valid(b):
+			continue
+		b.disabled = not Cooldown.is_ready(id)
+		b.text = Cooldown.label(id, b.get_meta("cool_text"))
+		b.tooltip_text = Cooldown.tip(id, b.get_meta("cool_tip"))
+	if not is_instance_valid(cool_timer):
+		return
+	if Cooldown.any_active():
+		if cool_timer.is_stopped() and cool_timer.is_inside_tree():
+			cool_timer.start()
+	else:
+		cool_timer.stop()
+
+
+## Only this button handler waits; GameBot (tests, the balance harness) never asks.
+func _autopilot(id: String, generations: int) -> void:
+	if not Cooldown.is_ready(id):
+		tick_cooldowns()
+		return
+	Cooldown.start(id)
 	for i in generations:
 		GameBot.live_life(d)
 		if i < generations - 1:

@@ -10,6 +10,8 @@
 		"hint_font_size": 15,
 		"touch_target_px": 48,
 		"compact_width": 1180,
-		"short_height": 600
+		"short_height": 600,
+		"autopilot_life_cooldown_seconds": 60,
+		"autopilot_gens_cooldown_seconds": 300
 	}
 }
