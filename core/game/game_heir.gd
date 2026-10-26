@@ -317,6 +317,9 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.disease_level = int(d.get("disease_level", h.level))
 	GameFeats.load_into(h, d)
 	GameSkillTree.load_into(h, d.get("skill_tree"))
+	# A save from before HP growth was lowered can hold more HP (or MP) than the body has now.
+	h.hp = mini(h.hp, h.max_hp())
+	h.mp = mini(h.mp, h.max_mp())
 	for c in d["children"]:
 		h.children.append(GameHeir.from_dict(c))
 	if d["spouse"] != null:

@@ -51,6 +51,7 @@ func _init() -> void:
 	test_companion_choices()
 	test_tactics()
 	test_bot()
+	test_every_class_feat_gets_used()
 	test_save_load()
 	test_old_saves()
 	test_determinism()
@@ -228,6 +229,11 @@ func test_broken_data() -> void:
 	s["point_levels"] = [5, 3, 200000]
 	ok(GameFeats.validate().any(func(e): return str(e).find("point_levels must rise") >= 0), "milestones out of order are reported")
 	s["point_levels"] = keep
+	var decay: Variant = s["bot_role_decay"]
+	for bad in [0.0, -0.5, 1.5]:
+		s["bot_role_decay"] = bad
+		ok(GameFeats.validate().any(func(e): return str(e).find("bot_role_decay must be above 0") >= 0), "a role decay of %s is reported" % str(bad))
+	s["bot_role_decay"] = decay
 	GameFeats.reindex()
 	ok(GameFeats.validate().is_empty(), "the data is sound again")
 
@@ -1099,6 +1105,55 @@ func test_bot() -> void:
 
 
 # ---------------------------------------------------------------- save / load
+
+## Every feat of a class's own craft is one the autopilot fires somewhere. For each feat the class
+## owns, in turn: at the level it opens, a little above and far above it, with a weapon of a kind it
+## asks for (or none), a lone heir and one with two companions, the autopilot readies its loadout
+## and fights long battles against foes of several kinds that bite and will not fall (the heir is kept on his feet); the feat must be played in one of
+## them. A feat the bot never carries or never plays is dead content.
+func test_every_class_feat_gets_used() -> void:
+	GameFeats.ids()   # reads the data
+	var kinds: Dictionary = GameFeats._src.get("weapon_kinds", {})
+	var scen := [["wolf", 1, 1.0], ["wolf", 3, 2.5], ["bandit", 3, 4.0], ["skeleton", 3, 3.0], ["ogre", 1, 3.0]]
+	for cid in GameData.classes:
+		var used := {}
+		for id in GameFeats.feats_from(cid, cid):
+			var min_lv := int(GameFeats.requires(id)["min_level"])
+			var asked: Array = GameFeats.requires(id).get("weapon", [])
+			var weapons: Array = asked if not asked.is_empty() else ["none", "blade", "blunt", "bow", "staff"]
+			for lv in [min_lv, min_lv * 3 + 2, 2500]:
+				for wk in weapons:
+					for crowd in [1, 3]:
+						if used.has(id):
+							break
+						var d := _dyn(cid, int(lv), 100)
+						if wk != "none" and kinds.has(wk):
+							var items: Array = kinds[wk].get("items", [])
+							d.heir.equipment["weapon"] = str(items[mini(1, items.size() - 1)])
+						if crowd > 1:
+							_full_party(d, ["bren_cask", "sister_oriel"])
+						d.heir.downtime = true
+						GameSkillTree.bot_tick(d)
+						GameFeats.bot_tick(d)
+						d.heir.full_heal()
+						for sc in scen:
+							if used.has(id):
+								break
+							var b := _battle(d, int(sc[1]), str(sc[0]), float(sc[2]))
+							for e in b.enemies:   # foes that bite and will not fall, against a heir kept on his feet
+								e["hp"] = 10000000
+								e["max_hp"] = 10000000
+							var g := 0
+							while not b.is_over() and g < 40:
+								g += 1
+								b.heir.hp = int(b.unit_numbers(-1)["max_hp"])
+								var p := GameTactics.auto_turn(b)
+								if p.get("act", "") == "ability" and str(p.get("feat", "")) != "":
+									used[str(p["feat"])] = true
+							d.battle = null
+		var dead: Array = GameFeats.feats_from(cid, cid).filter(func(id): return not used.has(id))
+		ok(dead.is_empty(), "%s: every feat of its own craft is played by the autopilot somewhere; never chosen: %s" % [cid, str(dead)])
+
 
 func test_save_load() -> void:
 	var d := _dyn("warrior", 30, 131, "steel_sword")

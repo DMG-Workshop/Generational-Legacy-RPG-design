@@ -3,7 +3,9 @@
 ## none), and the first ones, open from level 1, keep the places saves and plans index them by.
 ## A skill with "once" may be used once a battle. A class's "style" ({kind: martial, caster or
 ## hybrid, lean 0..1, heal_below 0..1: mend a party member under that share of HP first, opener:
-## ids of skills or feats to open a battle with, variety: how fast a move cools with use}) tells the
+## ids of skills or feats to open a battle with, opener_max_pace: {opener id: how hard the foes may hit in a round
+## (share of max HP) for that opener to be played, instead of settings.bot_opener_max_pace}, variety:
+## how fast a move cools with use}) tells the
 ## autopilot which of its actions to lean on; without one it follows the stat of the class's first
 ## strike. The weights per kind of action live in formations.json
 ## (settings.bot_styles). No rendering and no rolls here.
@@ -138,7 +140,8 @@ static func style(class_id: String) -> Dictionary:
 				kind = {"mag": "caster", "both": "hybrid"}.get(str(s.get("stat", "str")), "martial")
 				break
 	return {"kind": kind, "lean": float(st.get("lean", -1.0)), "heal_below": float(st.get("heal_below", 0.0)),
-		"opener": st.get("opener", []), "variety": float(st.get("variety", -1.0))}
+		"opener": st.get("opener", []), "variety": float(st.get("variety", -1.0)),
+		"opener_max_pace": st.get("opener_max_pace", {})}
 
 
 ## How much a unit's liking for a move cools with each use of it in one battle (see GameTactics).
@@ -325,6 +328,15 @@ static func validate() -> Array:
 				out.append("class %s: style lean must be within 0..1" % cid)
 			if st.has("heal_below") and (float(st["heal_below"]) <= 0.0 or float(st["heal_below"]) > 1.0):
 				out.append("class %s: style heal_below must be within 0..1" % cid)
+			if st.has("opener_max_pace"):
+				if not st["opener_max_pace"] is Dictionary:
+					out.append("class %s: style opener_max_pace must map opener ids to a limit" % cid)
+				else:
+					for id in st["opener_max_pace"]:
+						if str(id) not in st.get("opener", []).map(func(o): return str(o)):
+							out.append("class %s: style opener_max_pace '%s' is not one of its openers" % [cid, id])
+						if float(st["opener_max_pace"][id]) <= 0.0 or float(st["opener_max_pace"][id]) > 1.0:
+							out.append("class %s: style opener_max_pace '%s' must be within 0..1" % [cid, id])
 			for id in st.get("opener", []):
 				if not all.any(func(s): return str(s.get("id", "")) == str(id)) and not GameFeats.def(str(id)).has("name"):
 					out.append("class %s: style opener '%s' is neither a class skill nor a feat" % [cid, id])

@@ -257,7 +257,7 @@ func test_every_skill_runs() -> void:
 				var hp0 := b.heir.hp
 				var what := "%s %s on %d" % [cid, real["id"], n]
 				ok(b.can_use_skill(i), "%s: usable at level %d" % [what, d.heir.level])
-				b.use_skill(i, 0)
+				b.use_skill(i, -1 if real.has("pct_max_hp") and not real.get("party", false) else 0)   # a single heal aimed at the heir, not at the companion
 				all[i] = real
 				count += 1
 				ok(b.events.any(func(ev): return ev["type"] == "cast" and ev["name"] == real["name"]), what + ": cast")
@@ -596,9 +596,63 @@ func test_openers() -> void:
 	var b4 := _battle(d4, 1, "slime")
 	ok(str(GameTactics.auto_turn(b4).get("ab", {}).get("name", "")) != "Iron Stance", "a trivial fight is not opened with a stance")
 	d4.battle = null
+	# The rogue keeps both opening moves, but only plays them where the foes' round is cheap: its own, tighter pace limit.
+	var rp := float(GameSkills.style("rogue")["opener_max_pace"].get("shadow_slip", 0.0))
+	ok(rp > 0.0 and rp < float(GameCombat.setting("bot_opener_max_pace")), "the rogue's stealth opener has a tighter pace limit than the default, and poison keeps the default: %s" % str(rp))
+	ok(not GameSkills.style("rogue")["opener_max_pace"].has("envenom"), "the rogue's poison opener has no pace limit of its own")
+	ok(GameSkills.style("rogue")["opener"] == ["envenom", "shadow_slip"], "the rogue still opens with poison, then stealth")
 	for cid in GameData.classes:
 		for id in GameSkills.style(cid)["opener"]:
 			ok(GameSkills.list(cid).any(func(sk): return str(sk["id"]) == str(id)) or not GameFeats.def(str(id)).is_empty(), "%s: opener %s exists" % [cid, id])
+	test_rogue_opener_in_play()
+
+
+## What the rogue really plays: poison first against mid-pace foes (the pace limit of stealth must
+## not take poison with it), stealth next only where the foes' round is cheap.
+func test_rogue_opener_in_play() -> void:
+	for lv in [25, 80]:
+		for sc in [["skeleton", 2, 1.08], ["ogre", 1, 1.44]]:
+			var d := _dyn("rogue", lv, 100)
+			d.heir.downtime = true
+			GameSkillTree.bot_tick(d)
+			GameFeats.bot_tick(d)
+			d.heir.full_heal()
+			var foes: Array = []
+			for i in int(sc[1]):
+				foes.append(d._make_enemy(GameCombat.creature_def(str(sc[0])), float(sc[2]), 1.0, lv))
+			d._begin_battle(foes, "hunt")
+			var b: GameBattle = d.battle
+			var pace := float(GameTactics._context(b, -1)["total"]) / float(maxi(1, int(b.unit_numbers(-1)["max_hp"])))
+			var what := "L%d %s x%d (pace %.2f)" % [lv, sc[0], sc[1], pace]
+			ok(pace > float(GameSkills.style("rogue")["opener_max_pace"]["shadow_slip"]) and pace < float(GameCombat.setting("bot_opener_max_pace")), "%s is a mid-pace fight" % what)
+			var p1 := GameTactics.auto_turn(b)
+			ok(str(p1.get("ab", {}).get("name", "")) == "Envenom", "%s: turn 1 is Envenom, got %s" % [what, str(p1.get("ab", {}).get("name", p1["act"]))])
+			var p2 := GameTactics.auto_turn(b)
+			ok(str(p2.get("ab", {}).get("name", "")) != "Slip into Shadow", "%s: stealth is skipped where the foes bite hard" % what)
+			d.battle = null
+		# A long, cheap fight: poison, then stealth.
+		var d2 := _dyn("rogue", lv, 100)
+		d2.heir.downtime = true
+		GameSkillTree.bot_tick(d2)
+		GameFeats.bot_tick(d2)
+		d2.heir.full_heal()
+		var b2 := _battle(d2, 2, "skeleton")
+		for e in b2.enemies:
+			e["hp"] = 60000
+			e["max_hp"] = 60000
+			e["atk"] = 0.0
+		# Foes that hit softly (a round costs a tenth of the heir's HP at most) but last long.
+		var a := 0.0
+		while a < 2000.0:
+			a += 10.0
+			for e in b2.enemies:
+				e["atk"] = a
+			if float(GameTactics._context(b2, -1)["total"]) >= 0.07 * float(b2.unit_numbers(-1)["max_hp"]):
+				break
+		var q1 := GameTactics.auto_turn(b2)
+		var q2 := GameTactics.auto_turn(b2)
+		ok(str(q1.get("ab", {}).get("name", "")) == "Envenom" and str(q2.get("ab", {}).get("name", "")) == "Slip into Shadow", "L%d: a long cheap fight opens poison, then stealth: %s, %s" % [lv, str(q1.get("ab", {}).get("name", q1["act"])), str(q2.get("ab", {}).get("name", q2["act"]))])
+		d2.battle = null
 
 
 ## Over seeded fights of every sort, the autopilot reaches for each class skill that is not a

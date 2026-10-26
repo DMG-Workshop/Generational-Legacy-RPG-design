@@ -701,6 +701,11 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 		p.history[str(id)] = rec
 	if d != null:
 		for m in p.members:
+			# A save from before HP growth was lowered can hold more HP than the body has now.
+			var body := p._body(d, m)
+			body.diseases = []   # a sickness lowers the body in battle, not the record
+			m["hp"] = mini(int(m["hp"]), body.max_hp())
+			m["mp"] = mini(int(m["mp"]), body.max_mp())
 			if not p.history.has(m["id"]):
 				p.history[m["id"]] = {"name": m["name"], "status": "serving", "gen": int(m["gen"]), "first_gen": int(m["hired_gen"]),
 					"battles": 0, "fallen": [], "line": 0, "past": []}
