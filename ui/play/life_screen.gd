@@ -245,7 +245,7 @@ func _build_actions() -> void:
 	var boss := d.available_boss()
 	_act("Hunt", func(): _hunt("hunt"))
 	var hard := _act("Hard hunt", func(): _hunt("hunt_hard"))
-	hard.tooltip_text = "Tougher monsters and more Elites, for double XP and gold."
+	hard.tooltip_text = "Tougher monsters and more Elites, for double XP and gold.\nRisky: a defeat can cost %s their life (about %d%% of defeats)." % [h.name, int(round(float(GameData.bal("death_chance_on_defeat")) * 100.0))]
 	var auto := _act("Auto-battle: %s" % ("ON" if d.auto_battle else "OFF"), func(): d.auto_battle = not d.auto_battle; app.autosave(); _refresh())
 	auto.add_theme_color_override("font_color", Kit.GOOD if d.auto_battle else Kit.TEXT)
 	auto.tooltip_text = "Hunts fight themselves, choosing as the autopilot would. Switch it off in battle to take over."
