@@ -278,6 +278,7 @@ func test_check_and_queue() -> void:
 	ok(r.queue(-1, {"act": "attack", "target": "enemy:9"}) != "", "a foe that is not there is refused")
 	ok(r.entries[-1]["cmd"]["target"] == "enemy:1", "a refused command changes nothing")
 	ok(r.queue(0, {"act": "dance"}) != "", "an unknown command is refused")
+	ok(r.queue(0, {"act": "pass"}) != "" and not r.entries.has(0), "a pass is not a choice")
 	# Unaffordable.
 	d.heir.mp = 0
 	var power := {"act": "ability", "kind": "skill", "id": "power_strike", "target": "enemy:0"}

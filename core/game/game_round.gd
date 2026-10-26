@@ -401,6 +401,8 @@ func check(by: int, cmd: Dictionary) -> String:
 		return "Out of the fight."
 	if state_of(by) == "held":
 		return "Held fast."
+	if str(cmd.get("act", "")) == "pass":   # GameRound's own, for the covered; never a choice
+		return "Unknown command."
 	return _why_not(b, by, cmd, _reserved(by))
 
 
