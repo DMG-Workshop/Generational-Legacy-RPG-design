@@ -517,6 +517,23 @@ func test_old_saves() -> void:
 	var thin := GameDynasty.from_dict(raw)
 	ok(thin.party.history.has("hulda_stonebrow") and thin.party.history["hulda_stonebrow"]["status"] == "serving", "a bare member gets a record")
 	ok(absf(thin.party.age(thin, "hulda_stonebrow") - thin.party.hire_age(thin, "hulda_stonebrow")) < 0.001, "and an age")
+	# A save from before HP growth was lowered holds more HP than the body has now: loading clamps it.
+	var fat := _new(5)
+	fat.heir.level = 60
+	fat.party.members.append({"id": "bren_cask", "name": "Bren Cask", "hp": 1, "mp": 0, "level": 60, "gen": fat.gen, "due": 0.0, "battles": 0, "hired_gen": fat.gen})
+	var saved := fat.to_dict()
+	var cap := fat.heir.max_hp()
+	saved["heir"]["hp"] = cap + 59
+	saved["heir"]["mp"] = fat.heir.max_mp() + 40
+	for m in saved["party"]["members"]:
+		m["hp"] = 999999
+		m["mp"] = 999999
+	var thinned := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(saved)))
+	ok(thinned.heir.hp == thinned.heir.max_hp() and thinned.heir.mp == thinned.heir.max_mp(), "an old save's heir loads within max HP and MP (%d of %d)" % [thinned.heir.hp, thinned.heir.max_hp()])
+	for m in thinned.party.members:
+		var u := thinned.party.unit(thinned, m)
+		ok(int(m["hp"]) <= u.max_hp() and int(m["mp"]) <= u.max_mp(), "and so do the companions (%d of %d)" % [int(m["hp"]), u.max_hp()])
+	ok(thinned.party.members.size() == 1, "the companion is still in the party")
 
 
 func test_bot() -> void:
