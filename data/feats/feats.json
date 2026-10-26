@@ -292,7 +292,7 @@
       "requires": {"min_level": 14, "classes": ["rogue"]}
     },
     {
-      "id": "smoke_bomb", "name": "Smoke Bomb", "kind": "tactical", "cost": 2, "cooldown": 5, "bot_worth": 0.15, "companion": false,
+      "id": "smoke_bomb", "name": "Smoke Bomb", "kind": "tactical", "cost": 2, "cooldown": 5, "bot_worth": 0.2, "companion": false,
       "description": "A puff of grey smoke, and where the rogue stood there is only smoke.",
       "scaling": {}, "mult": 0,
       "target": {"shape": "self"},
