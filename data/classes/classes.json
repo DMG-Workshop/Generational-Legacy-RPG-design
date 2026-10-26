@@ -37,7 +37,7 @@
       "description": "Fast and lucky. Strikes twice, often critically.",
       "base": {"hp": 56, "mp": 16, "str": 7, "mag": 2, "agi": 10, "vit": 4},
       "growth": {"hp": 9.0, "mp": 1.5, "str": 1.6, "mag": 0.3, "agi": 2.0, "vit": 1.2},
-      "style": {"kind": "martial", "opener": ["envenom", "shadow_slip"], "opener_max_pace": 0.25},
+      "style": {"kind": "martial", "opener": ["envenom", "shadow_slip"], "opener_max_pace": {"shadow_slip": 0.25}},
       "skills": [
         {"id": "backstab", "name": "Twin Fangs", "type": "damage", "level": 1, "stat": "str", "mult": 1.0, "mp": 4, "hits": 2, "crit_bonus": 0.25},
         {"id": "shadow_step", "name": "Shadow Step", "type": "heal", "level": 1, "pct_max_hp": 0.2, "mp": 5},

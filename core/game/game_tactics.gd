@@ -225,17 +225,21 @@ static func _share_felled(b: GameBattle, by: int, plan: Dictionary, ctx: Diction
 ## The heir's opening moves (style opener: skill or feat ids, in order): while the battle is young,
 ## the first of them not yet used and ready is played, if the fight looks costly enough to prepare for
 ## (the HP it would cost at the foes' pace, as a share of max HP: settings.bot_opener_min_danger) and
-## a round of their blows costs no more than settings.bot_opener_max_pace of it (a class may set
-## its own, style opener_max_pace: the rogue's stealth is no use where the foes bite hard).
+## a round of their blows costs no more than the opener's pace limit of it: settings.bot_opener_max_pace,
+## or the class's own for that entry (style opener_max_pace {id: limit}: the rogue's stealth is no use
+## where the foes bite hard, its poison is).
 static func _opener(b: GameBattle, by: int, opts: Array, ctx: Dictionary) -> Dictionary:
 	var style := GameSkills.style(b.unit(by).class_id)
 	var list: Array = style["opener"]
 	if by >= 0 or list.is_empty() or b.turn >= list.size():
 		return {}   # a hireling just fights
 	var pace := float(ctx["total"]) / float(maxi(1, int(b.unit_numbers(-1)["max_hp"])))   # a round of the foes' blows
-	if pace * float(ctx["turns"]) < float(GameCombat.setting("bot_opener_min_danger")) or pace > (float(style["opener_max_pace"]) if float(style["opener_max_pace"]) > 0.0 else float(GameCombat.setting("bot_opener_max_pace"))):
-		return {}   # a fight that costs little is not worth a round of preparing, one that bites hard allows none
+	if pace * float(ctx["turns"]) < float(GameCombat.setting("bot_opener_min_danger")):
+		return {}   # a fight that costs little is not worth a round of preparing
+	var limits: Dictionary = style["opener_max_pace"]
 	for id in list:
+		if pace > float(limits.get(str(id), GameCombat.setting("bot_opener_max_pace"))):
+			continue   # the foes bite too hard for this one (and it is not played, so the next is not held back)
 		for o in opts:
 			var is_feat := str(o.get("feat", "")) != ""
 			if str(o["feat"] if is_feat else o["ab"].get("id", "")) != str(id) or (not is_feat and int(o["skill"]) < 0):
