@@ -158,6 +158,20 @@ func tick(delta: float) -> void:
 		# Gone with what it describes: a closed list, a rebuilt panel.
 		if _linger <= 0.0 or not is_instance_valid(shown_on) or not shown_on.is_visible_in_tree():
 			hide_hint()
+	if _shown:
+		_refresh_text()
+
+
+## A tip that counts down (a cooldown) is read again while its bubble is up.
+func _refresh_text() -> void:
+	if shown_text == "" or not is_instance_valid(shown_on):
+		return
+	var now := shown_on.get_tooltip(shown_on.get_global_transform_with_canvas().affine_inverse() * _start)
+	if now != "" and now != shown_text:
+		shown_text = now
+		text.text = now
+		bubble.reset_size()
+		_place.call_deferred(_start)
 
 
 ## A second finger: a pinch or a slip, neither a hold nor a click.

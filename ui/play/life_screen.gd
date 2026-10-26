@@ -16,6 +16,7 @@ const Cooldown := preload("res://ui/play/autopilot_cooldown.gd")
 
 const COLUMN_W := 300
 const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
+const COOL_FONT := 13   # the autopilot buttons: "Auto: 10 gens (5:00)" needs 132 of 130 px at 14, so 13
 const COMPACT_COLUMN_W := 270   # a narrow screen keeps one side column, holding both
 
 var app: Node
@@ -383,7 +384,8 @@ func _legend() -> void:
 ## An autopilot button; its cooldown text and state are kept by tick_cooldowns.
 func _auto_button(id: String, text: String, what: String, generations: int) -> void:
 	var b := _act(text, func(): _autopilot(id, generations))
-	b.add_theme_font_size_override("font_size", 13)   # the same size ready and counting down
+	b.add_theme_font_size_override("font_size", COOL_FONT)   # the same size ready and counting down
+	b.add_theme_color_override("font_disabled_color", Kit.DIM)   # the shared grey is too faint to read a countdown
 	b.set_meta("cool_text", text)
 	b.set_meta("cool_tip", what)
 	cool_buttons[id] = b
@@ -412,6 +414,8 @@ func tick_cooldowns() -> void:
 func _autopilot(id: String, generations: int) -> void:
 	if not Cooldown.is_ready(id):
 		tick_cooldowns()
+		return
+	if d.state != "life":   # nothing to play: no wait either
 		return
 	Cooldown.start(id)
 	for i in generations:

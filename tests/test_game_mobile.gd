@@ -79,6 +79,7 @@ func _run() -> void:
 	await test_command_text_fits()
 	test_cooldown_logic()
 	await test_cooldown_buttons()
+	await test_cooldown_timer()
 	await test_cooldown_text_fits()
 	await test_scale_mid_fight()
 	print("mobile tests: %d checks, %d failures" % [checks, fails])
@@ -1287,9 +1288,32 @@ func test_cooldown_logic() -> void:
 	var g := GameDynasty.new_game(5, "Bo", "warrior", "faetouched", "human")
 	Cooldown.start("life")
 	Cooldown.start("gens")
-	var gen0 := g.gen
+	var age0 := g.heir.age
 	GameBot.live_life(g)
-	ok(g.state != "life" or g.gen > gen0 or g.heir.age > 0.0, "the harness's autopilot plays while both buttons cool down")
+	ok(g.state != "life" and g.heir.age > age0 + 20.0, "the harness's autopilot plays a whole life (ended at age %.0f from %.0f) while both buttons cool down" % [g.heir.age, age0])
+	ok(not Cooldown.is_ready("life") and not Cooldown.is_ready("gens"), "and leaves the button cooldowns as they were")
+	# anything but a number in the file reads as ready, quietly
+	for v in [[1, 2], {"a": 1}, true, Vector2(5, 5), PackedByteArray([1]), "9"]:
+		UiSettings.store("autopilot_life_ready_at", v)
+		Cooldown.forget()
+		ok(Cooldown.is_ready("life"), "a stored %s reads as ready" % type_string(typeof(v)))
+	UiSettings.store("autopilot_life_ready_at", int(clock_t) + 30)
+	Cooldown.forget()
+	ok(Cooldown.remaining("life") > 28.0 and Cooldown.remaining("life") <= 30.0, "a stored whole number counts down")
+	# the lengths are the data's
+	var cfg: Dictionary = GameData.mobile["settings"]
+	var keep_life = cfg["autopilot_life_cooldown_seconds"]
+	var keep_gens = cfg["autopilot_gens_cooldown_seconds"]
+	cfg["autopilot_life_cooldown_seconds"] = 20
+	cfg["autopilot_gens_cooldown_seconds"] = 90
+	_cool_fresh()
+	ok(is_equal_approx(Cooldown.seconds("life"), 20.0) and is_equal_approx(Cooldown.seconds("gens"), 90.0), "the lengths follow data/ui/mobile.json")
+	Cooldown.start("gens")
+	Cooldown.start("life")
+	ok(Cooldown.label("gens", "A") == "A (1:30)" and Cooldown.label("life", "A") == "A (0:20)", "and so do the labels")
+	ok(Cooldown.tip("gens", "x") == "Ready in 1:30", "and the tooltips")
+	cfg["autopilot_life_cooldown_seconds"] = keep_life
+	cfg["autopilot_gens_cooldown_seconds"] = keep_gens
 	Cooldown.clock = Callable()
 	Cooldown.forget()
 	DirAccess.remove_absolute(UiSettings.path)
@@ -1331,6 +1355,10 @@ func test_cooldown_buttons() -> void:
 	life._autopilot("life", 1)
 	life._autopilot("gens", 10)
 	ok(d.to_dict() == state0 and app.current == life, "the handlers do nothing while cooling down")
+	var bg: Color = (one.get_theme_stylebox("disabled") as StyleBoxFlat).bg_color
+	var fg: Color = one.get_theme_color("font_disabled_color")
+	ok(_contrast(fg, bg) >= 4.5, "the countdown is readable: contrast %.2f" % _contrast(fg, bg))
+	ok(is_equal_approx(life.cool_timer.wait_time, 1.0), "the timer ticks every second")
 	var hunt := _find(life, "Hunt")
 	ok(hunt != null and not hunt.disabled, "the rest of the screen stays playable")
 	clock_t += 42.0
@@ -1340,6 +1368,12 @@ func test_cooldown_buttons() -> void:
 	clock_t += 241.0
 	life.tick_cooldowns()
 	ok(not ten.disabled and ten.text == "Auto: 10 gens" and life.cool_timer.is_stopped(), "all restored, and the timer stops")
+	# nothing to play (not in a life): no autopilot and no wait
+	var keep_state := d.state
+	d.state = "succession"
+	life._autopilot("gens", 10)
+	d.state = keep_state
+	ok(Cooldown.is_ready("gens"), "the handler starts no wait when there is no life to play")
 	gen0 = d.gen
 	ten.pressed.emit()
 	await _frames(3)
@@ -1352,6 +1386,52 @@ func test_cooldown_buttons() -> void:
 	await _frames(3)
 	ten = _find(app.current, "Auto: 10 gens")
 	ok(ten.disabled and ten.text == "Auto: 10 gens (4:30)", "a new screen after a restart shows the time left: '%s'" % ten.text)
+	Cooldown.clock = Callable()
+	Cooldown.forget()
+	DirAccess.remove_absolute(UiSettings.path)
+
+
+func _contrast(a: Color, b: Color) -> float:
+	var la := _luma(a)
+	var lb := _luma(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+func _luma(c: Color) -> float:
+	var f := func(v: float) -> float: return v / 12.92 if v <= 0.03928 else pow((v + 0.055) / 1.055, 2.4)
+	return 0.2126 * f.call(c.r) + 0.7152 * f.call(c.g) + 0.0722 * f.call(c.b)
+
+
+## The real one-second timer redraws the countdown with no manual tick, and a held tip's bubble
+## follows it.
+func test_cooldown_timer() -> void:
+	_cool_fresh()
+	_game()
+	Cooldown.start("life")
+	app.show_state()
+	await _frames(3)
+	var life: Control = app.current
+	var one := _find(life, "Auto: this life")
+	ok(one.text == "Auto: this life (1:00)" and not life.cool_timer.is_stopped(), "waiting: the timer runs")
+	clock_t += 5.0
+	await create_timer(1.2).timeout
+	ok(one.text == "Auto: this life (0:55)", "the timer alone updates the text: '%s'" % one.text)
+	life.actions_scroll.scroll_vertical = 100000
+	await _frames(3)
+	var seen := await _hold(one, float(UiSettings.setting("hold_seconds")) + 0.05)
+	ok(seen == "Ready in 0:55", "a hold shows the time left: '%s'" % seen)
+	app.hints.hide_hint()
+	await _down(_center(one))
+	app.hints.tick(float(UiSettings.setting("hold_seconds")) + 0.05)
+	clock_t += 10.0
+	await create_timer(1.2).timeout
+	app.hints.tick(0.1)
+	ok(app.hints.shown_text == "Ready in 0:45" and app.hints.text.text == "Ready in 0:45", "a bubble still up follows the countdown: '%s'" % app.hints.shown_text)
+	await _up(_center(one))
+	app.hints.hide_hint()
+	clock_t += 100.0
+	await create_timer(1.2).timeout
+	ok(not one.disabled and one.text == "Auto: this life" and life.cool_timer.is_stopped(), "when the time is up the timer restores the button and stops")
 	Cooldown.clock = Callable()
 	Cooldown.forget()
 	DirAccess.remove_absolute(UiSettings.path)

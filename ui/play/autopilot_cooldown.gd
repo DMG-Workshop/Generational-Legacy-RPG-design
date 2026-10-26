@@ -36,7 +36,8 @@ static func forget() -> void:
 
 static func _at(id: String) -> float:
 	if not ready_at.has(id):
-		var v := float(UiSettings.stored(_key(id), 0.0))   # files from before the setting have no key
+		var raw: Variant = UiSettings.stored(_key(id), 0.0)   # files from before the setting have no key
+		var v := float(raw) if typeof(raw) == TYPE_INT or typeof(raw) == TYPE_FLOAT else 0.0   # anything else reads as ready
 		ready_at[id] = 0.0 if is_nan(v) or is_inf(v) else minf(v, now() + seconds(id))
 	return ready_at[id]
 
