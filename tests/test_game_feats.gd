@@ -229,6 +229,11 @@ func test_broken_data() -> void:
 	s["point_levels"] = [5, 3, 200000]
 	ok(GameFeats.validate().any(func(e): return str(e).find("point_levels must rise") >= 0), "milestones out of order are reported")
 	s["point_levels"] = keep
+	var decay: Variant = s["bot_role_decay"]
+	for bad in [0.0, -0.5, 1.5]:
+		s["bot_role_decay"] = bad
+		ok(GameFeats.validate().any(func(e): return str(e).find("bot_role_decay must be above 0") >= 0), "a role decay of %s is reported" % str(bad))
+	s["bot_role_decay"] = decay
 	GameFeats.reindex()
 	ok(GameFeats.validate().is_empty(), "the data is sound again")
 

@@ -827,6 +827,8 @@ static func validate() -> Array:
 			out.append("settings has no %s" % key)
 	if not out.is_empty():
 		return out
+	if float(s["bot_role_decay"]) <= 0.0 or float(s["bot_role_decay"]) > 1.0:
+		out.append("settings bot_role_decay must be above 0 and at most 1")
 	var cap := int(GameData.bal("level_cap"))
 	var last := 1
 	for lv in s["point_levels"]:

@@ -676,6 +676,8 @@ func _fit_commands() -> void:
 	if not is_inside_tree():
 		return
 	await get_tree().process_frame
+	if not is_inside_tree() or not is_instance_valid(command_box):
+		return
 	var cols: Array = command_box.get_children().filter(func(c): return c is Container and is_instance_valid(c))
 	if cols.is_empty():
 		return
@@ -717,7 +719,7 @@ func _column_need(col: Node) -> float:
 		if btn is Button:
 			var widest := 0.0
 			for line in (btn as Button).text.split("\n"):
-				widest = maxf(widest, ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, (btn as Button).get_theme_font_size("font_size")).x)
+				widest = maxf(widest, (btn as Button).get_theme_font("font").get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, (btn as Button).get_theme_font_size("font_size")).x)
 			need = maxf(need, widest + (btn as Button).get_theme_stylebox("normal").get_minimum_size().x + 2.0)
 	return need
 
