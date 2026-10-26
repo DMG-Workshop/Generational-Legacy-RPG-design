@@ -79,8 +79,8 @@ static func script_cmd(b: GameBattle, seed_val: int) -> Dictionary:
 			var i := 1 if step == 7 else 0
 			if i < b.skill_count() and b.can_use_skill(i):
 				var ab := b.skill_info(i)
-				if not GameCombat.aims_at_foe(ab):
-					return {"act": "ability", "kind": "skill", "id": str(ab["id"]), "target": ""}
+				if not GameCombat.aims_at_foe(ab):   # a single heal is for the heir (the old calls' -1)
+					return {"act": "ability", "kind": "skill", "id": str(ab["id"]), "target": "heir" if ab.has("pct_max_hp") and not ab.get("party", false) else ""}
 				if not b.aoe_hits(ab, -1, living[0]).is_empty():
 					return {"act": "ability", "kind": "skill", "id": str(ab["id"]), "target": first}
 		2:

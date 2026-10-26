@@ -42,6 +42,9 @@ func _init() -> void:
 		if a.begins_with("seeds="):
 			seeds = int(a.get_slice("=", 1))
 	test_baseline(seeds)
+	test_manual_heir_through_rounds(seeds)
+	test_all_auto_rounds(seeds)
+	test_replay()
 	print("round determinism tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -90,3 +93,106 @@ func first_difference(old_log: Array, new_log: Array) -> String:
 		if a != b:
 			return " at log line %d:\n    was: %s\n    now: %s" % [i, a, b]
 	return " (logs match; state or events differ)"
+
+
+# ---------------------------------------------------------------- B, C, D: GameRound against the direct calls
+
+const MARKERS := ["round", "act", "foes"]
+
+
+## Events of one round without GameRound's markers: what the direct calls produce.
+func _plain(events: Array) -> Array:
+	return events.filter(func(e): return e["type"] not in MARKERS).duplicate(true)
+
+
+## The scripted heir or auto_turn through the battle's own calls: [log, trail, state, dynasty].
+func _direct(mode: String, seed_val: int, cls: String, n: int, kind: String) -> Dictionary:
+	var d := Scen.make(seed_val, cls, n, kind)
+	var b := d.battle
+	var trail: Array = []
+	var guard := 0
+	while not b.is_over() and guard < Scen.GUARD:
+		guard += 1
+		if mode == "auto_turn":
+			GameTactics.auto_turn(b)
+		else:
+			var coat := Scen.script_coat(b, seed_val)
+			if coat != "":
+				b.coat_blade(coat)
+				trail.append([b.log.size(), b.events.duplicate(true)])
+			var before := b.turn
+			Scen.direct(b, Scen.script_cmd(b, seed_val))
+			if b.result == "" and b.turn == before:
+				b.attack(b.first_target())
+		trail.append([b.log.size(), b.events.duplicate(true)])
+	d.finish_battle()
+	return {"log": b.log, "trail": trail, "state": Scen.state_of(b), "dynasty": d.to_dict()}
+
+
+## The same through GameRound: the heir by hand (or Auto too), the companions Auto.
+func _rounds(mode: String, seed_val: int, cls: String, n: int, kind: String) -> Dictionary:
+	var d := Scen.make(seed_val, cls, n, kind)
+	var b := d.battle
+	d.auto_party = {"companion_default": true}
+	if mode == "auto_turn":
+		d.auto_party["heir"] = true
+	var r := d.battle_round()
+	var trail: Array = []
+	var guard := 0
+	var refused := 0
+	while not b.is_over() and guard < Scen.GUARD:
+		guard += 1
+		if mode == "manual":
+			var coat := Scen.script_coat(b, seed_val)
+			if coat != "":
+				r.coat(coat)
+				trail.append([b.log.size(), b.events.duplicate(true)])
+			if r.state_of(-1) == "ready" and r.queue(-1, Scen.script_cmd(b, seed_val)) != "":
+				refused += 1
+				r.queue(-1, {"act": "attack", "target": "enemy:%d" % b.first_target()})
+		if not r.resolve()["played"]:
+			break
+		trail.append([b.log.size(), _plain(b.events)])
+	var hold_left := b.round_on or b.round_marks or not b.round_cmds.is_empty() or not b.braced.is_empty()
+	d.finish_battle()
+	d.auto_party = {}
+	return {"log": b.log, "trail": trail, "state": Scen.state_of(b), "dynasty": d.to_dict(), "refused": refused, "hold": hold_left}
+
+
+func _compare(mode: String, seed_val: int, cls: String, n: int, kind: String) -> void:
+	var tag := "%s %d %s x%d %s" % [mode, seed_val, cls, n, kind]
+	var a := _direct(mode, seed_val, cls, n, kind)
+	var b := _rounds(mode, seed_val, cls, n, kind)
+	ok(not b["hold"], "%s: the hold is off after the fight" % tag)
+	ok(b["refused"] == 0, "%s: the script's commands are all legal" % tag)
+	var same_log: bool = a["log"] == b["log"]
+	ok(same_log, "%s: same log%s" % [tag, "" if same_log else first_difference(a["log"], b["log"])])
+	ok(Scen.digest(a["state"]) == Scen.digest(b["state"]), "%s: same end state and RNG" % tag)
+	ok(Scen.digest(a["trail"]) == Scen.digest(b["trail"]), "%s: same events round by round" % tag)
+	ok(Scen.digest(a["dynasty"]) == Scen.digest(b["dynasty"]), "%s: same dynasty afterwards" % tag)
+
+
+func test_manual_heir_through_rounds(seeds: int) -> void:
+	var top := 8 if seeds <= 0 else mini(seeds, 8)
+	for s in range(1, top + 1):
+		for ci in Scen.CLASSES.size():
+			for n in [1, 3]:
+				_compare("manual", s, Scen.CLASSES[ci], n, Scen.KINDS[(s + ci + n) % Scen.KINDS.size()])
+
+
+func test_all_auto_rounds(seeds: int) -> void:
+	var top := 6 if seeds <= 0 else mini(seeds, 6)
+	for s in range(1, top + 1):
+		for ci in Scen.CLASSES.size():
+			for n in [0, 1, 3]:
+				_compare("auto_turn", s, Scen.CLASSES[ci], n, Scen.KINDS[(s + ci + n) % Scen.KINDS.size()])
+
+
+func test_replay() -> void:
+	for s in [3, 9]:
+		var a := _rounds("manual", s, "warrior", 3, "hunt")
+		var b := _rounds("manual", s, "warrior", 3, "hunt")
+		ok(Scen.digest(a) == Scen.digest(b), "the same seed and script replay identically (seed %d)" % s)
+	var c := _rounds("manual", 3, "warrior", 3, "hunt")
+	var d := _rounds("manual", 4, "warrior", 3, "hunt")
+	ok(Scen.digest(c) != Scen.digest(d), "and another seed does not")
