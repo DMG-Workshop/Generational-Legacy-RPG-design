@@ -672,6 +672,8 @@ func _lay_out_commands(cols: Array) -> void:
 ## shrinks a point at a time (down to MIN_COMMAND_FONT); then each column is kept as wide as its
 ## widest text needs, the spare room shared out as before.
 func _fit_commands() -> void:
+	if not is_inside_tree():   # the view can be gone before the deferred call runs
+		return
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return
