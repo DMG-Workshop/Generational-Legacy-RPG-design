@@ -18,7 +18,14 @@ func _init() -> void:
 			seeds = int(args[i].get_slice("=", 1))
 	var digests := {}
 	var logs := {}
-	for k in Scen.all_keys(seeds):
+	var keys: Array = Scen.all_keys(seeds)
+	var merge := "--only-flee" in args   # add the flee scenarios to a fixture already captured
+	if merge:
+		keys = Scen.flee_keys()
+		var old = JSON.parse_string(FileAccess.get_file_as_string(out_path))
+		digests = old["digests"]
+		logs = old["logs"]
+	for k in keys:
 		var first: bool = (k.split("|")[1] == "1")
 		var r: Dictionary = Scen.run_key(k, first)
 		digests[k] = r["digest"]

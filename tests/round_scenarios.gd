@@ -9,6 +9,7 @@ const PARTY_SIZES := [0, 1, 3]
 const KINDS := ["hunt", "hunt_hard", "legend"]
 const COMPANIONS := ["bren_cask", "sister_oriel", "maddy_thorn", "hulda_stonebrow", "tarsk_ember_eye", "ser_aldric_vane", "old_netta", "grull_one_tusk"]
 const MODES := ["bot", "auto_turn", "manual"]
+const FLEE_SEEDS := 60   # the "flee" scenarios: many flee rolls, so a changed chance shows
 const GUARD := 300
 
 
@@ -182,11 +183,28 @@ static func run(mode: String, seed_val: int, cls: String, n: int, kind: String, 
 					b.attack(b.first_target())
 				trail.append([b.log.size(), b.events.duplicate(true)])
 			d.finish_battle()
+	if mode == "flee":
+		while not b.is_over() and guard < GUARD:
+			guard += 1
+			var before := b.turn
+			if flee_now(b, seed_val):
+				b.flee()
+			else:
+				b.attack(b.first_target())
+			if b.result == "" and b.turn == before:
+				b.attack(b.first_target())
+			trail.append([b.log.size(), b.events.duplicate(true)])
+		d.finish_battle()
 	var payload := {"log": b.log, "trail": trail, "state": state_of(b), "dynasty": d.to_dict()}
 	var out := {"digest": digest(payload), "lines": b.log.size()}
 	if with_log:
 		out["log"] = b.log
 	return out
+
+
+## Whether the "flee" scenario's heir runs this turn: most turns, so the flee roll is thrown again and again.
+static func flee_now(b: GameBattle, seed_val: int) -> bool:
+	return (b.turn + seed_val) % 4 != 3
 
 
 ## A few lives of the autopilot: the whole save after each generation.
@@ -215,6 +233,15 @@ static func all_keys(seeds: int = 40) -> Array:
 					out.append(key(mode, s, CLASSES[ci], PARTY_SIZES[pi], kind))
 	for s in range(1, 7):
 		out.append("live|%d" % s)
+	return out
+
+
+## The flee scenarios (added after the first baseline; captured from the same origin/main).
+static func flee_keys() -> Array:
+	var out: Array = []
+	for s in range(1, FLEE_SEEDS + 1):
+		for n in PARTY_SIZES:
+			out.append(key("flee", s, CLASSES[(s + n) % CLASSES.size()], n, "hunt"))
 	return out
 
 

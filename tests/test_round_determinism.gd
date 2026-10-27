@@ -44,6 +44,8 @@ func _init() -> void:
 	test_baseline(seeds)
 	test_manual_heir_through_rounds(seeds)
 	test_all_auto_rounds(seeds)
+	test_flee_through_rounds(seeds)
+	test_flee_chance_pinned()
 	test_replay()
 	print("round determinism tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -115,6 +117,14 @@ func _direct(mode: String, seed_val: int, cls: String, n: int, kind: String) -> 
 		guard += 1
 		if mode == "auto_turn":
 			GameTactics.auto_turn(b)
+		elif mode == "flee":
+			var before := b.turn
+			if Scen.flee_now(b, seed_val):
+				b.flee()
+			else:
+				b.attack(b.first_target())
+			if b.result == "" and b.turn == before:
+				b.attack(b.first_target())
 		else:
 			var coat := Scen.script_coat(b, seed_val)
 			if coat != "":
@@ -142,6 +152,8 @@ func _rounds(mode: String, seed_val: int, cls: String, n: int, kind: String) -> 
 	var refused := 0
 	while not b.is_over() and guard < Scen.GUARD:
 		guard += 1
+		if mode == "flee":
+			r.queue(-1, {"act": "flee"} if Scen.flee_now(b, seed_val) else {"act": "attack", "target": "enemy:%d" % b.first_target()})
 		if mode == "manual":
 			var coat := Scen.script_coat(b, seed_val)
 			if coat != "":
@@ -196,3 +208,40 @@ func test_replay() -> void:
 	var c := _rounds("manual", 3, "warrior", 3, "hunt")
 	var d := _rounds("manual", 4, "warrior", 3, "hunt")
 	ok(Scen.digest(c) != Scen.digest(d), "and another seed does not")
+
+
+## The old flow when the heir flees with companions on their own (flee_covers_party is false by default).
+func test_flee_through_rounds(seeds: int) -> void:
+	var top := 20 if seeds <= 0 else mini(seeds, 20)
+	for s in range(1, top + 1):
+		for n in [1, 3]:
+			_compare("flee", s, Scen.CLASSES[(s + n) % Scen.CLASSES.size()], n, "hunt")
+
+
+## The flee roll's base chance is pinned: a roll just either side of it decides the fight.
+func test_flee_chance_pinned() -> void:
+	for n in [0, 3]:
+		for want in [true, false]:
+			var probe := Scen.make(5, "warrior", n, "hunt")
+			var h := probe.heir
+			var chance := clampf(0.45 + h.trait_total("stealth") + h.trait_total("intimidation") * 0.5 + h.dodge_chance() * 0.3, 0.1, 0.9)
+			var found := -1
+			for sd in range(1, 100000):
+				var p := RandomNumberGenerator.new()
+				p.seed = sd
+				var roll := p.randf()
+				if (want and roll >= chance - 0.009 and roll <= chance - 0.001) or (not want and roll >= chance + 0.001 and roll <= chance + 0.009):
+					found = sd
+					break
+			ok(found > 0, "a roll beside the flee chance exists (%d companions, success %s)" % [n, want])
+			var d := Scen.make(5, "warrior", n, "hunt")
+			d.battle.rng.seed = found
+			d.auto_party = {"companion_default": true}
+			var r := d.battle_round()
+			r.queue(-1, {"act": "flee"})
+			r.resolve()
+			ok((d.battle.result == "fled") == want, "the flee chance sits at %.3f: a roll of %s it %s (%d companions)" % [chance, "just under" if want else "just over", "escapes" if want else "fails", n])
+			var e := Scen.make(5, "warrior", n, "hunt")
+			e.battle.rng.seed = found
+			e.battle.flee()
+			ok((e.battle.result == "fled") == want, "(the old call agrees)")
