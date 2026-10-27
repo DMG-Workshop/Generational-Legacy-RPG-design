@@ -1,11 +1,15 @@
 ## Side-view battle rendering. All rules live in GameBattle; this only draws and forwards input.
 ## Every combatant stands where the battle placed it (paces, see GameCombat); an area ability is
-## shown on the field, with every foe it would catch outlined, before it is cast.
+## shown on the field, with every foe it would catch outlined, before it is cast. With companions the
+## player decides for each member of the party in turn (GameRound); the party strip shows who is
+## asked and what is queued, and Fight! plays the whole round. A solo hunt has no strip: its one
+## command is played at once, as ever.
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const PartyStrip := preload("res://ui/play/party_strip.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
 
@@ -28,7 +32,7 @@ var command_box: HBoxContainer
 var target: int = 0
 var busy: bool = false
 var result_shown: bool = false
-var aiming: Dictionary = {}    # {ab, skill, spell, feat (slot or -1)} while the player picks where an ability lands
+var aiming: Dictionary = {}    # {by, ab, cmd, aim, skill, spell, feat (slot or -1), item} while the player picks where an ability lands
 var aim_at: int = -1
 var shown: Dictionary = {}     # {ab, at}: the area drawn on the field
 var spell_list: Control = null
@@ -46,6 +50,13 @@ var cmd_w := 600.0              # the command panel's width: narrower on a narro
 var figure_scale := 1.0         # figures shrink to fit a short arena (a phone, large text)
 var bottom: HBoxContainer       # the log and the command panel
 var cmd_panel: PanelContainer
+var cmd_round: GameRound = null # the command round: whose move is asked, what is queued (null while auto-battle fights)
+var active_by: int = -1         # the member whose command is being chosen: -1 the heir, else a companion's index
+var strip: PartyStrip = null    # one chip per member, only with companions
+var top_bar: HBoxContainer      # the title (or, on a short screen, the strip) and the Auto-battle button
+var title_label: Label
+var root_box: VBoxContainer
+var _held_waiting := false      # a held party's pass is due once held_pass_seconds have gone
 
 const AUTO_PACE := 0.4
 
@@ -62,20 +73,27 @@ func _ready() -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 8)
 	margin.add_child(root)
+	root_box = root
 
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 12)
-	root.add_child(top)
-	var title := Kit.label("Battle: %s" % _foe_list(), 22, Kit.ACCENT)
-	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	title.clip_text = true
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(title)
+	top_bar = HBoxContainer.new()
+	top_bar.add_theme_constant_override("separation", 12)
+	root.add_child(top_bar)
+	title_label = Kit.label("Battle: %s" % _foe_list(), 22, Kit.ACCENT)
+	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	title_label.clip_text = true
+	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_bar.add_child(title_label)
 	auto = GameTactics.auto_from_start(d)
 	auto_button = Kit.button("", func(): set_auto(not auto), Vector2(190, 34))
 	auto_button.add_theme_font_size_override("font_size", 15)
-	top.add_child(auto_button)
+	top_bar.add_child(auto_button)
 	_show_auto()
+	if _party():
+		strip = PartyStrip.new()
+		strip.chip_pressed.connect(_on_chip)
+		_place_strip()
+	if not auto:
+		cmd_round = d.battle_round()
 
 	var ap := Kit.panel(Color("#191726"))
 	ap.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -119,6 +137,9 @@ func _ready() -> void:
 	if not b.allies.is_empty():
 		var party: Array = b.allies.map(func(a): return a.name)
 		_say("%s fight%s beside %s." % [GameParty.names_text(party), "s" if party.size() == 1 else "", d.heir.name])
+		if not d.flags.has("round_hint"):   # told once: how a party battle is played
+			d.flags["round_hint"] = d.gen
+			_say("Pick a move for each of your party, then %s Fight!. %s a name to change a choice; Auto lets that one fight on their own." % [Kit.click(), Kit.click().capitalize()])
 
 
 ## "Dire Wolf x3, Elite Dire Wolf" - the same foe is counted, not repeated.
@@ -142,6 +163,8 @@ func _size_commands() -> void:
 	cmd_w = clampf(room.x - 420.0, 480.0, 600.0)
 	if room.y < float(UiSettings.setting("short_height")):   # four or five columns of commands
 		cmd_w = clampf(room.x - 330.0, 480.0, 760.0)
+	if _party():   # and a column for Auto and Back
+		cmd_w += float(UiSettings.setting("party_cmd_extra_w"))
 
 
 func _fit_bottom() -> void:
@@ -156,6 +179,7 @@ func relayout() -> void:
 	Kit.retap(self)   # buttons built once (Auto-battle, the result's) take the touch layout's height
 	_size_commands()
 	_fit_bottom()
+	_place_strip()
 	if result_shown or busy:
 		return
 	_close_spells()
@@ -165,7 +189,8 @@ func relayout() -> void:
 	_build_commands()
 
 
-## Android's back button: drop an aim, else shut an open list. False when there is nothing to undo.
+## Android's back button: drop an aim, else shut an open list, else take back the last member's
+## choice. False when there is nothing to undo.
 func back() -> bool:
 	if result_shown:
 		return false
@@ -179,6 +204,8 @@ func back() -> bool:
 		_close_skills()
 	elif poison_list != null:
 		_close_poisons()
+	elif _can_undo():
+		_undo()
 	else:
 		return false
 	return true
@@ -195,6 +222,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif poison_list != null:
 		_close_poisons()
+		get_viewport().set_input_as_handled()
+	elif _can_undo():
+		_undo()
 		get_viewport().set_input_as_handled()
 
 
@@ -215,6 +245,7 @@ func _build_actors() -> void:
 	hero_body.color = Color(cls["color"])
 	hero_body.size = Vector2(80, 110)
 	hero_body.position = Vector2(22, 34)
+	hero_body.gui_input.connect(func(ev: InputEvent): _on_party_input(-1, ev))
 	hero_node.add_child(hero_body)
 	var head := ColorRect.new()
 	head.color = Color("#f0d9b5")
@@ -318,6 +349,8 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	body.color = Color(a.cls()["color"])
 	body.size = Vector2(58, 72)
 	body.position = Vector2(26, 28)
+	var by := ally_nodes.size()   # this companion's index: the figures are built in party order
+	body.gui_input.connect(func(ev: InputEvent): _on_party_input(by, ev))
 	root.add_child(body)
 	var head := ColorRect.new()
 	head.color = Color(a.race().get("color", "#f0d9b5"))
@@ -419,7 +452,7 @@ func _draw_field() -> void:
 	var at := b._valid_target(int(shown["at"]))
 	if at < 0:
 		return
-	var origin := b.cast_point(-1)
+	var origin := b.cast_point(int(shown["by"]))
 	var aim := b.enemy_point(at)
 	var t: Dictionary = ab.get("target", {})
 	var pts := PackedVector2Array()
@@ -467,7 +500,7 @@ func _draw_ground() -> void:
 
 
 func _show_area(ab: Dictionary, at: int) -> void:
-	shown = {} if ab.is_empty() or not GameCombat.aims_at_foe(ab) else {"ab": ab, "at": at}
+	shown = {} if ab.is_empty() or not GameCombat.aims_at_foe(ab) else {"ab": ab, "at": at, "by": active_by}
 	_update_marks()
 	field.queue_redraw()
 
@@ -480,6 +513,8 @@ func _on_foe_input(idx: int, ev: InputEvent) -> void:
 	if aiming.is_empty():
 		target = idx
 		_update_marks()
+	elif str(aiming.get("aim", "")) == "ally":
+		return   # a heal asks whom among the party, not which foe
 	elif idx == aim_at:
 		_confirm_aim()
 	else:
@@ -489,7 +524,7 @@ func _on_foe_input(idx: int, ev: InputEvent) -> void:
 
 
 func _on_foe_hover(idx: int, inside: bool) -> void:
-	if aiming.is_empty() or busy or b.enemies[idx]["hp"] <= 0:
+	if aiming.is_empty() or busy or b.enemies[idx]["hp"] <= 0 or str(aiming.get("aim", "")) == "ally":
 		return
 	var at := idx if inside else aim_at
 	_show_area(aiming["ab"], at)
@@ -499,18 +534,28 @@ func _on_foe_hover(idx: int, inside: bool) -> void:
 
 ## An area ability waits for the player to pick where it lands; single strikes go to the target.
 ## Aiming starts on the target if the area reaches it, else on the first foe it does reach; a
-## plague vial starts where its burst catches the most foes.
-func _begin_aim(ab: Dictionary, skill: int, spell: String, feat: int = -1, item: String = "") -> void:
-	aiming = {"ab": ab, "skill": skill, "spell": spell, "feat": feat, "item": item}
+## plague vial starts where its burst catches the most foes. `cmd` is what it queues (made from the
+## other arguments when not given): the active member's, with the foe set when it is confirmed.
+func _begin_aim(ab: Dictionary, skill: int, spell: String, feat: int = -1, item: String = "", cmd: Dictionary = {}) -> void:
+	var by := active_by
+	if cmd.is_empty():
+		cmd = _ability_cmd(by, skill, spell, feat, item)
+	aiming = {"by": by, "ab": ab, "cmd": cmd, "aim": "area", "skill": skill, "spell": spell, "feat": feat, "item": item}
 	aim_at = b._valid_target(target)
 	if item != "":
 		aim_at = GamePlague.best_aim(b, ab, aim_at)
-	if aim_at not in b.aoe_targets(ab, -1, aim_at):
+	if aim_at not in b.aoe_targets(ab, by, aim_at):
 		for i in b.living_enemies():
-			if i in b.aoe_targets(ab, -1, i):
+			if i in b.aoe_targets(ab, by, i):
 				aim_at = i
 				break
 	_show_area(ab, aim_at)
+	_build_commands()
+
+
+## A single heal asks whom among the party: a name on the strip, a figure, or the most hurt.
+func _begin_ally_aim(row: Dictionary) -> void:
+	aiming = {"by": active_by, "ab": row["ab"], "cmd": (row["cmd"] as Dictionary).duplicate(true), "aim": "ally", "skill": -1, "spell": "", "feat": -1, "item": ""}
 	_build_commands()
 
 
@@ -521,7 +566,7 @@ func _cancel_aim() -> void:
 
 
 func _confirm_aim() -> void:
-	if aiming.is_empty() or b.aoe_targets(aiming["ab"], -1, aim_at).is_empty():
+	if aiming.is_empty() or str(aiming["aim"]) == "ally" or b.aoe_targets(aiming["ab"], int(aiming["by"]), aim_at).is_empty():
 		return
 	var plan := aiming
 	var at := aim_at
@@ -529,43 +574,172 @@ func _confirm_aim() -> void:
 	_show_area({}, -1)
 	if float(plan["ab"].get("mult", 0.0)) > 0.0:
 		target = at
-	if str(plan.get("item", "")) != "":
-		_do(func(): b.throw_vial(str(plan["item"]), at))
-	elif int(plan.get("feat", -1)) >= 0:
-		_do(func(): b.use_feat(int(plan["feat"]), at))
-	elif int(plan["skill"]) >= 0:
-		_do(func(): b.use_skill(int(plan["skill"]), at))
-	else:
-		_do(func(): b.cast_spell(str(plan["spell"]), at))
+	var cmd: Dictionary = (plan["cmd"] as Dictionary).duplicate(true)
+	if cmd_round.aim_of(cmd, int(plan["by"])) == "area":   # aimed at a foe; an around-self burst is not
+		cmd["target"] = "enemy:%d" % at
+	_submit(int(plan["by"]), cmd)
 
 
-func _use_skill(i: int) -> void:
-	var s := b.skill_info(i)
-	if GameCombat.is_aoe(s):
-		_begin_aim(s, i, "")
-	else:
-		_do(func(): b.use_skill(i, target))
+## The heal goes to `by` (a name or figure that was picked), or "" for the most hurt at their turn.
+func _confirm_ally(by: int, most_hurt: bool = false) -> void:
+	if aiming.is_empty() or str(aiming["aim"]) != "ally" or (not most_hurt and b.unit(by).hp <= 0):
+		return
+	var plan := aiming
+	aiming = {}
+	var cmd: Dictionary = (plan["cmd"] as Dictionary).duplicate(true)
+	cmd["target"] = "" if most_hurt else GameBattle.ref_of(by)
+	_submit(int(plan["by"]), cmd)
 
 
-func _use_spell(id: String) -> void:
+## The command for an ability named the old way: a skill's index, a spell's id, a feat's slot, a vial.
+func _ability_cmd(by: int, skill: int, spell: String, feat: int, item: String) -> Dictionary:
+	var id := spell
+	var kind := "spell"
+	if item != "":
+		kind = "vial"
+		id = item
+	elif feat >= 0:
+		kind = "feat"
+		id = str(b.unit_feats(by)[feat]) if feat < b.unit_feats(by).size() else ""
+	elif skill >= 0:
+		kind = "skill"
+		var skills: Array = GameSkillTree.skills(b.unit(by))
+		id = str(skills[skill]["id"]) if skill < skills.size() else ""
+	return {"act": "ability", "kind": kind, "id": id, "target": ""}
+
+
+## A command button was pressed: the row says what it is, what it costs and how it is aimed.
+## Area abilities wait to be aimed; a foe aim takes the highlighted foe; a heal asks whom.
+func _choose(row: Dictionary) -> void:
+	if busy or cmd_round == null or b.is_over():
+		return
+	var cmd: Dictionary = (row["cmd"] as Dictionary).duplicate(true)
+	var ab: Dictionary = row["ab"]
+	if not ab.is_empty() and GameCombat.is_aoe(ab):
+		var keys := _ability_keys(active_by, cmd)
+		_begin_aim(ab, int(keys[0]), str(keys[1]), int(keys[2]), str(keys[3]), cmd)
+		return
+	match str(row["aim"]):
+		"foe":
+			cmd["target"] = "enemy:%d" % b._valid_target(target)
+		"ally":
+			if cmd_round.members().size() > 1:
+				_begin_ally_aim(row)
+				return
+	_submit(active_by, cmd)
+
+
+## The old-style handles of an ability command: [skill index, spell id, feat slot, vial id].
+func _ability_keys(by: int, cmd: Dictionary) -> Array:
+	var id := str(cmd.get("id", ""))
+	match str(cmd.get("kind", "")):
+		"vial":
+			return [-1, "", -1, id]
+		"feat":
+			return [-1, "", b.unit_feats(by).find(id), ""]
+		"skill":
+			var skills: Array = GameSkillTree.skills(b.unit(by))
+			for i in skills.size():
+				if str(skills[i].get("id", "")) == id:
+					return [i, "", -1, ""]
+			return [-1, "", -1, ""]
+	return [-1, id, -1, ""]
+
+
+## Queues the member's command. A refused one says why and nothing changes; once the round is
+## ready and only one member took orders, it plays at once (a solo hunt, as ever).
+func _submit(by: int, cmd: Dictionary) -> void:
+	if busy or cmd_round == null:
+		return
 	_close_spells()
-	var sp := b.unit_spell(-1, id)
-	if GameCombat.is_aoe(sp):
-		_begin_aim(sp, -1, id)
-	else:
-		_do(func(): b.cast_spell(id, target))
-
-
-func _use_feat(slot: int) -> void:
+	_close_skills()
 	_close_feats()
-	var ab := b.unit_feat(-1, b.feat_in_slot(slot))
-	if GameCombat.is_aoe(ab):
-		_begin_aim(ab, -1, "", slot)
+	var why := cmd_round.queue(by, cmd)
+	if why != "":
+		_build_commands()
+		hint.text = why
+		return
+	if cmd_round.ready() and cmd_round.auto_commits():
+		_commit()
 	else:
-		_do(func(): b.use_feat(slot, target))
+		_build_commands()
+
+
+## Fight! (or Flee!), or the only command a solo hunt needs: the round plays out.
+func _commit() -> void:
+	if busy or cmd_round == null or not cmd_round.ready():
+		return
+	_do(func(): cmd_round.resolve())
+
+
+func _can_undo() -> bool:
+	return cmd_round != null and not busy and not auto and not result_shown and bool(cmd_round.view()["can_back"])
+
+
+## The last member to choose is asked again.
+func _undo() -> void:
+	if busy or cmd_round == null:
+		return
+	aiming = {}
+	_show_area({}, -1)
+	_close_spells()
+	_close_skills()
+	_close_feats()
+	cmd_round.back()
+	_build_commands()
+
+
+func _repeat() -> void:
+	if busy or cmd_round == null:
+		return
+	var res := cmd_round.repeat_last()
+	_build_commands()
+	var fallback: Array = (res["fallback"] as Array).map(func(by): return b.unit(by).name)
+	if not fallback.is_empty():
+		hint.text = "%s fight%s on their own this round." % [GameParty.names_text(fallback), "s" if fallback.size() == 1 else ""]
+
+
+func _set_member_auto(by: int) -> void:
+	if busy or cmd_round == null:
+		return
+	cmd_round.set_auto(by, true)
+	_build_commands()
+
+
+## A tap on a party chip: it picks the heal's target while one is asked; otherwise it asks that
+## member (a queued one to change their mind, an Auto one to take over). Held and fallen members
+## cannot be asked.
+func _on_chip(by: int) -> void:
+	if busy or cmd_round == null or auto or result_shown:
+		return
+	if str(aiming.get("aim", "")) == "ally":
+		_confirm_ally(by)
+		return
+	if cmd_round.state_of(by) != "ready":
+		return
+	if bool(cmd_round.auto.get(by, false)):
+		cmd_round.set_auto(by, false)
+	elif not cmd_round.focus(by):
+		return
+	aiming = {}
+	_show_area({}, -1)
+	_close_spells()
+	_close_skills()
+	_close_feats()
+	_build_commands()
+
+
+func _on_party_input(by: int, ev: InputEvent) -> void:
+	if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and not busy and str(aiming.get("aim", "")) == "ally":
+		_confirm_ally(by)
 
 
 # ---------------------------------------------------------------- commands
+
+## The fight has companions: each member's command is asked in turn.
+func _party() -> bool:
+	return not b.allies.is_empty()
+
 
 func _build_commands() -> void:
 	Kit.clear(command_box)
@@ -573,48 +747,68 @@ func _build_commands() -> void:
 	if auto and not b.is_over():
 		_build_auto_commands()
 		return
+	if cmd_round == null or b.is_over():
+		return
+	_sync_strip()
 	if not aiming.is_empty():
 		_build_aim_commands()
 		return
-	hint.text = "Commands  (%s an enemy to target it)" % Kit.click()
+	if cmd_round.ready():
+		if _all_held():
+			_pass_held()
+		else:
+			_build_confirm()
+		return
+	if cmd_round.cursor == -2:
+		return
+	active_by = cmd_round.cursor
+	var by := active_by
+	var u := b.unit(by)
+	var rows: Array = cmd_round.menu(by)
+	hint.text = _command_hint(by)
+	var cols := 4.0 if _party() else 3.0
 	var col1 := VBoxContainer.new()
 	var col2 := VBoxContainer.new()
 	var col3 := VBoxContainer.new()
-	col1.add_child(Kit.button("Attack", func(): _do(func(): b.attack(target))))
-	col1.add_child(Kit.button("Defend", func(): _do(func(): b.defend())))
-	var readied: Array = b.unit_feats(-1)
-	var ready := range(readied.size()).filter(func(k): return b.can_use_feat(k)).size()
-	var fb := Kit.button("Feats (%d ready)" % ready if not readied.is_empty() else "Feats", func(): _open_feats())
-	if not readied.is_empty():
+	col1.add_child(_basic_button("Attack", _basic(rows, "attack")))
+	col1.add_child(_basic_button("Defend", _basic(rows, "defend")))
+	var feats := _group(rows, "feat")
+	var ready := feats.filter(func(r): return r["enabled"]).size()
+	var fb := Kit.button("Feats (%d ready)" % ready if not feats.is_empty() else "Feats", func(): _open_feats())
+	if not feats.is_empty():
 		fb.set_meta("compact", "Feats (%d)" % ready)
-	fb.disabled = readied.is_empty()
-	fb.tooltip_text = "%s's readied feats: no MP, a cooldown each." % d.heir.name if not readied.is_empty() else "%s has no feats readied." % d.heir.name
+	fb.disabled = feats.is_empty()
+	fb.tooltip_text = "%s's readied feats: no MP, a cooldown each." % u.name if not feats.is_empty() else "%s has no feats readied." % u.name
 	col1.add_child(fb)
 	# One button per skill open from level 1; every later class skill is in the Skills list.
-	var first := mini(GameSkills.first_count(d.heir.class_id), b.skill_count())
-	for i in first:
-		var s := b.skill_info(i)
-		var idx := i
-		var cost := b.pay_text(-1, b.skill_cost(i))
-		var one := "%s (%s)" % [s["name"], cost]
-		var two := _short() or not _fits(one, 14, (cmd_w - 40.0) / 3.0 - 20.0)
-		var btn := _small_button("%s\n%s" % [s["name"], cost] if two else one, func(): _use_skill(idx))
+	var skills := _group(rows, "skill")
+	var later: Array = []
+	for row in skills:
+		if not row["first"]:
+			later.append(row)
+			continue
+		var s: Dictionary = row["ab"]
+		var one := "%s (%s)" % [s["name"], row["cost"]]
+		var two := _short() or not _fits(one, 14, (cmd_w - 40.0) / cols - 20.0)
+		var btn := _small_button("%s\n%s" % [s["name"], row["cost"]] if two else one, func(): _choose(row))
 		if two:   # the cost under the name: a narrow column cannot hold both on one line
 			btn.add_theme_font_size_override("font_size", 13)
 			btn.add_theme_constant_override("line_spacing", -2)
-		btn.disabled = not b.can_use_skill(i)
+		btn.disabled = not row["enabled"]
 		btn.tooltip_text = "%s  -  %s\n%s" % [s["name"], GameCombat.shape_text(s), GameCombat.describe(s)]
+		if btn.disabled:
+			btn.tooltip_text += "\n" + str(row["why"])
 		TouchHint.on_hover(btn, func(): _show_area(s, target), func(): _show_area({}, -1))
 		col2.add_child(btn)
-	if b.skill_count() > first:
-		var usable := range(first, b.skill_count()).filter(func(k): return b.can_use_skill(k)).size()
+	if not later.is_empty():
+		var usable := later.filter(func(r): return r["enabled"]).size()
 		var kb := _small_button("Skills (%d ready)" % usable, func(): _open_skills())
 		kb.set_meta("compact", "Skills (%d)" % usable)
-		var nxt := GameSkills.next_unlock(d.heir)
-		kb.tooltip_text = "%s's later class skills%s." % [d.heir.name, "" if nxt.is_empty() else "; next: %s at level %s" % [nxt["name"], GameText.num(int(nxt["level"]))]]
+		var nxt := GameSkills.next_unlock(u)
+		kb.tooltip_text = "%s's later class skills%s." % [u.name, "" if nxt.is_empty() else "; next: %s at level %s" % [nxt["name"], GameText.num(int(nxt["level"]))]]
 		col2.add_child(kb)
 	var kit := GamePlague.toxins_carried(d.heir).size() + GamePlague.vials_carried(d.heir).size()
-	if kit > 0 or not b.coating.is_empty():
+	if by < 0 and (kit > 0 or not b.coating.is_empty()):   # the pack is the heir's
 		var n := 0
 		for id in d.heir.inventory:
 			if GameItems.kind_of(id) in ["toxin", "vial"]:
@@ -623,16 +817,117 @@ func _build_commands() -> void:
 		pb.disabled = n == 0
 		pb.tooltip_text = "Coat the blade with a toxin (no turn) or throw a plague vial."
 		col2.add_child(pb)
-	if not GameCombat.class_spell_plan(d.heir.class_id).is_empty() or not b.known_spells().is_empty():
-		var sb := Kit.button("Spells (%d)" % b.known_spells().size(), func(): _open_spells())
-		sb.disabled = b.known_spells().is_empty()
-		sb.tooltip_text = "The spells %s knows." % d.heir.name if not b.known_spells().is_empty() else "%s has learned no spells yet." % d.heir.name
+	var spells := _group(rows, "spell")
+	if not GameCombat.class_spell_plan(u.class_id).is_empty() or not spells.is_empty():
+		var sb := Kit.button("Spells (%d)" % spells.size(), func(): _open_spells())
+		sb.disabled = spells.is_empty()
+		sb.tooltip_text = "The spells %s knows." % u.name if not spells.is_empty() else "%s has learned no spells yet." % u.name
 		col3.add_child(sb)
-	var pot := Kit.button("Potion (%s)" % GameText.num(d.heir.potions), func(): _do(func(): b.use_potion()))
-	pot.disabled = d.heir.potions <= 0
+	var potion := _basic(rows, "potion")
+	var pot := Kit.button("Potion (%s)" % GameText.num(int(str(potion["cost"]).get_slice(" ", 0))), func(): _choose(potion))
+	pot.disabled = not potion["enabled"]
+	if pot.disabled:
+		pot.tooltip_text = str(potion["why"])
 	col3.add_child(pot)
-	col3.add_child(Kit.button("Flee", func(): _do(func(): b.flee())))
-	_lay_out_commands([col1, col2, col3])
+	col3.add_child(_basic_button("Flee", _basic(rows, "flee")))
+	_lay_out_commands([col1, col2, col3], _round_buttons(by))
+
+
+func _group(rows: Array, group: String) -> Array:
+	return rows.filter(func(r): return r["group"] == group)
+
+
+## The menu row of a basic command: "attack", "defend", "potion" or "flee".
+func _basic(rows: Array, act: String) -> Dictionary:
+	for r in rows:
+		if r["group"] == "basic" and r["cmd"]["act"] == act:
+			return r
+	return {}
+
+
+func _basic_button(text: String, row: Dictionary) -> Button:
+	var btn := Kit.button(text, func(): _choose(row))
+	btn.disabled = not bool(row["enabled"])
+	if btn.disabled:
+		btn.tooltip_text = str(row["why"])
+	return btn
+
+
+## "Bren Cask (2 of 4)  (tap an enemy to target it)": whose move is asked, as much as the panel's
+## width holds. A solo hunt keeps its plain "Commands".
+func _command_hint(by: int) -> String:
+	var tail := "(%s an enemy to target it)" % Kit.click()
+	if strip == null:
+		return "Commands  " + tail
+	var manual: Array = cmd_round.members().filter(func(m): return cmd_round.state_of(m) == "ready" and not bool(cmd_round.auto.get(m, false)))
+	var pos := manual.filter(func(m): return m <= by).size()
+	var head := b.unit(by).name
+	if manual.size() > 1:
+		head = "%s (%d of %d)" % [head, pos, manual.size()]
+	for text in ["%s  %s" % [head, tail], head]:
+		if _fits(text, 14, cmd_w - 40.0):
+			return text
+	return head
+
+
+## Auto for the active member, and Back (or, before anything is chosen, Repeat): the two round
+## controls a party gets beside the commands, never more.
+func _round_buttons(by: int) -> Array:
+	if strip == null:
+		return []
+	var out: Array = []
+	var ab := Kit.button("Auto", func(): _set_member_auto(by))
+	ab.tooltip_text = "%s %s their name to take over again." % [GameSkills.style_text(b.unit(by)), Kit.click().capitalize()]
+	out.append(ab)
+	var v := cmd_round.view()
+	if v["can_back"]:
+		var back_b := Kit.button("Back", func(): _undo())
+		back_b.tooltip_text = "Take back the last choice; that member is asked again."
+		out.append(back_b)
+	elif v["can_repeat"]:
+		var rep := Kit.button("Repeat", func(): _repeat())
+		rep.tooltip_text = "Do what each of you chose by hand last round, aimed at the foes still standing."
+		out.append(rep)
+	return out
+
+
+func _all_held() -> bool:
+	var m: Array = cmd_round.members()
+	return not m.is_empty() and m.all(func(x): return cmd_round.state_of(x) == "held")
+
+
+## Everyone is held: nothing to ask, so the round passes after a moment.
+func _pass_held() -> void:
+	var names: Array = cmd_round.members().map(func(m): return b.unit(m).name)
+	hint.text = "%s cannot act this turn." % GameParty.names_text(names)
+	if _held_waiting:
+		return
+	_held_waiting = true
+	await get_tree().create_timer(float(UiSettings.setting("held_pass_seconds"))).timeout
+	_held_waiting = false
+	if is_inside_tree() and not busy and not result_shown and not b.is_over() and not auto and cmd_round != null and _all_held():
+		_commit()
+
+
+## Everyone has a choice (or is Auto or held): Fight!, or Flee! when one member's escape covers the
+## party. Back takes the last choice back; the chips still change anyone's.
+func _build_confirm() -> void:
+	var v := cmd_round.view()
+	var fleeing: bool = v["flee"]
+	hint.text = "The party flees." if fleeing else ("Everyone is ready." if int(v["manual_count"]) > 0 else "Everyone fights on their own.")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	command_box.add_child(row)
+	var go := Kit.button("Flee!" if fleeing else "Fight!", func(): _commit(), Vector2(float(UiSettings.setting("confirm_button_w")), float(UiSettings.setting("party_chip_h"))))
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	go.add_theme_color_override("font_color", Kit.ACCENT)
+	go.tooltip_text = "Play the round: the party acts in order, then the foes."
+	row.add_child(go)
+	if v["can_back"]:
+		var back_b := Kit.button("Back", func(): _undo(), Vector2(110, float(UiSettings.setting("party_chip_h"))))
+		back_b.tooltip_text = "Take back the last choice; that member is asked again."
+		row.add_child(back_b)
 
 
 func _fits(text: String, font_size: int, width: float) -> bool:
@@ -644,8 +939,10 @@ func _short() -> bool:
 
 
 ## Three columns of commands; a short screen deals them into two rows instead, so the field keeps
-## its height. The order (attacks, skills, spells and escape) reads the same either way.
-func _lay_out_commands(cols: Array) -> void:
+## its height. The order (attacks, skills, spells and escape) reads the same either way. A party's
+## round controls (`extra`: Auto, and Back or Repeat) stand in a column of their own, last, so the
+## fit below sizes them with the rest.
+func _lay_out_commands(cols: Array, extra: Array = []) -> void:
 	var per := 2 if _short() else 0
 	if per > 0:
 		var all: Array = []
@@ -659,6 +956,11 @@ func _lay_out_commands(cols: Array) -> void:
 			if k % per == 0:
 				cols.append(VBoxContainer.new())
 			cols.back().add_child(all[k])
+	if not extra.is_empty():
+		var rc := VBoxContainer.new()
+		for btn in extra:
+			rc.add_child(btn)
+		cols.append(rc)
 	for c in cols:
 		c.add_theme_constant_override("separation", 6)
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -736,6 +1038,11 @@ func set_auto(on: bool) -> void:
 	_show_auto()
 	if result_shown:
 		return
+	if not on:   # taking over: a fresh round, nothing queued
+		cmd_round = d.battle_round()
+		if cmd_round != null:
+			cmd_round.begin_round()
+	_sync_strip()
 	if busy:
 		Kit.clear(command_box)
 		hint.text = ""
@@ -745,6 +1052,31 @@ func set_auto(on: bool) -> void:
 	aiming = {}
 	_show_area({}, -1)
 	_build_commands()
+
+
+## The strip follows the round (and is out of the way while auto-battle fights); on a short screen it
+## stands where the title was, else in a row of its own under the top bar.
+func _place_strip() -> void:
+	if strip == null:
+		return
+	var in_bar := _short()
+	var want: Node = top_bar if in_bar else root_box
+	if strip.get_parent() != want:
+		if strip.get_parent() != null:
+			strip.get_parent().remove_child(strip)
+		want.add_child(strip)
+		want.move_child(strip, 1)   # under the top bar, or between the title and the Auto-battle button
+	strip.visible = not auto
+	title_label.visible = not (in_bar and strip.visible)
+
+
+func _sync_strip() -> void:
+	if strip == null:
+		return
+	_place_strip()
+	if cmd_round != null and not auto:
+		var v := cmd_round.view()
+		strip.refresh(v, int(v["cursor"]))
 
 
 func _show_auto() -> void:
@@ -797,10 +1129,14 @@ func _small_button(text: String, cb: Callable) -> Button:
 
 func _build_aim_commands() -> void:
 	var ab: Dictionary = aiming["ab"]
+	var by := int(aiming["by"])
+	var ally := str(aiming["aim"]) == "ally"
 	var verb := "throw" if str(aiming.get("item", "")) != "" else ("cast" if str(aiming["spell"]) != "" else "strike")
 	hint.text = "%s: %s a foe to aim, %s it again to %s." % [ab["name"], Kit.click(), Kit.click(), verb]
-	if GameCombat.around_self(ab):
-		hint.text = "%s strikes all around %s, wherever it is aimed." % [ab["name"], d.heir.name]
+	if ally:
+		hint.text = "%s: heal whom? %s a name or a figure." % [ab["name"], Kit.click().capitalize()]
+	elif GameCombat.around_self(ab):
+		hint.text = "%s strikes all around %s, wherever it is aimed." % [ab["name"], b.unit(by).name]
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 4)
@@ -810,7 +1146,7 @@ func _build_aim_commands() -> void:
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	what.custom_minimum_size = Vector2(cmd_w - 220.0, 0)
 	v.add_child(what)
-	aim_info = Kit.label(_aim_text(ab, aim_at, false), 14, AREA)
+	aim_info = Kit.label("The one you pick, or whoever is most hurt." if ally else _aim_text(ab, aim_at, false), 14, AREA)
 	aim_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	aim_info.custom_minimum_size = Vector2(cmd_w - 220.0, 0)
 	v.add_child(aim_info)
@@ -818,8 +1154,8 @@ func _build_aim_commands() -> void:
 	side.add_theme_constant_override("separation", 6)
 	side.custom_minimum_size = Vector2(150, 0)
 	command_box.add_child(side)
-	var go := Kit.button(verb.capitalize() if verb != "strike" else "Use", func(): _confirm_aim())
-	go.disabled = b.aoe_targets(ab, -1, aim_at).is_empty()
+	var go := Kit.button("Most hurt" if ally else (verb.capitalize() if verb != "strike" else "Use"), func(): _confirm_ally(by, true) if ally else _confirm_aim())
+	go.disabled = not ally and b.aoe_targets(ab, by, aim_at).is_empty()
 	side.add_child(go)
 	side.add_child(Kit.button("Cancel", func(): _cancel_aim()))
 
@@ -829,18 +1165,19 @@ func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
 	at = b._valid_target(at)
 	if at < 0:
 		return ""
-	var caught := b.aoe_targets(ab, -1, at)
+	var by := int(aiming.get("by", active_by))
+	var caught := b.aoe_targets(ab, by, at)
 	var n := caught.size()
 	if n == 0:
 		if GameCombat.around_self(ab):
-			return "No foe stands within reach of %s." % d.heir.name
+			return "No foe stands within reach of %s." % b.unit(by).name
 		return "Toward %s it reaches no foe." % b.enemies[at]["name"]
 	var foes := "%d foe%s" % [n, "" if n == 1 else "s"]
 	var whom := str(b.enemies[at]["name"]) + ("" if at in caught else " (beyond reach)")
 	var text := ("Over %s: would catch %s" if hovering else "Aimed at %s: catches %s") % [whom, foes]
 	if GameCombat.around_self(ab):
-		text = "Around %s: catches %s" % [d.heir.name, foes]
-	var dmg := b.estimate(-1, ab, at)
+		text = "Around %s: catches %s" % [b.unit(by).name, foes]
+	var dmg := b.estimate(by, ab, at)
 	if dmg >= 1.0:
 		text += ", about %s damage%s" % [GameText.num(int(round(dmg))), " in all" if n > 1 else ""]
 	return text + "."
@@ -891,30 +1228,43 @@ func _list_panel(title: String, close: Callable) -> Array:
 func _open_spells() -> void:
 	if busy or spell_list != null:
 		return
-	var made := _list_panel("Spells  -  %s has %s / %s MP" % [d.heir.name, GameText.num(d.heir.mp), GameText.num(d.heir.max_mp())], _close_spells)
+	var by := active_by
+	var u := b.unit(by)
+	var made := _list_panel("Spells  -  %s has %s / %s MP" % [u.name, GameText.num(u.mp), GameText.num(u.max_mp())], _close_spells)
 	spell_list = made[0]
 	var rows: VBoxContainer = made[1]
+	var spells := _group(cmd_round.menu(by), "spell")
 	var groups: Dictionary = GameData.combat["spells"].get("groups", {})
 	for g in groups:
-		var ids: Array = b.known_spells().filter(func(id): return GameCombat.spell(id).get("group", "") == g)
-		if ids.is_empty():
+		var in_group: Array = spells.filter(func(r): return GameCombat.spell(str(r["cmd"]["id"])).get("group", "") == g)
+		if in_group.is_empty():
 			continue
 		rows.add_child(Kit.label(str(groups[g]), 15, Kit.DIM))
-		for id in ids:
-			rows.add_child(_spell_row(id))
-	var next := _next_spell()
+		for row in in_group:
+			rows.add_child(_spell_row(row))
+	var next := _next_spell(by)
 	if next != "":
 		rows.add_child(Kit.label(next, 13, Kit.DIM))
 
 
-func _spell_row(id: String) -> Control:
-	var sp := b.unit_spell(-1, id)
+## Why a row cannot be used, in the list's words: "(not enough MP)", else the reason as given.
+func _why_note(row: Dictionary, by: int) -> String:
+	if row["enabled"]:
+		return ""
+	if str(row["why"]) in ["Not enough MP.", "Too hurt."]:
+		return "  (not enough %s)" % ("HP" if b.pays_in_hp(by) else "MP")
+	return "  (%s)" % str(row["why"]).trim_suffix(".").to_lower()
+
+
+func _spell_row(spell: Dictionary) -> Control:
+	var sp: Dictionary = spell["ab"]
+	var by := active_by
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
-	var btn := Kit.button("%s  (%s)" % [sp["name"], b.pay_text(-1, b.spell_cost(id))], func(): _use_spell(id), Vector2(260, 34))
+	var btn := Kit.button("%s  (%s)" % [sp["name"], spell["cost"]], func(): _pick(spell), Vector2(260, 34))
 	btn.add_theme_font_size_override("font_size", 15)
 	btn.clip_text = true
-	btn.disabled = not b.can_cast(id)
+	btn.disabled = not spell["enabled"]
 	btn.tooltip_text = str(sp.get("text", ""))
 	TouchHint.on_hover(btn, func(): _show_area(sp, target), func(): _show_area({}, -1))
 	row.add_child(btn)
@@ -922,7 +1272,7 @@ func _spell_row(id: String) -> Control:
 	var shape := Kit.label(GameCombat.shape_text(sp), 14, Color(GameCombat.element_color(el)) if el != "" else Kit.TEXT)
 	shape.custom_minimum_size = Vector2(96, 0)
 	row.add_child(shape)
-	var what := Kit.label(GameCombat.describe(sp) + ("" if b.can_cast(id) else "  (not enough %s)" % ("HP" if b.pays_in_hp(-1) else "MP")), 13, Kit.TEXT if b.can_cast(id) else Kit.DIM)
+	var what := Kit.label(GameCombat.describe(sp) + _why_note(spell, by), 13, Kit.TEXT if spell["enabled"] else Kit.DIM)
 	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if UiSettings.compact(self):   # a narrow list wraps rather than hide the end of the effect
 		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -935,10 +1285,19 @@ func _spell_row(id: String) -> Control:
 	return row
 
 
+## A row of a list (a spell, a later skill, a feat) was chosen: the list shuts, the command is made.
+func _pick(row: Dictionary) -> void:
+	_close_spells()
+	_close_skills()
+	_close_feats()
+	_choose(row)
+
+
 ## "Next: Haste at level 32." for the class's next spell, if any.
-func _next_spell() -> String:
-	for p in GameCombat.class_spell_plan(d.heir.class_id):
-		if p[0] not in b.known_spells():
+func _next_spell(by: int) -> String:
+	var u := b.unit(by)
+	for p in GameCombat.class_spell_plan(u.class_id):
+		if p[0] not in b.unit_spells(by):
 			return "Next: %s at level %s." % [GameCombat.spell(p[0])["name"], GameText.num(int(p[1]))]
 	return ""
 
@@ -957,34 +1316,39 @@ func _close_spells() -> void:
 func _open_skills() -> void:
 	if busy or skill_list != null:
 		return
-	var made := _list_panel("Class skills  -  %s has %s / %s MP" % [d.heir.name, GameText.num(d.heir.mp), GameText.num(d.heir.max_mp())], _close_skills)
+	var by := active_by
+	var u := b.unit(by)
+	var made := _list_panel("Class skills  -  %s has %s / %s MP" % [u.name, GameText.num(u.mp), GameText.num(u.max_mp())], _close_skills)
 	skill_list = made[0]
 	var rows: VBoxContainer = made[1]
 	var locked: Array = []
-	for i in range(GameSkills.first_count(d.heir.class_id), b.skill_count()):
-		if b.skill_unlocked(i):
-			rows.add_child(_skill_row(i))
+	for row in _group(cmd_round.menu(by), "skill"):
+		if row["first"]:
+			continue
+		if u.level >= int(row["level"]):
+			rows.add_child(_skill_row(row))
 		else:
-			locked.append(i)
+			locked.append(row)
 	if not locked.is_empty():
 		rows.add_child(Kit.label("Opened by level", 15, Kit.DIM))
-	for i in locked:
-		var s := b.skill_info(i)
-		var l := Kit.label("Level %s: %s  -  %s" % [GameText.num(GameSkills.level_of(s)), s["name"], GameCombat.describe(s)], 13, Kit.DIM)
+	for row in locked:
+		var s: Dictionary = row["ab"]
+		var l := Kit.label("Level %s: %s  -  %s" % [GameText.num(int(row["level"])), s["name"], GameCombat.describe(s)], 13, Kit.DIM)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		rows.add_child(l)
 
 
-func _skill_row(i: int) -> Control:
-	var s := b.skill_info(i)
+func _skill_row(skill: Dictionary) -> Control:
+	var s: Dictionary = skill["ab"]
+	var by := active_by
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
-	var used := b.skill_used_up(i)
-	var btn := Kit.button("%s  (%s)" % [s["name"], "used" if used else b.pay_text(-1, b.skill_cost(i))], func(): _pick_skill(i), Vector2(260, 34))
+	var used := str(skill["why"]) == "Used this battle."
+	var btn := Kit.button("%s  (%s)" % [s["name"], "used" if used else skill["cost"]], func(): _pick(skill), Vector2(260, 34))
 	btn.add_theme_font_size_override("font_size", 15)
 	btn.clip_text = true
-	btn.disabled = not b.can_use_skill(i)
+	btn.disabled = not skill["enabled"]
 	btn.tooltip_text = GameCombat.describe(s)
 	TouchHint.on_hover(btn, func(): _show_area(s, target), func(): _show_area({}, -1))
 	row.add_child(btn)
@@ -992,8 +1356,8 @@ func _skill_row(i: int) -> Control:
 	var shape := Kit.label(GameCombat.shape_text(s), 14, Color(GameCombat.element_color(el)) if el != "" else Kit.TEXT)
 	shape.custom_minimum_size = Vector2(96, 0)
 	row.add_child(shape)
-	var note := "" if b.can_use_skill(i) else ("  (once a battle)" if used else "  (not enough %s)" % ("HP" if b.pays_in_hp(-1) else "MP"))
-	var what := Kit.label(GameCombat.describe(s) + note, 13, Kit.TEXT if b.can_use_skill(i) else Kit.DIM)
+	var note := "" if skill["enabled"] else ("  (once a battle)" if used else _why_note(skill, by))
+	var what := Kit.label(GameCombat.describe(s) + note, 13, Kit.TEXT if skill["enabled"] else Kit.DIM)
 	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if UiSettings.compact(self):   # a narrow list wraps rather than hide the end of the effect
 		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1004,11 +1368,6 @@ func _skill_row(i: int) -> Control:
 	what.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(what)
 	return row
-
-
-func _pick_skill(i: int) -> void:
-	_close_skills()
-	_use_skill(i)
 
 
 func _close_skills() -> void:
@@ -1047,7 +1406,7 @@ func _open_poisons() -> void:
 		var v: Dictionary = GameItems.item_def(id)["vial"]
 		var what := "%s  -  %s. The thrower: %d%% risk of %s." % [GameCombat.shape_text(ab), GameCombat.describe(ab), int(round(float(v["splash"]) * 100.0)), GameDisease.disease_name(str(v["disease"]))]
 		var item: String = id
-		var row := _poison_row("Throw: %s (%d)" % [GameItems.item_name(id), GameItems.count(d.heir, id)], what, b.can_throw(id), func(): _throw(item))
+		var row := _poison_row("Throw: %s (%d)" % [GameItems.item_name(id), GameItems.count(d.heir, id)], what, bool(_vial_row(item).get("enabled", false)), func(): _throw(item))
 		TouchHint.on_hover(row.get_child(0), func(): _show_area(ab, target), func(): _show_area({}, -1))
 		rows.add_child(row)
 
@@ -1076,12 +1435,22 @@ func _close_poisons() -> void:
 
 func _coat(item: String) -> void:
 	_close_poisons()
-	_do(func(): b.coat_blade(item))
+	_do(func(): cmd_round.coat(item))
+
+
+## The menu row of a plague vial the heir carries ({} when there is none).
+func _vial_row(item: String) -> Dictionary:
+	for row in _group(cmd_round.menu(-1), "item"):
+		if str(row["cmd"]["id"]) == item:
+			return row
+	return {}
 
 
 func _throw(item: String) -> void:
 	_close_poisons()
-	_begin_aim(GamePlague.vial_ability(item), -1, "", -1, item)
+	var row := _vial_row(item)
+	if not row.is_empty() and row["enabled"]:
+		_choose(row)
 
 
 # ---------------------------------------------------------------- feat list
@@ -1089,7 +1458,7 @@ func _throw(item: String) -> void:
 ## The readied feats in a panel over the party's side of the field, so the foes stay in sight:
 ## hovering a feat outlines the foes it would catch. The rest of the screen keeps working.
 func _open_feats() -> void:
-	if busy or b.unit_feats(-1).is_empty():
+	if busy or b.unit_feats(active_by).is_empty():
 		return
 	if feat_list != null:
 		_close_feats()
@@ -1107,7 +1476,10 @@ func _open_feats() -> void:
 	p.add_child(v)
 	var top := HBoxContainer.new()
 	v.add_child(top)
-	var t := Kit.label("Feats  -  no MP, each waits out its cooldown", 18, Kit.ACCENT)
+	var u := b.unit(active_by)
+	var t := Kit.label("Feats  -  no MP, each waits out its cooldown" if not _party() else "%s's feats  -  no MP, a cooldown each" % u.name, 18, Kit.ACCENT)
+	t.clip_text = true   # a long name is cut, not run past the Close button
+	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
 	top.add_child(Kit.button("Close", _close_feats, Vector2(90, 32)))
@@ -1118,12 +1490,12 @@ func _open_feats() -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 6)
 	scroll.add_child(list)
-	for k in b.unit_feats(-1).size():
-		list.add_child(_feat_row(k, room.size.x - 14.0))
+	for row in _group(cmd_round.menu(active_by), "feat"):
+		list.add_child(_feat_row(row, room.size.x - 14.0))
 	var rec := int(GameFeats.setting("recovery_turns"))
 	var note := "Feats are learned and readied in a town or right after a rest."
 	if rec > 0:
-		note = "After any feat %s catches breath for %s before the next. %s" % [d.heir.name, "a turn" if rec == 1 else "%d turns" % rec, note]
+		note = "After any feat %s catches breath for %s before the next. %s" % [u.name, "a turn" if rec == 1 else "%d turns" % rec, note]
 	var foot := Kit.label(note, 13, Kit.DIM)
 	foot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	foot.custom_minimum_size = Vector2(room.size.x - 24.0, 0)
@@ -1156,17 +1528,17 @@ func _feat_list_room() -> Rect2:
 
 
 ## A readied feat: its button, whether it is ready (or why not), its area and what it does.
-func _feat_row(slot: int, width: float) -> Control:
-	var id := b.feat_in_slot(slot)
-	var ab := b.unit_feat(-1, id)
+func _feat_row(feat: Dictionary, width: float) -> Control:
+	var id := str(feat["cmd"]["id"])
+	var ab: Dictionary = feat["ab"]
 	var kind := GameFeats.kind_info(str(ab.get("kind", "")))
-	var block := b.feat_block(-1, id)
+	var block := str(feat["why"])
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
-	var btn := Kit.button(str(ab["name"]), func(): _use_feat(slot), Vector2(170, 34))
+	var btn := Kit.button(str(ab["name"]), func(): _pick(feat), Vector2(170, 34))
 	btn.add_theme_font_size_override("font_size", 15)
 	btn.clip_text = true
-	btn.disabled = not b.can_use_feat(slot)
+	btn.disabled = not feat["enabled"]
 	btn.tooltip_text = str(ab.get("description", ""))
 	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	TouchHint.on_hover(btn, func(): _show_area(ab, target), func(): _show_area({}, -1))
@@ -1219,12 +1591,14 @@ func _do(action: Callable) -> void:
 	if b.is_over():
 		_show_result()
 		return
-	if b.heir_skip:   # a status cost the heir this turn: the round goes on without them
+	if auto and b.heir_skip:   # a status cost the heir this turn: the round goes on without them
 		hint.text = "%s cannot act this turn." % d.heir.name
 		Kit.clear(command_box)
-		await get_tree().create_timer(0.6).timeout
+		await get_tree().create_timer(float(UiSettings.setting("held_pass_seconds"))).timeout
 		_do(func(): b.pass_turn())
 		return
+	if cmd_round != null and cmd_round.number != b.turn:   # the turn moved on outside a round (a coat, a direct call)
+		cmd_round.begin_round()
 	_build_commands()
 
 
@@ -1243,12 +1617,14 @@ func _lands_with_next(events: Array, i: int) -> bool:
 
 func _play_events(events: Array) -> void:
 	floats = {}
+	if strip != null:
+		strip.mark_acting(-3)
 	for i in events.size():
 		var ev: Dictionary = events[i]
 		_play_one(ev)
 		_refresh_chips()
 		_update_marks()
-		if ev["type"] in ["death", "status"] or _lands_with_next(events, i):
+		if ev["type"] in ["death", "status", "round", "act", "foes"] or _lands_with_next(events, i):   # the round's markers take no time
 			continue
 		await get_tree().create_timer(0.25 if ev["type"] == "cast" else 0.35).timeout
 
@@ -1346,7 +1722,13 @@ func _play_one(ev: Dictionary) -> void:
 			for k in ev["indices"]:
 				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), 0.3)
 		"defend":
-			_float_text(hero_node.position + Vector2(30, 0), "guard", Kit.MP_BLUE)
+			_float_text(_unit_node(by).position + Vector2(30, 0), "guard", Kit.MP_BLUE)
+		"act":   # a party member's move begins: their chip lights up
+			if strip != null:
+				strip.mark_acting(by)
+		"foes":
+			if strip != null:
+				strip.mark_acting(-2)
 		"coat":
 			_float_text(hero_node.position + Vector2(30, 70), "blade coated", GamePlague.toxin_color(), 18)
 		"coat_end":
@@ -1405,6 +1787,8 @@ func _step_ref_hp(ref: String, delta: int) -> void:
 func _step_heir_hp(delta: int) -> void:
 	hero_hp.value = clampf(hero_hp.value + float(delta), 0.0, hero_hp.max_value)
 	_heir_info(int(hero_hp.value))
+	if strip != null:
+		strip.set_hp(-1, hero_hp.value)
 
 
 func _heir_info(hp: int) -> void:
@@ -1416,6 +1800,8 @@ func _step_ally_hp(i: int, delta: int) -> void:
 	var an: Dictionary = ally_nodes[i]
 	an["hp"].value = clampf(an["hp"].value + float(delta), 0.0, an["hp"].max_value)
 	_ally_info(i, int(an["hp"].value))
+	if strip != null:
+		strip.set_hp(i, an["hp"].value)
 
 
 ## "Lv5,000  HP 1,888,159" under a companion; the eleven-digit HP of the last generations is set
@@ -1482,8 +1868,8 @@ func _float_text(pos: Vector2, text: String, color: Color, size: int = 26) -> vo
 func _update_marks() -> void:
 	var caught: Array = []
 	if not shown.is_empty() and not b.is_over():
-		caught = b.aoe_targets(shown["ab"], -1, int(shown["at"]))
-	var aimed := aim_at if not aiming.is_empty() else target
+		caught = b.aoe_targets(shown["ab"], int(shown["by"]), int(shown["at"]))
+	var aimed := aim_at if not aiming.is_empty() and str(aiming["aim"]) != "ally" else target
 	for i in enemy_nodes.size():
 		var alive: bool = b.enemies[i]["hp"] > 0 and not b.is_over()
 		enemy_nodes[i]["sel"].visible = alive and i == aimed
@@ -1568,6 +1954,7 @@ func _update_view() -> void:
 		an["mp"].max_value = maxf(1.0, a.max_mp())
 		an["mp"].value = a.mp
 		_ally_info(i, a.hp)
+	_sync_strip()
 
 
 func _show_result() -> void:
