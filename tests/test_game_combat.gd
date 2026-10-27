@@ -1146,6 +1146,7 @@ func _ui_tests() -> void:
 	d.heir.learn_spells()
 	d.heir.full_heal()
 	_full_party(d)
+	d.auto_party["companion_default"] = true   # the companions fight on their own: one command per round, as these checks expect
 	var foes: Array = []
 	for i in 5:
 		foes.append(d._make_enemy(GameCombat.creature_def("goblin"), 1.0, 1.0, 40))

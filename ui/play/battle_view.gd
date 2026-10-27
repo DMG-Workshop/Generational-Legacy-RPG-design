@@ -754,7 +754,7 @@ func _build_commands() -> void:
 		_build_aim_commands()
 		return
 	if cmd_round.ready():
-		if _all_held():
+		if _only_held_left():
 			_pass_held()
 		else:
 			_build_confirm()
@@ -891,21 +891,21 @@ func _round_buttons(by: int) -> Array:
 	return out
 
 
-func _all_held() -> bool:
-	var m: Array = cmd_round.members()
-	return not m.is_empty() and m.all(func(x): return cmd_round.state_of(x) == "held")
+## Nobody is left to ask and someone is held (the rest are Auto): there is nothing to decide.
+func _only_held_left() -> bool:
+	return cmd_round.manual_count() == 0 and cmd_round.members().any(func(x): return cmd_round.state_of(x) == "held")
 
 
-## Everyone is held: nothing to ask, so the round passes after a moment.
+## Nothing to ask, someone held: the round passes after a moment.
 func _pass_held() -> void:
-	var names: Array = cmd_round.members().map(func(m): return b.unit(m).name)
+	var names: Array = cmd_round.members().filter(func(m): return cmd_round.state_of(m) == "held").map(func(m): return b.unit(m).name)
 	hint.text = "%s cannot act this turn." % GameParty.names_text(names)
 	if _held_waiting:
 		return
 	_held_waiting = true
 	await get_tree().create_timer(float(UiSettings.setting("held_pass_seconds"))).timeout
 	_held_waiting = false
-	if is_inside_tree() and not busy and not result_shown and not b.is_over() and not auto and cmd_round != null and _all_held():
+	if is_inside_tree() and not busy and not result_shown and not b.is_over() and not auto and cmd_round != null and _only_held_left():
 		_commit()
 
 
