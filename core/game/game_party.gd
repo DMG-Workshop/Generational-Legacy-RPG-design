@@ -331,6 +331,8 @@ func hire(d: GameDynasty, id: String) -> String:
 		# The same holder comes back as they left: still sick, and only as mended as the years away allow.
 		m["diseases"] = GameDisease.load_list(away.get("diseases", []))
 		m["tree"] = GameSkillTree.load_member(away.get("tree"))
+		if typeof(away.get("auto")) == TYPE_BOOL:
+			m["auto"] = away["auto"]
 		var gone := maxf(0.0, d.world.year - float(away.get("year", d.world.year)))
 		var share := minf(1.0, float(away.get("hp_share", 1.0)) + float(GameData.bal("companion_mend_per_year")) * gone)
 		var sick := _body(d, m)
@@ -386,6 +388,8 @@ func _part(d: GameDynasty, m: Dictionary, status: String) -> void:
 		var u := _body(d, m)
 		rec["away"] = {"diseases": (m.get("diseases", []) as Array).duplicate(true), "year": d.world.year,
 			"hp_share": snappedf(clampf(float(m["hp"]) / float(maxi(1, u.max_hp())), 0.0, 1.0), 0.0001), "tree": (m.get("tree", {}) as Dictionary).duplicate(true)}
+		if m.has("auto"):   # the Auto switch for party command rounds comes back with them
+			rec["away"]["auto"] = bool(m["auto"])
 	else:
 		rec.erase("away")
 	history[m["id"]] = rec
@@ -667,8 +671,8 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 			"battles": int(raw.get("battles", 0)), "hired_gen": int(raw.get("hired_gen", 1)),
 			"diseases": GameDisease.load_list(raw.get("diseases", [])), "tree": GameSkillTree.load_member(raw.get("tree")),
 		}
-		if raw.has("auto"):   # the player's Auto switch for this companion (see GameRound); absent = never set
-			m["auto"] = bool(raw["auto"])
+		if typeof(raw.get("auto")) == TYPE_BOOL:   # the player's Auto switch for this companion (see GameRound); absent or mistyped = never set
+			m["auto"] = raw["auto"]
 		p.members.append(m)
 	var h = v.get("history", {})
 	if typeof(h) != TYPE_DICTIONARY:
@@ -702,6 +706,8 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 		if typeof(away) == TYPE_DICTIONARY and not away.is_empty() and rec["status"] in ["dismissed", "left"]:
 			rec["away"] = {"diseases": GameDisease.load_list(away.get("diseases", [])), "year": float(away.get("year", 0.0)),
 				"hp_share": snappedf(float(away.get("hp_share", 1.0)), 0.0001), "tree": GameSkillTree.load_member(away.get("tree"))}
+			if typeof(away.get("auto")) == TYPE_BOOL:
+				rec["away"]["auto"] = away["auto"]
 		p.history[str(id)] = rec
 	if d != null:
 		for m in p.members:

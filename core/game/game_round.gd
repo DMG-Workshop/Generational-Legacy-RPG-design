@@ -20,8 +20,9 @@
 ##   "ally:N" or "" (the most hurt member at that member's turn). Aim "none" takes "".
 ##
 ## ENTRY (this round's decision for one member, `entries[by]`): {"cmd": Dictionary, "src": String}
-##   src "manual" (picked), "repeat" (re-queued by repeat_last), "cover" (the party flees: this member
-##   passes), "held" (cannot act: stunned, asleep, frozen; never asked), "auto_once" (repeat_last
+##   src "manual" (picked), "repeat" (re-queued by repeat_last), "cover" (the party flees and
+##   settings.flee_covers_party is true: this member passes, bonus action included, if the flee fails; with it false
+##   nobody is covered: each keeps their own choice, or acts as Auto if they have none), "held" (cannot act: stunned, asleep, frozen; never asked), "auto_once" (repeat_last
 ##   could not re-queue it: acts as Auto this round only; `cmd` is {}). No entry plus auto[by] means
 ##   Auto, decided at the member's own turn.
 ##
@@ -63,6 +64,8 @@
 ##   func back() -> int                  # undo the most recently queued member; returns the member to ask (or the cursor)
 ##   func clear() -> void                # drop every decision made by hand (Held stay)
 ##   func focus(by: int) -> bool         # jump the cursor to a member who is not Held or fallen
+##       # note: Auto members decide at their own turn, so an Auto heir may drink a potion a companion had reserved;
+##       # that companion then "improvises" (acts as Auto).
 ##   func set_auto(by: int, on: bool) -> void   # the Auto switch; drops by's decision; remembered (prefs / party record)
 ##   func repeat_last() -> Dictionary    # {"repeated": [by..], "fallback": [by..]}: re-queues last round's choices
 ##   func can_repeat() -> bool           # last round had hand-made choices and nothing is queued yet
@@ -123,13 +126,11 @@ static func validate() -> Array:
 	GameData.load_all()
 	var out: Array = []
 	var s: Dictionary = GameData.combat.get("rounds", {}).get("settings", {})
-	for key in ["party_order", "default_auto", "flee_covers_party", "confirm_single", "ally_defend", "defend_mp_pct", "brace_taken", "potion_for_companions", "chip_texts"]:
+	for key in ["default_auto", "flee_covers_party", "confirm_single", "ally_defend", "defend_mp_pct", "brace_taken", "potion_for_companions", "chip_texts"]:
 		if not s.has(key):
 			out.append("rounds: settings has no %s" % key)
 	if not out.is_empty():
 		return out
-	if str(s["party_order"]) not in ["fixed"]:
-		out.append("rounds: party_order must be \"fixed\"")
 	var da = s["default_auto"]
 	if typeof(da) != TYPE_DICTIONARY or typeof(da.get("heir")) != TYPE_BOOL or typeof(da.get("companion")) != TYPE_BOOL:
 		out.append("rounds: default_auto needs boolean heir and companion")
@@ -219,6 +220,8 @@ func state_of(by: int) -> String:
 
 
 func needs_input(by: int) -> bool:
+	if flee_by != -2 and not bool(setting("flee_covers_party")):
+		return false   # the party flees; whoever has not chosen acts on their own if the flee fails
 	return state_of(by) == "ready" and not bool(auto.get(by, false)) and not entries.has(by)
 
 
@@ -336,7 +339,7 @@ static func _party_index(ref: String) -> int:
 
 
 ## Whether `cmd` could be used by `by` right now, ignoring who else has queued what. `held` is the
-## stock other members have already reserved: {"potions": n, "vials": {item: n}}.
+## stock other members have already reserved: {"potions": n}.
 static func _why_not(p_b: GameBattle, by: int, cmd: Dictionary, held: Dictionary = {}) -> String:
 	var target := str(cmd.get("target", ""))
 	match str(cmd.get("act", "")):
@@ -356,10 +359,6 @@ static func _why_not(p_b: GameBattle, by: int, cmd: Dictionary, held: Dictionary
 			var info := _ability_of(p_b, by, cmd)
 			if str(info["why"]) != "":
 				return str(info["why"])
-			if str(info["item"]) != "":
-				var carried := (p_b.heir.inventory as Array).count(info["item"])
-				if carried - int((held.get("vials", {}) as Dictionary).get(info["item"], 0)) <= 0:
-					return "No more of those."
 			var ab: Dictionary = info["ab"]
 			match _aim(ab):
 				"foe", "area":
@@ -380,17 +379,17 @@ static func _why_not(p_b: GameBattle, by: int, cmd: Dictionary, held: Dictionary
 	return "Unknown command."
 
 
-## Potions and vials the other members have queued, so the stock is not promised twice.
+## Potions the other members have queued (including choices a queued Flee has set aside, which
+## come back if it is taken back), so the stock is not promised twice. Only the heir throws vials,
+## and has one decision, so vials need no reserving.
 func _reserved(except: int) -> Dictionary:
-	var held := {"potions": 0, "vials": {}}
-	for by in entries:
-		if by == except or str(entries[by]["src"]) not in ["manual", "repeat"]:
-			continue
-		var cmd: Dictionary = entries[by]["cmd"]
-		if str(cmd.get("act", "")) == "potion":
-			held["potions"] = int(held["potions"]) + 1
-		elif str(cmd.get("kind", "")) == "vial":
-			held["vials"][cmd["id"]] = int(held["vials"].get(cmd["id"], 0)) + 1
+	var held := {"potions": 0}
+	for table in [entries, _stash]:
+		for by in table:
+			if by == except or str(table[by]["src"]) not in ["manual", "repeat"]:
+				continue
+			if str(table[by]["cmd"].get("act", "")) == "potion":
+				held["potions"] = int(held["potions"]) + 1
 	return held
 
 
@@ -421,7 +420,7 @@ func queue(by: int, cmd: Dictionary) -> String:
 		flee_by = by
 		_stash = {}
 		for other in members():
-			if other == by or str(entries.get(other, {}).get("src", "")) == "held":
+			if other == by or str(entries.get(other, {}).get("src", "")) == "held" or not bool(setting("flee_covers_party")):
 				continue
 			if entries.has(other):
 				_stash[other] = entries[other]
@@ -431,7 +430,7 @@ func queue(by: int, cmd: Dictionary) -> String:
 
 
 func _drop_entry(by: int) -> void:
-	if entries.has(by) and str(entries[by]["src"]) != "held":
+	if entries.has(by) and str(entries[by]["src"]) not in ["held", "cover"]:   # a covered member stays covered while the flee stands
 		entries.erase(by)
 	_order.erase(by)
 
@@ -781,7 +780,7 @@ func view() -> Dictionary:
 				"auto_once":
 					decision = "fallback"
 				_:
-					decision = "auto" if bool(auto.get(by, false)) else "empty"
+					decision = "auto" if bool(auto.get(by, false)) else ("fallback" if flee_by != -2 else "empty")
 		var cmd: Dictionary = entry.get("cmd", {}) if decision == "queued" else {}
 		var kind := decision
 		if decision == "queued":
@@ -867,8 +866,8 @@ func resolve() -> Dictionary:
 			continue
 		var e: Dictionary = entries[ai]
 		if fleeing and bool(setting("flee_covers_party")) and str(e["src"]) != "held":
-			plans[ai] = {"act": "pass", "text": "%s covers the retreat." % b.allies[ai].name}
-		elif not fleeing and str(e["src"]) in ["manual", "repeat"]:
+			plans[ai] = {"act": "pass", "cover": true, "text": "%s covers the retreat." % b.allies[ai].name}
+		elif str(e["src"]) in ["manual", "repeat"] and str(e["cmd"].get("act", "")) != "flee":
 			plans[ai] = e["cmd"]
 	b.end_round(plans)
 	# ---- bookkeeping

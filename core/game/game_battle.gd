@@ -1184,7 +1184,7 @@ func defend() -> void:
 	if not _begin_action():
 		return
 	defending = true
-	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * 0.15)))
+	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * float(GameRound.setting("defend_mp_pct")))))
 	events.append({"type": "defend"})
 	_say("%s braces for impact." % heir.name)
 	_end_player_turn()
@@ -1333,8 +1333,9 @@ func _ally_turn(ai: int) -> void:
 		return
 	if round_marks:
 		events.append({"type": "act", "by": ai, "manual": round_cmds.has(ai)})
+	var covering := round_cmds.has(ai) and bool(round_cmds[ai].get("cover", false))   # the party flees: no bonus action either
 	_ally_act(ai)
-	if result == "" and not living_enemies().is_empty() and _extra_action(ref):
+	if not covering and result == "" and not living_enemies().is_empty() and _extra_action(ref):
 		_ally_act(ai)
 
 

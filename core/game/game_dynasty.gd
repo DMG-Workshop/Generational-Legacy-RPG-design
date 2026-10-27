@@ -877,8 +877,8 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	var ap = d.get("auto_party", {})
 	if typeof(ap) == TYPE_DICTIONARY:
 		for k in ["heir", "companion_default"]:
-			if ap.has(k):
-				g.auto_party[k] = bool(ap[k])
+			if typeof(ap.get(k)) == TYPE_BOOL:
+				g.auto_party[k] = ap[k]
 	g.loot = GamePlague.load_loot(d.get("loot", {})) if g.state == "life" else {}
 	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
 		GameAges.end_saga(g, [])

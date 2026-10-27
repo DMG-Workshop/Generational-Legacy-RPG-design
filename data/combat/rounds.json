@@ -1,8 +1,7 @@
 {
   "settings": {
-    "party_order": "fixed",
     "default_auto": {"heir": false, "companion": false},
-    "flee_covers_party": true,
+    "flee_covers_party": false,
     "confirm_single": false,
     "ally_defend": true,
     "defend_mp_pct": 0.15,

@@ -41,7 +41,9 @@ func _init() -> void:
 	test_hold_flag_always_released()
 	test_view_and_chips()
 	test_saves()
+	test_review_fixes()
 	test_old_save_plays()
+	ok(ran == 1, "the review-fix tests ran to the end")
 	print("round tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -118,7 +120,8 @@ func _acts(b: GameBattle) -> Array:
 
 func test_data() -> void:
 	ok(GameRound.validate().is_empty(), "rounds.json is sound: %s" % str(GameRound.validate()))
-	ok(str(GameRound.setting("party_order")) == "fixed", "initiative is the fixed order")
+	ok(not GameData.combat["rounds"]["settings"].has("party_order"), "initiative is fixed in the engine, not a setting")
+	ok(GameRound.setting("flee_covers_party") == false, "a failed flee costs the companions nothing by default")
 	ok(float(GameRound.setting("defend_mp_pct")) == 0.15, "the companion's Defend returns the heir's 15% MP")
 	var s: Dictionary = GameData.combat["rounds"]["settings"]
 	var saved: Variant = s["brace_taken"]
@@ -126,10 +129,6 @@ func test_data() -> void:
 	ok(GameRound.validate().size() == 1 and "brace_taken" in str(GameRound.validate()), "a brace above 1 is reported")
 	ok("brace_taken" in str(GameCombat.validate()), "and the combat data checks include it")
 	s["brace_taken"] = saved
-	saved = s["party_order"]
-	s["party_order"] = "agility"
-	ok("party_order" in str(GameRound.validate()), "an unknown initiative is reported")
-	s["party_order"] = saved
 	saved = s["default_auto"]
 	s["default_auto"] = {"heir": 1}
 	ok("default_auto" in str(GameRound.validate()), "default_auto needs booleans")
@@ -370,6 +369,7 @@ func test_back_and_clear() -> void:
 	ok(r.entries.has(-1) and r.entries[-1]["src"] == "held" and not r.entries.has(0), "a held member stays through clear")
 	ok(r.next_unset() == 0, "the others are asked again")
 	# Back restores what a Flee covered.
+	_covers(true)
 	b.heir_skip = false
 	r.begin_round()
 	r.queue(-1, _attack())
@@ -386,6 +386,7 @@ func test_back_and_clear() -> void:
 	r.set_auto(1, true)
 	ok(r.flee_by == -2, "switching the caller to Auto takes the flee back")
 	r.set_auto(1, false)
+	_covers(false)
 
 
 # ---------------------------------------------------------------- playing a round
@@ -554,6 +555,10 @@ func test_auto_decided_at_slot() -> void:
 	ok(ally_hits.size() >= 1 and ally_hits[0]["index"] == 2, "the Auto companion struck the foe the heir had just struck")
 	ok(b.events.any(func(e): return e["type"] == "act" and e["by"] == 0 and e["manual"] == false), "its act marker says it chose for itself")
 	ok(b.events.any(func(e): return e["type"] == "act" and e["by"] == -1 and e["manual"] == true), "the heir's says by hand")
+
+
+func _covers(on: bool) -> void:
+	GameData.combat["rounds"]["settings"]["flee_covers_party"] = on
 
 
 func _same_start(seed_val: int, cls: String, n: int) -> Array:
@@ -834,6 +839,7 @@ func test_flee() -> void:
 	ok(_acts(b) == [-1] and b.events.any(func(e): return e["type"] == "flee"), "only the flee was played")
 	ok(not b.round_on, "the hold is released after a flee")
 	# Failure: the heir and the covered lose the turn, the foes act.
+	_covers(true)
 	var made2 := _party_round()
 	var b2: GameBattle = made2[1]
 	var r2: GameRound = made2[2]
@@ -847,8 +853,8 @@ func test_flee() -> void:
 	ok(not b2.events.any(func(e): return e["type"] == "damage" and e.get("side", "") == "enemy"), "no blow of the party landed")
 	ok(b2.events.any(func(e): return e["type"] == "damage" and e.get("side", "") in ["player", "ally"]), "the foes struck")
 	ok(b2.events.filter(func(e): return e["type"] == "foes").size() == 1, "the foes had their turn")
-	# The data can let the companions act on their own instead.
-	GameData.combat["rounds"]["settings"]["flee_covers_party"] = false
+	# By default (and in the data) the companions act on their own instead.
+	_covers(false)
 	var made3 := _party_round()
 	var b3: GameBattle = made3[1]
 	var r3: GameRound = made3[2]
@@ -857,7 +863,6 @@ func test_flee() -> void:
 	r3.resolve()
 	ok(not b3.log.any(func(l): return " covers the retreat." in l), "no one covers when the data says so")
 	ok(b3.events.any(func(e): return e["type"] == "damage" and e.get("side", "") == "enemy"), "the companions struck on their own")
-	GameData.combat["rounds"]["settings"]["flee_covers_party"] = true
 	# Not while the heir is held.
 	var made4 := _party_round()
 	var b4: GameBattle = made4[1]
@@ -1089,7 +1094,7 @@ func test_saves() -> void:
 	ok(not r2.auto[-1] and not r2.auto[0], "and plays with every member taking orders")
 	# Junk is dropped.
 	var junk: Dictionary = JSON.parse_string(text)
-	junk["auto_party"] = {"heir": 1, "nonsense": true}
+	junk["auto_party"] = {"heir": true, "nonsense": true}
 	junk["party"]["members"][0]["mystery"] = 7
 	var k := GameDynasty.from_dict(junk)
 	ok(k.auto_party == {"heir": true}, "unknown keys in auto_party are dropped")
@@ -1124,3 +1129,139 @@ func test_old_save_plays() -> void:
 				break
 		ok(g.battle.is_over(), "%s: the old save plays a fight through command rounds" % tag)
 		g.finish_battle()
+
+
+# ---------------------------------------------------------------- review fixes
+
+func _ally_blows(b: GameBattle) -> Array:
+	return b.events.filter(func(e): return e["type"] == "damage" and e.get("side", "") == "enemy" and e.get("by", -9) >= 0)
+
+
+func test_review_fixes() -> void:
+	# A member covered by a Flee stays covered when their Auto switch is touched, and a hasted one
+	# gets no bonus action either.
+	_covers(true)
+	var made := _party_round()
+	var b: GameBattle = made[1]
+	var r: GameRound = made[2]
+	b.enemies[0]["atk"] = 40.0
+	b.apply_status("ally:0", "haste", 50.0, 3)
+	_flee_seed(b, false)
+	r.queue(-1, {"act": "flee"})
+	r.set_auto(1, true)
+	ok(r.flee_by == -1 and r.entries[1]["src"] == "cover" and r.entries[0]["src"] == "cover", "Auto on a covered member leaves them covered")
+	r.set_auto(1, false)
+	ok(r.entries[1]["src"] == "cover" and r.ready(), "and so does turning it off")
+	r.resolve()
+	ok("Tess fails to escape!" in b.log and _ally_blows(b).is_empty(), "no covered companion struck after the failed flee")
+	ok(not b.log.any(func(l): return "moves again" in l), "a hasted covered companion takes no bonus action")
+	ok(b.log.filter(func(l): return " covers the retreat." in l).size() == 3, "all three covered")
+	# Potions are not promised twice through a Flee.
+	var made2 := _party_round()
+	var d2: GameDynasty = made2[0]
+	var r2: GameRound = made2[2]
+	d2.heir.potions = 1
+	r2.queue(0, {"act": "potion"})
+	r2.queue(1, {"act": "flee"})
+	ok(r2.queue(2, {"act": "potion"}) != "" and r2.entries[2]["src"] == "cover", "the potion Flee set aside is still promised")
+	ok(r2.check(2, {"act": "potion"}) == "No potions left.", "(and says so)")
+	r2.back()
+	ok(r2.entries[0]["cmd"]["act"] == "potion", "taking the flee back returns the potion")
+	_covers(false)
+	# With covering off nobody is set aside: choices stand, and unset members act on their own.
+	var made3 := _party_round()
+	var b3: GameBattle = made3[1]
+	var r3: GameRound = made3[2]
+	r3.queue(0, {"act": "defend"})
+	ok(r3.queue(1, {"act": "flee"}) == "", "a companion calls the flee")
+	ok(r3.entries[0]["src"] == "manual" and not r3.entries.has(2) and not r3.entries.has(-1), "no one is marked covered")
+	ok(r3.ready() and r3.next_unset() == -2, "the unset members do not hold the flee up")
+	var views: Array = r3.view()["members"].map(func(m): return m["decision"])
+	ok(views == ["fallback", "queued", "queued", "fallback"], "chips: own choice kept, others act on their own (%s)" % str(views))
+	_flee_seed(b3, false)
+	r3.resolve()
+	ok(b3.events.any(func(e): return e["type"] == "defend" and e["by"] == 0), "a failed flee leaves a companion's own choice to play")
+	ok(not b3.log.any(func(l): return " covers the retreat." in l), "nobody is told to cover")
+	# Repeat after a failed flee repeats the round before it.
+	var made4 := _party_round()
+	var b4: GameBattle = made4[1]
+	var r4: GameRound = made4[2]
+	_all_attack(r4, 1)
+	r4.resolve()
+	var kept: Dictionary = r4.last.duplicate(true)
+	_flee_seed(b4, false)
+	r4.queue(-1, {"act": "flee"})
+	r4.resolve()
+	ok(r4.last == kept and r4.last[-1]["act"] == "attack", "a flee round leaves the last real round for Repeat")
+	ok(r4.repeat_last()["repeated"] == [-1, 0, 1, 2], "and Repeat brings it back")
+	# One manual member commits at once; two do not.
+	var d5 := _dynasty("warrior", TRIO, 30)
+	_battle(d5)
+	var r5 := d5.battle_round()
+	r5.set_auto(0, true)
+	r5.set_auto(1, true)
+	r5.set_auto(2, true)
+	ok(r5.manual_count() == 1 and r5.auto_commits(), "one member by hand: the pick commits")
+	r5.set_auto(2, false)
+	ok(r5.manual_count() == 2 and not r5.auto_commits(), "two by hand: a confirm")
+	# Companion MP regenerates at the round's end like the heir's.
+	var d6 := _dynasty("warrior", ["bren_cask"], 30)
+	var b6 := _battle(d6, 2)
+	var r6 := d6.battle_round()
+	b6.allies[0].mp = 0
+	b6.heir.mp = 0
+	var nums := b6.unit_numbers(0)
+	var regen := maxf(0.0, float(GameData.bal("mp_regen_per_turn_pct")) + float(b6.weather.get("mp_regen", 0.0)))
+	var want: int = mini(int(nums["max_mp"]), int(ceil(float(nums["max_mp"]) * (regen + float(nums["mp_regen"])))))
+	_all_attack(r6)
+	r6.resolve()
+	ok(want > 0 and b6.allies[0].mp == want, "a companion's MP regenerates by the same rule (%d of %d)" % [b6.allies[0].mp, want])
+	var hn := b6.unit_numbers(-1)
+	ok(b6.heir.mp == mini(int(hn["max_mp"]), int(ceil(float(hn["max_mp"]) * (regen + float(hn["mp_regen"]))))), "and the heir's")
+	# The heir's Defend reads the setting too.
+	var amounts: Array = []
+	for pct in [0.15, 0.5]:
+		GameData.combat["rounds"]["settings"]["defend_mp_pct"] = pct
+		var d7 := _dynasty("warrior", [], 30)
+		var b7 := _battle(d7, 1)
+		b7.heir.mp = 0
+		b7.defend()
+		amounts.append(b7.heir.mp)
+	GameData.combat["rounds"]["settings"]["defend_mp_pct"] = 0.15
+	ok(amounts[1] > amounts[0], "the heir's Defend follows defend_mp_pct (%s)" % str(amounts))
+	# The Auto switch survives a dismissal and a new hire.
+	var d8 := _dynasty("warrior", [], 30)
+	d8.heir.gold = 100000
+	d8.world.location = "hearthmere"
+	d8.party.hire(d8, "bren_cask")
+	d8.party.members[0]["auto"] = true
+	d8.party.dismiss(d8, "bren_cask")
+	ok(d8.party.members.is_empty() and d8.party.history["bren_cask"]["away"].get("auto", false) == true, "a dismissed companion's switch is kept")
+	var saved := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(d8.to_dict())))
+	d8.party.hire(d8, "bren_cask")
+	ok(d8.party.members[0].get("auto", false) == true, "and comes back with them")
+	saved.heir.gold = 100000
+	saved.party.hire(saved, "bren_cask")
+	ok(saved.party.members[0].get("auto", false) == true, "through a save too")
+	var d9 := _dynasty("warrior", [], 30)
+	d9.heir.gold = 100000
+	d9.world.location = "hearthmere"
+	d9.party.hire(d9, "bren_cask")
+	d9.party.dismiss(d9, "bren_cask")
+	d9.party.hire(d9, "bren_cask")
+	ok(not d9.party.members[0].has("auto"), "no switch set, none appears")
+	# Corrupt saves do not crash.
+	var raw := _dynasty("warrior", TRIO, 30).to_dict()
+	var text := JSON.stringify(raw)
+	var bad: Dictionary = JSON.parse_string(text)
+	bad["auto_party"] = {"companion_default": "yes", "heir": 1}
+	bad["party"]["members"][0]["auto"] = "yes"
+	bad["party"]["members"][1]["auto"] = 1
+	bad["party"]["members"][2]["auto"] = true
+	var g := GameDynasty.from_dict(bad)
+	ok(g.auto_party.is_empty(), "mistyped Auto switches in auto_party read as unset")
+	ok(not g.party.members[0].has("auto") and not g.party.members[1].has("auto") and g.party.members[2]["auto"] == true, "and in member records")
+	ran += 1
+
+
+var ran := 0
