@@ -12,6 +12,8 @@ extends SceneTree
 const GameApp := preload("res://ui/play/game_app.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const MenuPanel := preload("res://ui/play/menu_panel.gd")
+const TouchHint := preload("res://ui/play/touch_hint.gd")
+const Kit := preload("res://ui/play/ui_kit.gd")
 const DIR := "user://test_party_ui/"
 const LONG := ["tarsk_ember_eye", "corwin_saltmere", "hulda_stonebrow"]   # the longest names in the data
 const MIXED := ["sister_oriel", "bren_cask", "tarsk_ember_eye"]          # cleric, warrior, spellblade
@@ -47,18 +49,15 @@ func _run() -> void:
 	app = GameApp.new()
 	root.add_child(app)
 	await _frames(2)
-	await test_solo_is_today()
-	await test_step_through()
-	await test_auto_and_single_manual()
-	await test_repeat_and_back()
-	await test_flee()
-	await test_held_and_fallen()
-	await test_master_auto()
-	await test_aims()
-	await test_chip_hold()
-	await test_relayout_keeps_state()
-	await test_touch_and_fit()
-	await test_end_to_end()
+	var only: PackedStringArray = []   # -- only=a,b runs just those tests (used to check a test against a mutation)
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("only="):
+			only = a.substr(5).split(",")
+	for name in ["solo_is_today", "step_through", "auto_and_single_manual", "repeat_and_back", "flee", "held_and_fallen", "master_auto",
+			"aims", "chip_hold", "relayout_keeps_state", "chips_lit_and_cleared", "double_taps", "busy_guards", "round_hint", "take_over_and_turns",
+			"cues", "touch_and_fit", "end_to_end"]:
+		if only.is_empty() or name in only:
+			await call("test_" + name)
 	print("party ui tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -373,6 +372,8 @@ func test_relayout_keeps_state() -> void:
 	await _press("Attack")
 	await _press("Defend")
 	var snap := JSON.stringify([bv.cmd_round.entries, bv.cmd_round.cursor, bv.cmd_round._order])
+	var tall_before: int = bv.command_box.get_children().filter(func(c): return c is VBoxContainer and c.get_child_count() > 2).size()
+	ok(tall_before > 0, "at 100%% the room is tall: columns of three (%d)" % tall_before)
 	var m: Control = app.open_menu()
 	await _frames(2)
 	for b in _buttons(m, "150%"):
@@ -382,6 +383,8 @@ func test_relayout_keeps_state() -> void:
 	ok(bv.hint.text.begins_with("Bren Cask (3 of 4)"), "the same member is asked: %s" % bv.hint.text)
 	ok(_chip(-1).text.contains("Atk") or _chip(-1).text.contains("Attack"), "the chips still show the choices: %s" % _chip(-1).text)
 	ok(_buttons(bv.command_box, "Attack").size() == 1, "one command grid, no duplicates")
+	var tall_cols: int = bv.command_box.get_children().filter(func(c): return c is VBoxContainer and c.get_child_count() > 2).size()
+	ok(tall_cols == 0, "the commands were laid out again for the short room (no column of three, %d)" % tall_cols)
 	UiSettings.force_touch = 1
 	bv.relayout()
 	await _frames(4)
@@ -463,6 +466,8 @@ func test_touch_and_fit() -> void:
 					match st:
 						"later":
 							await _press("Attack")
+							await _frames(3)
+							ok(_chip(-1).text.contains("Attack"), "%s: the heir's chip keeps the word Attack: %s" % [who, _chip(-1).text.replace("\n", " / ")])
 							if n > 2:
 								await _press("Defend")
 						"aim":
@@ -537,3 +542,177 @@ func test_end_to_end() -> void:
 		ok(_find(bv, "Continue") != null, "searching ends in Continue")
 	app.show_state()
 	await _frames(3)
+
+
+# ---------------------------------------------------------------- review fixes
+
+func _border(btn: Button) -> Color:
+	return (btn.get_theme_stylebox("normal") as StyleBoxFlat).border_color
+
+
+## A round's lighting ends with it: dimmed foes' phase and the lit acting chip are cleared, and a
+## queued chip is green, the asked one gold.
+func test_chips_lit_and_cleared() -> void:
+	await _fight("warrior", MIXED)
+	ok(_border(_chip(-1)) == Kit.ACCENT, "the asked member's chip has the gold outline")
+	await _press("Attack")
+	ok(_border(_chip(-1)) == Kit.GOOD and _border(_chip(0)) == Kit.ACCENT, "a queued chip is green, the next one gold")
+	bv.strip.mark_acting(0)
+	ok(_chip(0).modulate.r > 1.0 and _chip(-1).modulate.r < 1.0 and _chip(1).modulate.r < 1.0, "the acting member's chip is lit, the others dimmed")
+	bv.strip.mark_acting(-2)
+	ok(_buttons(bv.strip).all(func(x): return (x as Button).modulate.r < 1.0), "the foes' phase dims every chip")
+	bv.strip.mark_acting(-3)
+	ok(_buttons(bv.strip).all(func(x): return (x as Button).modulate == Color.WHITE), "and -3 clears the lighting")
+	for k in 3:
+		await _press("Attack")
+	await _press("Fight!")
+	await _idle()
+	ok(_buttons(bv.strip).all(func(x): return (x as Button).modulate == Color.WHITE), "chips are not dimmed when the next round is asked")
+	bv.strip.mark_acting(-2)   # even if something left them dim, the strip is redrawn clean
+	bv.strip.refresh(_view(), int(_view()["cursor"]))
+	ok(_buttons(bv.strip).all(func(x): return (x as Button).modulate == Color.WHITE), "a redraw resets the lighting")
+
+
+func _touch_at(p: Vector2, up: bool) -> void:
+	var t := InputEventScreenTouch.new()
+	t.index = 0
+	t.position = root.get_final_transform() * p
+	t.pressed = not up
+	Input.parse_input_event(t)
+	Input.flush_buffered_events()
+	await _frames(1)
+
+
+## Two taps of a finger on the same spot, one frame apart: the second lands on whatever the first built.
+func _double_tap(c: Control) -> void:
+	await create_timer(float(UiSettings.setting("tap_guard_ms")) / 1000.0 + 0.1).timeout   # the first tap finds the panel settled
+	var at := c.get_global_rect().get_center()
+	for k in 2:
+		await _touch_at(at, false)
+		await _touch_at(at, true)
+	await _frames(2)
+	TouchHint.finger = false
+
+
+func test_double_taps() -> void:
+	UiSettings.force_touch = 1
+	await _fight("warrior", MIXED)
+	var flee := _find(bv.command_box, "Flee")
+	var turn: int = d.battle.turn
+	await _double_tap(flee)
+	ok(d.battle.result == "" and d.battle.turn == turn, "a double tap on Flee does not run the party away")
+	ok(int(bv.cmd_round.flee_by) == -1 and _find(bv.command_box, "Flee!") != null, "the Flee is queued and waits for its confirm")
+	await _press("Back")
+	# Potion for the heir: one queued choice, the second tap must not hit Flee for the next member.
+	await _double_tap(_find(bv.command_box, "Potion"))
+	ok(bv.cmd_round.entries.size() == 1 and bv.cmd_round.entries.has(-1) and bv.cmd_round.flee_by == -2 and int(_view()["cursor"]) == 0, "a double tap on Potion queues one potion and no flee (entries %s)" % str(bv.cmd_round.entries.keys()))
+	await _press("Back")
+	await _double_tap(_find(bv.command_box, "Attack"))
+	ok(bv.cmd_round.entries.size() == 1 and int(_view()["cursor"]) == 0, "a double tap on Attack queues one member's choice")
+	for k in 3:
+		await _press("Attack")
+	await _double_tap(_find(bv.command_box, "Back"))
+	ok(bv.cmd_round._order.size() == 3, "a double tap on Back undoes one member only (%d queued)" % bv.cmd_round._order.size())
+	await _press("Attack")
+	turn = d.battle.turn
+	await _double_tap(_find(bv.command_box, "Fight!"))
+	await _idle()
+	ok(d.battle.turn == turn + 1 and bv.cmd_round.entries.is_empty() and int(_view()["cursor"]) == -1, "a double tap on Fight! plays one round and picks nothing after it")
+	# A mouse is not held up: clicks right after a rebuild still act.
+	TouchHint.finger = false
+	await _press("Attack")
+	ok(bv.cmd_round.entries.has(-1), "a click is never ignored")
+	UiSettings.force_touch = 0
+
+
+func test_busy_guards() -> void:
+	await _fight("warrior", MIXED)
+	for k in 4:
+		await _press("Attack")
+	await _press("Fight!")
+	ok(bv.busy, "the round is playing")
+	var turn: int = d.battle.turn
+	bv._on_chip(0)
+	bv._undo()
+	bv._commit()
+	ok(_buttons(bv.command_box).is_empty(), "taps on chips or buttons while it plays build nothing")
+	await _idle()
+	ok(d.battle.turn == turn and int(_view()["cursor"]) == -1 and _view()["can_back"] == false, "and change nothing")
+
+
+## The first-use hint is kept with the device's settings (not the story flags), told once and only
+## when the strip is shown.
+func test_round_hint() -> void:
+	DirAccess.remove_absolute(UiSettings.path)
+	await _fight("warrior", MIXED)
+	var text: String = bv.log_label.get_parsed_text()
+	ok(text.contains("then click Fight! to play the round"), "the hint is told: %s" % text.right(160))
+	ok(bool(UiSettings.stored("round_hint", false)) and not d.flags.has("round_hint"), "kept in the settings file, not the story flags")
+	ok(not JSON.stringify(d.to_dict()).contains("round_hint"), "nor in the dynasty save")
+	await _fight("warrior", MIXED)
+	ok(not bv.log_label.get_parsed_text().contains("to play the round"), "and not told again")
+	DirAccess.remove_absolute(UiSettings.path)
+	await _fight("warrior", MIXED)
+	d.battle = null
+	DirAccess.remove_absolute(UiSettings.path)
+	app.new_game("Tess", "warrior", "faetouched", 77, "human")
+	d = app.dynasty
+	for id in MIXED:
+		d.party.members.append({"id": id, "name": GameParty.def(id)["name"], "hp": 1, "mp": 0, "level": 40, "gen": 1, "due": 0.0, "battles": 0, "hired_gen": 1, "diseases": []})
+	d.party.rest(d)
+	d._begin_battle([d._make_enemy(GameCombat.creature_def("wolf"), 1.0, 1.0, 40)], "hunt")
+	d.auto_battle = true
+	d.command_round = null
+	app.show_state()
+	await _frames(4)
+	ok(not bool(UiSettings.stored("round_hint", false)), "an auto-battle that hides the strip does not use up the hint")
+	d.battle = null
+	DirAccess.remove_absolute(UiSettings.path)
+
+
+## Taking over from auto-battle starts a fresh round; a turn that passes outside a round reopens it;
+## Back does nothing while auto-battle fights.
+func test_take_over_and_turns() -> void:
+	await _fight("warrior", MIXED)
+	await _press("Attack")
+	await _press("Defend")
+	bv.set_auto(true)
+	ok(not bv.back(), "the Android back button undoes nothing while auto-battle fights")
+	ok(bv.cmd_round.entries.size() == 2, "and the queue is untouched")
+	bv.set_auto(false)
+	await _frames(3)
+	ok(bv.cmd_round.entries.is_empty() and int(_view()["cursor"]) == -1, "taking over starts a fresh round")
+	await _press("Attack")
+	var turn: int = d.battle.turn
+	bv._do(func(): d.battle.defend())
+	await _idle()
+	ok(d.battle.turn == turn + 1 and bv.cmd_round.number == d.battle.turn and bv.cmd_round.entries.is_empty(), "a turn that passed outside the round reopens it")
+	ok(int(_view()["cursor"]) == -1, "and the heir is asked again")
+
+
+## What the screen says: why Flee is greyed, how Auto is turned off, who to tap.
+func test_cues() -> void:
+	await _fight("warrior", MIXED)
+	d.battle.heir_skip = true
+	bv.cmd_round.begin_round()
+	bv._build_commands()
+	await _frames(3)
+	ok(bv.hint.text.contains("Held fast"), "a greyed Flee says why in the hint: %s" % bv.hint.text)
+	d.battle.heir_skip = false
+	bv.cmd_round.begin_round()
+	bv._build_commands()
+	await _press("Auto")
+	ok(_chip(-1).text.contains("take over") or _chip(-1).text.contains("(click)") or _chip(-1).text.contains("Auto"), "the Auto chip shows Auto: %s" % _chip(-1).text)
+	ok(_chip(-1).tooltip_text.contains("take over"), "its tooltip says how to take over")
+	await _press("Auto")
+	await _press("Auto")
+	await _press("Auto")
+	ok(bv.hint.text.contains("take over"), "the confirm says how to take over from Auto: %s" % bv.hint.text)
+	await _press("Fight!")
+	await _idle()
+	# The Heal's "Most hurt" sends no name.
+	await _fight("warrior", ["sister_oriel", "tarsk_ember_eye"], 3)
+	await _press("Attack")
+	await _press("Heal")
+	await _press("Most hurt")
+	ok(bv.cmd_round.entries[0]["cmd"]["target"] == "", "Most hurt leaves the heal's target to the round")

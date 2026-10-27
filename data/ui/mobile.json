@@ -17,6 +17,8 @@
 		"party_chip_min_w": 96,
 		"party_cmd_extra_w": 90,
 		"held_pass_seconds": 0.6,
-		"confirm_button_w": 160
+		"confirm_button_w": 160,
+		"party_auto_w": 160,
+		"tap_guard_ms": 250
 	}
 }

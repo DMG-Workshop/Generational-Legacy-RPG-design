@@ -57,6 +57,7 @@ var top_bar: HBoxContainer      # the title (or, on a short screen, the strip) a
 var title_label: Label
 var root_box: VBoxContainer
 var _held_waiting := false      # a held party's pass is due once held_pass_seconds have gone
+var _guard_until := 0           # msec: a finger's taps on a panel that has just been rebuilt are ignored until then
 
 const AUTO_PACE := 0.4
 
@@ -84,7 +85,7 @@ func _ready() -> void:
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_bar.add_child(title_label)
 	auto = GameTactics.auto_from_start(d)
-	auto_button = Kit.button("", func(): set_auto(not auto), Vector2(190, 34))
+	auto_button = Kit.button("", func(): set_auto(not auto), Vector2(float(UiSettings.setting("party_auto_w")) if _party() else 190.0, 34))
 	auto_button.add_theme_font_size_override("font_size", 15)
 	top_bar.add_child(auto_button)
 	_show_auto()
@@ -137,9 +138,16 @@ func _ready() -> void:
 	if not b.allies.is_empty():
 		var party: Array = b.allies.map(func(a): return a.name)
 		_say("%s fight%s beside %s." % [GameParty.names_text(party), "s" if party.size() == 1 else "", d.heir.name])
-		if not d.flags.has("round_hint"):   # told once: how a party battle is played
-			d.flags["round_hint"] = d.gen
-			_say("Pick a move for each of your party, then %s Fight!. %s a name to change a choice; Auto lets that one fight on their own." % [Kit.click(), Kit.click().capitalize()])
+		if not auto:
+			_round_hint()
+
+
+## Told once on this device, the first time a party's strip is shown: how a party battle is played.
+func _round_hint() -> void:
+	if bool(UiSettings.stored("round_hint", false)):
+		return
+	UiSettings.store("round_hint", true)
+	_say("Pick a move for each of your party, then %s Fight! to play the round. %s a name to change a choice; Auto lets that member fight on their own." % [Kit.click(), Kit.click().capitalize()])
 
 
 ## "Dire Wolf x3, Elite Dire Wolf" - the same foe is counted, not repeated.
@@ -566,7 +574,7 @@ func _cancel_aim() -> void:
 
 
 func _confirm_aim() -> void:
-	if aiming.is_empty() or str(aiming["aim"]) == "ally" or b.aoe_targets(aiming["ab"], int(aiming["by"]), aim_at).is_empty():
+	if _guarded() or aiming.is_empty() or str(aiming["aim"]) == "ally" or b.aoe_targets(aiming["ab"], int(aiming["by"]), aim_at).is_empty():
 		return
 	var plan := aiming
 	var at := aim_at
@@ -582,7 +590,7 @@ func _confirm_aim() -> void:
 
 ## The heal goes to `by` (a name or figure that was picked), or "" for the most hurt at their turn.
 func _confirm_ally(by: int, most_hurt: bool = false) -> void:
-	if aiming.is_empty() or str(aiming["aim"]) != "ally" or (not most_hurt and b.unit(by).hp <= 0):
+	if _guarded() or aiming.is_empty() or str(aiming["aim"]) != "ally" or (not most_hurt and b.unit(by).hp <= 0):
 		return
 	var plan := aiming
 	aiming = {}
@@ -611,7 +619,7 @@ func _ability_cmd(by: int, skill: int, spell: String, feat: int, item: String) -
 ## A command button was pressed: the row says what it is, what it costs and how it is aimed.
 ## Area abilities wait to be aimed; a foe aim takes the highlighted foe; a heal asks whom.
 func _choose(row: Dictionary) -> void:
-	if busy or cmd_round == null or b.is_over():
+	if busy or cmd_round == null or b.is_over() or _guarded():
 		return
 	var cmd: Dictionary = (row["cmd"] as Dictionary).duplicate(true)
 	var ab: Dictionary = row["ab"]
@@ -667,7 +675,7 @@ func _submit(by: int, cmd: Dictionary) -> void:
 
 ## Fight! (or Flee!), or the only command a solo hunt needs: the round plays out.
 func _commit() -> void:
-	if busy or cmd_round == null or not cmd_round.ready():
+	if busy or cmd_round == null or not cmd_round.ready() or _guarded():
 		return
 	_do(func(): cmd_round.resolve())
 
@@ -678,7 +686,7 @@ func _can_undo() -> bool:
 
 ## The last member to choose is asked again.
 func _undo() -> void:
-	if busy or cmd_round == null:
+	if busy or cmd_round == null or _guarded():
 		return
 	aiming = {}
 	_show_area({}, -1)
@@ -690,7 +698,7 @@ func _undo() -> void:
 
 
 func _repeat() -> void:
-	if busy or cmd_round == null:
+	if busy or cmd_round == null or _guarded():
 		return
 	var res := cmd_round.repeat_last()
 	_build_commands()
@@ -700,7 +708,7 @@ func _repeat() -> void:
 
 
 func _set_member_auto(by: int) -> void:
-	if busy or cmd_round == null:
+	if busy or cmd_round == null or _guarded():
 		return
 	cmd_round.set_auto(by, true)
 	_build_commands()
@@ -736,6 +744,17 @@ func _on_party_input(by: int, ev: InputEvent) -> void:
 
 # ---------------------------------------------------------------- commands
 
+## A finger's double tap lands twice on whatever is under it: a panel rebuilt by the first tap must not
+## act on the second, or it would pick for the next member, or confirm what was never reviewed.
+## Taps are ignored for tap_guard_ms after the commands or a list change (mouse clicks are not held up).
+func _arm_guard() -> void:
+	_guard_until = Time.get_ticks_msec() + int(UiSettings.setting("tap_guard_ms"))
+
+
+func _guarded() -> bool:
+	return TouchHint.finger and Time.get_ticks_msec() < _guard_until
+
+
 ## The fight has companions: each member's command is asked in turn.
 func _party() -> bool:
 	return not b.allies.is_empty()
@@ -744,6 +763,7 @@ func _party() -> bool:
 func _build_commands() -> void:
 	Kit.clear(command_box)
 	aim_info = null
+	_arm_guard()
 	if auto and not b.is_over():
 		_build_auto_commands()
 		return
@@ -765,7 +785,7 @@ func _build_commands() -> void:
 	var by := active_by
 	var u := b.unit(by)
 	var rows: Array = cmd_round.menu(by)
-	hint.text = _command_hint(by)
+	hint.text = _command_hint(by, rows)
 	var cols := 4.0 if _party() else 3.0
 	var col1 := VBoxContainer.new()
 	var col2 := VBoxContainer.new()
@@ -855,10 +875,13 @@ func _basic_button(text: String, row: Dictionary) -> Button:
 
 ## "Bren Cask (2 of 4)  (tap an enemy to target it)": whose move is asked, as much as the panel's
 ## width holds. A solo hunt keeps its plain "Commands".
-func _command_hint(by: int) -> String:
+func _command_hint(by: int, rows: Array) -> String:
 	var tail := "(%s an enemy to target it)" % Kit.click()
 	if strip == null:
 		return "Commands  " + tail
+	var flee := _basic(rows, "flee")
+	if not flee.is_empty() and not flee["enabled"]:   # a greyed Flee says why
+		tail = "(Flee: %s)" % str(flee["why"]).trim_suffix(".")
 	var manual: Array = cmd_round.members().filter(func(m): return cmd_round.state_of(m) == "ready" and not bool(cmd_round.auto.get(m, false)))
 	var pos := manual.filter(func(m): return m <= by).size()
 	var head := b.unit(by).name
@@ -915,6 +938,12 @@ func _build_confirm() -> void:
 	var v := cmd_round.view()
 	var fleeing: bool = v["flee"]
 	hint.text = "The party flees." if fleeing else ("Everyone is ready." if int(v["manual_count"]) > 0 else "Everyone fights on their own.")
+	var autos: Array = (v["members"] as Array).filter(func(m): return m["decision"] == "auto").map(func(m): return str(m["name"]))
+	if not autos.is_empty() and not fleeing:   # Auto is turned off from the chip: say so
+		var cue := "%s is Auto: %s the name to take over." % [GameParty.names_text(autos), Kit.click()]
+		if autos.size() > 1:
+			cue = cue.replace(" is Auto", " are Auto")
+		hint.text = "%s  %s" % [hint.text, cue] if _fits("%s  %s" % [hint.text, cue], 14, cmd_w - 40.0) else cue
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1188,6 +1217,7 @@ func _aim_text(ab: Dictionary, at: int, hovering: bool) -> String:
 ## A list over the field (the spellbook, the readied feats): a click outside it or on Close shuts
 ## it. Returns [the list's root, the box its rows go in].
 func _list_panel(title: String, close: Callable) -> Array:
+	_arm_guard()
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.z_index = 5
@@ -1287,6 +1317,8 @@ func _spell_row(spell: Dictionary) -> Control:
 
 ## A row of a list (a spell, a later skill, a feat) was chosen: the list shuts, the command is made.
 func _pick(row: Dictionary) -> void:
+	if _guarded():
+		return
 	_close_spells()
 	_close_skills()
 	_close_feats()
@@ -1463,6 +1495,7 @@ func _open_feats() -> void:
 	if feat_list != null:
 		_close_feats()
 		return
+	_arm_guard()
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
 	p.z_index = 5
@@ -1619,6 +1652,12 @@ func _play_events(events: Array) -> void:
 	floats = {}
 	if strip != null:
 		strip.mark_acting(-3)
+	await _play_all(events)
+	if strip != null:
+		strip.mark_acting(-3)   # the foes' dimming ends with the round
+
+
+func _play_all(events: Array) -> void:
 	for i in events.size():
 		var ev: Dictionary = events[i]
 		_play_one(ev)

@@ -33,11 +33,14 @@ func refresh(view: Dictionary, active: int) -> void:
 		var c: Dictionary = chips[by]
 		var btn: Button = c["btn"]
 		var decision := str(m["decision"])
+		btn.modulate = Color.WHITE   # a round's lighting ends with it
 		_look(btn, decision, by == active)
 		btn.disabled = decision == "ko"
 		btn.tooltip_text = "%s\n%s" % [m["tip"], _tap_hint(m)]
 		c["name"] = str(m["name"])
 		c["lines"] = [str(m["chip"]["full"]), str(m["chip"]["short"]), str(m["chip"]["tiny"])]
+		if decision == "auto":   # the way back to hand control is on the chip itself
+			c["lines"] = ["Auto - %s to take over" % Kit.click(), "Auto (%s)" % Kit.click(), "Auto"]
 		var hp: ProgressBar = c["hp"]
 		hp.max_value = maxf(1.0, float(m["max_hp"]))
 		hp.value = float(m["hp"])
@@ -142,16 +145,23 @@ func _fit(c: Dictionary) -> void:
 		btn.text = "%s\n%s" % [who, lines[0]]
 		return
 	var font := btn.get_theme_font("font")
-	for fs in range(FONT, MIN_FONT - 1, -1):
-		if font.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > inner:
-			continue
-		for line in lines:
+	for line in lines:   # the fullest wording first, at the largest font that holds it
+		for fs in range(FONT, MIN_FONT - 1, -1):
+			if font.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > inner:
+				continue
 			if font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= inner:
 				btn.add_theme_font_size_override("font_size", fs)
 				btn.text = "%s\n%s" % [who, line]
 				return
+	# The name does not fit whole even at the smallest font: it is cut, but the action keeps its
+	# longest wording that fits before it falls back to the tiny one.
 	btn.add_theme_font_size_override("font_size", MIN_FONT)
-	btn.text = "%s\n%s" % [_cut(font, who, inner), _cut(font, lines[2], inner)]
+	var action: String = lines[2]
+	for line in lines:
+		if font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, MIN_FONT).x <= inner:
+			action = line
+			break
+	btn.text = "%s\n%s" % [_cut(font, who, inner), _cut(font, action, inner)]
 
 
 ## `text` as it fits `width` at the smallest font: a first name alone, else its start and a full stop.
