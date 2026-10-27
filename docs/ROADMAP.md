@@ -14,6 +14,7 @@ In order:
    - Readable on a phone: a text-size setting and larger buttons, with layouts checked on small screens.
    - Landscape lock, so the 1280x720 layout fills the screen.
    - Saves, auto-battle and the autopilot checked on a real device.
+6. **Party commands.** Done. In manual mode a battle with companions steps through each member (the heir, then every companion, from their own class skills, spells, feats and the shared potions), queues the choices and plays the round together on Fight!. Per-member Auto (remembered), Repeat last round, Back, a Flee that covers the party, and a party strip showing who is asked and what is queued. A solo hunt and the master Auto-battle play exactly as before.
 
 Also done: the autopilot takes Hard hunts once its heir is clearly strong, which keeps battle deaths in the 3-7% band now that skill trees make heirs stronger.
 
