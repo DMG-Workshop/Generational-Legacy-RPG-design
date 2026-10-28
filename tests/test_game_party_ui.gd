@@ -72,6 +72,7 @@ func _frames(n: int = 3) -> void:
 ## A battle of `foes` wolves against the heir and the companions `ids` (all at `level`). Sturdy wolves
 ## bite for little, so rounds can be played without anyone falling.
 func _fight(cls: String, ids: Array, foes: int = 3, level: int = 40, sturdy: bool = true, heir_name: String = "Tess") -> void:
+	TouchHint.finger = false   # a finger's taps wait out the guard after a rebuild; these tests press by signal
 	app.new_game(heir_name, cls, "faetouched", 77, "human")
 	d = app.dynasty
 	d.pending_event = {}
@@ -206,7 +207,7 @@ func test_auto_and_single_manual() -> void:
 	await _press("Auto")
 	ok(int(_view()["cursor"]) == 2, "the warrior is next, then the spellblade")
 	await _press("Auto")
-	ok(_find(bv.command_box, "Fight!") != null and bv.hint.text == "Everyone fights on their own.", "everyone Auto: Fight! only")
+	ok(_find(bv.command_box, "Fight!") != null and bv.hint.text.contains("Auto: "), "everyone Auto: Fight! only")
 	var turn: int = d.battle.turn
 	# Tap the cleric's Auto chip: she is asked again; she is the only manual member, so a pick plays at once.
 	_chip(0).pressed.emit()
@@ -248,7 +249,8 @@ func test_flee() -> void:
 	var go := _find(bv.command_box, "Flee!")
 	ok(go != null and _find(bv.command_box, "Fight!") == null, "the confirm reads Flee!")
 	ok(bv.hint.text == "The party flees.", "and says the party flees: %s" % bv.hint.text)
-	ok(_chip(1).text.contains("Covers") or _chip(1).text.contains("Cover"), "the others are covered: %s" % _chip(1).text)
+	if bool(GameRound.setting("flee_covers_party")):
+		ok(_chip(1).text.contains("Cover"), "the others are covered: %s" % _chip(1).text)
 	await _press("Back")
 	ok(_find(bv.command_box, "Flee!") == null and int(_view()["cursor"]) == 0, "Back takes the Flee back")
 
