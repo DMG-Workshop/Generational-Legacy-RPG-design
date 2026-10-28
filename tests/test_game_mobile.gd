@@ -468,6 +468,7 @@ func test_hover_preview() -> void:
 	app.hints.hide_hint()
 	ok(bv.shown.is_empty(), "the outline goes with the hint")
 	# A tap on it starts aiming; tapping a foe aims there, again casts (aiming unchanged by touch).
+	await create_timer(float(UiSettings.setting("tap_guard_ms")) / 1000.0 + 0.1).timeout   # a finger's tap waits out the guard after a panel opens
 	await _tap(spb)
 	ok(not bv.aiming.is_empty(), "a tap on the spell starts aiming")
 	var last: int = d.battle.living_enemies().back()
@@ -751,6 +752,8 @@ func test_every_tooltip_reachable() -> void:
 	bv.set_auto(false)
 	await _frames(2)
 	await _probe(bv, "battle_view.gd")
+	ok(bv.strip != null, "a battle with companions has the party strip")
+	await _probe(bv.strip, "party_strip.gd")
 	bv._open_feats()
 	await _frames(4)
 	if bv.feat_list != null:

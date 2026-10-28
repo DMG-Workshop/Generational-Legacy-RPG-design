@@ -43,6 +43,30 @@ the background. There is no Quit button on phones and tablets (iOS does not allo
 an app to quit itself; Android apps are left with Home or Back); the desktop's
 title screen keeps it.
 
+## Party battles
+
+With companions the fight is played a round at a time. A **party strip** shows one chip per
+member (name, what they will do, HP and MP): in the top bar on a short screen (under 600 high,
+where it takes the title's place), as a row of its own otherwise. The gold chip is the member being
+asked; the commands below are theirs (their class skills, spells, feats, the shared potions). Pick,
+and the next member is asked; when everyone has chosen, **Fight!** plays the round (**Flee!** if one
+member's Flee covers the party). **Auto** sets that member to fight on their own (the class's
+style), remembered for later rounds and battles; tap their chip to take over again. **Back** takes
+the last choice back; **Repeat** (before anything is chosen) redoes last round's choices. Only
+Auto and one of Back or Repeat sit beside the commands, so a short screen does not overflow. If
+only one member needs orders, their pick plays at once, as in a solo hunt, which has no strip
+and no Fight!. Chips are fingertip tall; a long press on a chip shows its HP, MP, statuses and
+choice in full. Chip text steps down from the full wording to a short one, a smaller font and a
+cut name, so nothing is ever clipped. The tunables are in `data/ui/mobile.json` (`party_chip_h`,
+`party_chip_min_w`, `party_cmd_extra_w`, `held_pass_seconds`, `confirm_button_w`) and the chip
+wordings in `data/combat/rounds.json`. A text-size or touch-layout change mid-round keeps what is
+queued. The master Auto-battle button is unchanged and never uses the round.
+A finger's taps are ignored for `tap_guard_ms` (250) after the commands or a list are rebuilt, so
+a double tap cannot pick for the next member or confirm a round that was never reviewed; mouse
+clicks are not held up. An Auto chip reads "Auto - tap to take over"; a greyed Flee names its
+reason in the hint. The how-to line in the log is told once per device (`[ui] round_hint` in
+`user://settings.cfg`), and only when the strip is shown.
+
 In the skill tree a node that is open but cannot be bought now (too few points,
 or mid-fight) has a green outline on a dark fill, apart from the green nodes that
 can be bought and the dim locked ones; choosing it says why not now. Keystones

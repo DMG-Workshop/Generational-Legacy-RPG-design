@@ -24,7 +24,7 @@ static var companions: Array = []
 static var creatures: Array = []
 static var balance: Dictionary = {}
 static var names: Dictionary = {}
-static var combat: Dictionary = {}   # spells, statuses, elements, formations (see GameCombat)
+static var combat: Dictionary = {}   # spells, statuses, elements, formations (see GameCombat), rounds (see GameRound)
 static var diseases: Dictionary = {}   # {settings, diseases}: read through GameDisease
 static var plague: Dictionary = {}     # looting, toxins, vials: read through GamePlague
 static var ages: Dictionary = {}       # {settings, text}: read through GameAges
@@ -75,7 +75,8 @@ static func load_all() -> void:
 	companions = load_json("res://data/companions/companions.json")["companions"]
 	balance = load_json("res://data/game/balance.json")
 	names = load_json("res://data/game/names.json")
-	combat = {"spells": load_json("res://data/spells/spells.json"), "statuses": load_json("res://data/combat/statuses.json"), "elements": load_json("res://data/combat/elements.json"), "formations": load_json("res://data/combat/formations.json")}
+	combat = {"spells": load_json("res://data/spells/spells.json"), "statuses": load_json("res://data/combat/statuses.json"), "elements": load_json("res://data/combat/elements.json"), "formations": load_json("res://data/combat/formations.json"),
+		"rounds": load_json("res://data/combat/rounds.json")}
 	diseases = load_json("res://data/diseases/diseases.json")
 	plague = load_json("res://data/diseases/plague.json")
 	ages = load_json("res://data/ages/ages.json")
