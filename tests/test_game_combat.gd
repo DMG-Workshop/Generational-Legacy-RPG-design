@@ -1252,6 +1252,11 @@ func _ui_reach_and_ranks(view: Control, d: GameDynasty, ev: InputEventMouseButto
 		if b.enemies[i]["row"] == "back" and b.enemies[i]["hp"] > 0:
 			back = i
 	d.heir.mp = d.heir.max_mp()
+	# The stunned heir's Defend already committed the round; wait for it to resolve before reading the menu.
+	for k in 80:
+		if not view.busy and view.cmd_round.cursor != -2 and not view.cmd_round.ready():
+			break
+		await create_timer(0.2).timeout
 	view._build_commands()
 	await _frames(2)
 	_button(view, "Spells").pressed.emit()
