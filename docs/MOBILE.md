@@ -61,6 +61,11 @@ cut name, so nothing is ever clipped. The tunables are in `data/ui/mobile.json` 
 `party_chip_min_w`, `party_cmd_extra_w`, `held_pass_seconds`, `confirm_button_w`) and the chip
 wordings in `data/combat/rounds.json`. A text-size or touch-layout change mid-round keeps what is
 queued. The master Auto-battle button is unchanged and never uses the round.
+A finger's taps are ignored for `tap_guard_ms` (250) after the commands or a list are rebuilt, so
+a double tap cannot pick for the next member or confirm a round that was never reviewed; mouse
+clicks are not held up. An Auto chip reads "Auto - tap to take over"; a greyed Flee names its
+reason in the hint. The how-to line in the log is told once per device (`[ui] round_hint` in
+`user://settings.cfg`), and only when the strip is shown.
 
 In the skill tree a node that is open but cannot be bought now (too few points,
 or mid-fight) has a green outline on a dark fill, apart from the green nodes that
