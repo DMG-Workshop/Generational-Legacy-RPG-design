@@ -1,68 +1,38 @@
-# Generational Legacy RPG — Project Guidance
+# CLAUDE.md
 
-## Engine & Architecture
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Engine:** Godot 4 with GDScript
+## Commands
 
-**Core Design Principle:** Logic is completely separated from rendering. All game systems (battle, traits, Fate, reputation, world simulation) run independently of the graphics layer. This allows the 2D side-view prototype to be reskinned as isometric 3D later without changing core logic.
+Godot 4.7 with GDScript. Commands assume `godot` is on the PATH.
 
-**Content Delivery:** All content (traits, classes, jobs, keystones, monsters, items, realms) lives in JSON data files. Code reads data; no hardcoding. This makes balancing, testing, and expansion straightforward.
+- Import assets and scripts (once in a fresh checkout): `godot --headless --path . --import`
+- Play the game: `godot --path .` (main scene `ui/main.tscn` loads `main.gd`, which starts `ui/play/game_app.gd`)
+- Run one test suite: `godot --headless --path . -s res://tests/test_game_round.gd`
+  - Exit code 0 means pass. A suite prints `N checks, M failures` (or `ALL PASS`) and exits 1 on any failure.
+- Run every game suite, one after another:
+  `for t in tests/test_game_*.gd tests/test_round_determinism.gd; do godot --headless --path . -s res://$t || echo "FAILED $t"; done`
+- Never run suites in parallel. They share the `user://` save files and fail when they overlap.
+- Debug Android APK: `godot --headless --path . --export-debug "Android" build/GenerationalLegacy-debug.apk` (the Android SDK and JDK are configured in Godot's editor settings). The iOS preset only exports on a Mac with Xcode.
+- The balance harness (autopilot, 10 generations x 3 seeds, all races) is not committed to this repo. The balance targets are in `docs/ROADMAP.md`: battle deaths stay in the 3-7% band.
 
-**Determinism:** Random number generation is seeded, so entire generations and Age transitions are reproducible and testable in isolation.
+## Architecture
 
-## Repository Structure
+Only the text game is wired into the app. The older prototype code is described at the end of this section.
 
-```
-/docs/GDD.md                  Full game design document
-/data/traits/*.json           Trait definitions (bloodline, acquired, curses, blessings)
-/data/classes/*.json          Classes and advanced/era-locked variants
-/data/jobs/*.json             Jobs and their combat/building effects
-/data/keystones/*.json        Skill tree keystones that rewrite combat rules
-/data/items/*.json            Weapons, armor, runes, heirlooms
-/data/creatures/*.json        Monster and NPC creature definitions
-/data/realms/*.json           World realms, time multipliers, resources
-/core/lineage/                Family tree, inheritance, trait mutation
-/core/fate/                   Fate Value calculation, milestone checks, failure severity
-/core/memory/                 Legacy echoes, reputation, faction standing
-/core/battle/                 Layered combat engine (no rendering calls)
-/core/sim/                    Age transitions, decay, strata compression
-/world/                       Tile world, chunks, building, digging persistence
-/ui/                          Rendering: battle screen, menus, family tree view
-/tests/                       Unit tests for core systems (use GDScript test framework)
-```
+- **Logic and rendering are separate.** `core/game/` makes no UI calls. `ui/play/` screens read dynasty state and call its methods, and they never compute results. New rules go in `core/game/` with a test in `tests/`.
+- **Content is data.** `GameData` (`core/game/game_data.gd`) loads every JSON file under `data/` once, through `load_all()`. The tunable settings are in `data/game/balance.json` (Hard hunt rules, death chance), `data/combat/rounds.json` (party rounds), `data/classes/classes.json` (class skills, auto-battle `style`, openers) and `data/ui/mobile.json` (touch and layout sizes). Don't hardcode numbers in code.
+- **State lives in `GameDynasty`** (`core/game/game_dynasty.gd`): the heir, the party, the world, the current battle, `command_round` and `auto_party`. It saves through `to_dict()` and `from_dict()`. A new field must load from an old save, and needs a test for that.
+- **Battles.** `GameBattle` owns the round: heir, allies, foes, events and log. Its `round_on` hold lets manual party rounds use the same methods, and it is inert when no party round is open. `GameTactics.auto_turn` picks actions for auto-battle, the autopilot and any party member on Auto. `GameRound` queues manual party commands, resolves them together and retargets members who have died.
+- **Autopilot.** `GameBot` (`step`, `live_life`, `wants_hard_hunt`) plays without input for the tests and the "Auto" buttons. Changing when it or the battle draws a random number changes every seeded fight, and the determinism tests will catch that.
+- **Determinism.** All randomness comes from the dynasty's seeded RNG. The same seed with the same commands gives the same result, including after a save and load between rounds. `tests/fixtures/round_baseline.json` is a golden file made by `tests/capture_round_baseline.gd`. Regenerate it only from the commit before a deliberate behaviour change, never to make a failing test pass.
+- **Touch.** `ui/play/touch_hint.gd` gives long-press previews on phones (`TouchHint.on_hover`). `ui/play/ui_settings.gd` stores the text size, the touch layout and the autopilot cooldowns in `user://settings.cfg`, not in the save. Touch targets are at least `touch_target_px` tall.
 
-## Current Roadmap Phase
+**Older prototype, not used by the game:** `core/battle`, `core/lineage`, `core/fate`, `core/economy`, `core/crafting`, `core/equipment`, `core/legacy`, `core/simulation`, `core/generation`, `world/`, `ui/screens`, `ui/components`, `ui/animations`, and the `tests/test_*.gd` files that don't start with `test_game_`. Nothing in the playable game refers to them. Don't extend them unless asked, and check before treating their tests as a gate.
 
-**Phase 1: Lineage Core** (Current focus)
+## Conventions
 
-Build and test the family tree, trait inheritance, mutation, and Fate system in isolation. Start with text-only simulation: 999 generations passing through the system, checking that:
-- Traits pass down with correct probabilities
-- Mutations occur and chain correctly
-- Dormant traits can skip generations
-- Fate Values are rolled and milestone checks work
-- Failures transform properly and affect the next heir
-- Legacy echoes compound correctly
-
-This is the foundation. Every system depends on it working correctly.
-
-## Key Files to Know
-
-- `docs/GDD.md` — The complete design, 25,000 words of mechanics and lore
-- Core tests will live in `/tests/test_lineage.gd`, `/tests/test_fate.gd`, etc.
-
-## Next Steps
-
-1. Set up Godot 4 project structure
-2. Create trait definition schema and load system
-3. Build family tree and inheritance engine
-4. Implement Fate roll system
-5. Write integration test: simulate 999 generations, verify all systems
-6. Only after Phase 1 is green: move to battle prototype
-
-## Design Principles (Preserve These)
-
-1. **Logic before rendering.** Battle system computes results; UI renders them.
-2. **No hardcoding.** Everything data-driven.
-3. **Fail visibly.** Test early, test often. A generation system with bugs now is catastrophic at Gen 500.
-4. **Modular.** Lineage doesn't know about battles. Battles don't know about the world. Each system is testable alone.
-5. **Persistent and reactive.** The world remembers everything. Choices ripple forward 999 generations.
+- Old saves must keep loading. Missing keys fall back to defaults, and corrupt values must not crash loading, so check the type (for example `typeof(v) == TYPE_BOOL`) before using a saved value.
+- A change that alters autopilot or auto-battle results is a balance change. Say so in the PR and show the before and after numbers.
+- Don't add new `.uid` files or commit anything under `.godot/`.
+- Documentation: `docs/GDD.md` is the design, `docs/ROADMAP.md` lists what is done and what is next, and `docs/MOBILE.md` covers touch, text size and the Android and iOS export setup. `TESTING.md` and the phase list in `README.md` are out of date and describe a test framework (GUT) that this repo doesn't use.
