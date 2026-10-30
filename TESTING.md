@@ -1,123 +1,66 @@
-# Testing Phase 1: Lineage Core
+# Testing the text game
 
-## Running Tests
+The playable game is tested with headless Godot suites. No test addon is needed.
 
-### Install GutTest (Godot Unit Testing)
+## Running tests
 
-```bash
-cd /home/user/GenerationalLegacyRPG
-godot --headless --script res://addons/gut/gut_cmdline.gd
-```
-
-Or add GutTest as a Godot plugin:
-1. Create `addons/gut/` directory
-2. Download GutTest from https://github.com/bitwes/Gut
-3. Copy files into `addons/gut/`
-
-### Run Specific Tests
+Commands assume `godot` is on the PATH. Import once in a fresh checkout first:
 
 ```bash
-# Lineage system tests
-godot --headless -s res://addons/gut/gut_cmdline.gd -gtest=res://tests/test_lineage.gd
-
-# Integration tests (generation loop)
-godot --headless -s res://addons/gut/gut_cmdline.gd -gtest=res://tests/test_integration_generation_loop.gd
-
-# All tests
-godot --headless -s res://addons/gut/gut_cmdline.gd -gtest=res://tests/
+godot --headless --path . --import
 ```
 
-## Test Coverage
+Run one suite:
 
-### `test_lineage.gd`
-- ✓ Founder creation
-- ✓ Heir production from parents
-- ✓ Fate Value rolling
-- ✓ 999-generation simulation
-- ✓ Trait inheritance probability
-- ✓ Fate tier perception (Charmed → Ill-Starred)
-
-### `test_integration_generation_loop.gd`
-- ✓ 5-generation family saga
-- ✓ Fate milestone distribution across 100 generations
-- ✓ Heir archetype assignment after failure
-- ✓ Trait conflict handling
-- ✓ Fate modifiers from traits
-
-## What Each Test Validates
-
-### Lineage System
-- Family tree structure (parent/child relationships)
-- Trait inheritance with probability
-- Trait mutations (15% chance)
-- Generation tracking (Gen 0 → 999)
-- Heir creation from two parents
-
-### Fate System
-- Fate Value rolled at birth (1-30%)
-- Milestone probability calculated (1 - (1 - P)^(1/5))
-- Severity assignment based on Fate
-- Heir archetype assignment (6 types)
-- Perception tiers (Charmed/Steady/Uncertain/Ill-Starred)
-
-### Data-Driven Content
-- 30 traits loaded from JSON (bloodline, acquired, curses, blessings)
-- Trait effects and mutations defined
-- Trait conflicts detected
-- Dormancy tracked (future feature)
-
-## Test Design Philosophy
-
-**Deterministic:** Every test uses a seeded RNG (e.g., `Lineage.new(42)`). Same seed = same results. This lets us validate the 999-generation saga is reproducible.
-
-**Isolated:** Each system (Lineage, Fate) is tested independently before integration tests run them together.
-
-**Scale:** `test_simulate_999_generations` actually produces 999 heirs to catch scaling bugs early.
-
-## Next Phase Triggers
-
-After Phase 1 tests pass:
-1. Add Battle prototype (combat engine)
-2. Add World system (tile world, digging, building)
-3. Add Generation loop (transition between heirs)
-4. Integrate all three
-
-## Debugging
-
-### Print Heir Info
-```gdscript
-var heir = lineage.get_current_heir()
-print(heir)  # Uses Heir.to_string()
-print("Traits: ", heir.traits)
-print("Fate: %.2f (%s)" % [heir.fate_value, heir.fate_tier])
+```bash
+godot --headless --path . -s res://tests/test_game_round.gd
 ```
 
-### Print Family Tree
-```gdscript
-for gen in range(lineage.generation_count()):
-	var heir = lineage.get_heir(gen)
-	print("Gen %d: %s (traits: %s)" % [gen, heir.name, heir.traits])
+A suite prints `N checks, M failures` (or `ALL PASS`) and exits with code 0 on success, 1 on any failure.
+
+Run every game suite, one after another:
+
+```bash
+for t in tests/test_game_*.gd tests/test_round_determinism.gd; do godot --headless --path . -s res://$t || echo "FAILED $t"; done
 ```
 
-### Verify Trait Loading
-```gdscript
-print("Trait catalog size: ", lineage.trait_catalog.size())
-for trait_id in lineage.trait_catalog.keys():
-	print("  - ", trait_id)
-```
+Never run suites in parallel. They share the `user://` save files and fail when they overlap.
 
-## Known Limitations (Phase 1)
+## What each suite covers
 
-- Dormant traits not yet stored (will skip generations)
-- No legacy echoes or reputation system (Phase 2)
-- No battle mechanics (Phase 2)
-- No world/building (Phase 3)
-- No NPC parents or generation transition UI (Phase 4)
+| Suite | Covers |
+|-------|--------|
+| `test_game_aging.gd` | Companion ageing, old age, death and retirement, successors, saves and the autopilot |
+| `test_game_bot.gd` | The autopilot's Hard hunt choice and the `bot_hard_hunt` rules in `balance.json` |
+| `test_game_combat.gd` | Battlefield geometry, the ability pipeline and spellbook, statuses, elements, packs, spell costs and saves |
+| `test_game_disease.gd` | Diseases: catching, worsening, cures, contagion, the black market and saves |
+| `test_game_events.gd` | Events with skill checks: check math, gating, every outcome and event fights |
+| `test_game_feats.gd` | Feats by class, gates, companions, MAG and STR scaling, and the autopilot's use of them |
+| `test_game_generations.gd` | The long count: Ages, content gates, scaling, bounded saves and the end of the saga at generation 999,999 |
+| `test_game_integration.gd` | Shops, gear, quests, events and companions together, including old-save fixtures |
+| `test_game_items.gd` | Shops, equipment and the temple; every item reaches the player somehow |
+| `test_game_mobile.gd` | Phones and tablets: hold-for-details, no hover previews from a finger, tooltips in the shipped UI |
+| `test_game_party.gd` | Companions: hire, dismiss, upkeep, level sync, rest, succession, battles with allies and saves |
+| `test_game_party_ui.gd` | The party command screen: a solo hunt is unchanged, and with companions each member is asked in turn |
+| `test_game_plague.gd` | The battle side of sickness: carriers, toxins, plague vials, sick companions and determinism |
+| `test_game_quests.gd` | Notice-board quests: content, rules, rewards, saves and the board |
+| `test_game_round.gd` | Party command rounds: queueing, back, repeat last, retargeting, flee, reserved items and saves |
+| `test_game_skills.gd` | Class skills by level and class style, unlock gates, once-a-battle skills and the journal |
+| `test_game_trees.gd` | Skill trees: data validation, skill points, prerequisites, node effects, keystones and refunds |
+| `test_round_determinism.gd` | Seeded battles around party rounds match the golden fixture (see below) |
 
-## Success Criteria for Phase 1
+Each suite's header comment says what it proves and gives its own run command.
 
-✓ Lineage tests pass (family tree, inheritance, Fate)
-✓ Integration test runs 999 generations without crash
-✓ Traits load correctly from JSON (30 traits × 4 categories)
-✓ Failure distribution matches expected ~1-2 critical failures per 10 generations
-✓ Seeded RNG produces identical saga when run twice with same seed
+## Determinism and the golden fixture
+
+All randomness comes from the dynasty's seeded RNG, so the same seed with the same commands gives the same result. `tests/fixtures/round_baseline.json` records the battle digests from before party rounds were added. `test_round_determinism.gd` recomputes them and fails if anything changed.
+
+Regenerate the fixture only from the commit before a deliberate behaviour change, with `tests/capture_round_baseline.gd`. Never regenerate it to make a failing test pass.
+
+## Balance checks
+
+Autopilot changes are balance changes. The balance harness (autopilot over 10 generations and 3 seeds, all races) is not committed to this repo. Battle deaths should stay in the 3-7% band in `docs/ROADMAP.md`. Show the before and after numbers when a change affects them.
+
+## Older prototype tests
+
+The `tests/test_*.gd` files that don't start with `test_game_` test the older prototype code (`core/battle`, `core/lineage`, `world/`, `ui/screens` and others) that the game does not use. Many of them extend `GutTest`, and the GUT addon is not in this repo, so they don't run as they are. Don't treat them as a gate. Check them before relying on them.

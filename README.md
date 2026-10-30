@@ -30,19 +30,17 @@ Play one heir's full life, then continue as their child while your old character
 ### Project Structure
 
 ```
-/docs/GDD.md             Full game design (25,000 words)
+/docs/GDD.md             Full game design
+/docs/ROADMAP.md         What is done and what is next
+/docs/MOBILE.md          Touch, text size and Android/iOS export
 /CLAUDE.md               Project guidance & architecture
-/data/                   JSON trait/class/item definitions
-/core/                   Game logic (no rendering)
-  ├── lineage/           Family tree & inheritance
-  ├── fate/              Failure system
-  ├── memory/            Legacy echoes & reputation
-  ├── battle/            Combat engine
-  └── sim/               Age transitions & decay
-/world/                  Tile world, digging, building
-/ui/                     Rendering & menus
-/tests/                  Unit tests
+/data/                   JSON content: classes, combat, game balance, ui, ...
+/core/game/              Game logic (no rendering)
+/ui/play/                Screens for the playable game
+/tests/                  Headless test suites (see TESTING.md)
 ```
+
+The older prototype folders (`core/battle`, `core/lineage`, `world/`, `ui/screens` and others) are not used by the game. See CLAUDE.md.
 
 ## Play the Test Game
 
@@ -55,31 +53,11 @@ A self-contained playable slice (lineage, fate, echoes, heirlooms, turn-based ba
 
 Code: `core/game/` (logic, no rendering), `ui/play/` (screens), data in `data/classes`, `data/creatures`, `data/game`, `data/traits`, `data/spells`, `data/feats` and `data/combat` (statuses, elements, formations and packs).
 
-Tests (headless): each `tests/test_game_*.gd`, e.g. `godot --headless --path . -s res://tests/test_game_generations.gd`, which also plays a house through to the end of generation 999,999.
+Tests (headless): each `tests/test_game_*.gd`, e.g. `godot --headless --path . -s res://tests/test_game_generations.gd`, which also plays a house through to the end of generation 999,999. See TESTING.md for how to run them all and what each covers.
 
 ## Development Roadmap
 
-**Phase 1: Lineage Core** (In progress)
-- Family tree with trait inheritance and mutation
-- Fate Value rolls and milestone checks
-- Failure system with heir archetypes
-- Text-only simulation of 999,999 generations for testing
-
-**Phase 2: Battle Prototype**
-- Side-view combat with front/back rows
-- Two class families and basic keystones
-- Skill trees and class advancement
-
-**Phase 3: Tile World**
-- One realm with dig/build mechanics
-- Chunked save system
-- Persistence across generations
-
-**Phase 4+**
-- Generation loop and NPC parents
-- Legacy echoes and faction reputation
-- Remaining classes, jobs, realms, and Ages
-- Sieges and world decay (Strata system)
+The text game's queue is done: feats, battle diseases, a whole-game bug hunt, skill trees, mobile Android and iOS support (apart from testing on a real device), and party-command battles. What is left, and the sandbox that follows the text game, are in `docs/ROADMAP.md`.
 
 ## Design Principles
 
