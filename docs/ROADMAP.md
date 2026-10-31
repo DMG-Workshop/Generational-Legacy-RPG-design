@@ -18,6 +18,41 @@ In order:
 
 Also done: the autopilot takes Hard hunts once its heir is clearly strong, which keeps battle deaths in the 3-7% band now that skill trees make heirs stronger.
 
+## Running list of updates
+
+A running backlog for the text game. Add new ideas at the end; mark an item done when it lands.
+
+**Done**
+- **Auto hunt keeps going.** With Auto-battle on, a finished hunt starts the next one of the same kind by itself after a short pause. It stops when the player presses Stop (on the result, or "Stop after this fight" during it), takes over, or when the heir's health is under half (`balance.json` "auto_hunt").
+
+**Fixes and known gaps**
+1. **Commit the balance harness**, so the 3-7% death band can be re-checked after any change.
+2. **Lift battle deaths into the band.** Some seeds land near 2.5%, just under the 3% floor.
+3. **Lifespan-scaled death hazard for long-lived races** (elves, gnomes), where one flat chance per battle stacks up differently.
+4. **Fix the occasional tooltip-hold test failure** in `test_game_mobile.gd` at its timing cause.
+5. **Stop the arena jumping during party rounds.**
+6. **Remove or archive the older prototype code** (`core/battle`, `world/`, `ui/screens` and the GutTest suites).
+
+**Build and release**
+7. **CI that runs the game suites on every PR.**
+8. **A release workflow** that builds the Android APK and the Windows exe and attaches them to a GitHub release.
+9. **A signed release APK** with a real keystore, for the Play Store.
+
+**Player experience**
+10. **A first-heir tutorial:** Hunt, Rest, Train, founding a family and the first succession.
+11. **Several save slots and a backup export.**
+12. **A family tree viewer:** ancestors, traits, deaths and legacy echoes.
+13. **A dynasty statistics screen:** deaths by cause, best heir, Ages reached, gold over time.
+14. **Accessibility options:** colour-blind palette, high contrast, reduced motion.
+15. **Sound and music:** battle cues, a death sting, ambient tracks per Age.
+
+**Game systems**
+16. **Achievements and dynasty milestones.**
+17. **Faction reputation in the text game**, so NPCs judge the heir by their ancestors.
+18. **Heirloom upgrades across generations.**
+19. **Random world events per Age:** wars, famines and golden ages that change hunts, shops and diseases.
+20. **Hard-mode dynasty options:** whole-line permadeath, iron-man saves, a generation cap.
+
 ## After the text game: the 2D/3D sandbox
 
 Starts only once the text game is complete. The text game's systems (lineage, Fate, battles, diseases, companions, Ages) carry over: logic stays apart from rendering, so the new world is a new view on the same core.

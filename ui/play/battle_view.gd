@@ -1138,7 +1138,16 @@ func _auto_panel() -> void:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size = Vector2(cmd_w - 40.0, 0)
 	v.add_child(l)
-	v.add_child(Kit.button("Take over", func(): set_auto(false), Vector2(180, 38)))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	v.add_child(row)
+	row.add_child(Kit.button("Take over", func(): set_auto(false), Vector2(180, 38)))
+	if d.battle_kind in ["hunt", "hunt_hard"]:   # a run of hunts: this fight finishes, no next one starts
+		var stop := Kit.button("Stopping after this fight" if app.hunt_stopped else "Stop after this fight", _stop_after_fight, Vector2(220, 38))
+		stop.name = "StopAfterFight"
+		stop.disabled = app.hunt_stopped
+		stop.tooltip_text = "Let this fight play out on its own, then stop hunting."
+		row.add_child(stop)
 
 
 func _auto_step() -> void:
@@ -2047,7 +2056,7 @@ func _show_result() -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 	if d.loot.is_empty():
-		foot.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
+		_end_foot(foot)
 	elif auto:   # auto-battle settles the bodies as the autopilot would
 		_loot_done(v, foot, null, GamePlague.bot_loot(d), "Auto-battle: ")
 	else:
@@ -2103,5 +2112,56 @@ func _loot_done(v: VBoxContainer, foot: VBoxContainer, box: Control, lines: Arra
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 	app.autosave()
-	foot.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
+	_end_foot(foot)
 	_fit_result.call_deferred()
+
+
+## The result's last word: Continue, and with auto-battle on, the next hunt. A healthy heir hunts
+## again (the same kind) after "auto_hunt" "pause_s" unless the player presses Stop; a hurt one stops
+## and says why.
+func _end_foot(foot: VBoxContainer) -> void:
+	var why := GameTactics.auto_hunt_stop(d) if auto else "off"
+	if why == "" and app.hunt_stopped:
+		why = "stopped"
+	var say := ""
+	match why:
+		"":
+			say = "Auto-battle: the next hunt starts in a moment."
+		"stopped":
+			say = "Auto-battle: hunting stopped."
+		"low_hp":
+			say = "Auto-battle stops hunting: %s is down to %d%% health. Rest or drink a potion." % [d.heir.name, int(100.0 * float(d.heir.hp) / float(d.heir.max_hp()))]
+	if say != "":
+		var l := Kit.label(say, 15, Kit.BAD if why == "low_hp" else Kit.ACCENT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		foot.add_child(l)
+	if why != "":
+		foot.add_child(Kit.button("Continue", func(): app.show_state(), Vector2(0, 44)))
+		return
+	var stop := Kit.button("Stop", _stop_hunting, Vector2(0, 44))
+	stop.tooltip_text = "Stop hunting and go back to %s's life." % d.heir.name
+	foot.add_child(stop)
+	get_tree().create_timer(float(GameData.bal("auto_hunt")["pause_s"])).timeout.connect(_next_hunt.bind(d.battle_kind))
+
+
+## Stop pressed while auto-battle fights a hunt: this fight plays out, no next one starts.
+func _stop_after_fight() -> void:
+	app.hunt_stopped = true
+	var stop := command_box.find_child("StopAfterFight", true, false) as Button
+	if stop != null:
+		stop.text = "Stopping after this fight"
+		stop.disabled = true
+
+
+## Stop pressed on the result screen: back to the heir's life, no next hunt.
+func _stop_hunting() -> void:
+	app.hunt_stopped = true
+	app.show_state()
+
+
+## Starts the next hunt of the run, unless the player stopped it or left this screen meanwhile.
+func _next_hunt(kind: String) -> void:
+	if not is_inside_tree() or app.current != self or app.hunt_stopped or GameTactics.auto_hunt_stop(d) != "":
+		return
+	d.start_hunt(kind)
+	app.show_state()
