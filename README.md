@@ -16,7 +16,7 @@ Play one heir's full life, then continue as their child while your old character
 - **Layered Combat:** Final Fantasy side-view with class mechanics, skill trees, and ancestral arts
 - **Spells and Areas:** foes stand in front and back rows; bursts, cones, lines and field-wide spells strike every foe they reach, casters learn a spellbook as they level, and burns, poisons, stuns, wards and haste tick turn by turn
 - **Feats:** martial techniques bought with feat points earned at level milestones and readied in a few slots, changed only in a town or right after a rest: cleaves, charges, stuns and rallies that cost no MP but wait out a cooldown, and tricks of the ground such as a rockslide in the mountains or caltrops that keep biting
-- **Auto-battle:** a switch beside Hunt (and in every battle) that lets hunts fight themselves turn by turn with the autopilot's choices, until the player takes over
+- **Auto-battle:** a switch beside Hunt (and in every battle) that lets hunts fight themselves turn by turn with the autopilot's choices, one hunt after another, until the player presses Stop, takes over, or the heir's health runs low
 - **Dig & Build:** Terraria-style exploration with persistent structures that decay across generations
 - **Data-Driven:** All content (traits, classes, jobs, creatures) in JSON; logic independent of rendering
 

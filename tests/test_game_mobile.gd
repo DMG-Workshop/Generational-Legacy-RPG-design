@@ -149,7 +149,11 @@ func _center(c: Control) -> Vector2:
 
 
 ## A finger held on `c` for `secs`, then lifted. Returns the hint text seen while it was down.
+## It waits a frame before aiming: a control just rebuilt (a tap's click redraws the screen) is
+## placed by its container in a deferred call, and until that runs it sits at the container's
+## corner, so a finger aimed by its rect would land on whatever is drawn there.
 func _hold(c: Control, secs: float) -> String:
+	await _frames(1)
 	app.hints.hide_hint()
 	var at := _center(c)
 	await _down(at)

@@ -14,6 +14,7 @@ const SuccessionScreen := preload("res://ui/play/succession_screen.gd")
 const EndingScreen := preload("res://ui/play/ending_screen.gd")
 
 var dynasty: GameDynasty
+var hunt_stopped := false   # the player pressed Stop: auto-battle's run of hunts ends after this fight
 var current: Control
 var bg: ColorRect
 var frame: Control

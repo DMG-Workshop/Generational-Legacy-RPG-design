@@ -231,6 +231,54 @@ func test_auto_battle() -> void:
 		d.heir.clean_streak = 0   # the bot rule would say plain
 		d.start_hunt(kind)
 		ok(d.battle_kind == kind and GameTactics.auto_from_start(d), "auto-battle takes on the player's %s as started" % kind)
+	test_auto_hunt_run()
+
+
+## Auto-battle's run of hunts: after a won hunt a healthy heir hunts again; it ends when auto-battle
+## is off, the fight was not a hunt, the heir is busy, or health is under "auto_hunt" "stop_hp_frac".
+func test_auto_hunt_run() -> void:
+	var cfg: Dictionary = GameData.bal("auto_hunt")
+	ok(cfg.has("stop_hp_frac") and cfg.has("pause_s"), "balance.json has the auto_hunt settings")
+	ok(float(cfg["stop_hp_frac"]) > 0.0 and float(cfg["stop_hp_frac"]) < 1.0 and float(cfg["pause_s"]) > 0.0, "and they are sensible: %s" % str(cfg))
+	for kind in ["hunt", "hunt_hard"]:
+		var d := _ready_dyn(73)
+		d.auto_battle = true
+		d.start_hunt(kind)
+		ok(GameTactics.auto_hunt_stop(d) == "busy", "%s: no next hunt while this one is being fought" % kind)
+		d.battle.result = "victory"
+		d.finish_battle()
+		d.loot = {}
+		d.pending_event = {}
+		d.heir.full_heal()
+		ok(GameTactics.auto_hunt_stop(d) == "", "%s: a healthy heir hunts again" % kind)
+		var line := int(ceil(float(cfg["stop_hp_frac"]) * float(d.heir.max_hp())))
+		d.heir.hp = line
+		ok(GameTactics.auto_hunt_stop(d) == "", "%s: right at the line still hunts" % kind)
+		d.heir.hp = line - 1
+		ok(GameTactics.auto_hunt_stop(d) == "low_hp", "%s: under the line stops for low health" % kind)
+		d.heir.full_heal()
+		d.loot = {"x": 1}
+		ok(GameTactics.auto_hunt_stop(d) == "busy", "%s: bodies left to settle wait" % kind)
+		d.loot = {}
+		d.pending_event = {"id": "x"}
+		ok(GameTactics.auto_hunt_stop(d) == "busy", "%s: an event waiting stops the run" % kind)
+		d.pending_event = {}
+		d.auto_battle = false
+		ok(GameTactics.auto_hunt_stop(d) == "off", "%s: auto-battle off stops the run" % kind)
+	var d2 := _ready_dyn(74)
+	d2.auto_battle = true
+	d2._begin_battle([d2._make_enemy(GameCombat.creature_def("goblin"), 1.0, 1.0, 10)], "legend")
+	d2.battle = null
+	ok(GameTactics.auto_hunt_stop(d2) == "kind", "a legend fight never starts a hunt")
+	d2.battle_kind = "hunt"
+	d2.state = "succession"
+	ok(GameTactics.auto_hunt_stop(d2) == "busy", "a dead heir hunts no more")
+	# The rule draws no random number, so a run of hunts plays like hunts begun by hand.
+	var a := _ready_dyn(75)
+	var b := _ready_dyn(75)
+	b.auto_battle = true
+	GameTactics.auto_hunt_stop(b)
+	ok(a.rng.randi() == b.rng.randi(), "asking the rule leaves the seeded RNG alone")
 
 
 # ---------------------------------------------------------------- whole lives

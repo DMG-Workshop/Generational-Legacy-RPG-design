@@ -55,7 +55,7 @@ func _run() -> void:
 			only = a.substr(5).split(",")
 	for name in ["solo_is_today", "step_through", "auto_and_single_manual", "repeat_and_back", "flee", "held_and_fallen", "master_auto",
 			"aims", "chip_hold", "relayout_keeps_state", "chips_lit_and_cleared", "double_taps", "busy_guards", "round_hint", "take_over_and_turns",
-			"cues", "touch_and_fit", "end_to_end"]:
+			"cues", "touch_and_fit", "auto_hunt_run", "end_to_end"]:
 		if only.is_empty() or name in only:
 			await call("test_" + name)
 	print("party ui tests: %d checks, %d failures" % [checks, fails])
@@ -518,6 +518,106 @@ func test_touch_and_fit() -> void:
 
 ## A whole fight through the buttons: four members, Fight! each round, the hunt is won, the loot
 ## panel comes as ever.
+## An auto-battle hunt on its own: sets up a fresh heir hunting with auto-battle on, then ends the
+## fight in victory with the heir at `hp_frac` of full health and shows the result. Tries a few seeds
+## until the result is the one wanted (`want`, as GameTactics.auto_hunt_stop says), since a won hunt
+## can bring an event. Returns whether it got there.
+func _auto_hunt_result(want: String, hp_frac: float = 1.0, stop_first: bool = false) -> bool:
+	for s in [77, 78, 79, 80, 81, 82, 83, 84]:
+		TouchHint.finger = false
+		app.new_game("Tess", "warrior", "faetouched", s, "human")
+		d = app.dynasty
+		d.pending_event = {}
+		d.heir.level = 40
+		d.heir.potions = 3
+		d.heir.full_heal()
+		d.auto_battle = true
+		app.hunt_stopped = false
+		d.start_hunt("hunt")
+		app.show_state()
+		await _frames(3)
+		bv = app.current
+		if stop_first:
+			var btn := _find(bv.command_box, "Stop after this fight")
+			ok(btn != null, "an auto hunt offers Stop after this fight")
+			if btn != null:
+				btn.pressed.emit()
+				await _frames(2)
+				ok(app.hunt_stopped and btn.disabled and btn.text == "Stopping after this fight", "Stop after this fight is taken: %s" % btn.text)
+		d.heir.hp = maxi(1, int(float(d.heir.max_hp()) * hp_frac))
+		d.battle.result = "victory"
+		bv._show_result()
+		await _frames(3)
+		var why := GameTactics.auto_hunt_stop(d)
+		if stop_first and why == "":
+			why = "stopped"
+		if why == want:
+			return true
+		d.battle = null
+	return false
+
+
+func _labels_text(n: Node) -> String:
+	var out := ""
+	if n is Label and (n as Label).is_visible_in_tree():
+		out += (n as Label).text + "\n"
+	for c in n.get_children():
+		out += _labels_text(c)
+	return out
+
+
+## With auto-battle on, a won hunt starts the next one by itself; Stop (on the result, or during the
+## fight) ends the run, and so does low health. A hunt begun by hand starts a fresh run.
+func test_auto_hunt_run() -> void:
+	var pause := float(GameData.bal("auto_hunt")["pause_s"])
+	# A healthy heir hunts again.
+	ok(await _auto_hunt_result(""), "a won auto hunt with a healthy heir is reached")
+	var first := bv
+	ok(_find(bv, "Stop") != null and _find(bv, "Continue") == null, "the result offers Stop, not Continue: %s" % str(_texts(bv)))
+	ok(_labels_text(bv).contains("next hunt starts"), "and says the next hunt is coming")
+	await create_timer(pause + 0.4).timeout
+	await _frames(3)
+	ok(app.current != first and d.battle != null and d.battle_kind == "hunt", "the next hunt starts on its own")
+	ok(d.battle != null and GameTactics.auto_from_start(d), "and it fights itself too")
+	_quiet()
+	await _frames(3)
+	# Stop on the result: back to the heir's life, and no hunt follows.
+	ok(await _auto_hunt_result(""), "another won auto hunt")
+	_find(bv, "Stop").pressed.emit()
+	await _frames(3)
+	ok(app.hunt_stopped and d.battle == null, "Stop goes back to the heir's life")
+	await create_timer(pause + 0.4).timeout
+	ok(d.battle == null, "and no hunt starts after Stop")
+	# Stop during the fight: it plays out, then the run ends.
+	ok(await _auto_hunt_result("stopped", 1.0, true), "a fight with Stop pressed is reached")
+	ok(_labels_text(bv).contains("hunting stopped") and _find(bv, "Continue") != null, "the result says hunting stopped and offers Continue")
+	await create_timer(pause + 0.4).timeout
+	ok(d.battle == null, "no hunt starts after Stop after this fight")
+	# Low health ends the run, and says why.
+	ok(await _auto_hunt_result("low_hp", float(GameData.bal("auto_hunt")["stop_hp_frac"]) * 0.5), "a won hunt at low health is reached")
+	ok(_labels_text(bv).contains("health") and _find(bv, "Stop") == null and _find(bv, "Continue") != null, "low health stops the run and says why: %s" % _labels_text(bv))
+	await create_timer(pause + 0.4).timeout
+	ok(d.battle == null, "no hunt starts at low health")
+	# A hunt begun by hand starts a fresh run.
+	app.hunt_stopped = true
+	app.show_state()
+	await _frames(3)
+	app.current._hunt("hunt")
+	await _frames(3)
+	ok(not app.hunt_stopped and d.battle != null, "a hunt begun by hand clears Stop")
+	_quiet()
+	await _frames(3)
+
+
+## Ends an auto hunt left running: auto-battle off and back to the life screen, so no run of hunts
+## carries on into the next test.
+func _quiet() -> void:
+	d.auto_battle = false
+	d.battle = null
+	d.command_round = null
+	app.show_state()
+
+
 func test_end_to_end() -> void:
 	await _fight("warrior", MIXED, 2, 40, false)
 	for e in d.battle.enemies:

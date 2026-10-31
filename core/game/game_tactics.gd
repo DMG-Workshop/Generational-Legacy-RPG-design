@@ -648,3 +648,20 @@ static func auto_turn(b: GameBattle) -> Dictionary:
 ## auto-battle on. The player may switch it on or off in any battle.
 static func auto_from_start(d: GameDynasty) -> bool:
 	return d.auto_battle and d.battle != null and d.battle_kind in ["hunt", "hunt_hard"]
+
+
+## Why auto-battle's run of hunts ends after the fight just finished, or "" to hunt again (the same
+## kind). It ends when auto-battle is off ("off"), when the fight was not a hunt ("kind"), when the
+## heir is no longer free to hunt ("busy": dead, an event waiting, another fight begun), and when the
+## heir's health is under balance.json "auto_hunt" "stop_hp_frac" ("low_hp"). The player's Stop is
+## the screen's to keep.
+static func auto_hunt_stop(d: GameDynasty) -> String:
+	if not d.auto_battle:
+		return "off"
+	if not (d.battle_kind in ["hunt", "hunt_hard"]):
+		return "kind"
+	if d.state != "life" or d.battle != null or d.has_pending_event() or not d.loot.is_empty():
+		return "busy"
+	if float(d.heir.hp) < float(GameData.bal("auto_hunt")["stop_hp_frac"]) * float(d.heir.max_hp()):
+		return "low_hp"
+	return ""

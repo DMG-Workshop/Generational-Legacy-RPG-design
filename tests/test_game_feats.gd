@@ -1404,9 +1404,15 @@ func _auto_ui(app: Node, d: GameDynasty) -> void:
 			break
 		await create_timer(0.2).timeout
 	ok(view.result_shown and d.battle == null, "it fights on to the end")
-	_button(view, "Continue").pressed.emit()
+	# A heir free to hunt again is offered Stop (the next hunt follows on its own); otherwise Continue.
+	var next := "Stop" if GameTactics.auto_hunt_stop(d) == "" and not app.hunt_stopped else "Continue"
+	var leave := _button(view, next)
+	ok(leave != null, "the result offers %s" % next)
+	if leave == null:
+		return
+	leave.pressed.emit()
 	await _frames(3)
-	ok(_button(app.current, "Auto-battle: ON") != null, "and stays on for the hunts after")
+	ok(d.battle == null and _button(app.current, "Auto-battle: ON") != null, "and auto-battle stays on for the hunts after")
 	d.auto_battle = false
 
 
