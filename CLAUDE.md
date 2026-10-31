@@ -34,5 +34,5 @@ Only the text game is wired into the app. The older prototype code is described 
 
 - Old saves must keep loading. Missing keys fall back to defaults, and corrupt values must not crash loading, so check the type (for example `typeof(v) == TYPE_BOOL`) before using a saved value.
 - A change that alters autopilot or auto-battle results is a balance change. Say so in the PR and show the before and after numbers.
-- Don't add new `.uid` files or commit anything under `.godot/`.
+- Commit the `.uid` file Godot generates beside each new script, so script references stay stable. Never commit anything under `.godot/`.
 - Documentation: `docs/GDD.md` is the design, `docs/ROADMAP.md` lists what is done and what is next, and `docs/MOBILE.md` covers touch, text size and the Android and iOS export setup. `TESTING.md` describes how the game's headless suites run. The `GutTest` files among the older prototype tests need an addon that isn't in this repo.
