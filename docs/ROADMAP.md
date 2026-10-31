@@ -29,7 +29,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 1. **Commit the balance harness**, so the 3-7% death band can be re-checked after any change.
 2. **Lift battle deaths into the band.** Some seeds land near 2.5%, just under the 3% floor.
 3. **Lifespan-scaled death hazard for long-lived races** (elves, gnomes), where one flat chance per battle stacks up differently.
-4. **Fix the occasional tooltip-hold test failure** in `test_game_mobile.gd` at its timing cause.
+4. **Fix the occasional tooltip-hold test failure** in `test_game_mobile.gd` at its timing cause. Done: after a tap rebuilt the screen, the test aimed its finger at a button its container had not yet placed (Godot lays containers out in a deferred call), so the hold could land on the button drawn underneath. The `_hold` helper now waits a frame before aiming.
 5. **Stop the arena jumping during party rounds.**
 6. **Remove or archive the older prototype code** (`core/battle`, `world/`, `ui/screens` and the GutTest suites).
 
