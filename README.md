@@ -55,6 +55,22 @@ Code: `core/game/` (logic, no rendering), `ui/play/` (screens), data in `data/cl
 
 Tests (headless): each `tests/test_game_*.gd`, e.g. `godot --headless --path . -s res://tests/test_game_generations.gd`, which also plays a house through to the end of generation 999,999. See TESTING.md for how to run them all and what each covers.
 
+### Windows build
+
+`export_presets.cfg` has a **Windows Desktop** preset (x86_64, PCK embedded, no code signing)
+that writes a single self-contained `build/windows/GenerationalLegacy.exe`. With Godot 4.7.2 and
+its export templates installed (**Editor > Manage Export Templates**, or unpack
+`Godot_v4.7.2-stable_export_templates.tpz` into `%APPDATA%\Godot\export_templates\4.7.2.stable\`):
+
+```powershell
+New-Item -ItemType Directory -Force build\windows   # Godot will not create the folder itself
+godot --headless --path . --import                   # first time only, registers script classes
+godot --headless --path . --export-release "Windows Desktop"
+```
+
+Use `--export-debug` instead for a debug build; it also emits a `*.console.exe` wrapper that keeps
+a terminal open for `print()` output. `build/` is git-ignored.
+
 ## Development Roadmap
 
 The text game's queue is done: feats, battle diseases, a whole-game bug hunt, skill trees, mobile Android and iOS support (apart from testing on a real device), and party-command battles. What is left, and the sandbox that follows the text game, are in `docs/ROADMAP.md`.
