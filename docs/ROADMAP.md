@@ -34,7 +34,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 6. **Remove or archive the older prototype code** (`core/battle`, `world/`, `ui/screens` and the GutTest suites).
 
 **Build and release**
-7. **CI that runs the game suites on every PR.**
+7. **CI that runs the game suites on every PR.** Done: `.github/workflows/tests.yml` runs each suite in its own job, and fails one that prints `SCRIPT ERROR` even if it exits 0. Still to do in the repository settings: mark the **All game suites** check as required.
 8. **A release workflow** that builds the Android APK and the Windows exe and attaches them to a GitHub release.
 9. **A signed release APK** with a real keystore, for the Play Store.
 

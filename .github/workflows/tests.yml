@@ -1,0 +1,96 @@
+name: Game tests
+
+# Runs every game suite (tests/test_game_*.gd and tests/test_round_determinism.gd) headless, one suite per
+# job, so a pull request shows which suite broke. New suites are picked up from the folder; nothing here
+# needs editing when one is added.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+  # SHA-512 of Godot_v4.7.2-stable_linux.x86_64.zip, from the release's SHA512-SUMS.txt.
+  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+
+jobs:
+  suites:
+    name: List suites
+    runs-on: ubuntu-latest
+    outputs:
+      suites: ${{ steps.list.outputs.suites }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          list=$(ls tests/test_game_*.gd tests/test_round_determinism.gd | sed 's#^tests/##; s#\.gd$##' | grep -E '^[a-z0-9_]+$' | jq -R . | jq -sc .)
+          echo "suites=$list" >> "$GITHUB_OUTPUT"
+          echo "$list"
+
+  test:
+    name: ${{ matrix.suite }}
+    needs: suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: ${{ fromJson(needs.suites.outputs.suites) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache the Godot download
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot.zip
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Download Godot
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: curl -fsSL -o ~/godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+
+      - name: Install Godot
+        run: |
+          echo "${GODOT_SHA512}  $HOME/godot.zip" | sha512sum -c -
+          mkdir -p "$HOME/godot"
+          unzip -q "$HOME/godot.zip" -d "$HOME/godot"
+          mv "$HOME/godot/Godot_v${GODOT_VERSION}_linux.x86_64" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+
+      - name: Import the project
+        run: godot --headless --path . --import
+
+      - name: Run the suite
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: |
+          set -o pipefail
+          godot --headless --path . -s "res://tests/${SUITE}.gd" 2>&1 | tee suite.log
+          # A suite can exit 0 after a script error and silently skip the checks that follow it.
+          if grep -q 'SCRIPT ERROR' suite.log; then
+            echo "::error::${SUITE} printed a script error; the checks after it did not run."
+            exit 1
+          fi
+
+  all-suites:
+    name: All game suites
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every suite passed
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: |
+          echo "Suites: ${RESULT}"
+          [ "${RESULT}" = "success" ]
