@@ -12,7 +12,8 @@ Godot 4.7 with GDScript. Commands assume `godot` is on the PATH.
   - Exit code 0 means pass. A suite prints `N checks, M failures` (or `ALL PASS`) and exits 1 on any failure.
 - Run every game suite, one after another:
   `for t in tests/test_game_*.gd tests/test_round_determinism.gd; do godot --headless --path . -s res://$t || echo "FAILED $t"; done`
-- Never run suites in parallel. They share the `user://` save files and fail when they overlap.
+- Never run suites in parallel on one machine. They share the `user://` save files and fail when they overlap.
+- CI (`.github/workflows/tests.yml`) runs the same suites on every pull request, one job per suite. It also fails a suite that prints `SCRIPT ERROR` even when the exit code is 0. Look for that text when you run suites by hand.
 - Debug Android APK: `godot --headless --path . --export-debug "Android" build/GenerationalLegacy-debug.apk` (the Android SDK and JDK are configured in Godot's editor settings). The iOS preset only exports on a Mac with Xcode.
 - The balance harness (autopilot, 10 generations x 3 seeds, all races) is not committed to this repo. The balance targets are in `docs/ROADMAP.md`: battle deaths stay in the 3-7% band.
 

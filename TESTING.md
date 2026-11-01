@@ -24,7 +24,17 @@ Run every game suite, one after another:
 for t in tests/test_game_*.gd tests/test_round_determinism.gd; do godot --headless --path . -s res://$t || echo "FAILED $t"; done
 ```
 
-Never run suites in parallel. They share the `user://` save files and fail when they overlap.
+Never run suites in parallel on one machine. They share the `user://` save files and fail when they overlap.
+
+A suite can exit 0 and still have skipped checks: if a script error stops a test partway, Godot prints `SCRIPT ERROR` and the suite goes on to report `0 failures` with fewer checks. When you run suites by hand, look for that text, and compare the check count with the last run.
+
+## Continuous integration
+
+`.github/workflows/tests.yml` runs the game suites on every pull request and on every push to `main`. Each suite gets its own job, so a pull request shows which one broke, and the jobs run in parallel on separate machines, so the `user://` rule above doesn't apply to them. The list of suites is read from the `tests/` folder: a new `tests/test_game_*.gd` file is picked up with no change to the workflow.
+
+Each job downloads Godot, checks its SHA-512, imports the project, and runs one suite. It fails if the suite exits non-zero **or** prints `SCRIPT ERROR`. A last job, **All game suites**, passes only when every suite did; it is the one to mark as a required check in the repository's branch protection settings.
+
+To move to a newer Godot, change `GODOT_VERSION` and `GODOT_SHA512` together in the workflow. The hash is in the `SHA512-SUMS.txt` file on that release at https://github.com/godotengine/godot-builds/releases.
 
 ## What each suite covers
 
