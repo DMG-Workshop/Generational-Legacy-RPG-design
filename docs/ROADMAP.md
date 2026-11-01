@@ -35,7 +35,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 
 **Build and release**
 7. **CI that runs the game suites on every PR.** Done: `.github/workflows/tests.yml` runs each suite in its own job, and fails one that prints `SCRIPT ERROR` even if it exits 0. Still to do in the repository settings: mark the **All game suites** check as required.
-8. **A release workflow** that builds the Android APK and the Windows exe and attaches them to a GitHub release.
+8. **A release workflow** that builds the Android APK and the Windows exe and attaches them to a GitHub release. Done: `.github/workflows/release.yml`, described in `docs/RELEASING.md`. Publishing a release runs it. The APK is debug-signed, with a one-off key per build unless the repository has a keystore secret.
 9. **A signed release APK** with a real keystore, for the Play Store.
 
 **Player experience**

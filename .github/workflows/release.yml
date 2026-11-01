@@ -1,0 +1,193 @@
+name: Build and release
+
+# Builds the Android APK and the Windows exe with Godot's official export templates.
+#  - Publishing a GitHub release attaches both files (and SHA256SUMS.txt) to that release.
+#  - "Run workflow" on the Actions tab builds both and keeps them as that run's artifacts, with no release.
+#  - A pull request that changes this workflow, the shared Godot setup or the export presets builds both
+#    as a check.
+# docs/RELEASING.md has the steps and the Android signing note.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .github/actions/setup-godot/action.yml
+      - export_presets.cfg
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  ANDROID_BUILD_TOOLS: 35.0.1
+  ANDROID_PLATFORM: android-35
+  ANDROID_PACKAGE: com.dmgworkshop.generationallegacy
+
+jobs:
+  build:
+    name: Build the Android and Windows files
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Godot and the export templates
+        uses: ./.github/actions/setup-godot
+        with:
+          templates: "true"
+
+      - name: Work out the version
+        env:
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ github.event.release.tag_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "release" ]; then
+            re='^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$'
+            if ! [[ "$TAG" =~ $re ]]; then
+              echo "::error::The release tag must look like v1.2.3 (got '$TAG')."
+              exit 1
+            fi
+            name="${TAG#v}"
+          else
+            name="0.0.0-dev"
+          fi
+          # The Android version code only ever goes up, so a newer build installs over an older one.
+          echo "VERSION_NAME=${name}" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=${RUN_NUMBER}" >> "$GITHUB_ENV"
+          mkdir -p dist
+
+      - name: Build the Windows exe
+        run: |
+          set -euo pipefail
+          godot --headless --path . --export-release "Windows Desktop" dist/GenerationalLegacy-windows-x86_64.exe 2>&1 | tee windows.log
+          if grep -q '^ERROR:' windows.log; then
+            echo "::error::The Windows export printed an error."
+            exit 1
+          fi
+          test "$(stat -c %s dist/GenerationalLegacy-windows-x86_64.exe)" -gt 10000000
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up the Android SDK
+        run: |
+          set -euo pipefail
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" "build-tools;${ANDROID_BUILD_TOOLS}" "platforms;${ANDROID_PLATFORM}" "platform-tools" > /dev/null
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_HOME}"
+          export/android/java_sdk_path = "${JAVA_HOME}"
+          EOF
+          cat "$HOME/.config/godot/editor_settings-4.7.tres"
+
+      - name: Build the Android APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          keystore="$RUNNER_TEMP/android.keystore"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            [ -n "$KEYSTORE_PASSWORD" ] || { echo "::error::ANDROID_KEYSTORE_BASE64 is set but ANDROID_KEYSTORE_PASSWORD is not."; exit 1; }
+            echo "$KEYSTORE_BASE64" | base64 -d > "$keystore"
+            alias="${KEY_ALIAS:-androiddebugkey}"
+            password="$KEYSTORE_PASSWORD"
+            signing="the keystore in the repository secrets"
+          else
+            # No secret: a key made for this run. Every such build is signed differently, so Android will not
+            # install one over another; uninstall the old one first (docs/RELEASING.md).
+            alias=androiddebugkey
+            password=android
+            rm -f "$keystore"
+            # keytool prints its errors on stdout, so show everything it said if it fails.
+            if ! made=$(keytool -genkeypair -keystore "$keystore" -alias "$alias" -keyalg RSA -keysize 2048 -validity 10000 \
+                  -storepass "$password" -keypass "$password" -dname "CN=Android Debug,O=Android,C=US" 2>&1); then
+              echo "$made"
+              exit 1
+            fi
+            signing="a one-off key made for this run (no keystore secret is set)"
+          fi
+          echo "SIGNING=${signing}" >> "$GITHUB_ENV"
+
+          # The version goes into the runner's copy of the preset only; nothing is committed.
+          sed -i -E "s#^version/code=.*#version/code=${VERSION_CODE}#; s#^version/name=.*#version/name=\"${VERSION_NAME}\"#" export_presets.cfg
+
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER="$alias" GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="$password"
+          godot --headless --path . --export-debug "Android" dist/GenerationalLegacy-android-debug.apk 2>&1 | tee android.log
+          if grep -q '^ERROR:' android.log; then
+            echo "::error::The Android export printed an error."
+            exit 1
+          fi
+          rm -f dist/*.idsig
+
+      - name: Check what was built
+        run: |
+          set -euo pipefail
+          tools="$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}"
+          apk=dist/GenerationalLegacy-android-debug.apk
+          "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt
+          # aapt2 reads this manifest; the older aapt exits with an error on it.
+          first=$("$tools/aapt2" dump badging "$apk" 2>/dev/null | sed -n 1p)
+          echo "$first"
+          case "$first" in
+            "package: name='${ANDROID_PACKAGE}' versionCode='${VERSION_CODE}' versionName='${VERSION_NAME}'"*) ;;
+            *) echo "::error::The APK's package or version is not what was asked for."; exit 1 ;;
+          esac
+          (cd dist && sha256sum GenerationalLegacy-* > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          {
+            echo "### Builds"
+            echo
+            echo "Version \`${VERSION_NAME}\` (Android version code ${VERSION_CODE}). Android is signed with ${SIGNING}."
+            echo
+            echo '| File | Size |'
+            echo '|---|---|'
+            for f in dist/GenerationalLegacy-*; do echo "| \`$(basename "$f")\` | $(du -h "$f" | cut -f1) |"; done
+            echo
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game-builds
+          path: dist/*
+          retention-days: 14
+          if-no-files-found: error
+
+  publish:
+    name: Attach the files to the release
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: game-builds
+          path: dist
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          ls -la dist
+          gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"

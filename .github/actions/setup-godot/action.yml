@@ -1,0 +1,74 @@
+name: Set up Godot
+description: >
+  Installs the pinned Godot editor for headless use (its SHA-512 is checked), optionally the official
+  export templates for the Android and Windows builds, and imports the project. Run it after checkout.
+  The version and the hashes are the only places to change to move to a newer Godot.
+
+inputs:
+  templates:
+    description: "'true' to also install the export templates the Android and Windows builds need."
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Pin the Godot version
+      id: pin
+      shell: bash
+      run: |
+        # The hashes are from SHA512-SUMS.txt on the release at https://github.com/godotengine/godot-builds/releases
+        version=4.7.2-stable
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+        {
+          echo "GODOT_VERSION=${version}"
+          # Godot_v4.7.2-stable_linux.x86_64.zip
+          echo "GODOT_SHA512=9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65"
+          # Godot_v4.7.2-stable_export_templates.tpz
+          echo "TEMPLATES_SHA512=ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079"
+        } >> "$GITHUB_ENV"
+
+    - name: Cache the Godot download
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/godot.zip
+        key: godot-${{ steps.pin.outputs.version }}-linux-x86_64
+
+    - name: Download Godot
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: curl -fsSL -o ~/godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+
+    - name: Install Godot
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "${GODOT_SHA512}  $HOME/godot.zip" | sha512sum -c -
+        mkdir -p "$HOME/godot"
+        unzip -q "$HOME/godot.zip" -d "$HOME/godot"
+        mv "$HOME/godot/Godot_v${GODOT_VERSION}_linux.x86_64" "$HOME/godot/godot"
+        echo "$HOME/godot" >> "$GITHUB_PATH"
+
+    - name: Install the export templates
+      if: inputs.templates == 'true'
+      shell: bash
+      run: |
+        # Only what the builds use: the Windows exe wants its debug and release templates, the Android
+        # debug-signed APK wants the debug one.
+        set -euo pipefail
+        curl -fsSL -o "$HOME/templates.tpz" "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+        echo "${TEMPLATES_SHA512}  $HOME/templates.tpz" | sha512sum -c -
+        dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION/-/.}"
+        mkdir -p "$dir"
+        unzip -q -j "$HOME/templates.tpz" \
+          templates/version.txt \
+          templates/windows_debug_x86_64.exe \
+          templates/windows_release_x86_64.exe \
+          templates/android_debug.apk \
+          -d "$dir"
+        rm "$HOME/templates.tpz"
+        ls -la "$dir"
+
+    - name: Import the project
+      shell: bash
+      run: "$HOME/godot/godot --headless --path . --import"

@@ -17,11 +17,6 @@ concurrency:
   group: game-tests-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  GODOT_VERSION: 4.7.2-stable
-  # SHA-512 of Godot_v4.7.2-stable_linux.x86_64.zip, from the release's SHA512-SUMS.txt.
-  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
-
 jobs:
   suites:
     name: List suites
@@ -48,27 +43,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache the Godot download
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: ~/godot.zip
-          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
-
-      - name: Download Godot
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: curl -fsSL -o ~/godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-
-      - name: Install Godot
-        run: |
-          echo "${GODOT_SHA512}  $HOME/godot.zip" | sha512sum -c -
-          mkdir -p "$HOME/godot"
-          unzip -q "$HOME/godot.zip" -d "$HOME/godot"
-          mv "$HOME/godot/Godot_v${GODOT_VERSION}_linux.x86_64" "$HOME/godot/godot"
-          echo "$HOME/godot" >> "$GITHUB_PATH"
-
-      - name: Import the project
-        run: godot --headless --path . --import
+      - name: Set up Godot
+        uses: ./.github/actions/setup-godot
 
       - name: Run the suite
         env:

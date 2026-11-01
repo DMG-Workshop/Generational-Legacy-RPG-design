@@ -34,7 +34,7 @@ A suite can exit 0 and still have skipped checks: if a script error stops a test
 
 Each job downloads Godot, checks its SHA-512, imports the project, and runs one suite. It fails if the suite exits non-zero **or** prints `SCRIPT ERROR`. A last job, **All game suites**, passes only when every suite did; it is the one to mark as a required check in the repository's branch protection settings.
 
-To move to a newer Godot, change `GODOT_VERSION` and `GODOT_SHA512` together in the workflow. The hash is in the `SHA512-SUMS.txt` file on that release at https://github.com/godotengine/godot-builds/releases.
+The Godot download, checksum and project import are in `.github/actions/setup-godot/action.yml`, which the release workflow uses too. To move to a newer Godot, change the version and the hashes there. The hashes are in the `SHA512-SUMS.txt` file on that release at https://github.com/godotengine/godot-builds/releases.
 
 ## What each suite covers
 
