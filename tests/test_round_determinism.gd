@@ -136,7 +136,7 @@ func _direct(mode: String, seed_val: int, cls: String, n: int, kind: String) -> 
 				b.attack(b.first_target())
 		trail.append([b.log.size(), b.events.duplicate(true)])
 	d.finish_battle()
-	return {"log": b.log, "trail": trail, "state": Scen.state_of(b), "dynasty": d.to_dict()}
+	return {"log": b.log, "trail": trail, "state": Scen.state_of(b), "dynasty": Scen.drop_sex(d.to_dict())}
 
 
 ## The same through GameRound: the heir by hand (or Auto too), the companions Auto.
@@ -168,7 +168,7 @@ func _rounds(mode: String, seed_val: int, cls: String, n: int, kind: String) -> 
 	var hold_left := b.round_on or b.round_marks or not b.round_cmds.is_empty() or not b.braced.is_empty()
 	d.finish_battle()
 	d.auto_party = {}
-	return {"log": b.log, "trail": trail, "state": Scen.state_of(b), "dynasty": d.to_dict(), "refused": refused, "hold": hold_left}
+	return {"log": b.log, "trail": trail, "state": Scen.state_of(b), "dynasty": Scen.drop_sex(d.to_dict()), "refused": refused, "hold": hold_left}
 
 
 func _compare(mode: String, seed_val: int, cls: String, n: int, kind: String) -> void:

@@ -5,6 +5,7 @@ extends RefCounted
 const STATS := ["str", "mag", "agi", "vit"]
 
 var id: int = 0
+var sex: String = ""          # GameSex.MALE or FEMALE; "" only on a save from before sexes existed
 var name: String = ""
 var surname: String = ""
 var class_id: String = "warrior"
@@ -263,7 +264,7 @@ func to_dict() -> Dictionary:
 	for c in children:
 		kids.append(c.to_dict())
 	return {
-		"id": id, "name": name, "surname": surname, "class_id": class_id, "race_id": race_id, "gen": gen,
+		"id": id, "sex": sex, "name": name, "surname": surname, "class_id": class_id, "race_id": race_id, "gen": gen,
 		"age": age, "hazard_age": hazard_age, "lifespan": lifespan, "level": level, "xp": xp, "hp": hp, "mp": mp,
 		"gold": gold, "potions": potions, "traits": traits, "dormant": dormant,
 		"fate_value": fate_value, "milestones_done": milestones_done, "archetype": archetype,
@@ -280,7 +281,7 @@ func to_dict() -> Dictionary:
 
 static func from_dict(d: Dictionary) -> GameHeir:
 	var h := GameHeir.new()
-	h.id = int(d["id"]); h.name = d["name"]; h.surname = d["surname"]; h.class_id = d["class_id"]
+	h.id = int(d["id"]); h.sex = str(d.get("sex", "")) if GameSex.valid(d.get("sex", "")) else ""; h.name = d["name"]; h.surname = d["surname"]; h.class_id = d["class_id"]
 	h.race_id = d.get("race_id", "human")
 	h.gen = int(d["gen"]); h.age = float(d["age"]); h.lifespan = float(d["lifespan"])
 	h.hazard_age = float(d.get("hazard_age", h.age))

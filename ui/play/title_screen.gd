@@ -12,6 +12,7 @@ var race_desc: Label
 var race_ids: Array = []
 var bloodline_pick: OptionButton
 var seed_edit: LineEdit
+var sex_pick: OptionButton
 var class_desc: Label
 var bloodline_desc: Label
 var class_ids: Array = []
@@ -62,6 +63,13 @@ func _ready() -> void:
 	name_edit.placeholder_text = "Theron"
 	name_edit.custom_minimum_size.y = UiSettings.tap_h(0)
 	form.add_child(name_edit)
+
+	form.add_child(Kit.label("Sex"))
+	sex_pick = OptionButton.new()
+	sex_pick.custom_minimum_size.y = UiSettings.tap_h(0)
+	sex_pick.add_item("Male")
+	sex_pick.add_item("Female")
+	form.add_child(sex_pick)
 
 	form.add_child(Kit.label("Class"))
 	class_pick = OptionButton.new()
@@ -273,4 +281,4 @@ func _start() -> void:
 func _begin() -> void:
 	var s := seed_edit.text.strip_edges()
 	var seed_value: int = int(s) if s.is_valid_int() else int(Time.get_unix_time_from_system()) % 1000000
-	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected])
+	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected], GameSex.SEXES[sex_pick.selected])

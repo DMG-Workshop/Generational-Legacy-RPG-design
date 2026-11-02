@@ -53,6 +53,19 @@ static func key(mode: String, seed_val: int, cls: String, n: int, kind: String) 
 	return "%s|%d|%s|%d|%s" % [mode, seed_val, cls, n, kind]
 
 
+## Removes the "sex" keys (see GameSex) from a save snapshot, in place: it changes no play, and it must
+## not copy the snapshot, because a save's lists are shared with the game and the golden digests depend on that.
+static func drop_sex(v: Variant) -> Variant:
+	if typeof(v) == TYPE_DICTIONARY:
+		v.erase("sex")
+		for k in v:
+			drop_sex(v[k])
+	elif typeof(v) == TYPE_ARRAY:
+		for x in v:
+			drop_sex(x)
+	return v
+
+
 static func digest(payload: Variant) -> String:
 	return JSON.stringify(payload, "", true).sha256_text()
 
@@ -195,7 +208,7 @@ static func run(mode: String, seed_val: int, cls: String, n: int, kind: String, 
 				b.attack(b.first_target())
 			trail.append([b.log.size(), b.events.duplicate(true)])
 		d.finish_battle()
-	var payload := {"log": b.log, "trail": trail, "state": state_of(b), "dynasty": d.to_dict()}
+	var payload := {"log": b.log, "trail": trail, "state": state_of(b), "dynasty": drop_sex(d.to_dict())}
 	var out := {"digest": digest(payload), "lines": b.log.size()}
 	if with_log:
 		out["log"] = b.log
@@ -215,7 +228,7 @@ static func live(seed_val: int) -> Dictionary:
 	var gens := 0
 	while gens < 3 and d.state != "ended":
 		GameBot.live_life(d)
-		shots.append(d.to_dict())
+		shots.append(drop_sex(d.to_dict()))
 		gens += 1
 		if d.state == "succession":
 			GameBot.choose_best(d)
