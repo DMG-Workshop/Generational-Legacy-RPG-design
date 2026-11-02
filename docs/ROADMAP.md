@@ -26,8 +26,8 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 - **Auto hunt keeps going.** With Auto-battle on, a finished hunt starts the next one of the same kind by itself after a short pause. It stops when the player presses Stop (on the result, or "Stop after this fight" during it), takes over, or when the heir's health is under half (`balance.json` "auto_hunt").
 
 **Fixes and known gaps**
-1. **Commit the balance harness**, so the 3-7% death band can be re-checked after any change.
-2. **Lift battle deaths into the band.** Some seeds land near 2.5%, just under the 3% floor.
+1. **Commit the balance harness**, so the 3-7% death band can be re-checked after any change. Done: `tools/balance_harness.gd`, described in `docs/BALANCE.md`. It is a new tool, so its figures are its own baseline.
+2. **Lift battle deaths into the band.** Some seeds land near 2.5%, just under the 3% floor. Re-checked with the committed harness: 3.6% overall over 960 lives (95% range 2.6-5.0%), inside the band, with single seeds anywhere from 1.2% to 7.5% by chance. The old near-2.5% figures cannot be reproduced with a different tool, so this stays open only as a question: run `seeds=1-40` and lift deaths if the range then sits below 3%.
 3. **Lifespan-scaled death hazard for long-lived races** (elves, gnomes), where one flat chance per battle stacks up differently.
 4. **Fix the occasional tooltip-hold test failure** in `test_game_mobile.gd` at its timing cause. Done: after a tap rebuilt the screen, the test aimed its finger at a button its container had not yet placed (Godot lays containers out in a deferred call), so the hold could land on the button drawn underneath. The `_hold` helper now waits a frame before aiming.
 5. **Stop the arena jumping during party rounds.**
