@@ -5,6 +5,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const Clipboard := preload("res://ui/play/clipboard.gd")
 
 var app: Node
 var note: Label
@@ -83,6 +84,14 @@ func _ready() -> void:
 			v.add_child(Kit.button("Save", func():
 				app.autosave()
 				note.text = "Saved.", Vector2(0, 40)))
+			v.add_child(Kit.button("Copy backup", func():
+				app.autosave()
+				var text := GameSaves.export_text(app.slot)
+				if text.is_empty():
+					note.text = "Nothing could be copied."
+				else:
+					Clipboard.set_text(text)
+					note.text = "Backup of slot %d copied. Paste it into a note to keep it." % app.slot, Vector2(0, 40)))
 			v.add_child(Kit.button("Title screen", func(): app.show_title(), Vector2(0, 40)))
 		"battle":
 			var l := Kit.label("A fight is not saved until it ends; the house is as it was before it began.", 14, Kit.DIM)
