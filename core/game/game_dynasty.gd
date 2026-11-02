@@ -15,6 +15,7 @@ var state: String = "life"     # "life", "succession", or "ended" once the last 
 var history: Array = []         # the founder and the latest dead heirs in full; older ones live in `ages`
 var echoes: Array = []          # [{kind,key,text,strength,gen}]
 var heirlooms: Array = []       # [{name, boss, gen}]
+var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
 var candidates: Array = []      # Array[GameHeir] during succession
@@ -396,7 +397,7 @@ func work() -> Array:
 func train(stat: String) -> Array:
 	heir.training[stat] += 1.5
 	var msgs: Array = ["%s trains %s (+1.5 base)." % [heir.name, stat.to_upper()]]
-	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level))))
+	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level) * GameHouse.train_xp_mult(self))))
 	if lv > 0:
 		msgs.append("Level up! Now level %s." % GameText.num(heir.level))
 	return _finish_time("train", msgs)
@@ -888,6 +889,8 @@ func to_dict() -> Dictionary:
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
 		"shop_state": shop_state, "ages": ages.to_dict(), "auto_battle": auto_battle, "loot": loot,
 	}
+	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
+		out["house"] = house
 	if not auto_party.is_empty():   # only once the player has set a switch: older saves and fresh ones stay alike
 		out["auto_party"] = auto_party
 	return out
@@ -926,6 +929,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.flags = _ints(d.get("flags", {}))
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
 	g.party = GameParty.from_dict(d.get("party", {}), g)
+	g.house = GameHouse.from_dict(d.get("house", {}))
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
 	g.auto_battle = bool(d.get("auto_battle", false))

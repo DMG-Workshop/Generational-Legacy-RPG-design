@@ -48,8 +48,9 @@ static func setting(key: String) -> Variant:
 	return _settings[key]
 
 
-static func max_size() -> int:
-	return int(GameData.bal("party_max_size"))
+## The party's places: the base size plus one for each level of the House Hall (see GameHouse).
+static func max_size(d: GameDynasty) -> int:
+	return int(GameData.bal("party_max_size")) + GameHouse.extra_party_slots(d)
 
 
 ## A companion's fighting body at a given level and generation (no hp/mp state applied).
@@ -297,8 +298,8 @@ func hire_block(d: GameDynasty, id: String) -> String:
 	var lock := locked_reason(d, id)
 	if lock != "":
 		return lock
-	if members.size() >= max_size():
-		return "The party is full (%d)." % max_size()
+	if members.size() >= max_size(d):
+		return "The party is full (%d)." % max_size(d)
 	if d.heir.gold < fee(d, id):
 		return "Not enough gold (%s needed)." % GameText.num(fee(d, id))
 	return ""
@@ -625,7 +626,7 @@ static func bot_tick(d: GameDynasty) -> void:
 		return
 	# Fill an empty place first. A full party swaps whoever has grown too frail to fight for
 	# someone fresh, never taking the frail back. Away from a tavern a frail companion beats none.
-	if p.members.size() >= max_size():
+	if p.members.size() >= max_size(d):
 		var frail := ""
 		for m in p.members:
 			if p.decline(d, m["id"]) >= float(setting("bot_dismiss_decline")) and (frail == "" or p.decline(d, m["id"]) > p.decline(d, frail)):

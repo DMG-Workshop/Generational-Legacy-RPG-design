@@ -34,7 +34,7 @@ func _build() -> void:
 	var intro := Kit.label(str(t.get("text", "")), 14, Kit.DIM)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(intro)
-	body.add_child(Kit.label("Gold %s    Party %d / %d    Upkeep %s gold a year" % [GameText.num(d.heir.gold), p.members.size(), GameParty.max_size(), GameText.num(p.upkeep_total(d))], 15, Kit.ACCENT))
+	body.add_child(Kit.label("Gold %s    Party %d / %d    Upkeep %s gold a year" % [GameText.num(d.heir.gold), p.members.size(), GameParty.max_size(d), GameText.num(p.upkeep_total(d))], 15, Kit.ACCENT))
 	if note != "":
 		var n := Kit.label(note, 14, Kit.GOOD)
 		n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -60,7 +60,7 @@ func _build() -> void:
 		for id in rumours:
 			left.add_child(_dim(_rumour(id)))
 
-	right.add_child(Kit.label("Your party (%d / %d)" % [p.members.size(), GameParty.max_size()], 19, Kit.ACCENT))
+	right.add_child(Kit.label("Your party (%d / %d)" % [p.members.size(), GameParty.max_size(d)], 19, Kit.ACCENT))
 	if p.members.is_empty():
 		right.add_child(_dim("No one rides with %s. Hirelings fight at the heir's side, draw some of the blows and bind wounds, though foes take longer to bring down when they face a band." % d.heir.name))
 	for m in p.members:

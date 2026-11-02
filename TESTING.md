@@ -59,6 +59,7 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_skills.gd` | Class skills by level and class style, unlock gates, once-a-battle skills and the journal |
 | `test_game_trees.gd` | Skill trees: data validation, skill points, prerequisites, node effects, keystones and refunds |
 | `test_game_tutorial.gd` | The first-heir tips' logic: the data is sound, each condition works, the tips come in order, nothing is saved |
+| `test_game_house.gd` | The family house's rules: costs per level and the top, buying takes only gold, the Hall's party places, the Yard's training XP, an empty house changes nothing, saves and old saves |
 | `test_game_sex.gd` | Sex in the dynasty: the founder's start choice, spouses always the opposite sex, children rolled both ways, old saves filled in |
 | `test_game_saves.gd` | Save slots and backups without screens: slot files, atomic saving with its `.bak`, loading from the `.bak`, the slot summary, backup text out and back in, every way a pasted backup can be wrong |
 | `test_game_saves_ui.gd` | Slots on the real screens: the title's slot list, begin and continue per slot, the ask before covering or erasing a house, Copy and Restore backup, the game menu's Copy backup |
