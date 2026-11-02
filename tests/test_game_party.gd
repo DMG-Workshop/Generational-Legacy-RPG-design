@@ -95,7 +95,7 @@ func test_hire_dismiss() -> void:
 	ok(p.hire_block(d, "bren_cask").find("already rides") >= 0, "cannot hire a member twice")
 	p.hire(d, "maddy_thorn")
 	ok(p.members.size() == 2, "two hired")
-	ok(GameParty.max_size() == 3, "a party holds three companions")
+	ok(GameParty.max_size(d) == 3, "a party holds three companions")
 	d.heir.level = 6
 	ok(p.hire(d, "sister_oriel").contains("joins") and p.members.size() == 3, "a third joins")
 	d.world.visit("brinehaven")
