@@ -37,7 +37,7 @@ var auto_party: Dictionary = {}      # the player's Auto switches for party comm
 var command_round: GameRound = null  # the battle's command round, made on first use (see battle_round)
 
 
-static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human") -> GameDynasty:
+static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human", p_sex: String = GameSex.MALE) -> GameDynasty:
 	GameData.load_all()
 	var d := GameDynasty.new()
 	d.seed_value = p_seed
@@ -49,6 +49,7 @@ static func new_game(p_seed: int, founder_name: String, class_id: String, bloodl
 	d.dynasty_name = h.surname
 	h.class_id = class_id
 	h.race_id = race_id
+	h.sex = p_sex if GameSex.valid(p_sex) else GameSex.MALE
 	h.traits = [bloodline_id]
 	var others := GameData.traits_in(["bloodline"]).filter(func(t): return t != bloodline_id)
 	h.dormant = [others[d.rng.randi() % others.size()]]
@@ -407,6 +408,7 @@ func found_family() -> Array:
 		return ["You cannot found a family right now."]
 	var sp := GameHeir.new()
 	sp.id = _take_id()
+	sp.sex = GameSex.opposite(heir.sex)   # mates are always the opposite sex
 	sp.name = GameInheritance.random_name(rng)
 	sp.surname = GameData.names["surnames"][rng.randi() % GameData.names["surnames"].size()]
 	var class_ids := GameData.starting_ids(GameData.classes)
@@ -426,6 +428,7 @@ func found_family() -> Array:
 		var res := GameInheritance.inherit([heir, sp], rng)
 		var c := GameHeir.new()
 		c.id = _take_id()
+		c.sex = GameSex.roll(seed_value, c.id)
 		c.name = GameInheritance.random_name(rng)
 		c.surname = dynasty_name
 		c.race_id = _child_race(heir.race_id, sp.race_id)
@@ -747,6 +750,7 @@ func _cousins() -> Array:
 		var res := GameInheritance.inherit([heir], rng, float(GameData.bal("adopted_inherit_penalty")))
 		var c := GameHeir.new()
 		c.id = _take_id()
+		c.sex = GameSex.roll(seed_value, c.id)
 		c.name = GameInheritance.random_name(rng)
 		c.surname = dynasty_name
 		c.race_id = heir.race_id
@@ -882,6 +886,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.loot = GamePlague.load_loot(d.get("loot", {})) if g.state == "life" else {}
 	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
 		GameAges.end_saga(g, [])
+	_fill_sexes(g)
 	return g
 
 
@@ -917,3 +922,22 @@ static func load_from_disk() -> GameDynasty:
 	if d == null:
 		d = GameSaves.load_file(save_path + ".bak")
 	return d
+
+
+## Saves from before sexes existed: each person without one is given the sex the game would have rolled, and
+## a spouse without one is the opposite of the heir they married.
+static func _fill_sexes(g: GameDynasty) -> void:
+	_fill_sex(g.heir, g)
+	for c in g.candidates:
+		_fill_sex(c, g)
+
+
+static func _fill_sex(h: GameHeir, g: GameDynasty) -> void:
+	if h == null:
+		return
+	if not GameSex.valid(h.sex):
+		h.sex = GameSex.roll(g.seed_value, h.id)
+	if h.spouse != null and not GameSex.valid(h.spouse.sex):
+		h.spouse.sex = GameSex.opposite(h.sex)
+	for c in h.children:
+		_fill_sex(c, g)
