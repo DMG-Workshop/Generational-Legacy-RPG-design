@@ -12,7 +12,7 @@ const PREDICATES := ["hunted", "trained", "wounded", "can_found_family", "too_yo
 
 
 ## The tip to show on `screen` ("life" or "succession"), or {} when there is none. Returns
-## {id, text, highlight}: the text with its {name}, {dead} and {min_age} filled in, and the start of
+## {id, text, highlight}: the text with its {name} and {min_age} filled in, and the start of
 ## the text of each action button to mark.
 static func current(d: GameDynasty, screen: String = "life") -> Dictionary:
 	GameData.load_all()
@@ -51,7 +51,6 @@ static func holds(d: GameDynasty, predicate: String) -> bool:
 	return false
 
 
-## {name} is the heir, {dead} the heir who has just died, {min_age} the age a family may be founded.
+## {name} is the heir, {min_age} the age a family may be founded.
 static func fill(text: String, d: GameDynasty) -> String:
-	return text.replace("{name}", d.heir.name).replace("{dead}", str(d.last_death.get("name", "The heir"))) \
-		.replace("{min_age}", str(int(ceil(d.heir.family_min_age()))))
+	return text.replace("{name}", d.heir.name).replace("{min_age}", str(int(ceil(d.heir.family_min_age()))))
