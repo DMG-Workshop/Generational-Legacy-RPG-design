@@ -402,25 +402,76 @@ func train(stat: String) -> Array:
 	return _finish_time("train", msgs)
 
 
-func found_family() -> Array:
+## The mates the heir can marry: opposite-sex candidates, drawn from their own seeded dice (not the main
+## dice), so looking at them changes nothing. Ids are placeholders until one is chosen.
+func mate_candidates() -> Array:
+	var r := RandomNumberGenerator.new()
+	r.seed = hash([seed_value, heir.id, gen, "mates"])
+	var out: Array = []
+	for i in int(GameData.bal("mate_candidate_count")):
+		out.append(_make_mate(r, -(i + 1)))
+	return out
+
+
+func _make_mate(r: RandomNumberGenerator, id: int) -> GameHeir:
+	var sp := GameHeir.new()
+	sp.id = id
+	sp.sex = GameSex.opposite(heir.sex)   # mates are always the opposite sex
+	sp.name = GameInheritance.random_name(r)
+	sp.surname = GameData.names["surnames"][r.randi() % GameData.names["surnames"].size()]
+	var class_ids := GameData.starting_ids(GameData.classes)
+	sp.class_id = class_ids[r.randi() % class_ids.size()]
+	var race_ids := GameData.starting_ids(GameData.races)
+	sp.race_id = heir.race_id if r.randf() < float(GameData.bal("spouse_same_race_chance")) else race_ids[r.randi() % race_ids.size()]
+	var pool := GameData.traits_in(["bloodline", "blessing"]).filter(func(t): return t not in heir.traits)
+	if r.randf() < float(GameData.bal("spouse_trait_chance")) and not pool.is_empty():
+		sp.traits.append(pool[r.randi() % pool.size()])
+	if r.randf() < float(GameData.bal("spouse_trait_chance")) * 0.4 and not pool.is_empty():
+		sp.dormant.append(pool[r.randi() % pool.size()])
+	sp.lifespan = sp.compute_lifespan()
+	return sp
+
+
+## The candidate the autopilot marries: the one with the most traits (a dormant trait counts half). Ties go
+## to the earlier candidate.
+func best_mate() -> int:
+	var best := 0
+	var best_score := -1.0
+	var mates := mate_candidates()
+	for i in mates.size():
+		var score := float(mates[i].traits.size()) + 0.5 * float(mates[i].dormant.size())
+		if score > best_score:
+			best = i
+			best_score = score
+	return best
+
+
+## Founds the family. `mate` picks one of mate_candidates(); -1 keeps the old random spouse.
+func found_family(mate: int = -1) -> Array:
 	var msgs: Array = []
 	if not can_found_family():
 		return ["You cannot found a family right now."]
-	var sp := GameHeir.new()
-	sp.id = _take_id()
-	sp.sex = GameSex.opposite(heir.sex)   # mates are always the opposite sex
-	sp.name = GameInheritance.random_name(rng)
-	sp.surname = GameData.names["surnames"][rng.randi() % GameData.names["surnames"].size()]
-	var class_ids := GameData.starting_ids(GameData.classes)
-	sp.class_id = class_ids[rng.randi() % class_ids.size()]
-	var race_ids := GameData.starting_ids(GameData.races)
-	sp.race_id = heir.race_id if rng.randf() < float(GameData.bal("spouse_same_race_chance")) else race_ids[rng.randi() % race_ids.size()]
-	var pool := GameData.traits_in(["bloodline", "blessing"]).filter(func(t): return t not in heir.traits)
-	if rng.randf() < float(GameData.bal("spouse_trait_chance")) and not pool.is_empty():
-		sp.traits.append(pool[rng.randi() % pool.size()])
-	if rng.randf() < float(GameData.bal("spouse_trait_chance")) * 0.4 and not pool.is_empty():
-		sp.dormant.append(pool[rng.randi() % pool.size()])
-	sp.lifespan = sp.compute_lifespan()
+	var mates := mate_candidates()
+	var sp: GameHeir
+	if mate >= 0 and mate < mates.size():
+		sp = mates[mate]
+		sp.id = _take_id()
+	else:
+		sp = GameHeir.new()
+		sp.id = _take_id()
+		sp.sex = GameSex.opposite(heir.sex)   # mates are always the opposite sex
+		sp.name = GameInheritance.random_name(rng)
+		sp.surname = GameData.names["surnames"][rng.randi() % GameData.names["surnames"].size()]
+		var class_ids := GameData.starting_ids(GameData.classes)
+		sp.class_id = class_ids[rng.randi() % class_ids.size()]
+		var race_ids := GameData.starting_ids(GameData.races)
+		sp.race_id = heir.race_id if rng.randf() < float(GameData.bal("spouse_same_race_chance")) else race_ids[rng.randi() % race_ids.size()]
+		var pool := GameData.traits_in(["bloodline", "blessing"]).filter(func(t): return t not in heir.traits)
+		if rng.randf() < float(GameData.bal("spouse_trait_chance")) and not pool.is_empty():
+			sp.traits.append(pool[rng.randi() % pool.size()])
+		if rng.randf() < float(GameData.bal("spouse_trait_chance")) * 0.4 and not pool.is_empty():
+			sp.dormant.append(pool[rng.randi() % pool.size()])
+		sp.lifespan = sp.compute_lifespan()
 	heir.spouse = sp
 	var counts: Array = heir.race().get("children", [GameData.bal("child_count_min"), GameData.bal("child_count_max")])
 	var n := rng.randi_range(int(counts[0]), int(counts[1]))
