@@ -136,7 +136,15 @@ func test_tips_follow_the_game() -> void:
 	ok("can found a family" in _tip_text() and _marked() == ["Found family"], "old enough: found a family, marked: %s" % str(_marked()))
 	_button("Found family").pressed.emit()
 	await _frames(3)
-	ok(d.heir.family_founded, "the button founds the family")
+	var mate_pick: Button = null
+	for b in _buttons(app.current):
+		if b.text.begins_with(d.mate_candidates()[0].name):
+			mate_pick = b
+	ok(mate_pick != null, "the button offers the mates first")
+	if mate_pick != null:
+		mate_pick.pressed.emit()
+	await _frames(3)
+	ok(d.heir.family_founded, "a mate picked from the button founds the family")
 	ok("Retire" in _tip_text() and _marked() == ["Retire"], "then the tip is Retire, marked: %s" % _tip_text())
 
 
