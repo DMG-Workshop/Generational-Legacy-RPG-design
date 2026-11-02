@@ -59,6 +59,8 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_skills.gd` | Class skills by level and class style, unlock gates, once-a-battle skills and the journal |
 | `test_game_trees.gd` | Skill trees: data validation, skill points, prerequisites, node effects, keystones and refunds |
 | `test_game_tutorial.gd` | The first-heir tips' logic: the data is sound, each condition works, the tips come in order, nothing is saved |
+| `test_game_saves.gd` | Save slots and backups without screens: slot files, atomic saving with its `.bak`, loading from the `.bak`, the slot summary, backup text out and back in, every way a pasted backup can be wrong |
+| `test_game_saves_ui.gd` | Slots on the real screens: the title's slot list, begin and continue per slot, the ask before covering or erasing a house, Copy and Restore backup, the game menu's Copy backup |
 | `test_game_tutorial_ui.gd` | The tips on the real screens: the strip follows play and marks buttons, Skip tips and the menu switch, the succession tip |
 | `test_round_determinism.gd` | Seeded battles around party rounds match the golden fixture (see below) |
 

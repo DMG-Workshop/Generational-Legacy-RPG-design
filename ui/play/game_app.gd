@@ -14,6 +14,7 @@ const SuccessionScreen := preload("res://ui/play/succession_screen.gd")
 const EndingScreen := preload("res://ui/play/ending_screen.gd")
 
 var dynasty: GameDynasty
+var slot := 1   # the save slot in use (GameSaves); GameDynasty.save_path is its file
 var hunt_stopped := false   # the player pressed Stop: auto-battle's run of hunts ends after this fight
 var current: Control
 var bg: ColorRect
@@ -26,6 +27,8 @@ var _safe_check := 0.0
 
 func _ready() -> void:
 	GameData.load_all()
+	GameSaves.base = GameDynasty.save_path   # slot 1 is the file the game already saved to
+	use_slot(maxi(1, GameSaves.newest()))   # start on the slot played last
 	UiSettings.apply(get_window())
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg = ColorRect.new()
@@ -85,6 +88,12 @@ func _swap(screen: Control) -> void:
 	current = screen
 	screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.add_child(screen)
+
+
+## Points saving and loading at a slot: new games, Continue and every autosave use its file from now on.
+func use_slot(n: int) -> void:
+	slot = clampi(n, 1, GameSaves.slots())
+	GameDynasty.save_path = GameSaves.path_for(slot)
 
 
 func show_title() -> void:

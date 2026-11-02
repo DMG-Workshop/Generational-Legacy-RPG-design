@@ -2,6 +2,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const Clipboard := preload("res://ui/play/clipboard.gd")
 
 var app: Node
 var name_edit: LineEdit
@@ -15,6 +16,11 @@ var class_desc: Label
 var bloodline_desc: Label
 var class_ids: Array = []
 var bloodline_ids: Array = []
+var cont: Button
+var slot_box: VBoxContainer
+var slot_note: Label
+var confirm_row: HBoxContainer
+var _pending: Callable = Callable()
 
 
 func _ready() -> void:
@@ -102,19 +108,25 @@ func _ready() -> void:
 	seed_edit.placeholder_text = "e.g. 42"
 	form2.add_child(seed_edit)
 
+	var sp := Kit.panel()
+	box.add_child(sp)
+	slot_box = VBoxContainer.new()
+	slot_box.add_theme_constant_override("separation", 6)
+	sp.add_child(slot_box)
+
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
 	box.add_child(buttons)
 	var begin := Kit.button("Begin Dynasty", _start, Vector2(0, 48))
 	begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons.add_child(begin)
-	var cont := Kit.button("Continue" if narrow else "Continue Saved Dynasty", func(): app.continue_game(), Vector2(300 if not narrow else 160, 48))
-	cont.disabled = not GameDynasty.has_save()
+	cont = Kit.button("Continue" if narrow else "Continue Saved Dynasty", func(): app.continue_game(), Vector2(300 if not narrow else 160, 48))
 	buttons.add_child(cont)
 	buttons.add_child(Kit.button("Settings", func(): app.open_menu(), Vector2(130, 48)))
 	if not UiSettings.is_mobile():   # phones leave an app from the system, not from a button
 		buttons.add_child(Kit.button("Quit", func(): get_tree().quit(), Vector2(120, 48)))
 	_refresh()
+	_build_slots()
 
 
 func _column(parent: Control) -> VBoxContainer:
@@ -143,7 +155,122 @@ func _refresh() -> void:
 	bloodline_desc.text = GameData.trait_def(bloodline_ids[bloodline_pick.selected]).get("description", "")
 
 
+## The save slots: one row per slot to pick from, then Copy backup, Restore backup and Delete for the
+## picked one. A slot with a house in it asks before it is overwritten or erased.
+func _build_slots() -> void:
+	Kit.clear(slot_box)
+	var head := Kit.label("Save slot", 16, Kit.ACCENT)
+	slot_box.add_child(head)
+	for n in range(1, GameSaves.slots() + 1):
+		var info := GameSaves.peek(n)
+		var text := "Slot %d: empty" % n
+		if info["exists"] and not info["valid"]:
+			text = "Slot %d: damaged, cannot be read" % n
+		elif info["valid"]:
+			text = "Slot %d: House %s, gen %d. %s %s %s, level %d" % [n, info["house"], info["gen"], info["heir"], info["race"], info["class"], info["level"]]
+		var b := Kit.button(("> " if n == app.slot else "") + text, _pick.bind(n), Vector2(0, 0))
+		b.custom_minimum_size.y = UiSettings.tap_h(0)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slot_box.add_child(b)
+	var acts := HBoxContainer.new()
+	acts.add_theme_constant_override("separation", 8)
+	slot_box.add_child(acts)
+	var here := GameSaves.peek(app.slot)
+	var copy := Kit.button("Copy backup", _copy_backup, Vector2(0, 0))
+	copy.custom_minimum_size.y = UiSettings.tap_h(0)
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy.disabled = not here["valid"]
+	acts.add_child(copy)
+	var restore := Kit.button("Restore backup", func(): _ask_if_full(_restore_backup, "Restore the backup over this slot's house?"), Vector2(0, 0))
+	restore.custom_minimum_size.y = UiSettings.tap_h(0)
+	restore.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	acts.add_child(restore)
+	var del := Kit.button("Delete", func(): _ask_if_full(_delete_slot, "Erase this slot's house for good?"), Vector2(0, 0))
+	del.custom_minimum_size.y = UiSettings.tap_h(0)
+	del.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	del.disabled = not here["exists"]
+	acts.add_child(del)
+	confirm_row = HBoxContainer.new()
+	confirm_row.add_theme_constant_override("separation", 8)
+	confirm_row.visible = false
+	slot_box.add_child(confirm_row)
+	slot_note = Kit.label("", 14, Kit.DIM)
+	slot_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	slot_box.add_child(slot_note)
+	cont.disabled = not here["valid"]
+
+
+func _pick(n: int) -> void:
+	app.use_slot(n)
+	_build_slots()
+
+
+func _say(text: String) -> void:
+	slot_note.text = text
+
+
+## Runs `act` at once when the picked slot is empty; otherwise shows "question" with Yes and No first.
+func _ask_if_full(act: Callable, question: String) -> void:
+	if not GameSaves.peek(app.slot)["exists"]:
+		act.call()
+		return
+	_pending = act
+	Kit.clear(confirm_row)
+	var q := Kit.label(question, 14, Kit.BAD)
+	q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	q.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	confirm_row.add_child(q)
+	var yes := Kit.button("Yes", _confirmed, Vector2(0, 0))
+	yes.custom_minimum_size.y = UiSettings.tap_h(0)
+	confirm_row.add_child(yes)
+	var no := Kit.button("No", func(): confirm_row.visible = false, Vector2(0, 0))
+	no.custom_minimum_size.y = UiSettings.tap_h(0)
+	confirm_row.add_child(no)
+	confirm_row.visible = true
+
+
+func _confirmed() -> void:
+	var act := _pending
+	_pending = Callable()
+	confirm_row.visible = false
+	if act.is_valid():
+		act.call()
+
+
+func _copy_backup() -> void:
+	var text := GameSaves.export_text(app.slot)
+	if text.is_empty():
+		_say("Nothing in this slot can be copied.")
+		return
+	Clipboard.set_text(text)
+	_say("Backup copied (%d characters). Paste it into a note to keep it." % text.length())
+
+
+func _restore_backup() -> void:
+	var r := GameSaves.import_text(Clipboard.get_text())
+	if not r["ok"]:
+		_say(r["error"])
+		return
+	if not GameSaves.write_atomic(GameSaves.path_for(app.slot), r["json"]):
+		_say("The backup could not be written to this slot.")
+		return
+	_build_slots()
+	_say("Restored House %s, generation %d, into slot %d." % [r["house"], r["gen"], app.slot])
+
+
+func _delete_slot() -> void:
+	GameSaves.delete(app.slot)
+	_build_slots()
+	_say("Slot %d is empty." % app.slot)
+
+
 func _start() -> void:
+	_ask_if_full(_begin, "Slot %d already has a house. Begin a new dynasty over it?" % app.slot)
+
+
+func _begin() -> void:
 	var s := seed_edit.text.strip_edges()
 	var seed_value: int = int(s) if s.is_valid_int() else int(Time.get_unix_time_from_system()) % 1000000
 	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected])

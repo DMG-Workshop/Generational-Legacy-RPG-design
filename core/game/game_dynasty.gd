@@ -903,22 +903,17 @@ static func _ints(v: Variant) -> Variant:
 func save_to_disk() -> bool:
 	if battle != null:
 		return false
-	var f := FileAccess.open(save_path, FileAccess.WRITE)
-	if f == null:
-		return false
-	f.store_string(JSON.stringify(to_dict()))
-	return true
+	return GameSaves.write_atomic(save_path, JSON.stringify(to_dict()))
 
 
+## True when the save file, or the ".bak" kept beside it, exists.
 static func has_save() -> bool:
-	return FileAccess.file_exists(save_path)
+	return FileAccess.file_exists(save_path) or FileAccess.file_exists(save_path + ".bak")
 
 
+## The saved dynasty, or null. A missing or damaged file falls back to the ".bak" the last save kept.
 static func load_from_disk() -> GameDynasty:
-	var f := FileAccess.open(save_path, FileAccess.READ)
-	if f == null:
-		return null
-	var parsed = JSON.parse_string(f.get_as_text())
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return null
-	return from_dict(parsed)
+	var d := GameSaves.load_file(save_path)
+	if d == null:
+		d = GameSaves.load_file(save_path + ".bak")
+	return d
