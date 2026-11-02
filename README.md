@@ -71,6 +71,9 @@ godot --headless --path . --export-release "Windows Desktop"
 Use `--export-debug` instead for a debug build; it also emits a `*.console.exe` wrapper that keeps
 a terminal open for `print()` output. `build/` is git-ignored.
 
+To get the Android APK and this exe without building anything yourself, publish a release on GitHub and
+the files are attached to it. See [docs/RELEASING.md](docs/RELEASING.md).
+
 ## Development Roadmap
 
 The text game's queue is done: feats, battle diseases, a whole-game bug hunt, skill trees, mobile Android and iOS support (apart from testing on a real device), and party-command battles. What is left, and the sandbox that follows the text game, are in `docs/ROADMAP.md`.

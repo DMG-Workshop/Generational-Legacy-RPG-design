@@ -26,8 +26,8 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 - **Auto hunt keeps going.** With Auto-battle on, a finished hunt starts the next one of the same kind by itself after a short pause. It stops when the player presses Stop (on the result, or "Stop after this fight" during it), takes over, or when the heir's health is under half (`balance.json` "auto_hunt").
 
 **Fixes and known gaps**
-1. **Commit the balance harness**, so the 3-7% death band can be re-checked after any change.
-2. **Lift battle deaths into the band.** Some seeds land near 2.5%, just under the 3% floor.
+1. **Commit the balance harness**, so the 3-7% death band can be re-checked after any change. Done: `tools/balance_harness.gd`, described in `docs/BALANCE.md`. It is a new tool, so its figures are its own baseline.
+2. **Lift battle deaths into the band.** Some seeds land near 2.5%, just under the 3% floor. Re-checked with the committed harness: 3.6% overall over 960 lives (95% range 2.6-5.0%), inside the band, with single seeds anywhere from 1.2% to 7.5% by chance. The old near-2.5% figures cannot be reproduced with a different tool, so this stays open only as a question: run `seeds=1-40` and lift deaths if the range then sits below 3%.
 3. **Lifespan-scaled death hazard for long-lived races** (elves, gnomes), where one flat chance per battle stacks up differently.
 4. **Fix the occasional tooltip-hold test failure** in `test_game_mobile.gd` at its timing cause. Done: after a tap rebuilt the screen, the test aimed its finger at a button its container had not yet placed (Godot lays containers out in a deferred call), so the hold could land on the button drawn underneath. The `_hold` helper now waits a frame before aiming.
 5. **Stop the arena jumping during party rounds.**
@@ -35,7 +35,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 
 **Build and release**
 7. **CI that runs the game suites on every PR.** Done: `.github/workflows/tests.yml` runs each suite in its own job, and fails one that prints `SCRIPT ERROR` even if it exits 0. Still to do in the repository settings: mark the **All game suites** check as required.
-8. **A release workflow** that builds the Android APK and the Windows exe and attaches them to a GitHub release.
+8. **A release workflow** that builds the Android APK and the Windows exe and attaches them to a GitHub release. Done: `.github/workflows/release.yml`, described in `docs/RELEASING.md`. Publishing a release runs it. The APK is debug-signed, with a one-off key per build unless the repository has a keystore secret.
 9. **A signed release APK** with a real keystore, for the Play Store.
 
 **Player experience**
@@ -52,6 +52,8 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 18. **Heirloom upgrades across generations.**
 19. **Random world events per Age:** wars, famines and golden ages that change hunts, shops and diseases.
 20. **Hard-mode dynasty options:** whole-line permadeath, iron-man saves, a generation cap.
+21. **A family house that grows across generations.** Upgrades bought between hunts and passed down the line: more party slots, crafting, better training and shops. Idea from the base between expeditions in *The Shattered Isles*, fitted to the dynasty. Builds on item 18 (heirloom upgrades) and the persistent estates the README promises.
+22. **Reactions that ask first.** When a hurt party member is about to be hit, the player is offered a reaction such as "Cover this ally?"; a member on Auto decides for itself. Idea from *The Shattered Isles*, fitted to party commands. It changes battle results, so it is a balance change: show before and after numbers.
 
 ## After the text game: the 2D/3D sandbox
 

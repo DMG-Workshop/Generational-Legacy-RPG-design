@@ -15,7 +15,7 @@ Godot 4.7 with GDScript. Commands assume `godot` is on the PATH.
 - Never run suites in parallel on one machine. They share the `user://` save files and fail when they overlap.
 - CI (`.github/workflows/tests.yml`) runs the same suites on every pull request, one job per suite. It also fails a suite that prints `SCRIPT ERROR` even when the exit code is 0. Look for that text when you run suites by hand.
 - Debug Android APK: `godot --headless --path . --export-debug "Android" build/GenerationalLegacy-debug.apk` (the Android SDK and JDK are configured in Godot's editor settings). The iOS preset only exports on a Mac with Xcode.
-- The balance harness (autopilot, 10 generations x 3 seeds, all races) is not committed to this repo. The balance targets are in `docs/ROADMAP.md`: battle deaths stay in the 3-7% band.
+- Balance harness: `godot --headless --path . -s res://tools/balance_harness.gd` (the autopilot plays 12 seeds x 8 races x 10 generations, in parallel processes, about 4 minutes on 4 processors). Battle deaths should stay in the 3-7% band. Run it on the commit before a balance change and on the change with the same arguments; `docs/BALANCE.md` explains how to read the figures, which are noisy per seed.
 
 ## Architecture
 
@@ -36,4 +36,4 @@ Only the text game is wired into the app. The older prototype code is described 
 - Old saves must keep loading. Missing keys fall back to defaults, and corrupt values must not crash loading, so check the type (for example `typeof(v) == TYPE_BOOL`) before using a saved value.
 - A change that alters autopilot or auto-battle results is a balance change. Say so in the PR and show the before and after numbers.
 - Commit the `.uid` file Godot generates beside each new script, so script references stay stable. Never commit anything under `.godot/`.
-- Documentation: `docs/GDD.md` is the design, `docs/ROADMAP.md` lists what is done and what is next, and `docs/MOBILE.md` covers touch, text size and the Android and iOS export setup. `TESTING.md` describes how the game's headless suites run. The `GutTest` files among the older prototype tests need an addon that isn't in this repo.
+- Documentation: `docs/GDD.md` is the design, `docs/ROADMAP.md` lists what is done and what is next, and `docs/MOBILE.md` covers touch, text size and the Android and iOS export setup, `docs/BALANCE.md` covers the balance harness, and `docs/RELEASING.md` covers publishing the APK and the Windows exe through GitHub. `TESTING.md` describes how the game's headless suites run. The `GutTest` files among the older prototype tests need an addon that isn't in this repo.

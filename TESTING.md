@@ -34,13 +34,14 @@ A suite can exit 0 and still have skipped checks: if a script error stops a test
 
 Each job downloads Godot, checks its SHA-512, imports the project, and runs one suite. It fails if the suite exits non-zero **or** prints `SCRIPT ERROR`. A last job, **All game suites**, passes only when every suite did; it is the one to mark as a required check in the repository's branch protection settings.
 
-To move to a newer Godot, change `GODOT_VERSION` and `GODOT_SHA512` together in the workflow. The hash is in the `SHA512-SUMS.txt` file on that release at https://github.com/godotengine/godot-builds/releases.
+The Godot download, checksum and project import are in `.github/actions/setup-godot/action.yml`, which the release workflow uses too. To move to a newer Godot, change the version and the hashes there. The hashes are in the `SHA512-SUMS.txt` file on that release at https://github.com/godotengine/godot-builds/releases.
 
 ## What each suite covers
 
 | Suite | Covers |
 |-------|--------|
 | `test_game_aging.gd` | Companion ageing, old age, death and retirement, successors, saves and the autopilot |
+| `test_game_balance_tool.gd` | The balance harness's logic: seed lists, the 95% range, the verdict against the band, and a small reproducible autopilot batch |
 | `test_game_bot.gd` | The autopilot's Hard hunt choice and the `bot_hard_hunt` rules in `balance.json` |
 | `test_game_combat.gd` | Battlefield geometry, the ability pipeline and spellbook, statuses, elements, packs, spell costs and saves |
 | `test_game_disease.gd` | Diseases: catching, worsening, cures, contagion, the black market and saves |
@@ -69,7 +70,7 @@ Regenerate the fixture only from the commit before a deliberate behaviour change
 
 ## Balance checks
 
-Autopilot changes are balance changes. The balance harness (autopilot over 10 generations and 3 seeds, all races) is not committed to this repo. Battle deaths should stay in the 3-7% band in `docs/ROADMAP.md`. Show the before and after numbers when a change affects them.
+Autopilot changes are balance changes. The balance harness is `tools/balance_harness.gd` (not a test suite, so CI does not run it): the autopilot plays many dynasties and it reports the share of heirs slain in battle, which should stay in the 3-7% band. Run it before and after a change with the same arguments and show both figures. How to run it and how to read it, including why single seeds are noisy, is in `docs/BALANCE.md`. Its logic (`tools/balance.gd`) is covered by `tests/test_game_balance_tool.gd`.
 
 ## Older prototype tests
 
