@@ -27,8 +27,8 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 
 **Fixes and known gaps**
 1. **Commit the balance harness**, so the 3-7% death band can be re-checked after any change. Done: `tools/balance_harness.gd`, described in `docs/BALANCE.md`. It is a new tool, so its figures are its own baseline.
-2. **Lift battle deaths into the band.** Some seeds land near 2.5%, just under the 3% floor. Re-checked with the committed harness: 3.6% overall over 960 lives (95% range 2.6-5.0%), inside the band, with single seeds anywhere from 1.2% to 7.5% by chance. The old near-2.5% figures cannot be reproduced with a different tool, so this stays open only as a question: run `seeds=1-40` and lift deaths if the range then sits below 3%.
-3. **Lifespan-scaled death hazard for long-lived races** (elves, gnomes), where one flat chance per battle stacks up differently.
+2. **Lift battle deaths into the band.** Closed, no change needed. The 40-seed run (3,200 lives) gives 3.4% slain in battle, 95% range 2.9-4.1%, inside the band. The "seeds near 2.5%" were noise: single 80-life seeds ran from 0% to 10% and 19 of the 40 fell under 3% by chance. See `docs/BALANCE.md`.
+3. **Lifespan-scaled death hazard for long-lived races** (elves, gnomes). Not needed by the numbers: dwarf, elf, gnome and halfling sit at 4.7-5.2% against 3.5% for humans, inside the band, so a long life does not stack up too many chances to die. What the 40-seed run did show is the opposite end, left as a design question: the autopilot almost never loses an orc (0 of 376) or a beastkin (1 of 378), because they die of old age before its Hard hunt rules (level 40 and up) apply.
 4. **Fix the occasional tooltip-hold test failure** in `test_game_mobile.gd` at its timing cause. Done: after a tap rebuilt the screen, the test aimed its finger at a button its container had not yet placed (Godot lays containers out in a deferred call), so the hold could land on the button drawn underneath. The `_hold` helper now waits a frame before aiming.
 5. **Stop the arena jumping during party rounds.**
 6. **Remove or archive the older prototype code** (`core/battle`, `world/`, `ui/screens` and the GutTest suites).
@@ -39,7 +39,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 9. **A signed release APK** with a real keystore, for the Play Store.
 
 **Player experience**
-10. **A first-heir tutorial:** Hunt, Rest, Train, founding a family and the first succession.
+10. **A first-heir tutorial:** Hunt, Rest, Train, founding a family and the first succession. Done: a one-line tip strip above the life screen's actions names the next thing to do and marks its button, and the succession screen carries the last tip. The tips come from the game's own state (so old saves need nothing), are written in `data/ui/tutorial.json`, and are switched off by Skip tips, by choosing the first heir, or under Menu > Tutorial tips.
 11. **Several save slots and a backup export.**
 12. **A family tree viewer:** ancestors, traits, deaths and legacy echoes.
 13. **A dynasty statistics screen:** deaths by cause, best heir, Ages reached, gold over time.

@@ -160,6 +160,12 @@ func set_touch_layout(t: String) -> void:
 	_relayout()
 
 
+## The menu's Tutorial tips: whether the first-heir tips show.
+func set_tutorial(on: bool) -> void:
+	UiSettings.set_tutorial(on)
+	_relayout()
+
+
 ## The screens laid out again after a setting changed, with the menu open on top as before.
 func _relayout() -> void:
 	# A fight is laid out again in place (rebuilding it would lose its log); other screens are

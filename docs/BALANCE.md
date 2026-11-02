@@ -36,26 +36,30 @@ A change that alters the autopilot or auto-battle results is a balance change (C
 
 ## Baseline
 
-Default arguments (seeds 1-12, 10 generations), at the commit that added the harness:
+Seeds 1 to 40, 10 generations (`seeds=1-40`, about 10 minutes on four processors), at the commit that added the harness:
 
 | | Lives | Slain | Share | 95% range |
 |---|---|---|---|---|
-| Overall | 960 | 35 | 3.6% | 2.6-5.0% |
+| Overall | 3,200 | 110 | 3.4% | 2.9-4.1% |
+
+The overall share is inside the band. It is also a good picture of why a single seed means little: with the true rate near 3.4%, **19 of the 40 seeds fell under 3% and 3 went over 7%**, and the slain count per seed ran from 0 to 8 (0% to 10%). The old note that some seeds landed near 2.5% was this noise.
 
 By race of the heir:
 
 | Race | Lives | Slain | Share |
 |---|---|---|---|
-| beastkin | 102 | 1 | 1.0% |
-| dragonborn | 102 | 3 | 2.9% |
-| dwarf | 131 | 5 | 3.8% |
-| elf | 118 | 5 | 4.2% |
-| gnome | 123 | 8 | 6.5% |
-| halfling | 110 | 7 | 6.4% |
-| human | 125 | 4 | 3.2% |
-| orc | 105 | 0 | 0.0% |
-| half_dragon | 17 | 0 | 0.0% |
-| half_elf | 10 | 2 | 20.0% |
-| half_orc | 17 | 0 | 0.0% |
+| beastkin | 378 | 1 | 0.3% |
+| orc | 376 | 0 | 0.0% |
+| human | 313 | 11 | 3.5% |
+| dragonborn | 359 | 12 | 3.3% |
+| halfling | 426 | 21 | 4.9% |
+| dwarf | 403 | 19 | 4.7% |
+| gnome | 364 | 19 | 5.2% |
+| elf | 337 | 17 | 5.0% |
+| half_dragon | 85 | 3 | 3.5% |
+| half_elf | 72 | 7 | 9.7% |
+| half_orc | 87 | 0 | 0.0% |
 
-The overall share is inside the band, and its range reaches below the 3% floor. Within the sampling noise, the orc (shortest lived) stands out for never being slain, and the gnome and halfling sit near the 7% ceiling.
+- The long-lived races (dwarf, elf, gnome, halfling) sit at 4.7-5.2%, a little above humans and inside the band. Nothing here says a long life stacks up too many chances to die.
+- The short-lived ones stand out the other way: **the autopilot almost never loses an orc or a beastkin in battle** (1 in 754 lives). They die of old age at a mean level of 31-35, before the autopilot's Hard hunt rules (level 40 and up) let it take the risky fights. That is the autopilot's caution more than the game's difficulty, but it is where the numbers differ most.
+- The hybrids appear only through marriages, so their rows rest on 70 to 90 lives and are good to several points at best.

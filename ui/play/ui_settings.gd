@@ -61,6 +61,16 @@ static func store(key: String, value: Variant) -> bool:
 	return cf.save(path) == OK
 
 
+## Whether the first-heir tips show. On until the player switches them off (Skip tips, the menu, or
+## choosing the first heir); a settings file from before the tips has no key, which reads as on.
+static func tutorial_on() -> bool:
+	return str(stored("tutorial", "on")) != "off"
+
+
+static func set_tutorial(on: bool) -> void:
+	store("tutorial", "on" if on else "off")
+
+
 static func save_settings() -> bool:
 	var cf := ConfigFile.new()
 	cf.load(path)

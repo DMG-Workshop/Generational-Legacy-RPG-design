@@ -32,6 +32,7 @@ static var feats: Dictionary = {}      # {settings, kinds, weapon_kinds, statuse
 static var skill_trees: Dictionary = {}   # {settings, trees}: read through GameSkillTree
 static var keystones: Dictionary = {}     # {keystones}: read through GameSkillTree
 static var mobile: Dictionary = {}        # {settings}: touch hints and UI scale, read through ui/play/ui_settings.gd
+static var tutorial: Dictionary = {}      # {wounded_below, steps}: the first-heir tips, read through core/game/game_tutorial.gd
 
 
 static func load_json(path: String) -> Variant:
@@ -85,6 +86,7 @@ static func load_all() -> void:
 	skill_trees["trees"] = skill_trees["trees"].map(func(t): return load_json("res://data/skill_trees/%s.json" % t))
 	keystones = load_json("res://data/keystones/keystones.json")
 	mobile = load_json("res://data/ui/mobile.json")
+	tutorial = load_json("res://data/ui/tutorial.json")
 	_loaded = true
 
 

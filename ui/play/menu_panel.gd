@@ -66,6 +66,16 @@ func _ready() -> void:
 		var tip := Kit.label("Hold a finger on anything for its details; a quick tap acts.", 14, Kit.DIM)
 		tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(tip)
+
+	v.add_child(Kit.label("Tutorial tips", 17, Kit.ACCENT))
+	var prow := HBoxContainer.new()
+	prow.add_theme_constant_override("separation", 8)
+	v.add_child(prow)
+	_choice(prow, "On", UiSettings.tutorial_on(), func(): app.set_tutorial(true))
+	_choice(prow, "Off", not UiSettings.tutorial_on(), func(): app.set_tutorial(false))
+	var pwhy := Kit.label("Short tips about what to do next, for a new house's first heir.", 14, Kit.DIM)
+	pwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(pwhy)
 	v.add_child(HSeparator.new())
 	note = Kit.label("", 14, Kit.GOOD)
 	match mode:

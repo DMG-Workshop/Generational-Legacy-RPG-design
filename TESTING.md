@@ -58,6 +58,8 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_round.gd` | Party command rounds: queueing, back, repeat last, retargeting, flee, reserved items and saves |
 | `test_game_skills.gd` | Class skills by level and class style, unlock gates, once-a-battle skills and the journal |
 | `test_game_trees.gd` | Skill trees: data validation, skill points, prerequisites, node effects, keystones and refunds |
+| `test_game_tutorial.gd` | The first-heir tips' logic: the data is sound, each condition works, the tips come in order, nothing is saved |
+| `test_game_tutorial_ui.gd` | The tips on the real screens: the strip follows play and marks buttons, Skip tips and the menu switch, the succession tip |
 | `test_round_determinism.gd` | Seeded battles around party rounds match the golden fixture (see below) |
 
 Each suite's header comment says what it proves and gives its own run command.
