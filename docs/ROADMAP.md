@@ -39,7 +39,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 9. **A signed release APK** with a real keystore, for the Play Store.
 
 **Player experience**
-10. **A first-heir tutorial:** Hunt, Rest, Train, founding a family and the first succession.
+10. **A first-heir tutorial:** Hunt, Rest, Train, founding a family and the first succession. Done: a one-line tip strip above the life screen's actions names the next thing to do and marks its button, and the succession screen carries the last tip. The tips come from the game's own state (so old saves need nothing), are written in `data/ui/tutorial.json`, and are switched off by Skip tips, by choosing the first heir, or under Menu > Tutorial tips.
 11. **Several save slots and a backup export.**
 12. **A family tree viewer:** ancestors, traits, deaths and legacy echoes.
 13. **A dynasty statistics screen:** deaths by cause, best heir, Ages reached, gold over time.

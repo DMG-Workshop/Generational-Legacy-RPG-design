@@ -4,6 +4,7 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
+const TutorialTip := preload("res://ui/play/tutorial_tip.gd")
 
 var app: Node
 var d: GameDynasty
@@ -33,6 +34,9 @@ func _ready() -> void:
 	elif GameAges.era_of(d.gen + 1) == 1:
 		into += ", the first of Age %s" % GameText.num(GameAges.age_of(d.gen + 1))
 	root.add_child(_wrapped(Kit.label("Choose who carries the family name into %s. They inherit %d%% of the gold left and every potion; legacy echoes fade by 15%%." % [into, int(round(float(GameData.bal("gold_inherit_fraction")) * 100.0))], 16)))
+	var tip := GameTutorial.current(d, "succession") if UiSettings.tutorial_on() else {}
+	if not tip.is_empty():
+		root.add_child(TutorialTip.make(tip, UiSettings.room(self).x - 48.0, _skip_tip))
 
 	# The cards scroll when a short screen cannot show a long-lived family whole.
 	var scroll := ScrollContainer.new()
@@ -108,7 +112,16 @@ func _wrapped(l: Label) -> Label:
 	return l
 
 
+func _skip_tip() -> void:
+	UiSettings.set_tutorial(false)
+	var strip := find_child("TutorialTip", true, false)
+	if strip != null:
+		strip.queue_free()
+
+
 func _choose(i: int) -> void:
+	if d.gen <= 1 and UiSettings.tutorial_on():
+		UiSettings.set_tutorial(false)   # the first succession is the last thing the tips teach
 	d.choose_heir(i)
 	app.autosave()
 	app.show_state()

@@ -13,6 +13,7 @@ const FeatsPanel := preload("res://ui/play/feats_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const LootPanel := preload("res://ui/play/loot_panel.gd")
 const Cooldown := preload("res://ui/play/autopilot_cooldown.gd")
+const TutorialTip := preload("res://ui/play/tutorial_tip.gd")
 
 const COLUMN_W := 300
 const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
@@ -30,6 +31,9 @@ var header: Label
 var where: Label
 var column_w := COLUMN_W
 var compact := false
+var mid_w := 0.0          # the width the middle column has, for what must wrap inside it
+var tip := {}             # the tutorial tip being shown (see GameTutorial), {} for none
+var tip_slot: VBoxContainer   # holds the tip strip, above the actions
 var cool_buttons := {}   # autopilot id -> its button, rebuilt with the actions
 var cool_timer: Timer     # ticks the countdown text once a second while a cooldown runs
 
@@ -73,13 +77,15 @@ func _ready() -> void:
 	mid.add_child(jp)
 	journal = Kit.rich()
 	jp.add_child(journal)
+	tip_slot = VBoxContainer.new()
+	mid.add_child(tip_slot)
 	# The actions scroll when a short screen (a phone, large text) cannot show every row.
 	actions_scroll = ScrollContainer.new()
 	actions_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	mid.add_child(actions_scroll)
 	actions = GridContainer.new()
 	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var mid_w := UiSettings.room(self).x - 28.0 - (column_w + 10.0) * (1.0 if compact else 2.0)
+	mid_w = UiSettings.room(self).x - 28.0 - (column_w + 10.0) * (1.0 if compact else 2.0)
 	actions.columns = 4 if mid_w >= 4.0 * 150.0 + 3.0 * 8.0 else 3
 	actions.add_theme_constant_override("h_separation", 8)
 	actions.add_theme_constant_override("v_separation", 8)
@@ -126,9 +132,23 @@ func _refresh() -> void:
 	if compact:
 		left.add_child(HSeparator.new())
 	_build_right()
+	tip = GameTutorial.current(d) if UiSettings.tutorial_on() else {}
+	_build_tip()
 	_build_actions()
 	_fit_actions.call_deferred()
 	journal.text = "\n".join(d.journal.slice(maxi(0, d.journal.size() - 60)).map(_colorize))
+
+
+## The tutorial's tip for what to do next, above the actions it points at (see GameTutorial).
+func _build_tip() -> void:
+	Kit.clear(tip_slot)
+	if not tip.is_empty():
+		tip_slot.add_child(TutorialTip.make(tip, mid_w, _skip_tips))
+
+
+func _skip_tips() -> void:
+	UiSettings.set_tutorial(false)
+	_refresh()
 
 
 func _colorize(line: String) -> String:
@@ -297,6 +317,7 @@ func _build_actions() -> void:
 	ret.disabled = not d.can_retire()
 	_auto_button("life", "Auto: this life", "Plays a whole life on autopilot.", 1)
 	_auto_button("gens", "Auto: 10 gens", "Plays ten generations on autopilot.", 10)
+	TutorialTip.mark(actions.get_children(), tip)
 	tick_cooldowns()
 	_act("Chronicle", func(): _chronicle())
 	_act("Save", func(): d.save_to_disk(); d._say("Game saved."); _refresh())
@@ -310,7 +331,10 @@ func _fit_actions() -> void:
 		return
 	var need := actions.get_combined_minimum_size().y
 	var col := actions_scroll.get_parent() as Control
-	actions_scroll.custom_minimum_size.y = minf(need, maxf(120.0, col.size.y * 0.6))
+	# The actions get a share of what the column has left once the tip strip has its height; counting
+	# the strip in the share would make the actions grow with it and squeeze the journal away.
+	var room_h := col.size.y - tip_slot.get_combined_minimum_size().y
+	actions_scroll.custom_minimum_size.y = minf(need, maxf(120.0, room_h * 0.6))
 
 
 func _act(text: String, cb: Callable) -> Button:

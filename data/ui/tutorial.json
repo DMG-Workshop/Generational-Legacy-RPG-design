@@ -1,0 +1,61 @@
+{
+  "wounded_below": 0.5,
+  "steps": [
+    {
+      "id": "hunt",
+      "screen": "life",
+      "when": ["first_generation"],
+      "done": ["hunted"],
+      "highlight": ["Hunt"],
+      "text": "Welcome, {name}. Every action uses up years of a short life: a hunt takes 2. Begin with a Hunt for XP, gold and loot."
+    },
+    {
+      "id": "rest",
+      "screen": "life",
+      "when": ["first_generation", "hunted", "wounded"],
+      "done": [],
+      "highlight": ["Rest", "Potion"],
+      "text": "{name} is badly hurt. Rest heals fully for 1 year; a potion heals at once, for gold."
+    },
+    {
+      "id": "train",
+      "screen": "life",
+      "when": ["first_generation", "hunted"],
+      "done": ["trained"],
+      "highlight": ["Train"],
+      "text": "Train a stat for a lasting bonus: STR hits harder, MAG casts stronger, AGI is quicker, VIT is tougher. Takes 2 years."
+    },
+    {
+      "id": "family",
+      "screen": "life",
+      "when": ["first_generation", "hunted", "trained", "can_found_family"],
+      "done": ["family_founded"],
+      "highlight": ["Found family"],
+      "text": "{name} can found a family now. Children inherit traits and carry the house on when {name} is gone."
+    },
+    {
+      "id": "family_wait",
+      "screen": "life",
+      "when": ["first_generation", "hunted", "trained", "too_young_for_family"],
+      "done": [],
+      "highlight": [],
+      "text": "A family needs age {min_age}. Until then, hunt, train and earn gold. Children carry the house on."
+    },
+    {
+      "id": "retire",
+      "screen": "life",
+      "when": ["family_founded", "can_retire", "first_generation"],
+      "done": [],
+      "highlight": ["Retire"],
+      "text": "The house is founded. Hunt on, then Retire to hand it to a child. If {name} dies first, a child inherits anyway."
+    },
+    {
+      "id": "succession",
+      "screen": "succession",
+      "when": ["first_generation"],
+      "done": [],
+      "highlight": [],
+      "text": "{dead} has passed. Pick the child who carries the house on. A lower Fate Value means fewer random failures."
+    }
+  ]
+}
