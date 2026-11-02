@@ -433,20 +433,6 @@ func _make_mate(r: RandomNumberGenerator, id: int) -> GameHeir:
 	return sp
 
 
-## The candidate the autopilot marries: the one with the most traits (a dormant trait counts half). Ties go
-## to the earlier candidate.
-func best_mate() -> int:
-	var best := 0
-	var best_score := -1.0
-	var mates := mate_candidates()
-	for i in mates.size():
-		var score := float(mates[i].traits.size()) + 0.5 * float(mates[i].dormant.size())
-		if score > best_score:
-			best = i
-			best_score = score
-	return best
-
-
 ## Founds the family. `mate` picks one of mate_candidates(); -1 keeps the old random spouse.
 func found_family(mate: int = -1) -> Array:
 	var msgs: Array = []

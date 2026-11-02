@@ -34,7 +34,7 @@ static func step(d: GameDynasty) -> bool:
 	if hp_frac < 0.55:
 		d.rest()
 	elif d.can_found_family():
-		d.found_family(d.best_mate())
+		d.found_family()
 	else:
 		var boss := d.available_boss()
 		var target := _legend_to_hunt(d)

@@ -18,7 +18,6 @@ func _init() -> void:
 	GameData.load_all()
 	test_candidates()
 	test_choice_becomes_spouse()
-	test_best_mate()
 	test_old_path_unchanged()
 	print("mate tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -56,18 +55,6 @@ func test_choice_becomes_spouse() -> void:
 	ok(not d.heir.children.is_empty(), "children are born of the marriage")
 	for c in d.heir.children:
 		ok(c.parent_names == [d.heir.name, want.name], "each child names the chosen mate as a parent")
-
-
-func test_best_mate() -> void:
-	var d := _adult(6)
-	var mates := d.mate_candidates()
-	var best := d.best_mate()
-	var score := func(m: GameHeir) -> float: return float(m.traits.size()) + 0.5 * float(m.dormant.size())
-	var top := 0.0
-	for m in mates:
-		top = maxf(top, score.call(m))
-	ok(score.call(mates[best]) == top, "the autopilot's mate has the most traits")
-	ok(best == d.best_mate(), "and the same one every time")
 
 
 func test_old_path_unchanged() -> void:
