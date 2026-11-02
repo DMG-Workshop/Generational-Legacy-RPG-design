@@ -10,6 +10,7 @@
   "mutation_chance": 0.1,
   "spontaneous_blessing_chance": 0.04,
   "spouse_trait_chance": 0.5,
+  "mate_candidate_count": 3,
   "child_count_min": 1,
   "child_count_max": 3,
   "adopted_inherit_penalty": 0.5,
