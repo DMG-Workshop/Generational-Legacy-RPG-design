@@ -345,6 +345,10 @@ func test_succession() -> void:
 	p.history["bren_cask"]["born"] = d.world.year - 60.0
 	var hulda0 := p.age(d, "hulda_stonebrow")
 	_tune("retire_per_lifespan", 0.0)
+	# This test is about companions ageing through heirs who are cousins; with adoption on, the companions
+	# themselves would be the heirs (see test_game_adoption), so adoption is off here.
+	var adoption_was: Variant = GameData.balance["adoption_max"]
+	GameData.balance["adoption_max"] = 0
 	var heirs := 0
 	var bren_gone_at := -1
 	for i in 5:
@@ -358,6 +362,7 @@ func test_succession() -> void:
 		if bren_gone_at < 0 and not p.has_member("bren_cask"):
 			bren_gone_at = heirs
 	_restore()
+	GameData.balance["adoption_max"] = adoption_was
 	ok(p.has_member("hulda_stonebrow"), "a dwarf serves on through %d heirs (now %d)" % [heirs, int(p.age(d, "hulda_stonebrow"))])
 	ok(absf(p.age(d, "hulda_stonebrow") - hulda0 - 60.0) < 0.01, "and has aged with every year of them")
 	ok(bren_gone_at > 0 and p.history["bren_cask"]["status"] == "dead", "a human hired with her is long gone (by heir %d)" % bren_gone_at)
