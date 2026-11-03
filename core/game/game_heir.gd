@@ -33,6 +33,7 @@ var battles_won: int = 0
 var clean_streak: int = 0   # clean wins in a row (little HP lost); a costly win, defeat or flight ends it
 var kills: Dictionary = {}
 var parent_names: Array = []
+var companion_id: String = ""   # the party member this heir was adopted from (see GameDynasty._adoptees); "" otherwise
 var children: Array = []     # Array[GameHeir], born to this heir
 var spouse: GameHeir = null
 var heirloom_bonus: float = 0.0
@@ -270,7 +271,7 @@ func to_dict() -> Dictionary:
 		"fate_value": fate_value, "milestones_done": milestones_done, "archetype": archetype,
 		"archetype_bonus": archetype_bonus, "training": training, "family_founded": family_founded,
 		"extra_life_used": extra_life_used, "battles_won": battles_won, "clean_streak": clean_streak, "kills": kills,
-		"parent_names": parent_names, "heirloom_bonus": heirloom_bonus, "children": kids,
+		"parent_names": parent_names, "companion_id": companion_id, "heirloom_bonus": heirloom_bonus, "children": kids,
 		"equipment": equipment, "inventory": inventory, "spells": spells, "spell_news": spell_news, "skill_news": skill_news,
 		"diseases": diseases, "tainted_gear": tainted_gear, "disease_level": disease_level,
 		"known_feats": known_feats, "equipped_feats": equipped_feats, "feat_points": feat_points,
@@ -297,6 +298,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	for k in d["kills"]:
 		h.kills[k] = int(d["kills"][k])
 	h.parent_names = Array(d["parent_names"])
+	h.companion_id = str(d.get("companion_id", "")) if typeof(d.get("companion_id", "")) == TYPE_STRING else ""
 	h.heirloom_bonus = float(d["heirloom_bonus"])
 	h.equipment = d.get("equipment", {"weapon": "", "armor": "", "trinket": ""})
 	h.inventory = Array(d.get("inventory", []))
