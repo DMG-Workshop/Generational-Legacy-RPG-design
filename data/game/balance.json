@@ -14,7 +14,7 @@
   "child_count_min": 1,
   "child_count_max": 3,
   "adopted_inherit_penalty": 0.5,
-  "adoption_max": 2,
+  "adoption_max": 0,
   "dormant_express_chance": 0.5,
   "enemy_scale_per_gen": 0.035,
   "heir_scale_per_gen": 0.032,
