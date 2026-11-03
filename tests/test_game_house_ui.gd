@@ -49,6 +49,7 @@ func _run() -> void:
 	ok(_panel() != null, "House opens the family house panel")
 	var hall_build := _button_starting(_panel(), "Build")
 	ok(hall_build != null and hall_build.disabled, "with no gold, the Build button is disabled")
+	ok(_shows_text(_panel(), "Not enough gold"), "and the reason is shown as text, not only a tooltip")
 	_panel().queue_free()
 	await _frames(2)
 
@@ -94,6 +95,15 @@ func _press(text: String) -> void:
 		if b.text.begins_with(text):
 			b.pressed.emit()
 			return
+
+
+func _shows_text(n: Node, text: String) -> bool:
+	if n is Label and (n as Label).text.begins_with(text):
+		return true
+	for c in n.get_children():
+		if _shows_text(c, text):
+			return true
+	return false
 
 
 func _button_starting(panel: Node, text: String) -> Button:

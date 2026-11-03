@@ -58,8 +58,12 @@ func _row(track: String, column: float) -> Control:
 	var label := "Build (%s gold)" % GameText.num(price) if price >= 0 else "Fully built"
 	var b := Kit.button(label, func(): _buy(track, column), Vector2(column, 48))
 	b.disabled = why != ""
-	b.tooltip_text = why if why != "" else "Build the next level of the %s." % GameHouse.track_name(track)
 	box.add_child(b)
+	# The reason is shown as text, not a tooltip: a touch player sees it without holding the button.
+	if why != "":
+		var reason := Kit.label(why, 14, Kit.DIM)
+		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(reason)
 	return box
 
 
