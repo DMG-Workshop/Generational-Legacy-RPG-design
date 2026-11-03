@@ -17,6 +17,7 @@ func ok(cond: bool, what: String) -> void:
 
 func _init() -> void:
 	GameData.load_all()
+	GameData.balance["adoption_max"] = 2   # adoption ships off (balance.json); these tests turn it on
 	test_no_companions_gets_cousins()
 	test_companions_are_offered()
 	test_choosing_an_adoptee_leaves_the_company()

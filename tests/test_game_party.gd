@@ -700,6 +700,8 @@ func test_message_order() -> void:
 
 
 func test_succession() -> void:
+	var adoption_was: Variant = GameData.balance["adoption_max"]
+	GameData.balance["adoption_max"] = 2   # adoption is off by default; this test is about it being on
 	var d := _new(91)
 	var p := d.party
 	d.heir.gold = 1000
@@ -737,7 +739,7 @@ func test_succession() -> void:
 	var one: Array = []
 	p.on_succession(d, one)
 	ok(one == ["Maddy Thorn stays with the family and swears to serve %s." % d.heir.name], "one name: %s" % str(one))
-
+	GameData.balance["adoption_max"] = adoption_was
 
 func test_save_load() -> void:
 	var d := _new(92)
