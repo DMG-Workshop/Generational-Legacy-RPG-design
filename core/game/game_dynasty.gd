@@ -766,8 +766,15 @@ func _die(cause: String) -> Array:
 		return msgs
 	var kids: Array = heir.children
 	if kids.is_empty():
-		msgs.append("%s left no children. Distant cousins step forward." % heir.name)
-		kids = _cousins()
+		var adoptees := _adoptees()
+		if adoptees.is_empty():
+			msgs.append("%s left no children. Distant cousins step forward." % heir.name)
+			kids = _cousins()
+		else:
+			msgs.append("%s left no children. Companions of the house are adopted to carry on the name." % heir.name)
+			kids = adoptees
+			if kids.size() < 2:
+				kids.append_array(_cousins(2 - kids.size()))
 	candidates = kids
 	state = "succession"
 	last_death = rec
@@ -782,9 +789,36 @@ func glory_level(h: GameHeir) -> float:
 	return float(GameData.bal("glory_min_level")) * pow(span_ratio, 0.7)
 
 
-func _cousins() -> Array:
+## Companions of the house who can be adopted as heirs when there are no children: in party order, up to
+## adoption_max. Each keeps their own race and class and takes the dynasty name; traits pass with the same
+## penalty as a cousin's. Nothing leaves the party until one of them is chosen (see choose_heir).
+func _adoptees() -> Array:
 	var out: Array = []
-	for i in 2:
+	for m in party.members:
+		if out.size() >= int(GameData.bal("adoption_max")):
+			break
+		var def_c := GameParty.def(str(m["id"]))
+		var res := GameInheritance.inherit([heir], rng, float(GameData.bal("adopted_inherit_penalty")))
+		var c := GameHeir.new()
+		c.id = _take_id()
+		c.sex = GameSex.roll(seed_value, c.id)
+		c.name = str(m["name"]).split(" ")[0]
+		c.surname = dynasty_name
+		c.race_id = str(def_c.get("race", heir.race_id))
+		c.class_id = str(def_c.get("class", heir.class_id))
+		c.traits = res["traits"]
+		c.dormant = res["dormant"]
+		c.companion_id = str(m["id"])
+		c.parent_names = ["(companion %s)" % heir.name]
+		c.fate_value = GameFate.roll_fate_value(rng, c.fate_modifier_total())
+		c.lifespan = c.compute_lifespan()
+		out.append(c)
+	return out
+
+
+func _cousins(count: int = 2) -> Array:
+	var out: Array = []
+	for i in count:
 		var res := GameInheritance.inherit([heir], rng, float(GameData.bal("adopted_inherit_penalty")))
 		var c := GameHeir.new()
 		c.id = _take_id()
@@ -832,6 +866,12 @@ func choose_heir(index: int) -> Array:
 					break
 	pending_archetype = ""
 	world.visit(GameData.world["start"])
+	if c.companion_id != "":
+		var m := party.member(c.companion_id)
+		if not m.is_empty():
+			party._part(self, m, "adopted")
+			msgs.append("%s leaves the company to take up the family name." % c.name)
+		c.companion_id = ""
 	_setup_new_heir(c)
 	GameSkillTree.inherit(self, parent, c, msgs)
 	# The heir inherits what the family has left: its gold and the items bought.

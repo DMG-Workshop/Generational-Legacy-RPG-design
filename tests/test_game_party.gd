@@ -714,28 +714,29 @@ func test_succession() -> void:
 	ok(d.state == "succession", "succession")
 	ok(p.hire_block(d, "grull_one_tusk") == "No one hires in mourning.", "no hiring during succession")
 	var msgs := d.choose_heir(0)
-	ok(p.members.size() == 3, "companions stay with the family")
+	# With companions to spare the heir is adopted from them (see GameDynasty._adoptees): Bren takes the
+	# name and leaves the company, and the other two stay with the family.
+	ok(p.members.size() == 2 and not p.has_member("bren_cask"), "the adopted companion leaves; the others stay")
 	for m in p.members:
 		var u := p.unit(d, m)
 		ok(u.level == d.heir.level and u.level == 1 and int(m["gen"]) == d.gen, "rebuilt to the new heir's level and gen")
 		ok(u.hp == u.max_hp(), "fresh at succession")
-	ok(msgs.has("Bren Cask, Maddy Thorn and Sister Oriel stay with the family and swear to serve %s." % d.heir.name), "succession message: %s" % str(msgs))
+	ok(msgs.has("Bren leaves the company to take up the family name."), "the adoption is in the message: %s" % str(msgs))
+	ok(msgs.has("Maddy Thorn and Sister Oriel stay with the family and swear to serve %s." % d.heir.name), "succession message: %s" % str(msgs))
 	var lines: Array = Tavern.summary_lines(d)
-	var bren_age := int(p.age(d, "bren_cask"))
-	ok(lines.size() == 3 and str(lines[0]).begins_with("Bren Cask (%d), Human Warrior Lv1  HP\u00a0" % bren_age), "summary line: %s" % str(lines))
-	ok(str(lines[2]).begins_with("Sister Oriel (%d), Human Cleric Lv1" % int(p.age(d, "sister_oriel"))), "a third line for the third companion: %s" % str(lines))
+	ok(lines.size() == 2 and str(lines[0]).begins_with("Maddy Thorn (%d), Halfling Rogue Lv1  HP\u00a0" % int(p.age(d, "maddy_thorn"))), "summary line: %s" % str(lines))
+	ok(str(lines[1]).begins_with("Sister Oriel (%d), Human Cleric Lv1" % int(p.age(d, "sister_oriel"))), "a second line for the second companion: %s" % str(lines))
 	var u0 := p.unit(d, p.members[0])
 	ok(str(lines[0]).ends_with("%d/%d" % [u0.hp, u0.max_hp()]), "summary line ends with HP now/max")
 	ok(GameParty.names_text(["A"]) == "A" and GameParty.names_text(["A", "B"]) == "A and B" and GameParty.names_text([]) == "", "names read naturally")
 	# One or two companions read the same as before.
-	p.dismiss(d, "sister_oriel")
 	var two: Array = []
 	p.on_succession(d, two)
-	ok(two == ["Bren Cask and Maddy Thorn stay with the family and swear to serve %s." % d.heir.name], "two names: %s" % str(two))
-	p.dismiss(d, "maddy_thorn")
+	ok(two == ["Maddy Thorn and Sister Oriel stay with the family and swear to serve %s." % d.heir.name], "two names: %s" % str(two))
+	p.dismiss(d, "sister_oriel")
 	var one: Array = []
 	p.on_succession(d, one)
-	ok(one == ["Bren Cask stays with the family and swears to serve %s." % d.heir.name], "one name: %s" % str(one))
+	ok(one == ["Maddy Thorn stays with the family and swears to serve %s." % d.heir.name], "one name: %s" % str(one))
 
 
 func test_save_load() -> void:

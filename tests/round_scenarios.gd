@@ -53,11 +53,13 @@ static func key(mode: String, seed_val: int, cls: String, n: int, kind: String) 
 	return "%s|%d|%s|%d|%s" % [mode, seed_val, cls, n, kind]
 
 
-## Removes the "sex" keys (see GameSex) from a save snapshot, in place: it changes no play, and it must
+## Removes the "sex" keys (see GameSex) and empty "companion_id" keys from a save snapshot, in place: it changes no play, and it must
 ## not copy the snapshot, because a save's lists are shared with the game and the golden digests depend on that.
 static func drop_sex(v: Variant) -> Variant:
 	if typeof(v) == TYPE_DICTIONARY:
 		v.erase("sex")
+		if v.has("companion_id") and v["companion_id"] == "":   # the adoption key (see GameHeir.companion_id): empty for every life that adopts no one
+			v.erase("companion_id")
 		for k in v:
 			drop_sex(v[k])
 	elif typeof(v) == TYPE_ARRAY:
