@@ -52,7 +52,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 18. **Heirloom upgrades across generations.**
 19. **Random world events per Age:** wars, famines and golden ages that change hunts, shops and diseases.
 20. **Hard-mode dynasty options:** whole-line permadeath, iron-man saves, a generation cap.
-21. **A family house that grows across generations.** Upgrades bought between hunts and passed down the line: more party slots, crafting, better training and shops. Idea from the base between expeditions in *The Shattered Isles*, fitted to the dynasty. Builds on item 18 (heirloom upgrades) and the persistent estates the README promises.
+21. **A family house that grows across generations.** Upgrades bought between hunts and passed down the line: more party slots, crafting, better training and shops. Idea from the base between expeditions in *The Shattered Isles*, fitted to the dynasty. Builds on item 18 (heirloom upgrades) and the persistent estates the README promises. Progress: the core rules and the first two tracks (Hall and Training Yard) are in, and the House button on the life screen buys them. The autopilot does not buy upgrades, so the battle figures do not move with the screen.
 22. **Reactions that ask first.** When a hurt party member is about to be hit, the player is offered a reaction such as "Cover this ally?"; a member on Auto decides for itself. Idea from *The Shattered Isles*, fitted to party commands. It changes battle results, so it is a balance change: show before and after numbers.
 
 ## After the text game: the 2D/3D sandbox
