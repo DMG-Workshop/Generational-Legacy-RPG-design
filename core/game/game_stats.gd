@@ -6,7 +6,7 @@ class_name GameStats
 extends RefCounted
 
 
-## {generations, age, heirs, causes, legends, legend_kinds, best, gold}. causes is [[cause, count]] most
+## {generations, age, heirs, causes, legends, legend_kinds, best, gold, gold_by_age}. causes is [[cause, count]] most
 ## common first. best is the Hall of Fame's first entry ({} before any heir has died). gold is
 ## [{gen, gold}] for the heirs kept in full, oldest first, the living heir last.
 static func summary(d: GameDynasty) -> Dictionary:
@@ -39,4 +39,18 @@ static func summary(d: GameDynasty) -> Dictionary:
 		"legend_kinds": legends.size(),
 		"best": d.ages.hall[0] if not d.ages.hall.is_empty() else {},
 		"gold": gold,
+		"gold_by_age": _gold_by_age(d),
 	}
+
+
+## One entry per Age, oldest first: its number, the heirs whose gold at death is known, and their average
+## gold at death (-1 when none of its heirs has a known figure, as in an Age saved before gold was kept).
+static func _gold_by_age(d: GameDynasty) -> Array:
+	var out: Array = []
+	for row in d.ages.age_rows(d):
+		var known := int(row.get("gold_known", 0))
+		var avg := -1
+		if known > 0:
+			avg = int(round(float(row.get("gold_sum", 0)) / float(known)))
+		out.append({"age": int(row["age"]), "known": known, "average": avg})
+	return out

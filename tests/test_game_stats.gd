@@ -63,6 +63,23 @@ func _run() -> void:
 	ok(s["causes"] == [["old age", 6]], "folded deaths still count by cause")
 	ok(s["gold"].size() < 7, "gold is kept only for the heirs in full")
 
+	# Gold over time: each Age has an average of the gold its heirs had at death, and it survives folding.
+	var ga: Array = GameStats.summary(f)["gold_by_age"]
+	ok(ga.size() >= 1 and int(ga[0]["known"]) > 0, "each Age that has deaths has a known gold figure")
+	var kept_known := 0
+	for row in f.ages.age_rows(f):
+		kept_known += int(row.get("gold_known", 0))
+	ok(kept_known == 6, "all six deaths have their gold counted, folded or not")
+	# An Age saved before gold was kept reads as not recorded, not as zero.
+	var old_row := {"age": 9, "from": 1, "to": 1, "heirs": 1, "greatest": {}, "legends": [], "causes": {}}
+	f.ages.summaries.append(old_row)
+	var nine := {}
+	for a in GameStats.summary(f)["gold_by_age"]:
+		if int(a["age"]) == 9:
+			nine = a
+	ok(not nine.is_empty() and int(nine["known"]) == 0 and int(nine["average"]) == -1, "an Age with no gold figure reads as not recorded, not zero")
+	f.ages.summaries.pop_back()
+
 	# A save round trip gives the same statistics.
 	var r := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(f.to_dict())))
 	ok(JSON.stringify(GameStats.summary(r)) == JSON.stringify(GameStats.summary(f)), "the statistics are the same after a save and load")

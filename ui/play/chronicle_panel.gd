@@ -139,6 +139,13 @@ func _stats_text() -> String:
 	else:
 		lines.append("[b]Greatest heir[/b]  %s, %s %s, level %s (generation %s)" % [best["name"], GameData.races[best["race_id"]]["name"], GameData.classes[best["class_id"]]["name"], _n(best["level"]), _n(best["gen"])])
 	lines.append("")
+	lines.append("[b]Average gold at death, by Age[/b]")
+	for a in st["gold_by_age"]:
+		if int(a["known"]) == 0:
+			lines.append(" - Age %s: not recorded" % _n(a["age"]))
+		else:
+			lines.append(" - Age %s: %s gold, from %s heir%s" % [_n(a["age"]), _n(a["average"]), _n(a["known"]), "" if int(a["known"]) == 1 else "s"])
+	lines.append("")
 	lines.append("[b]Gold of the heirs kept in full[/b]")
 	for g in st["gold"]:
 		lines.append(" - generation %s: %s gold" % [_n(g["gen"]), _n(g["gold"])])
