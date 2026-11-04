@@ -49,7 +49,7 @@ func _ready() -> void:
 	for s in UiSettings.scales():
 		var sc: float = s
 		_choice(row, "%d%%" % int(round(sc * 100.0)), is_equal_approx(sc, UiSettings.get_scale()), func(): app.set_ui_scale(sc))
-	var why := Kit.label("Everything on screen grows together. Phones and tablets start at %d%%." % int(round(float(UiSettings.setting("default_scale_mobile")) * 100.0)), 14, Kit.DIM)
+	var why := Kit.label("Everything on screen grows together. Phones and tablets start at %d%%." % int(round(float(UiSettings.setting("default_scale_mobile")) * 100.0)), 14, Kit.dim())
 	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(why)
 
@@ -60,11 +60,11 @@ func _ready() -> void:
 	for tl in UiSettings.touch_layouts():
 		var mode_id: String = tl
 		_choice(trow, mode_id.capitalize(), mode_id == UiSettings.get_touch_layout(), func(): app.set_touch_layout(mode_id))
-	var twhy := Kit.label("Fingertip-sized buttons and tap / hold in the help. Auto: on phones and tablets only.", 14, Kit.DIM)
+	var twhy := Kit.label("Fingertip-sized buttons and tap / hold in the help. Auto: on phones and tablets only.", 14, Kit.dim())
 	twhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(twhy)
 	if UiSettings.touch() or UiSettings.touch_screen():
-		var tip := Kit.label("Hold a finger on anything for its details; a quick tap acts.", 14, Kit.DIM)
+		var tip := Kit.label("Hold a finger on anything for its details; a quick tap acts.", 14, Kit.dim())
 		tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(tip)
 
@@ -74,11 +74,31 @@ func _ready() -> void:
 	v.add_child(prow)
 	_choice(prow, "On", UiSettings.tutorial_on(), func(): app.set_tutorial(true))
 	_choice(prow, "Off", not UiSettings.tutorial_on(), func(): app.set_tutorial(false))
-	var pwhy := Kit.label("Short tips about what to do next, for a new house's first heir.", 14, Kit.DIM)
+	var pwhy := Kit.label("Short tips about what to do next, for a new house's first heir.", 14, Kit.dim())
 	pwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(pwhy)
+	v.add_child(Kit.label("Accessibility", 17, Kit.ACCENT))
+	var options := [
+		["colour_blind", "Colour-blind colours", "Good and bad news in blue and orange, not green and red."],
+		["high_contrast", "High contrast", "Quiet text in a brighter grey."],
+		["reduced_motion", "Reduced motion", "No sliding or lunging in fights; numbers fade where they are."],
+	]
+	for opt in options:
+		var key: String = opt[0]
+		var on := UiSettings.access_on(key)
+		var krow := HBoxContainer.new()
+		krow.add_theme_constant_override("separation", 8)
+		v.add_child(krow)
+		var name_l := Kit.label(opt[1], 15, Kit.TEXT)
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		krow.add_child(name_l)
+		_choice(krow, "On", on, func(): app.set_access(key, true))
+		_choice(krow, "Off", not on, func(): app.set_access(key, false))
+		var khy := Kit.label(opt[2], 14, Kit.dim())
+		khy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(khy)
 	v.add_child(HSeparator.new())
-	note = Kit.label("", 14, Kit.GOOD)
+	note = Kit.label("", 14, Kit.good())
 	match mode:
 		"game":
 			v.add_child(Kit.button("Save", func():
@@ -94,7 +114,7 @@ func _ready() -> void:
 					note.text = "Backup of slot %d copied. Paste it into a note to keep it." % app.slot, Vector2(0, 40)))
 			v.add_child(Kit.button("Title screen", func(): app.show_title(), Vector2(0, 40)))
 		"battle":
-			var l := Kit.label("A fight is not saved until it ends; the house is as it was before it began.", 14, Kit.DIM)
+			var l := Kit.label("A fight is not saved until it ends; the house is as it was before it began.", 14, Kit.dim())
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 	v.add_child(note)

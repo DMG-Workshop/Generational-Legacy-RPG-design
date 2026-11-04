@@ -24,10 +24,10 @@ func _ready() -> void:
 	var dead := d.last_death
 	root.add_child(Kit.label("%s has passed." % dead["name"], 34, Kit.ACCENT))
 	var cname: String = "%s %s" % [GameData.races[dead.get("race_id", "human")]["name"], GameData.classes[dead["class_id"]]["name"]]
-	root.add_child(_wrapped(Kit.label("Generation %s  -  %s, level %s  -  died aged %d (%s)  -  %s, %s gold left" % [GameText.num(dead["gen"]), cname, GameText.num(dead["level"]), dead["age"], dead["cause"], "1 victory" if int(dead["battles_won"]) == 1 else "%s victories" % GameText.num(dead["battles_won"]), GameText.num(dead["gold"])], 16, Kit.DIM)))
+	root.add_child(_wrapped(Kit.label("Generation %s  -  %s, level %s  -  died aged %d (%s)  -  %s, %s gold left" % [GameText.num(dead["gen"]), cname, GameText.num(dead["level"]), dead["age"], dead["cause"], "1 victory" if int(dead["battles_won"]) == 1 else "%s victories" % GameText.num(dead["battles_won"]), GameText.num(dead["gold"])], 16, Kit.dim())))
 	if d.pending_archetype != "":
 		var a: Dictionary = GameFate.ARCHETYPES[d.pending_archetype]
-		root.add_child(_wrapped(Kit.label("Fate has left its mark. The next heir will be a %s: %s" % [a["name"], a["desc"]], 16, Kit.BAD)))
+		root.add_child(_wrapped(Kit.label("Fate has left its mark. The next heir will be a %s: %s" % [a["name"], a["desc"]], 16, Kit.bad())))
 	var into := "generation %s" % GameText.num(d.gen + 1)
 	if d.gen + 1 == GameAges.max_generations():
 		into += ", the last of the saga"
@@ -74,25 +74,25 @@ func _card(i: int, c: GameHeir, width: float) -> Control:
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
 	v.add_child(_wrapped(Kit.label(c.full_name(), 24, Kit.ACCENT)))
-	v.add_child(_wrapped(Kit.label("%s %s  -  %s" % [c.race()["name"], c.cls()["name"], " & ".join(c.parent_names)], 14, Kit.DIM)))
-	v.add_child(_wrapped(Kit.label("Fate Value: %d%% (lifetime chance of major failure)" % int(round(c.fate_value * 100.0)), 15, Kit.BAD if c.fate_value > 0.2 else Kit.TEXT)))
+	v.add_child(_wrapped(Kit.label("%s %s  -  %s" % [c.race()["name"], c.cls()["name"], " & ".join(c.parent_names)], 14, Kit.dim())))
+	v.add_child(_wrapped(Kit.label("Fate Value: %d%% (lifetime chance of major failure)" % int(round(c.fate_value * 100.0)), 15, Kit.bad() if c.fate_value > 0.2 else Kit.TEXT)))
 	v.add_child(_wrapped(Kit.label("Expected lifespan: ~%d years" % int(c.lifespan), 15)))
-	v.add_child(_wrapped(Kit.label(GameSkillTree.preview_text(d.heir, c), 14, Kit.DIM)))
+	v.add_child(_wrapped(Kit.label(GameSkillTree.preview_text(d.heir, c), 14, Kit.dim())))
 	if not c.diseases.is_empty():
-		v.add_child(_wrapped(Kit.label("Sick: %s" % GameDisease.status_text(c), 15, Kit.BAD)))
+		v.add_child(_wrapped(Kit.label("Sick: %s" % GameDisease.status_text(c), 15, Kit.bad())))
 	v.add_child(HSeparator.new())
-	v.add_child(_wrapped(Kit.label("Expressed traits", 15, Kit.DIM)))
+	v.add_child(_wrapped(Kit.label("Expressed traits", 15, Kit.dim())))
 	if c.traits.is_empty():
-		v.add_child(Kit.label("none", 14, Kit.DIM))
+		v.add_child(Kit.label("none", 14, Kit.dim()))
 	for id in c.traits:
 		var l := _wrapped(Kit.label(GameData.trait_name(id), 16, Kit.trait_color(id)))
 		l.tooltip_text = Kit.trait_tooltip(id)
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		v.add_child(l)
 	if not c.dormant.is_empty():
-		v.add_child(_wrapped(Kit.label("Carried dormant", 15, Kit.DIM)))
+		v.add_child(_wrapped(Kit.label("Carried dormant", 15, Kit.dim())))
 		for id in c.dormant:
-			var l2 := _wrapped(Kit.label("  " + GameData.trait_name(id), 14, Kit.DIM))
+			var l2 := _wrapped(Kit.label("  " + GameData.trait_name(id), 14, Kit.dim()))
 			l2.tooltip_text = Kit.trait_tooltip(id)
 			l2.mouse_filter = Control.MOUSE_FILTER_STOP
 			v.add_child(l2)

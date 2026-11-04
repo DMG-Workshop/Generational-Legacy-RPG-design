@@ -58,7 +58,7 @@ func _ready() -> void:
 	header.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	header.mouse_filter = Control.MOUSE_FILTER_PASS
 	root.add_child(header)
-	where = Kit.label("", 15, Kit.DIM)
+	where = Kit.label("", 15, Kit.dim())
 	where.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	where.mouse_filter = Control.MOUSE_FILTER_PASS
 	root.add_child(where)
@@ -169,11 +169,11 @@ func _build_left() -> void:
 	var arch := ""
 	if h.archetype != "":
 		arch = "  -  %s" % GameFate.ARCHETYPES[h.archetype]["name"]
-	left.add_child(Kit.label("Level %s %s %s%s" % [GameText.num(h.level), h.race()["name"], h.cls()["name"], arch], 15, Kit.DIM))
+	left.add_child(Kit.label("Level %s %s %s%s" % [GameText.num(h.level), h.race()["name"], h.cls()["name"], arch], 15, Kit.dim()))
 	left.add_child(Kit.label("Age %d / ~%d%s" % [int(h.age), int(h.lifespan), "  (living on borrowed time)" if h.age > h.lifespan else ""], 15))
-	left.add_child(Kit.label("Fate Value: %d%%" % int(round(h.fate_value * 100.0)), 15, Kit.BAD if h.fate_value > 0.2 else Kit.TEXT))
+	left.add_child(Kit.label("Fate Value: %d%%" % int(round(h.fate_value * 100.0)), 15, Kit.bad() if h.fate_value > 0.2 else Kit.TEXT))
 	left.add_child(Kit.label("HP %s / %s" % [GameText.num(h.hp), GameText.num(h.max_hp())], 14))
-	left.add_child(Kit.bar(Kit.GOOD, h.max_hp(), h.hp))
+	left.add_child(Kit.bar(Kit.good(), h.max_hp(), h.hp))
 	left.add_child(Kit.label("MP %s / %s" % [GameText.num(h.mp), GameText.num(h.max_mp())], 14))
 	left.add_child(Kit.bar(Kit.MP_BLUE, maxf(1.0, h.max_mp()), h.mp))
 	left.add_child(Kit.label("XP %s / %s" % [GameText.num(h.xp), GameText.num(h.xp_to_next())], 14))
@@ -182,18 +182,18 @@ func _build_left() -> void:
 	left.add_child(Kit.label("Gold %s    Potions %d" % [GameText.num(h.gold), h.potions], 16, Kit.ACCENT))
 	_afflictions(h)
 	left.add_child(HSeparator.new())
-	left.add_child(Kit.label("Traits (%s for details)" % Kit.hover(), 15, Kit.DIM))
+	left.add_child(Kit.label("Traits (%s for details)" % Kit.hover(), 15, Kit.dim()))
 	for id in h.all_traits():
 		var l := Kit.label(GameData.trait_name(id), 15, Kit.trait_color(id))
 		l.tooltip_text = Kit.trait_tooltip(id)
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		left.add_child(l)
 	if h.all_traits().is_empty():
-		left.add_child(Kit.label("none", 14, Kit.DIM))
+		left.add_child(Kit.label("none", 14, Kit.dim()))
 	if not h.dormant.is_empty():
-		left.add_child(Kit.label("Carried dormant (may pass on):", 14, Kit.DIM))
+		left.add_child(Kit.label("Carried dormant (may pass on):", 14, Kit.dim()))
 		for id in h.dormant:
-			var l := Kit.label("  " + GameData.trait_name(id), 14, Kit.DIM)
+			var l := Kit.label("  " + GameData.trait_name(id), 14, Kit.dim())
 			l.tooltip_text = Kit.trait_tooltip(id)
 			l.mouse_filter = Control.MOUSE_FILTER_STOP
 			left.add_child(l)
@@ -205,14 +205,14 @@ func _afflictions(h: GameHeir) -> void:
 	if h.diseases.is_empty():
 		return
 	left.add_child(HSeparator.new())
-	left.add_child(Kit.label("Afflictions (cures at temples)", 15, Kit.BAD))
+	left.add_child(Kit.label("Afflictions (cures at temples)", 15, Kit.bad()))
 	for e in h.diseases:
 		var info := GameDisease.describe_entry(e)
-		var l := Kit.label("%s: %s (%d/%d)" % [info["name"], info["stage_name"], info["stage"], info["stages"]], 15, Kit.BAD)
+		var l := Kit.label("%s: %s (%d/%d)" % [info["name"], info["stage_name"], info["stage"], info["stages"]], 15, Kit.bad())
 		l.tooltip_text = "%s\n%s" % [info["name"], info["description"]]
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		left.add_child(l)
-		left.add_child(Kit.label("  %s\n  %s" % [info["effects"], info["outlook"]], 13, Kit.DIM))
+		left.add_child(Kit.label("  %s\n  %s" % [info["effects"], info["outlook"]], 13, Kit.dim()))
 
 
 ## Every line in a side column wraps at the column's width: six-figure stats at level 5000,
@@ -233,7 +233,7 @@ func _build_right() -> void:
 			var traits_txt: String = ", ".join(c.traits.map(func(t): return GameData.trait_name(t)))
 			right.add_child(Kit.label("%s (%s %s)  Fate %d%%\n   %s%s" % [c.name, c.race()["name"], c.cls()["name"], int(round(c.fate_value * 100.0)), traits_txt if traits_txt != "" else "no expressed traits", _sick(c)], 14))
 	else:
-		right.add_child(Kit.label("Unmarried. Without children, distant cousins inherit with weaker blood.", 14, Kit.DIM))
+		right.add_child(Kit.label("Unmarried. Without children, distant cousins inherit with weaker blood.", 14, Kit.dim()))
 	_section("Gear", ShopPanel.summary_lines(d))
 	var every: Array = GameSkills.list(h.class_id).map(func(s): return "Level %s  %s: %s" % [GameText.num(GameSkills.level_of(s)), s["name"], GameCombat.describe(s)])
 	_section("Class skills", GameSkills.summary_lines(h), "\n".join(every))
@@ -246,9 +246,9 @@ func _build_right() -> void:
 	right.add_child(Kit.label("Heirlooms: %d  (+%d%% power)" % [d.heirlooms.size(), int(round(d.heirloom_bonus() * 100.0))], 14))
 	right.add_child(Kit.label("Ancestors: %s" % GameText.num(d.ancestor_count()), 14))
 	if d.echoes.is_empty():
-		right.add_child(Kit.label("No legacy echoes yet.", 14, Kit.DIM))
+		right.add_child(Kit.label("No legacy echoes yet.", 14, Kit.dim()))
 	for e in d.echoes:
-		right.add_child(Kit.label(d.describe_echo(e), 13, Kit.DIM))
+		right.add_child(Kit.label(d.describe_echo(e), 13, Kit.dim()))
 	_fit_column(right)
 
 
@@ -278,7 +278,7 @@ func _build_actions() -> void:
 	var hard := _act("Hard hunt", func(): _hunt("hunt_hard"))
 	hard.tooltip_text = "Tougher monsters and more Elites, for double XP and gold.\nRisky: a defeat can cost %s their life (about %d%% of defeats)." % [h.name, int(round(float(GameData.bal("death_chance_on_defeat")) * 100.0))]
 	var auto := _act("Auto-battle: %s" % ("ON" if d.auto_battle else "OFF"), func(): d.auto_battle = not d.auto_battle; app.autosave(); _refresh())
-	auto.add_theme_color_override("font_color", Kit.GOOD if d.auto_battle else Kit.TEXT)
+	auto.add_theme_color_override("font_color", Kit.good() if d.auto_battle else Kit.TEXT)
 	auto.tooltip_text = "Hunts fight themselves, choosing as the autopilot would, and keep hunting until you press Stop or health runs low. Switch it off in battle to take over."
 	var legend := _act("Fight %s" % boss.get("short", boss["name"]) if not boss.is_empty() else "No legend here", func(): _legend())
 	legend.disabled = boss.is_empty()
@@ -414,7 +414,7 @@ func _legend() -> void:
 func _auto_button(id: String, text: String, what: String, generations: int) -> void:
 	var b := _act(text, func(): _autopilot(id, generations))
 	b.add_theme_font_size_override("font_size", COOL_FONT)   # the same size ready and counting down
-	b.add_theme_color_override("font_disabled_color", Kit.DIM)   # the shared grey is too faint to read a countdown
+	b.add_theme_color_override("font_disabled_color", Kit.dim())   # the shared grey is too faint to read a countdown
 	b.set_meta("cool_text", text)
 	b.set_meta("cool_tip", what)
 	cool_buttons[id] = b

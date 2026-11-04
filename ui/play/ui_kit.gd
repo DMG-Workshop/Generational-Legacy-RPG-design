@@ -12,6 +12,24 @@ const DIM := Color("#8d88a0")
 const GOOD := Color("#6fcf6f")
 const BAD := Color("#e0605a")
 const MP_BLUE := Color("#5a8fe0")
+# The accessible variants (see UiSettings.ACCESS_KEYS): blue and orange tell good from bad without red and
+# green, and a brighter grey keeps quiet text readable in high contrast.
+const GOOD_CB := Color("#56b4e9")
+const BAD_CB := Color("#e69f00")
+const DIM_HC := Color("#c4bfd6")
+
+
+## The colours of good and bad news, and of quiet text, honouring the accessibility options.
+static func good() -> Color:
+	return GOOD_CB if UiSettings.colour_blind() else GOOD
+
+
+static func bad() -> Color:
+	return BAD_CB if UiSettings.colour_blind() else BAD
+
+
+static func dim() -> Color:
+	return DIM_HC if UiSettings.high_contrast() else DIM
 
 
 static func style(color: Color, radius: int = 6, border: Color = Color(0, 0, 0, 0)) -> StyleBoxFlat:
@@ -144,8 +162,8 @@ static func clear(node: Node) -> void:
 
 static func trait_color(id: String) -> Color:
 	match GameData.trait_def(id).get("category", ""):
-		"curse": return BAD
-		"blessing": return GOOD
+		"curse": return bad()
+		"blessing": return good()
 		"mutation": return Color("#c58fe8")
 		"acquired": return Color("#e8a05a")
 		"divine": return Color("#ffd75e")

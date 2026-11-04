@@ -43,7 +43,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 11. **Several save slots and a backup export.** Done: three slots on the title screen (slot 1 is the existing save file), each saved atomically with a `.bak` it falls back to, and a text backup that Copy backup puts on the clipboard (title screen and game menu) and Restore backup reads back into any slot. Covering or erasing a house asks first. Backups pass through the clipboard only; a file export for phones is not built.
 12. **A family tree viewer:** ancestors, traits, deaths and legacy echoes.
 13. **A dynasty statistics screen:** deaths by cause, best heir, Ages reached, gold over time. Progress: a Statistics tab in the chronicle shows heirs lived, generations and Age, deaths by cause, legends slain, the greatest heir and the gold of each heir kept in full (`GameStats`). Gold over time is only kept for the latest heirs; older heirs fold into the Ages without their gold.
-14. **Accessibility options:** colour-blind palette, high contrast, reduced motion.
+14. **Accessibility options:** colour-blind palette, high contrast, reduced motion. Progress: the menu's Accessibility row turns on colour-blind colours (blue and orange for good and bad), high contrast (brighter quiet text) and reduced motion (no sliding or lunging in fights). The choices are stored in settings.cfg, not in the save.
 15. **Sound and music:** battle cues, a death sting, ambient tracks per Age.
 
 **Game systems**

@@ -61,10 +61,10 @@ class MapCanvas extends Control:
 			draw_rect(r, fill)
 			draw_rect(r, Kit.ACCENT if here else Color("#8d88a0"), false, 2.0 if here else 1.0)
 			var label: String = "?" if k == "seen" else str(l["name"])
-			var col := Kit.TEXT if k == "visited" else Kit.DIM
+			var col := Kit.TEXT if k == "visited" else Kit.dim()
 			draw_string(font, p + Vector2(-BOX.x * 0.5, 4), label, HORIZONTAL_ALIGNMENT_CENTER, BOX.x, name_size(font, label), col)
 			if l.has("lair") and k != "seen":
-				draw_circle(p + Vector2(40, -12), 4, Kit.BAD)
+				draw_circle(p + Vector2(40, -12), 4, Kit.bad())
 
 
 func _ready() -> void:
@@ -124,7 +124,7 @@ func _ready() -> void:
 	var where := Kit.label("%s (%s)\n%s" % [here["name"], here["type"], here.get("description", "")], 14)
 	where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(where)
-	var sky := Kit.label(w.weather().get("text", ""), 13, Kit.DIM)
+	var sky := Kit.label(w.weather().get("text", ""), 13, Kit.dim())
 	sky.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(sky)
 	side.add_child(HSeparator.new())
@@ -140,7 +140,7 @@ func _ready() -> void:
 		side.add_child(b)
 	for link in GameWorld.place(w.location).get("links", []):
 		if link.has("requires_flag") and not dynasty.flags.has(link["requires_flag"]):
-			var sealed := Kit.label("A road to %s is sealed." % ("somewhere" if w.knowledge(link["to"]) == "seen" else GameWorld.place(link["to"])["name"]), 13, Kit.DIM)
+			var sealed := Kit.label("A road to %s is sealed." % ("somewhere" if w.knowledge(link["to"]) == "seen" else GameWorld.place(link["to"])["name"]), 13, Kit.dim())
 			sealed.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			side.add_child(sealed)
 	var maps := w.maps_for_sale()
@@ -155,7 +155,7 @@ func _ready() -> void:
 			b2.disabled = dynasty.heir.gold < dynasty.map_price(m) or (m["reveals"] as Array).all(func(id): return w.knowledge(id) in ["visited", "charted"])
 			side.add_child(b2)
 	side.add_child(HSeparator.new())
-	var legend := Kit.label("Gold box: town.  Red dot: a legend's lair.  ?: seen from the road, never walked.", 12, Kit.DIM)
+	var legend := Kit.label("Gold box: town.  Red dot: a legend's lair.  ?: seen from the road, never walked.", 12, Kit.dim())
 	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(legend)
 

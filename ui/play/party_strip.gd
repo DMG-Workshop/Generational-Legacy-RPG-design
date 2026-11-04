@@ -60,10 +60,10 @@ func _rebuild(members: Array) -> void:
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.clip_text = true
 		btn.add_theme_font_size_override("font_size", FONT)
-		btn.add_theme_color_override("font_disabled_color", Kit.DIM)
+		btn.add_theme_color_override("font_disabled_color", Kit.dim())
 		btn.add_theme_constant_override("line_spacing", -2)
 		add_child(btn)
-		var hp := _bar(btn, Kit.GOOD, -9.0, -5.0)
+		var hp := _bar(btn, Kit.good(), -9.0, -5.0)
 		var mp := _bar(btn, Kit.MP_BLUE, -5.0, -2.0)
 		chips[by] = {"btn": btn, "hp": hp, "mp": mp, "name": "", "lines": ["", "", ""]}
 
@@ -93,13 +93,13 @@ func _look(btn: Button, decision: String, active: bool) -> void:
 	match decision:
 		"queued":
 			fill = Color("#233025")
-			edge = Kit.GOOD
+			edge = Kit.good()
 		"auto", "fallback":
 			fill = Color("#1f2a44")
 			edge = Kit.MP_BLUE
 		"held":
 			fill = Color("#33202a")
-			edge = Kit.BAD
+			edge = Kit.bad()
 		"cover":
 			fill = Color("#2e2a20")
 			edge = Kit.ACCENT.darkened(0.35)

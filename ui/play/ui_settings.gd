@@ -61,6 +61,40 @@ static func store(key: String, value: Variant) -> bool:
 	return cf.save(path) == OK
 
 
+## The accessibility options (the menu's Accessibility row): colour-blind colours, high contrast and
+## reduced motion. Each is a yes or no in settings.cfg; a file from before they existed, or a damaged
+## value, reads as off.
+const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion"]
+
+
+static func access_on(key: String) -> bool:
+	var v: Variant = stored(key, false)
+	return typeof(v) == TYPE_BOOL and bool(v)
+
+
+static func colour_blind() -> bool:
+	return access_on("colour_blind")
+
+
+static func high_contrast() -> bool:
+	return access_on("high_contrast")
+
+
+static func reduced_motion() -> bool:
+	return access_on("reduced_motion")
+
+
+## A tween's time in seconds, or none when reduced motion is on: changes then show at once.
+static func motion_time(seconds: float) -> float:
+	return 0.0 if reduced_motion() else seconds
+
+
+static func set_access(key: String, on: bool) -> bool:
+	if not ACCESS_KEYS.has(key):
+		return false
+	return store(key, on)
+
+
 ## Whether the first-heir tips show. On until the player switches them off (Skip tips, the menu, or
 ## choosing the first heir); a settings file from before the tips has no key, which reads as on.
 static func tutorial_on() -> bool:

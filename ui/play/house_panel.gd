@@ -30,7 +30,7 @@ func _build(column: float) -> void:
 	for c in _body.get_children():
 		_body.remove_child(c)
 		c.queue_free()
-	var note := Kit.label("Gold: %s. The house is kept by the dynasty, so every heir after this one has what is built here." % GameText.num(dynasty.heir.gold), 15, Kit.DIM)
+	var note := Kit.label("Gold: %s. The house is kept by the dynasty, so every heir after this one has what is built here." % GameText.num(dynasty.heir.gold), 15, Kit.dim())
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.add_child(note)
 	for track in GameHouse.TRACKS:
@@ -44,14 +44,14 @@ func _row(track: String, column: float) -> Control:
 	var lv := GameHouse.level(dynasty, track)
 	var title := Kit.label("%s: level %d of %d" % [GameHouse.track_name(track), lv, GameHouse.max_level()], 18, Kit.TEXT)
 	box.add_child(title)
-	var now := Kit.label(_effect(track, lv), 15, Kit.DIM)
+	var now := Kit.label(_effect(track, lv), 15, Kit.dim())
 	now.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(now)
 	var price := GameHouse.cost(dynasty, track)
 	var text := "Fully built."
 	if price >= 0:
 		text = "Next level: %s. Costs %s gold." % [_effect(track, lv + 1), GameText.num(price)]
-	var next := Kit.label(text, 15, Kit.DIM)
+	var next := Kit.label(text, 15, Kit.dim())
 	next.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(next)
 	var why := GameHouse.buy_error(dynasty, track)
@@ -61,7 +61,7 @@ func _row(track: String, column: float) -> Control:
 	box.add_child(b)
 	# The reason is shown as text, not a tooltip: a touch player sees it without holding the button.
 	if why != "":
-		var reason := Kit.label(why, 14, Kit.DIM)
+		var reason := Kit.label(why, 14, Kit.dim())
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(reason)
 	return box
