@@ -18,7 +18,7 @@ const KEY := Color("#c58fe8")
 const LOCKED_EDGE := Color("#3a3650")
 const DIM_FILL := Color("#1d1b29")
 const OPEN_FILL := Color("#25452c")
-static var WAITING_EDGE := Kit.GOOD.darkened(0.28)   # the way is open, not the purse
+static var WAITING_EDGE := Kit.good().darkened(0.28)   # the way is open, not the purse
 static var WAITING_INK := Kit.TEXT.darkened(0.2)
 
 var dynasty: GameDynasty
@@ -87,7 +87,7 @@ func _build() -> void:
 	top.add_child(Kit.label("Skill points %s" % GameText.num(pts), 18, Kit.ACCENT))
 	var nxt := GameSkillTree.next_point_for(u)
 	if nxt > 0:
-		top.add_child(Kit.label("Next at level %s" % GameText.num(nxt), 14, Kit.DIM))
+		top.add_child(Kit.label("Next at level %s" % GameText.num(nxt), 14, Kit.dim()))
 	var fill := Control.new()
 	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(fill)
@@ -104,7 +104,7 @@ func _build() -> void:
 	re.tooltip_text = why if why != "" else "Refund every bought rank. What the blood carries stays."
 	top.add_child(re)
 	if why != "" and GameSkillTree.spent(u) > 0:
-		head.append(_wrap(why, 13, Kit.BAD))
+		head.append(_wrap(why, 13, Kit.bad()))
 
 	var tabs := HFlowContainer.new()
 	tabs.add_theme_constant_override("h_separation", 6)
@@ -210,7 +210,7 @@ func _draw_tree(u: GameHeir) -> void:
 		var keyst := GameSkillTree.is_keystone(id)
 		var edge := LOCKED_EDGE
 		var fill := DIM_FILL
-		var ink := Kit.DIM
+		var ink := Kit.dim()
 		match lk:
 			"mastered":
 				edge = Kit.ACCENT
@@ -221,7 +221,7 @@ func _draw_tree(u: GameHeir) -> void:
 				fill = Color("#33301f")
 				ink = Kit.TEXT
 			"open":
-				edge = Kit.GOOD
+				edge = Kit.good()
 				fill = OPEN_FILL
 				ink = Kit.TEXT
 			"waiting":
@@ -323,13 +323,13 @@ func _show(id: String) -> void:
 	Kit.clear(side_box)
 	var u: GameHeir = side_box.get_meta("unit")
 	if note != "":
-		side_box.add_child(_wrap(note, 13, Kit.GOOD))
+		side_box.add_child(_wrap(note, 13, Kit.good()))
 		side_box.add_child(HSeparator.new())
 	if id == "":
 		var t := GameSkillTree.tree(tree_id)
 		side_box.add_child(_wrap(str(t["name"]), 17, Kit.ACCENT))
-		side_box.add_child(_wrap(str(t.get("description", "")), 13, Kit.DIM))
-		side_box.add_child(_wrap("Gold: taken (choose it to see whether its next rank can be bought now). Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir. A child of another race takes it in that race's shape." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.DIM))
+		side_box.add_child(_wrap(str(t.get("description", "")), 13, Kit.dim()))
+		side_box.add_child(_wrap("Gold: taken (choose it to see whether its next rank can be bought now). Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir. A child of another race takes it in that race's shape." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.dim()))
 		for line in _held(u):
 			side_box.add_child(_wrap(line, 13, Kit.TEXT))
 		for line in GameSkillTree.plan_lines(dynasty, who):
@@ -340,9 +340,9 @@ func _show(id: String) -> void:
 	var mx := GameSkillTree.max_rank(id)
 	side_box.add_child(_wrap(str(n["name"]), 18, KEY if GameSkillTree.is_keystone(id) else Kit.ACCENT))
 	var c := GameSkillTree.cost(id)
-	side_box.add_child(_wrap("%sRank %d / %d  -  %d point%s a rank" % ["Keystone  -  " if GameSkillTree.is_keystone(id) else "", r, mx, c, "" if c == 1 else "s"], 13, Kit.DIM))
+	side_box.add_child(_wrap("%sRank %d / %d  -  %d point%s a rank" % ["Keystone  -  " if GameSkillTree.is_keystone(id) else "", r, mx, c, "" if c == 1 else "s"], 13, Kit.dim()))
 	if str(n.get("text", "")) != "":
-		side_box.add_child(_wrap(str(n["text"]), 13, Kit.DIM))
+		side_box.add_child(_wrap(str(n["text"]), 13, Kit.dim()))
 	if r > 0:
 		side_box.add_child(Kit.label("Now", 14, Kit.ACCENT))
 		for line in GameSkillTree.effect_lines(id, r, u):
@@ -353,7 +353,7 @@ func _show(id: String) -> void:
 			side_box.add_child(_wrap(line, 13, Kit.TEXT))
 	var req: Array = n.get("requires", [])
 	if not req.is_empty():
-		side_box.add_child(_wrap("Needs a rank in %s." % " or ".join(PackedStringArray(req.map(func(q): return GameSkillTree.node_name(str(q))))), 12, Kit.DIM))
+		side_box.add_child(_wrap("Needs a rank in %s." % " or ".join(PackedStringArray(req.map(func(q): return GameSkillTree.node_name(str(q))))), 12, Kit.dim()))
 	if int(u.tree_free.get(id, 0)) > 0:
 		side_box.add_child(_wrap("%d rank%s carried in the blood: free, never refunded." % [int(u.tree_free[id]), "" if int(u.tree_free[id]) == 1 else "s"], 12, Color("#e8a05a")))
 	if GameSkillTree.inheritable(id):
@@ -369,9 +369,9 @@ func _show(id: String) -> void:
 		b.tooltip_text = block
 		side_box.add_child(b)
 		if waiting:
-			side_box.add_child(_wrap("The way is open, but it cannot be bought now: %s" % block, 12, Kit.BAD))
+			side_box.add_child(_wrap("The way is open, but it cannot be bought now: %s" % block, 12, Kit.bad()))
 		elif block != "":
-			side_box.add_child(_wrap(block, 12, Kit.BAD))
+			side_box.add_child(_wrap(block, 12, Kit.bad()))
 
 
 ## The keystones held and what the bought ranks add up to, for the side box's resting state.

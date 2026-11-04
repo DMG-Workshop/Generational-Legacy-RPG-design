@@ -20,7 +20,7 @@ func _ready() -> void:
 	body.custom_minimum_size = Vector2(column, 0)
 	body.add_theme_constant_override("separation", 10)
 	center.add_child(body)
-	var note := Kit.label("Only %s are offered. The one you pick is the spouse, and the children carry both of your blood." % _sex_word(GameSex.opposite(dynasty.heir.sex)), 15, Kit.DIM)
+	var note := Kit.label("Only %s are offered. The one you pick is the spouse, and the children carry both of your blood." % _sex_word(GameSex.opposite(dynasty.heir.sex)), 15, Kit.dim())
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(note)
 	var mates := dynasty.mate_candidates()

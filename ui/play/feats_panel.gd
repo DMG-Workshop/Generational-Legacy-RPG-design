@@ -34,11 +34,11 @@ func _build() -> void:
 	body.add_child(top)
 	top.add_child(Kit.label("Feat points %s" % GameText.num(pts), 20, Kit.ACCENT))
 	top.add_child(Kit.label("Readied %d / %d" % [h.equipped_feats.size(), GameFeats.slots(h)], 20, Kit.ACCENT))
-	var next := Kit.label(_next_text(h), 14, Kit.DIM)
+	var next := Kit.label(_next_text(h), 14, Kit.dim())
 	next.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(next)
 	var why := GameFeats.manage_block(d)
-	var where := _wrap(why if why != "" else _open_text(d), 14, Kit.BAD if why != "" else Kit.GOOD)
+	var where := _wrap(why if why != "" else _open_text(d), 14, Kit.bad() if why != "" else Kit.good())
 	body.add_child(where)
 	if note != "":
 		body.add_child(_wrap(note, 14, Kit.TEXT))
@@ -53,7 +53,7 @@ func _build() -> void:
 	var readied: Array = h.equipped_feats
 	var known: Array = h.known_feats.filter(func(id): return id not in readied)
 	if readied.is_empty() and known.is_empty():
-		mine.add_child(_wrap("%s knows no feats yet. Learn one with feat points; it is readied at once while a slot is free." % h.name, 14, Kit.DIM))
+		mine.add_child(_wrap("%s knows no feats yet. Learn one with feat points; it is readied at once while a slot is free." % h.name, 14, Kit.dim()))
 	if not readied.is_empty():
 		mine.add_child(Kit.label("Readied for battle", 16, Kit.ACCENT))
 	for id in readied:
@@ -89,7 +89,7 @@ func _build() -> void:
 			var c := GameFeats.cost(id)
 			others.add_child(_card(id, "Learn (%d pt%s)" % [c, "" if c == 1 else "s"], Callable(), GameFeats.requirement_block(h, id)))
 	if not any:
-		others.add_child(_wrap("Nothing more to learn for now.", 14, Kit.DIM))
+		others.add_child(_wrap("Nothing more to learn for now.", 14, Kit.dim()))
 	_restore_scroll.call_deferred(keep)
 
 
@@ -199,13 +199,13 @@ func _card(id: String, action: String, cb: Callable, block: String) -> Control:
 	head.add_theme_constant_override("h_separation", 10)
 	v.add_child(head)
 	head.add_child(Kit.label(str(f["name"]), 16, Color(kind.get("color", "#ffffff"))))
-	var tag := Kit.label("%s  -  %s  -  %d pt%s" % [kind.get("name", ""), GameFeats.shape_text(id), GameFeats.cost(id), "" if GameFeats.cost(id) == 1 else "s"], 12, Kit.DIM)
+	var tag := Kit.label("%s  -  %s  -  %d pt%s" % [kind.get("name", ""), GameFeats.shape_text(id), GameFeats.cost(id), "" if GameFeats.cost(id) == 1 else "s"], 12, Kit.dim())
 	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(tag)
-	var flavour := _wrap(str(f["description"]), 12, Kit.DIM)
+	var flavour := _wrap(str(f["description"]), 12, Kit.dim())
 	v.add_child(flavour)
 	v.add_child(_wrap(GameFeats.describe(id), 13, Kit.TEXT))
-	v.add_child(_wrap(_needs_text(h, id), 12, Kit.DIM))
+	v.add_child(_wrap(_needs_text(h, id), 12, Kit.dim()))
 	card.tooltip_text = "%s\n%s" % [f["name"], kind.get("text", "")]
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(SIDE_W, 0)
@@ -219,7 +219,7 @@ func _card(id: String, action: String, cb: Callable, block: String) -> Control:
 		b.tooltip_text = block if block != "" else "%s: %s" % [action, f["name"]]
 		side.add_child(b)
 	if block != "" and block != GameFeats.manage_block(dynasty):
-		var why := Kit.label(block, 12, Kit.BAD)
+		var why := Kit.label(block, 12, Kit.bad())
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		why.custom_minimum_size = Vector2(SIDE_W, 0)
 		side.add_child(why)

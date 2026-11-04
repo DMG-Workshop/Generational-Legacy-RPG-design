@@ -122,7 +122,7 @@ func _ready() -> void:
 	bottom.add_child(cmd_panel)
 	var cv := VBoxContainer.new()
 	cmd_panel.add_child(cv)
-	hint = Kit.label("", 14, Kit.DIM)
+	hint = Kit.label("", 14, Kit.dim())
 	hint.clip_text = true
 	cv.add_child(hint)
 	command_box = HBoxContainer.new()
@@ -265,10 +265,10 @@ func _build_actors() -> void:
 	hero_label.size = Vector2(124, 20)
 	hero_label.clip_text = true
 	hero_node.add_child(hero_label)
-	hero_info = Kit.label("", 12, Kit.DIM)
+	hero_info = Kit.label("", 12, Kit.dim())
 	hero_info.position = Vector2(0, 165)
 	hero_node.add_child(hero_info)
-	hero_hp = _thin_bar(Kit.GOOD, d.heir.max_hp(), d.heir.hp, Vector2(124, 9))
+	hero_hp = _thin_bar(Kit.good(), d.heir.max_hp(), d.heir.hp, Vector2(124, 9))
 	hero_hp.position = Vector2(0, 184)
 	hero_node.add_child(hero_hp)
 	hero_mp = _thin_bar(Kit.MP_BLUE, maxf(1.0, d.heir.max_mp()), d.heir.mp, Vector2(124, 5))
@@ -338,7 +338,7 @@ func _build_actors() -> void:
 		lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		lbl.z_index = 1
 		root.add_child(lbl)
-		var hp := _thin_bar(Kit.BAD, e["max_hp"], e["hp"], Vector2(w, 8))
+		var hp := _thin_bar(Kit.bad(), e["max_hp"], e["hp"], Vector2(w, 8))
 		hp.position = Vector2(0, h + 23)
 		root.add_child(hp)
 		var chips := _chips()
@@ -365,7 +365,7 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	head.size = Vector2(30, 30)
 	head.position = Vector2(40, 0)
 	root.add_child(head)
-	var ko := Kit.label("KO", 22, Kit.BAD)
+	var ko := Kit.label("KO", 22, Kit.bad())
 	ko.add_theme_color_override("font_outline_color", Color.BLACK)
 	ko.add_theme_constant_override("outline_size", 6)
 	ko.position = Vector2(38, 46)
@@ -376,10 +376,10 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	nm.size = Vector2(110, 18)
 	nm.clip_text = true
 	root.add_child(nm)
-	var info := Kit.label("", 12, Kit.DIM)
+	var info := Kit.label("", 12, Kit.dim())
 	info.position = Vector2(0, 120)
 	root.add_child(info)
-	var hp := _thin_bar(Kit.GOOD, a.max_hp(), a.hp, Vector2(110, 8))
+	var hp := _thin_bar(Kit.good(), a.max_hp(), a.hp, Vector2(110, 8))
 	hp.position = Vector2(0, 139)
 	root.add_child(hp)
 	var mp := _thin_bar(Kit.MP_BLUE, maxf(1.0, a.max_mp()), a.mp, Vector2(110, 5))
@@ -1110,7 +1110,7 @@ func _sync_strip() -> void:
 
 func _show_auto() -> void:
 	auto_button.text = "Auto-battle: %s" % ("ON" if auto else "OFF")
-	auto_button.add_theme_color_override("font_color", Kit.GOOD if auto else Kit.TEXT)
+	auto_button.add_theme_color_override("font_color", Kit.good() if auto else Kit.TEXT)
 	auto_button.tooltip_text = ("%s fights on their own, choosing as the autopilot would. " + Kit.click().capitalize() + " to take over." if auto
 		else "Let %s fight on their own, now and in the hunts that follow.") % d.heir.name
 
@@ -1278,12 +1278,12 @@ func _open_spells() -> void:
 		var in_group: Array = spells.filter(func(r): return GameCombat.spell(str(r["cmd"]["id"])).get("group", "") == g)
 		if in_group.is_empty():
 			continue
-		rows.add_child(Kit.label(str(groups[g]), 15, Kit.DIM))
+		rows.add_child(Kit.label(str(groups[g]), 15, Kit.dim()))
 		for row in in_group:
 			rows.add_child(_spell_row(row))
 	var next := _next_spell(by)
 	if next != "":
-		rows.add_child(Kit.label(next, 13, Kit.DIM))
+		rows.add_child(Kit.label(next, 13, Kit.dim()))
 
 
 ## Why a row cannot be used, in the list's words: "(not enough MP)", else the reason as given.
@@ -1311,7 +1311,7 @@ func _spell_row(spell: Dictionary) -> Control:
 	var shape := Kit.label(GameCombat.shape_text(sp), 14, Color(GameCombat.element_color(el)) if el != "" else Kit.TEXT)
 	shape.custom_minimum_size = Vector2(96, 0)
 	row.add_child(shape)
-	var what := Kit.label(GameCombat.describe(sp) + _why_note(spell, by), 13, Kit.TEXT if spell["enabled"] else Kit.DIM)
+	var what := Kit.label(GameCombat.describe(sp) + _why_note(spell, by), 13, Kit.TEXT if spell["enabled"] else Kit.dim())
 	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if UiSettings.compact(self):   # a narrow list wraps rather than hide the end of the effect
 		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1371,10 +1371,10 @@ func _open_skills() -> void:
 		else:
 			locked.append(row)
 	if not locked.is_empty():
-		rows.add_child(Kit.label("Opened by level", 15, Kit.DIM))
+		rows.add_child(Kit.label("Opened by level", 15, Kit.dim()))
 	for row in locked:
 		var s: Dictionary = row["ab"]
-		var l := Kit.label("Level %s: %s  -  %s" % [GameText.num(int(row["level"])), s["name"], GameCombat.describe(s)], 13, Kit.DIM)
+		var l := Kit.label("Level %s: %s  -  %s" % [GameText.num(int(row["level"])), s["name"], GameCombat.describe(s)], 13, Kit.dim())
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		rows.add_child(l)
@@ -1398,7 +1398,7 @@ func _skill_row(skill: Dictionary) -> Control:
 	shape.custom_minimum_size = Vector2(96, 0)
 	row.add_child(shape)
 	var note := "" if skill["enabled"] else ("  (once a battle)" if used else _why_note(skill, by))
-	var what := Kit.label(GameCombat.describe(s) + note, 13, Kit.TEXT if skill["enabled"] else Kit.DIM)
+	var what := Kit.label(GameCombat.describe(s) + note, 13, Kit.TEXT if skill["enabled"] else Kit.dim())
 	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if UiSettings.compact(self):   # a narrow list wraps rather than hide the end of the effect
 		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1430,9 +1430,9 @@ func _open_poisons() -> void:
 	var rows: VBoxContainer = made[1]
 	var tox := GamePlague.toxins_carried(d.heir)
 	if not tox.is_empty() or not b.coating.is_empty():
-		rows.add_child(Kit.label("Toxins: coat the blade, no turn spent. The next %d blade blows carry it; pure spells do not." % int(GamePlague.setting("coat_hits")), 15, Kit.DIM))
+		rows.add_child(Kit.label("Toxins: coat the blade, no turn spent. The next %d blade blows carry it; pure spells do not." % int(GamePlague.setting("coat_hits")), 15, Kit.dim()))
 	if not b.coating.is_empty():
-		rows.add_child(Kit.label("The blade is coated with %s: %d blow%s left." % [GameItems.item_name(str(b.coating["item"])), int(b.coating["hits"]), "" if int(b.coating["hits"]) == 1 else "s"], 14, Kit.GOOD))
+		rows.add_child(Kit.label("The blade is coated with %s: %d blow%s left." % [GameItems.item_name(str(b.coating["item"])), int(b.coating["hits"]), "" if int(b.coating["hits"]) == 1 else "s"], 14, Kit.good()))
 	for id in tox:
 		var t: Dictionary = GameItems.item_def(id)["toxin"]
 		var what := "Venom %d%% of max HP a turn for %d turns%s. Handling it: %d%% risk of %s." % [int(round(float(t["poison_pct"]) * 100.0)), int(t["turns"]),
@@ -1441,7 +1441,7 @@ func _open_poisons() -> void:
 		rows.add_child(_poison_row("Coat: %s (%d)" % [GameItems.item_name(id), GameItems.count(d.heir, id)], what, b.can_coat(id), func(): _coat(item)))
 	var vials := GamePlague.vials_carried(d.heir)
 	if not vials.is_empty():
-		rows.add_child(Kit.label("Plague vials: thrown like an area spell, a turn spent.", 15, Kit.DIM))
+		rows.add_child(Kit.label("Plague vials: thrown like an area spell, a turn spent.", 15, Kit.dim()))
 	for id in vials:
 		var ab := GamePlague.vial_ability(id)
 		var v: Dictionary = GameItems.item_def(id)["vial"]
@@ -1460,7 +1460,7 @@ func _poison_row(title: String, what: String, enabled: bool, cb: Callable) -> HB
 	btn.clip_text = true
 	btn.disabled = not enabled
 	row.add_child(btn)
-	var l := Kit.label(what, 13, Kit.TEXT if enabled else Kit.DIM)
+	var l := Kit.label(what, 13, Kit.TEXT if enabled else Kit.dim())
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(l)
@@ -1538,7 +1538,7 @@ func _open_feats() -> void:
 	var note := "Feats are learned and readied in a town or right after a rest."
 	if rec > 0:
 		note = "After any feat %s catches breath for %s before the next. %s" % [u.name, "a turn" if rec == 1 else "%d turns" % rec, note]
-	var foot := Kit.label(note, 13, Kit.DIM)
+	var foot := Kit.label(note, 13, Kit.dim())
 	foot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	foot.custom_minimum_size = Vector2(room.size.x - 24.0, 0)
 	v.add_child(foot)
@@ -1593,8 +1593,8 @@ func _feat_row(feat: Dictionary, width: float) -> Control:
 	top.add_theme_constant_override("separation", 12)
 	v.add_child(top)
 	top.add_child(Kit.label(GameFeats.shape_text(id), 14, Color(kind.get("color", "#ffffff"))))
-	top.add_child(Kit.label("Ready" if block == "" else block, 14, Kit.GOOD if block == "" else Kit.BAD))
-	var what := Kit.label(GameFeats.describe(id), 13, Kit.TEXT if block == "" else Kit.DIM)
+	top.add_child(Kit.label("Ready" if block == "" else block, 14, Kit.good() if block == "" else Kit.bad()))
+	var what := Kit.label(GameFeats.describe(id), 13, Kit.TEXT if block == "" else Kit.dim())
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	what.custom_minimum_size = Vector2(width - 214.0, 0)
 	v.add_child(what)
@@ -1701,20 +1701,20 @@ func _play_one(ev: Dictionary) -> void:
 			elif ev["side"] == "ally":
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 				var an: Dictionary = ally_nodes[ev["ally"]]
-				_float_text(an["root"].position + Vector2(34, -6), _hurt_text(ev), Kit.BAD)
+				_float_text(an["root"].position + Vector2(34, -6), _hurt_text(ev), Kit.bad())
 				_flash(an["body"])
 				_step_ally_hp(ev["ally"], -int(ev["amount"]))
 			else:
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
-				_float_text(hero_node.position + Vector2(40, 0), _hurt_text(ev), Kit.BAD)
+				_float_text(hero_node.position + Vector2(40, 0), _hurt_text(ev), Kit.bad())
 				_flash(hero_node.get_child(0))
 				_step_heir_hp(-int(ev["amount"]))
 		"heal":
 			if ev["side"] == "ally":
-				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), GameText.signed(int(ev["amount"])), Kit.GOOD)
+				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), GameText.signed(int(ev["amount"])), Kit.good())
 				_step_ally_hp(ev["ally"], int(ev["amount"]))
 			else:
-				_float_text(hero_node.position + Vector2(40, 0), GameText.signed(int(ev["amount"])), Kit.GOOD)
+				_float_text(hero_node.position + Vector2(40, 0), GameText.signed(int(ev["amount"])), Kit.good())
 				_step_heir_hp(int(ev["amount"]))
 		"tick":
 			var def := GameCombat.status_def(str(ev["id"]))
@@ -1723,14 +1723,14 @@ func _play_one(ev: Dictionary) -> void:
 			var txt := GameText.signed(amt) if heal else "-" + GameText.num(amt)
 			if amt == 0 and int(ev.get("absorbed", 0)) > 0:
 				txt = "absorbed"
-			_float_text(_ref_node(ev["ref"]).position + Vector2(30, 0), txt, Kit.GOOD if heal else Color(def.get("color", "#ff9a3c")))
+			_float_text(_ref_node(ev["ref"]).position + Vector2(30, 0), txt, Kit.good() if heal else Color(def.get("color", "#ff9a3c")))
 			_step_ref_hp(str(ev["ref"]), amt if heal else -amt)
 		"status":
 			var def := GameCombat.status_def(str(ev["id"]))
 			if ev.get("applied", false):
 				_float_text(_side_point(str(ev["ref"])), str(def.get("name", ev["id"])), Color(def.get("color", "#ffffff")), 16)
 			elif not ev.has("removed"):
-				_float_text(_side_point(str(ev["ref"])), "resisted", Kit.DIM, 16)
+				_float_text(_side_point(str(ev["ref"])), "resisted", Kit.dim(), 16)
 		"skip":
 			var def := GameCombat.status_def(str(ev["id"]))
 			_float_text(_side_point(str(ev["ref"])), "%s - no turn" % def.get("name", ev["id"]), Color(def.get("color", "#ffffff")), 16)
@@ -1739,7 +1739,7 @@ func _play_one(ev: Dictionary) -> void:
 		"field", "field_end":   # ground fouled by a feat, or come clear again
 			field.queue_redraw()
 		"hp_cost":   # a feat paid for in the user's own blood
-			_float_text(_unit_node(by).position + Vector2(30, 10), "-%s HP" % GameText.num(int(ev["amount"])), Kit.BAD, 18)
+			_float_text(_unit_node(by).position + Vector2(30, 10), "-%s HP" % GameText.num(int(ev["amount"])), Kit.bad(), 18)
 			if by < 0:
 				_step_heir_hp(-int(ev["amount"]))
 			else:
@@ -1749,13 +1749,13 @@ func _play_one(ev: Dictionary) -> void:
 				if int(ev.get("cast", 0)) == 0:
 					_lunge(_unit_node(by), 22.0)
 				var en4: Dictionary = enemy_nodes[ev["index"]]
-				_float_text(en4["root"].position + Vector2(en4["w"] * 0.2, 6), "dodge", Kit.DIM)
+				_float_text(en4["root"].position + Vector2(en4["w"] * 0.2, 6), "dodge", Kit.dim())
 				return
 			_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 			if ev["side"] == "ally":
-				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.DIM)
+				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.dim())
 			else:
-				_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.DIM)
+				_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.dim())
 		"ko":
 			_knock_out(ev["ally"])
 			for en3 in enemy_nodes:   # the foes lose the toughness that companion's presence gave them
@@ -1765,10 +1765,10 @@ func _play_one(ev: Dictionary) -> void:
 			var en2: Dictionary = enemy_nodes[ev["index"]]
 			en2["mark"].visible = false
 			var t := create_tween()
-			t.tween_property(en2["root"], "modulate:a", 0.0, 0.4)
+			t.tween_property(en2["root"], "modulate:a", 0.0, UiSettings.motion_time(0.4))
 		"advance":   # the back rank steps up into the fallen front rank's place
 			for k in ev["indices"]:
-				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), 0.3)
+				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), UiSettings.motion_time(0.3))
 		"defend":
 			_float_text(_unit_node(by).position + Vector2(30, 0), "guard", Kit.MP_BLUE)
 		"act":   # a party member's move begins: their chip lights up
@@ -1780,7 +1780,7 @@ func _play_one(ev: Dictionary) -> void:
 		"coat":
 			_float_text(hero_node.position + Vector2(30, 70), "blade coated", GamePlague.toxin_color(), 18)
 		"coat_end":
-			_float_text(hero_node.position + Vector2(30, 0), "coating spent", Kit.DIM, 16)
+			_float_text(hero_node.position + Vector2(30, 0), "coating spent", Kit.dim(), 16)
 
 
 func _hurt_text(ev: Dictionary) -> String:
@@ -1867,13 +1867,15 @@ func _knock_out(i: int) -> void:
 		return
 	an["down"] = true
 	an["ko"].visible = true
-	_float_text(an["root"].position + Vector2(10, -6), "knocked out", Kit.BAD)
+	_float_text(an["root"].position + Vector2(10, -6), "knocked out", Kit.bad())
 	var t := create_tween()
-	t.tween_property(an["body"], "modulate", Color(0.35, 0.35, 0.4), 0.4)
+	t.tween_property(an["body"], "modulate", Color(0.35, 0.35, 0.4), UiSettings.motion_time(0.4))
 
 
 ## A short step towards the other side and back, so it is clear who acted.
 func _lunge(node: Control, dx: float) -> void:
+	if UiSettings.reduced_motion():   # the step is motion only: who acted is still in the log
+		return
 	var home := node.position
 	var t := create_tween()
 	t.tween_property(node, "position:x", home.x + dx, 0.1)
@@ -1881,6 +1883,9 @@ func _lunge(node: Control, dx: float) -> void:
 
 
 func _flash(node: CanvasItem) -> void:
+	node.modulate = Color.WHITE
+	if UiSettings.reduced_motion():
+		return
 	var t := create_tween()
 	node.modulate = Color(3, 3, 3)
 	t.tween_property(node, "modulate", Color.WHITE, 0.25)
@@ -1891,7 +1896,7 @@ func _pulse(mark: CanvasItem) -> void:
 	mark.visible = true
 	mark.modulate = Color(1, 1, 1, 1)
 	var t := create_tween()
-	t.tween_property(mark, "modulate:a", 0.0, 0.6)
+	t.tween_property(mark, "modulate:a", 0.0, UiSettings.motion_time(0.6))
 	t.tween_callback(func():
 		mark.modulate = Color.WHITE
 		_update_marks())
@@ -1906,7 +1911,8 @@ func _float_text(pos: Vector2, text: String, color: Color, size: int = 26) -> vo
 	arena.add_child(l)
 	var t := create_tween()
 	t.set_parallel(true)
-	t.tween_property(l, "position:y", pos.y - 50, 0.7)
+	if not UiSettings.reduced_motion():   # with reduced motion the number stays put and fades
+		t.tween_property(l, "position:y", pos.y - 50, 0.7)
 	t.tween_property(l, "modulate:a", 0.0, 0.7)
 	t.chain().tween_callback(l.queue_free)
 
@@ -1965,7 +1971,7 @@ func _fill_chips(box: HBoxContainer, ref: String, room: float) -> void:
 		var def := GameCombat.status_def(list[k]["id"])
 		box.add_child(_chip(texts[k], Color(def.get("color", "#ffffff")), _chip_tip(list[k])))
 	if fit < list.size():
-		box.add_child(_chip("+%d" % (list.size() - fit), Kit.DIM, "\n".join(PackedStringArray(list.slice(fit).map(func(inst): return _chip_tip(inst))))))
+		box.add_child(_chip("+%d" % (list.size() - fit), Kit.dim(), "\n".join(PackedStringArray(list.slice(fit).map(func(inst): return _chip_tip(inst))))))
 
 
 func _chip(text: String, color: Color, tip: String) -> Label:
@@ -2034,7 +2040,7 @@ func _show_result() -> void:
 	outer.add_theme_constant_override("separation", 10)
 	p.add_child(outer)
 	var title: String = {"victory": "VICTORY", "defeat": "DEFEAT", "fled": "ESCAPED"}.get(b.result, "")
-	outer.add_child(Kit.label(title, 36, Kit.GOOD if b.result == "victory" else (Kit.BAD if b.result == "defeat" else Kit.ACCENT)))
+	outer.add_child(Kit.label(title, 36, Kit.good() if b.result == "victory" else (Kit.bad() if b.result == "defeat" else Kit.ACCENT)))
 	# The story scrolls when a long fight (or a sick party) tells more than fits; the choice and
 	# Continue stay below it, always on screen.
 	result_scroll = ScrollContainer.new()
@@ -2070,7 +2076,7 @@ func _loot_choice(v: VBoxContainer, foot: VBoxContainer) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	foot.add_child(box)
-	var risk := Kit.label(GamePlague.risk_text(d), 15, Kit.BAD if GamePlague.risk(d) > 0.0 else Kit.DIM)
+	var risk := Kit.label(GamePlague.risk_text(d), 15, Kit.bad() if GamePlague.risk(d) > 0.0 else Kit.dim())
 	risk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(risk)
 	var row := HBoxContainer.new()
@@ -2108,7 +2114,7 @@ func _loot_done(v: VBoxContainer, foot: VBoxContainer, box: Control, lines: Arra
 		foot.remove_child(box)
 		box.queue_free()
 	for k in lines.size():
-		var l := Kit.label((lead if k == 0 else "") + str(lines[k]), 16, Kit.BAD if " catches " in str(lines[k]) else Kit.TEXT)
+		var l := Kit.label((lead if k == 0 else "") + str(lines[k]), 16, Kit.bad() if " catches " in str(lines[k]) else Kit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 	app.autosave()
@@ -2132,7 +2138,7 @@ func _end_foot(foot: VBoxContainer) -> void:
 		"low_hp":
 			say = "Auto-battle stops hunting: %s is down to %d%% health. Rest or drink a potion." % [d.heir.name, int(100.0 * float(d.heir.hp) / float(d.heir.max_hp()))]
 	if say != "":
-		var l := Kit.label(say, 15, Kit.BAD if why == "low_hp" else Kit.ACCENT)
+		var l := Kit.label(say, 15, Kit.bad() if why == "low_hp" else Kit.ACCENT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		foot.add_child(l)
 	if why != "":

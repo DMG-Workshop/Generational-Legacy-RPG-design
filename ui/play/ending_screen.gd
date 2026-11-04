@@ -24,7 +24,7 @@ func _ready() -> void:
 	var founder: Dictionary = d.history[0] if not d.history.is_empty() else {}
 	var start: String = GameWorld.place(GameData.world["start"]).get("name", "home")
 	root.add_child(_wrapped("%s and %s, %s since %s set out from %s." % [GameAges.count(d.gen, "generation"), GameAges.count(d.age_number(), "Age"), GameAges.count(int(d.world.year), "year"), founder.get("name", "the founder"), start], 17, Kit.TEXT))
-	root.add_child(_wrapped(_last_heir_text(d.last_death), 16, Kit.DIM))
+	root.add_child(_wrapped(_last_heir_text(d.last_death), 16, Kit.dim()))
 
 	var cols := HBoxContainer.new()
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -90,18 +90,18 @@ func _greatest(col: VBoxContainer) -> void:
 		var h: Dictionary = d.ages.hall[i]
 		col.add_child(_wrapped("%d. %s" % [i + 1, h["name"]], 16, Kit.ACCENT))
 		col.add_child(_wrapped("%s %s, level %s" % [GameData.races[h["race_id"]]["name"], GameData.classes[h["class_id"]]["name"], GameText.num(int(h["level"]))], 14, Kit.TEXT))
-		col.add_child(_wrapped("generation %s, Age %s" % [GameText.num(int(h["gen"])), GameText.num(GameAges.age_of(int(h["gen"])))], 13, Kit.DIM))
+		col.add_child(_wrapped("generation %s, Age %s" % [GameText.num(int(h["gen"])), GameText.num(GameAges.age_of(int(h["gen"])))], 13, Kit.dim()))
 
 
 func _legends(col: VBoxContainer) -> void:
 	var totals := d.ages.legend_totals(d)
 	if totals.is_empty():
-		col.add_child(_wrapped("No legend fell to House %s." % d.dynasty_name, 14, Kit.DIM))
+		col.add_child(_wrapped("No legend fell to House %s." % d.dynasty_name, 14, Kit.dim()))
 		return
 	var all := 0
 	for id in totals:
 		all += int(totals[id])
-	col.add_child(_wrapped("%s in all. Heirlooms kept: %d." % [GameText.num(all), d.heirlooms.size()], 14, Kit.DIM))
+	col.add_child(_wrapped("%s in all. Heirlooms kept: %d." % [GameText.num(all), d.heirlooms.size()], 14, Kit.dim()))
 	for c in GameData.creatures:
 		if totals.has(c["id"]):
 			_row(col, c["name"], int(totals[c["id"]]))
@@ -109,7 +109,7 @@ func _legends(col: VBoxContainer) -> void:
 
 func _deaths(col: VBoxContainer) -> void:
 	var totals := d.ages.cause_totals(d)
-	col.add_child(_wrapped("%s heirs in all." % GameText.num(d.ancestor_count()), 14, Kit.DIM))
+	col.add_child(_wrapped("%s heirs in all." % GameText.num(d.ancestor_count()), 14, Kit.dim()))
 	var causes := totals.keys()
 	causes.sort_custom(func(a, b): return int(totals[a]) > int(totals[b]) or (int(totals[a]) == int(totals[b]) and str(a) < str(b)))
 	for c in causes:

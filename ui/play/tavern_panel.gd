@@ -31,12 +31,12 @@ func _build() -> void:
 		body.remove_child(c)
 		c.queue_free()
 	var t := GameParty.tavern(d.world.location)
-	var intro := Kit.label(str(t.get("text", "")), 14, Kit.DIM)
+	var intro := Kit.label(str(t.get("text", "")), 14, Kit.dim())
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(intro)
 	body.add_child(Kit.label("Gold %s    Party %d / %d    Upkeep %s gold a year" % [GameText.num(d.heir.gold), p.members.size(), GameParty.max_size(d), GameText.num(p.upkeep_total(d))], 15, Kit.ACCENT))
 	if note != "":
-		var n := Kit.label(note, 14, Kit.GOOD)
+		var n := Kit.label(note, 14, Kit.good())
 		n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		body.add_child(n)
 
@@ -106,7 +106,7 @@ func _column(parent: Control, ratio: float) -> VBoxContainer:
 
 
 func _dim(text: String) -> Label:
-	var l := Kit.label(text, 13, Kit.DIM)
+	var l := Kit.label(text, 13, Kit.dim())
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return l
@@ -206,11 +206,11 @@ func _offer_card(id: String) -> Control:
 	if before != "":
 		who = "%s %s" % [before, who]
 	v.add_child(_wrap(who, 14))
-	v.add_child(_wrap(p.age_text(d, id), 14, OLD if p.is_old(d, id) else Kit.DIM))
+	v.add_child(_wrap(p.age_text(d, id), 14, OLD if p.is_old(d, id) else Kit.dim()))
 	v.add_child(_wrap(_preview(u), 14))
-	v.add_child(_wrap(_skills(u), 13, Kit.DIM))
+	v.add_child(_wrap(_skills(u), 13, Kit.dim()))
 	var fee := p.fee(d, id)
-	side.add_child(Kit.label("Fee: %s" % ("waived" if fee == 0 else "%s gold" % GameText.num(fee)), 14, Kit.GOOD if fee == 0 else Kit.TEXT))
+	side.add_child(Kit.label("Fee: %s" % ("waived" if fee == 0 else "%s gold" % GameText.num(fee)), 14, Kit.good() if fee == 0 else Kit.TEXT))
 	side.add_child(Kit.label("Upkeep: %s a year" % GameText.num(p.upkeep(d, id)), 14))
 	var block := p.hire_block(d, id)
 	var btn := Kit.button("Hire", func(): _hire(id), Vector2(150, 34))
@@ -221,7 +221,7 @@ func _offer_card(id: String) -> Control:
 		btn.tooltip_text = "%s served the house before and asks no fee." % u.name if fee == 0 else "Hire %s." % u.name
 	side.add_child(btn)
 	if block != "":
-		var why := Kit.label(block, 12, Kit.BAD)
+		var why := Kit.label(block, 12, Kit.bad())
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		why.custom_minimum_size = Vector2(150, 0)
 		side.add_child(why)
@@ -249,11 +249,11 @@ func _member_card(m: Dictionary) -> Control:
 	side.custom_minimum_size = Vector2(120, 0)
 	var u := p.unit(d, m)
 	v.add_child(Kit.label(u.name, 17, Kit.ACCENT))
-	v.add_child(Kit.label("%s %s  Lv%s" % [u.race()["name"], u.cls()["name"], GameText.num(u.level)], 14, Kit.DIM))
-	v.add_child(_wrap(p.age_text(d, id), 13, OLD if p.is_old(d, id) else Kit.DIM))
+	v.add_child(Kit.label("%s %s  Lv%s" % [u.race()["name"], u.cls()["name"], GameText.num(u.level)], 14, Kit.dim()))
+	v.add_child(_wrap(p.age_text(d, id), 13, OLD if p.is_old(d, id) else Kit.dim()))
 	for e in u.diseases:
 		var info := GameDisease.describe_entry(e)
-		var sick := _wrap("Sick: %s (%s), %s" % [info["name"], info["stage_name"], info["outlook"]], 13, Kit.BAD)
+		var sick := _wrap("Sick: %s (%s), %s" % [info["name"], info["stage_name"], info["outlook"]], 13, Kit.bad())
 		sick.tooltip_text = "%s\n%s\nThe temple can cure it." % [info["effects"], info["description"]]
 		sick.mouse_filter = Control.MOUSE_FILTER_PASS
 		v.add_child(sick)
@@ -261,7 +261,7 @@ func _member_card(m: Dictionary) -> Control:
 	var gauges := HBoxContainer.new()
 	gauges.add_theme_constant_override("separation", 12)
 	v.add_child(gauges)
-	gauges.add_child(_gauge("HP %s / %s" % [GameText.num(u.hp), GameText.num(u.max_hp())], Kit.GOOD, u.max_hp(), u.hp))
+	gauges.add_child(_gauge("HP %s / %s" % [GameText.num(u.hp), GameText.num(u.max_hp())], Kit.good(), u.max_hp(), u.hp))
 	gauges.add_child(_gauge("MP %s / %s" % [GameText.num(u.mp), GameText.num(u.max_mp())], Kit.MP_BLUE, maxf(1.0, u.max_mp()), u.mp))
 	var tb := Kit.button("Skill tree", func(): _tree(id), Vector2(120, 34))
 	var pts := GameSkillTree.points(u)
@@ -273,11 +273,11 @@ func _member_card(m: Dictionary) -> Control:
 	side.add_child(btn)
 	if confirm_id == id:
 		var home: Array = GameParty.def(id).get("where", [])
-		side.add_child(_wrap("Back to %s?" % GameWorld.place(home[0]).get("name", "home"), 12, Kit.DIM))
+		side.add_child(_wrap("Back to %s?" % GameWorld.place(home[0]).get("name", "home"), 12, Kit.dim()))
 	else:
 		var fought := int(m["battles"]) + int(p.history.get(id, {}).get("battles", 0))
-		side.add_child(Kit.label("Upkeep %s a year" % GameText.num(p.upkeep(d, id)), 12, Kit.DIM))
-		side.add_child(Kit.label("Battles %d" % fought, 12, Kit.DIM))
+		side.add_child(Kit.label("Upkeep %s a year" % GameText.num(p.upkeep(d, id)), 12, Kit.dim()))
+		side.add_child(Kit.label("Battles %d" % fought, 12, Kit.dim()))
 	return shell[0]
 
 

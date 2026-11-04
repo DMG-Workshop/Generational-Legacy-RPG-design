@@ -28,9 +28,9 @@ func _build(news: Array) -> void:
 	var qs := d.quests
 	var town := d.world.location
 	var max_active := int(GameData.bal("quest_max_active"))
-	body.add_child(Kit.label("Obligations %d / %d    Notices completed: %s (%d different)" % [qs.active.size(), max_active, GameText.num(qs.total_done()), qs.done.size()], 15, Kit.DIM))
+	body.add_child(Kit.label("Obligations %d / %d    Notices completed: %s (%d different)" % [qs.active.size(), max_active, GameText.num(qs.total_done()), qs.done.size()], 15, Kit.dim()))
 	if not news.is_empty():
-		var n := Kit.label("\n".join(news), 14, Kit.GOOD)
+		var n := Kit.label("\n".join(news), 14, Kit.good())
 		n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		body.add_child(n)
 	var cols := HBoxContainer.new()
@@ -41,13 +41,13 @@ func _build(news: Array) -> void:
 	var posted := _column(cols, "Posted in %s" % GameQuests.place_name(town))
 	var offers := qs.postings(d, town)
 	if offers.is_empty():
-		posted.add_child(_wrap("Nothing new on the board this generation. Notices go up as the years turn and the house's deeds become known.", 14, Kit.DIM))
+		posted.add_child(_wrap("Nothing new on the board this generation. Notices go up as the years turn and the house's deeds become known.", 14, Kit.dim()))
 	for q in offers:
 		_offer_card(posted, q)
 
 	var mine := _column(cols, "House obligations")
 	if qs.active.is_empty():
-		mine.add_child(_wrap("The house owes no one anything. Take down a notice to add it here; unfinished ones pass to the next heir.", 14, Kit.DIM))
+		mine.add_child(_wrap("The house owes no one anything. Take down a notice to add it here; unfinished ones pass to the next heir.", 14, Kit.dim()))
 	# Rewards claimable here first, then other finished ones, then the rest.
 	var claim_here := func(e): return qs.is_complete(e) and GameQuests.def(e["id"])["giver"] == town
 	for e in qs.active.filter(claim_here):
@@ -59,7 +59,7 @@ func _build(news: Array) -> void:
 	if not qs.done.is_empty():
 		mine.add_child(Kit.label("Completed", 16, Kit.ACCENT))
 		var names: Array = qs.done.map(func(id): return GameQuests.def(id).get("name", id) + (" x%s" % GameText.num(qs.times_done(id)) if qs.times_done(id) > 1 else ""))
-		mine.add_child(_wrap(", ".join(names), 13, Kit.DIM))
+		mine.add_child(_wrap(", ".join(names), 13, Kit.dim()))
 	_restore_scroll.call_deferred(keep)
 
 
@@ -114,17 +114,17 @@ func _card(list: VBoxContainer, q: Dictionary) -> VBoxContainer:
 	if q.has("chain"):
 		row.add_child(Kit.label("Story", 13, Color("#c58fe8")))
 	elif q.get("repeatable", false):
-		row.add_child(Kit.label("Bounty", 13, Kit.DIM))
+		row.add_child(Kit.label("Bounty", 13, Kit.dim()))
 	return v
 
 
 func _offer_card(list: VBoxContainer, q: Dictionary) -> void:
 	var d := dynasty
 	var v := _card(list, q)
-	v.add_child(Kit.label("Posted by %s" % q.get("poster", "the town"), 13, Kit.DIM))
+	v.add_child(Kit.label("Posted by %s" % q.get("poster", "the town"), 13, Kit.dim()))
 	v.add_child(_wrap(q.get("text", ""), 14, Kit.TEXT))
 	v.add_child(_wrap("Task: %s" % GameQuests.objective_text(q), 14, Kit.TEXT))
-	v.add_child(_wrap("Reward: %s" % GameQuests.reward_text(d, q), 14, Kit.GOOD))
+	v.add_child(_wrap("Reward: %s" % GameQuests.reward_text(d, q), 14, Kit.good()))
 	var row := HFlowContainer.new()   # the reason wraps under the button on a narrow card
 	row.add_theme_constant_override("h_separation", 10)
 	v.add_child(row)
@@ -134,7 +134,7 @@ func _offer_card(list: VBoxContainer, q: Dictionary) -> void:
 	b.disabled = why != ""
 	row.add_child(b)
 	if why != "":
-		var l := Kit.label(why, 13, Kit.BAD)
+		var l := Kit.label(why, 13, Kit.bad())
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(l)
 
@@ -153,13 +153,13 @@ func _active_card(list: VBoxContainer, e: Dictionary) -> void:
 	var task := _wrap(GameQuests.objective_text(q), 14, Kit.TEXT)
 	row.add_child(task)
 	if GameQuests.kind(q) == "kill":
-		var pb := Kit.bar(Kit.GOOD if complete else Kit.ACCENT, goal, int(e["progress"]), Vector2(120, 14))
+		var pb := Kit.bar(Kit.good() if complete else Kit.ACCENT, goal, int(e["progress"]), Vector2(120, 14))
 		pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(pb)
 		row.add_child(Kit.label("%d / %d" % [int(e["progress"]), goal], 14))
 	var by := "Taken up by %s in generation %s, from the board in %s." % [e["by"], GameText.num(int(e["gen"])), GameQuests.place_name(q["giver"])]
-	v.add_child(_wrap(by, 13, Kit.DIM))
-	v.add_child(_wrap("Reward: %s" % GameQuests.reward_text(d, q), 14, Kit.GOOD))
+	v.add_child(_wrap(by, 13, Kit.dim()))
+	v.add_child(_wrap("Reward: %s" % GameQuests.reward_text(d, q), 14, Kit.good()))
 	var here: bool = d.world.location == q["giver"]
 	var buttons := HFlowContainer.new()
 	buttons.add_theme_constant_override("h_separation", 10)
@@ -177,7 +177,7 @@ func _active_card(list: VBoxContainer, e: Dictionary) -> void:
 	var state := ""
 	if complete:
 		state = "Done. Claim the reward here." if here else "Done. Report to the board in %s." % GameQuests.place_name(q["giver"])
-	var s := Kit.label(state, 13, Kit.GOOD)
+	var s := Kit.label(state, 13, Kit.good())
 	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	buttons.add_child(s)
 

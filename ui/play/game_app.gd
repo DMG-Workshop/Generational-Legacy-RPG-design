@@ -169,6 +169,13 @@ func set_touch_layout(t: String) -> void:
 	_relayout()
 
 
+## The menu's accessibility options (colour-blind colours, high contrast, reduced motion): the choice is
+## stored, then the screen is laid out again so the colours and motion follow it.
+func set_access(key: String, on: bool) -> void:
+	UiSettings.set_access(key, on)
+	_relayout()
+
+
 ## The menu's Tutorial tips: whether the first-heir tips show.
 func set_tutorial(on: bool) -> void:
 	UiSettings.set_tutorial(on)

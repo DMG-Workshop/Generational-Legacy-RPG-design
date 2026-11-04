@@ -46,7 +46,7 @@ func _ready() -> void:
 	v.add_child(top)
 	gold_label = Kit.label("", 20, Kit.ACCENT)
 	top.add_child(gold_label)
-	price_label = Kit.label("", 14, Kit.DIM)
+	price_label = Kit.label("", 14, Kit.dim())
 	price_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(price_label)
 	note = Kit.label("", 14, Kit.TEXT)
@@ -65,7 +65,7 @@ func _ready() -> void:
 	tabs = HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 8)
 	tab_row.add_child(tabs)
-	tab_note = Kit.label("", 14, Kit.DIM)
+	tab_note = Kit.label("", 14, Kit.dim())
 	tab_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	tab_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tab_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -191,7 +191,7 @@ func _build_wares(service: String) -> void:
 	if service == "temple":
 		rows.add_child(_section("Wares"))
 	if stock.is_empty():
-		rows.add_child(Kit.label("Nothing on the shelves.", 15, Kit.DIM))
+		rows.add_child(Kit.label("Nothing on the shelves.", 15, Kit.dim()))
 	var kinds := {}
 	for id in stock:
 		kinds[GameItems.kind_of(id)] = true
@@ -225,7 +225,7 @@ func _build_temple() -> void:
 		b.disabled = h.gold < cost
 		var title := "%s%s" % [GameData.trait_name(tid), "  (dormant)" if dormant else ""]
 		var what := "Gone for good; later children are spared."
-		rows.add_child(_service_row(title, str(GameData.trait_def(tid).get("description", "")), what, "%sg" % GameText.num(cost), Kit.BAD, Kit.trait_tooltip(tid), b, _afford(cost)))
+		rows.add_child(_service_row(title, str(GameData.trait_def(tid).get("description", "")), what, "%sg" % GameText.num(cost), Kit.bad(), Kit.trait_tooltip(tid), b, _afford(cost)))
 	var pcost := GameItems.prayer_price(dynasty)
 	var pb := Kit.button("Pray", func(): _act(GameItems.pray(dynasty)), Vector2(96, 34))
 	pb.disabled = not GameItems.can_pray(dynasty) or h.gold < pcost
@@ -240,7 +240,7 @@ func _build_temple() -> void:
 	rows.add_child(_service_row("Prayer", fate_now, effect, "%sg" % GameText.num(pcost), Kit.TEXT, "A lower Fate Value makes failure at life's milestones less likely.", pb, _afford(pcost)))
 	var c := GameItems.temple_uses(dynasty, "cleanse")
 	var p := GameItems.temple_uses(dynasty, "prayer")
-	rows.add_child(Kit.label("This life: %d cleansing%s, %d prayer%s. Each costs more than the last." % [c, "" if c == 1 else "s", p, "" if p == 1 else "s"], 13, Kit.DIM))
+	rows.add_child(Kit.label("This life: %d cleansing%s, %d prayer%s. Each costs more than the last." % [c, "" if c == 1 else "s", p, "" if p == 1 else "s"], 13, Kit.dim()))
 
 
 ## The priests cure any sickness outright; the price grows with how far it has gone.
@@ -258,7 +258,7 @@ func _build_cures() -> void:
 		b.tooltip_text = "The priests cure it at once."
 		var title := "%s: %s (stage %d of %d)" % [info["name"], info["stage_name"], info["stage"], info["stages"]]
 		var outlook: String = info["outlook"]
-		rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%sg" % GameText.num(cost), Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
+		rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%sg" % GameText.num(cost), Kit.bad(), "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
 	for m in dynasty.party.members:
 		var u := dynasty.party.sick_body(dynasty, m)
 		for e in u.diseases:
@@ -271,7 +271,7 @@ func _build_cures() -> void:
 			b.tooltip_text = "The priests cure %s at once." % m["name"]
 			var title := "%s: %s, %s (stage %d of %d)" % [m["name"], info["name"], info["stage_name"], info["stage"], info["stages"]]
 			var outlook: String = info["outlook"]
-			rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%sg" % GameText.num(cost), Kit.BAD, "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
+			rows.add_child(_service_row(title, info["effects"], outlook.left(1).to_upper() + outlook.substr(1) + ".", "%sg" % GameText.num(cost), Kit.bad(), "%s\n%s" % [info["name"], info["description"]], b, _afford(cost)))
 
 
 func _build_gear() -> void:
@@ -283,12 +283,12 @@ func _build_gear() -> void:
 		var b := Kit.button("Take off", func(): _act(GameItems.unequip(dynasty, s)), Vector2(96, 34))
 		b.disabled = id == ""
 		if id == "":
-			rows.add_child(_service_row(s.capitalize(), "Nothing worn.", "", "", Kit.DIM, "", b))
+			rows.add_child(_service_row(s.capitalize(), "Nothing worn.", "", "", Kit.dim(), "", b))
 		else:
 			rows.add_child(_item_row(id, "", [b], s.capitalize()))
 	rows.add_child(_section("Pack"))
 	if h.inventory.is_empty():
-		rows.add_child(Kit.label("The pack is empty.", 15, Kit.DIM))
+		rows.add_child(Kit.label("The pack is empty.", 15, Kit.dim()))
 	var can_sell := not GameItems.shops_here(dynasty).is_empty()
 	var listed := {}
 	for id in h.inventory:
@@ -338,9 +338,9 @@ func _build_side() -> void:
 	side.add_child(Kit.label("Worn", 18, Kit.ACCENT))
 	for slot in GameItems.SLOTS:
 		var id := GameItems.equipped(h, slot)
-		side.add_child(Kit.label("%s: %s" % [str(slot).capitalize(), GameItems.item_name(id) if id != "" else "-"], 14, Kit.TEXT if id != "" else Kit.DIM))
+		side.add_child(Kit.label("%s: %s" % [str(slot).capitalize(), GameItems.item_name(id) if id != "" else "-"], 14, Kit.TEXT if id != "" else Kit.dim()))
 		if id != "":
-			var e := _wrap(Kit.label("   " + GameItems.describe(id), 12, Kit.DIM))
+			var e := _wrap(Kit.label("   " + GameItems.describe(id), 12, Kit.dim()))
 			side.add_child(e)
 	side.add_child(HSeparator.new())
 	side.add_child(Kit.label("%s, %s fighter" % [h.name, "a spell" if GameItems.fighting_style(h) == "magic" else "a weapon"], 15, Kit.ACCENT))
@@ -351,9 +351,9 @@ func _build_side() -> void:
 	side.add_child(Kit.label("MP %s / %s" % [GameText.num(h.mp), GameText.num(h.max_mp())], 14))
 	side.add_child(Kit.label("Potions %d    Pack %d item%s" % [h.potions, h.inventory.size(), "" if h.inventory.size() == 1 else "s"], 14))
 	if not h.diseases.is_empty():
-		side.add_child(_wrap(Kit.label("Sick: %s" % GameDisease.status_text(h), 14, Kit.BAD)))
+		side.add_child(_wrap(Kit.label("Sick: %s" % GameDisease.status_text(h), 14, Kit.bad())))
 	side.add_child(HSeparator.new())
-	side.add_child(_wrap(Kit.label("Bought gear goes on at once if that slot is empty; otherwise it waits in the pack. Merchants buy back at a fraction of the price.", 12, Kit.DIM)))
+	side.add_child(_wrap(Kit.label("Bought gear goes on at once if that slot is empty; otherwise it waits in the pack. Merchants buy back at a fraction of the price.", 12, Kit.dim())))
 
 
 ## Lines for the life screen's right-hand panel: what is worn, and how full the pack is.
@@ -408,7 +408,7 @@ func _service_row(title: String, sub: String, effect: String, price_text: String
 
 ## Prices the heir cannot pay show in red.
 func _afford(cost: int) -> Color:
-	return Kit.ACCENT if dynasty.heir.gold >= cost else Kit.BAD
+	return Kit.ACCENT if dynasty.heir.gold >= cost else Kit.bad()
 
 
 func _row(title: String, color: Color, sub: String, middle: Control, price_text: String, buttons: Array, tip: String, price_color: Color = Kit.ACCENT) -> PanelContainer:
@@ -427,7 +427,7 @@ func _row(title: String, color: Color, sub: String, middle: Control, price_text:
 	t.custom_minimum_size = Vector2(left_w, 0)
 	left.add_child(t)
 	if sub != "":
-		var s := Kit.label(sub, 12, Kit.DIM)
+		var s := Kit.label(sub, 12, Kit.dim())
 		s.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		s.custom_minimum_size = Vector2(left_w, 0)
 		left.add_child(s)
@@ -449,7 +449,7 @@ func _row(title: String, color: Color, sub: String, middle: Control, price_text:
 func _effects_rich(effects: Array) -> RichTextLabel:
 	var parts: Array = []
 	for e in effects:
-		var col := Kit.GOOD if float(e["value"]) >= 0.0 else Kit.BAD
+		var col := Kit.good() if float(e["value"]) >= 0.0 else Kit.bad()
 		parts.append("[color=#%s]%s[/color]" % [col.to_html(false), GameItems.effect_text(str(e["stat"]), float(e["value"]))])
 	var r := _style_rich(RichTextLabel.new())
 	r.text = ", ".join(parts) if not parts.is_empty() else "[color=#8d88a0]no effect[/color]"

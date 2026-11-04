@@ -24,7 +24,7 @@ func _ready() -> void:
 	remove_meta("back_close")
 	set_meta("modal", true)
 	column = minf(WIDE, Kit.overlay_room(self) - 16.0)
-	sub = Kit.label("", 15, Kit.DIM)
+	sub = Kit.label("", 15, Kit.dim())
 	v.add_child(sub)
 	v.add_child(HSeparator.new())
 	var scroll := ScrollContainer.new()
@@ -74,7 +74,7 @@ func _build_choices() -> void:
 		b.disabled = not st["ok"]
 		b.tooltip_text = GameEvents.choice_tooltip(dynasty, i)
 		body.add_child(b)
-	var hint := _wrapped("%s a choice to see how its bonus is made up and the odds of each result." % Kit.hover().capitalize(), 13, Kit.DIM)
+	var hint := _wrapped("%s a choice to see how its bonus is made up and the odds of each result." % Kit.hover().capitalize(), 13, Kit.dim())
 	body.add_child(hint)
 
 
@@ -91,11 +91,11 @@ func _choose(i: int) -> void:
 
 func _build_result() -> void:
 	var r: Dictionary = dynasty.pending_event.get("result", {})
-	body.add_child(_wrapped("You chose: %s" % r.get("choice_text", ""), 15, Kit.DIM))
+	body.add_child(_wrapped("You chose: %s" % r.get("choice_text", ""), 15, Kit.dim()))
 	var roll: Dictionary = r.get("roll", {})
 	if not roll.is_empty():
 		var deg: String = roll.get("degree", "")
-		var col := Kit.GOOD if deg.ends_with("success") else Kit.BAD
+		var col := Kit.good() if deg.ends_with("success") else Kit.bad()
 		var line := Kit.label("%s check:  %s" % [GameEvents.ATTR_LABELS.get(roll.get("attr", ""), ""), GameEvents.roll_text(roll)], 20, col)
 		body.add_child(line)
 	var text: String = r.get("text", "")
@@ -107,7 +107,7 @@ func _build_result() -> void:
 		box.add_theme_constant_override("separation", 2)
 		for f in fx:
 			var k: String = f.get("k", "info")
-			var col: Color = Kit.GOOD if k == "good" else (Kit.BAD if k == "bad" else Kit.TEXT)
+			var col: Color = Kit.good() if k == "good" else (Kit.bad() if k == "bad" else Kit.TEXT)
 			box.add_child(_wrapped("  %s" % f.get("t", ""), 15, col))
 		body.add_child(box)
 	var spacer := Control.new()

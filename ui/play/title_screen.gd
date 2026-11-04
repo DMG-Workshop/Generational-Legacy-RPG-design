@@ -43,7 +43,7 @@ func _ready() -> void:
 	var title := Kit.label("GENERATIONAL LEGACY", 44 if not narrow else 34, Kit.ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
-	var sub := Kit.label("Found a dynasty. Every heir inherits your blood, your curses and your legend.", 16, Kit.DIM)
+	var sub := Kit.label("Found a dynasty. Every heir inherits your blood, your curses and your legend.", 16, Kit.dim())
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(sub)
@@ -79,7 +79,7 @@ func _ready() -> void:
 		class_pick.add_item(GameData.classes[id]["name"])
 	class_pick.item_selected.connect(func(_i): _refresh())
 	form.add_child(class_pick)
-	class_desc = Kit.label("", 14, Kit.DIM)
+	class_desc = Kit.label("", 14, Kit.dim())
 	class_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	form.add_child(class_desc)
 
@@ -92,7 +92,7 @@ func _ready() -> void:
 	race_pick.selected = maxi(0, race_ids.find("human"))
 	race_pick.item_selected.connect(func(_i): _refresh())
 	form2.add_child(race_pick)
-	race_desc = Kit.label("", 14, Kit.DIM)
+	race_desc = Kit.label("", 14, Kit.dim())
 	race_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	form2.add_child(race_desc)
 
@@ -104,7 +104,7 @@ func _ready() -> void:
 		bloodline_pick.add_item(GameData.trait_name(id))
 	bloodline_pick.item_selected.connect(func(_i): _refresh())
 	form2.add_child(bloodline_pick)
-	bloodline_desc = Kit.label("", 14, Kit.DIM)
+	bloodline_desc = Kit.label("", 14, Kit.dim())
 	bloodline_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	form2.add_child(bloodline_desc)
 
@@ -204,7 +204,7 @@ func _build_slots() -> void:
 	confirm_row.add_theme_constant_override("separation", 8)
 	confirm_row.visible = false
 	slot_box.add_child(confirm_row)
-	slot_note = Kit.label("", 14, Kit.DIM)
+	slot_note = Kit.label("", 14, Kit.dim())
 	slot_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	slot_box.add_child(slot_note)
 	cont.disabled = not here["valid"]
@@ -226,7 +226,7 @@ func _ask_if_full(act: Callable, question: String) -> void:
 		return
 	_pending = act
 	Kit.clear(confirm_row)
-	var q := Kit.label(question, 14, Kit.BAD)
+	var q := Kit.label(question, 14, Kit.bad())
 	q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	q.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	confirm_row.add_child(q)
