@@ -30,6 +30,12 @@ func _ready() -> void:
 	tree.name = "Family Tree"
 	tree.text = _tree_text()
 	tabs.add_child(tree)
+
+
+	var stats := Kit.rich()
+	stats.name = "Statistics"
+	stats.text = _stats_text()
+	tabs.add_child(stats)
 	var ages := Kit.rich()
 	ages.name = "Ages"
 	ages.text = _ages_text()
@@ -111,6 +117,33 @@ func _tree_heir(h: Dictionary) -> String:
 	for e in h["echoes"]:
 		out += "\n      legacy: %s" % e
 	return out
+
+
+## The dynasty's numbers (GameStats): heirs, causes of death, legends, the greatest heir and gold.
+func _stats_text() -> String:
+	var st := GameStats.summary(dynasty)
+	var lines: Array = []
+	lines.append("[b]Heirs[/b]  %s lived through %s generation%s, now in Age %s" % [_n(st["heirs"]), _n(st["generations"]), "" if int(st["generations"]) == 1 else "s", _n(st["age"])])
+	lines.append("")
+	lines.append("[b]Deaths by cause[/b]")
+	if (st["causes"] as Array).is_empty():
+		lines.append("[color=#8d88a0]None yet.[/color]")
+	for c in st["causes"]:
+		lines.append(" - %s %s" % [_n(c[1]), c[0]])
+	lines.append("")
+	lines.append("[b]Legends slain[/b]  %s (%s kind%s)" % [_n(st["legends"]), _n(st["legend_kinds"]), "" if int(st["legend_kinds"]) == 1 else "s"])
+	lines.append("")
+	var best: Dictionary = st["best"]
+	if best.is_empty():
+		lines.append("[b]Greatest heir[/b]  [color=#8d88a0]none yet[/color]")
+	else:
+		lines.append("[b]Greatest heir[/b]  %s, %s %s, level %s (generation %s)" % [best["name"], GameData.races[best["race_id"]]["name"], GameData.classes[best["class_id"]]["name"], _n(best["level"]), _n(best["gen"])])
+	lines.append("")
+	lines.append("[b]Gold of the heirs kept in full[/b]")
+	for g in st["gold"]:
+		lines.append(" - generation %s: %s gold" % [_n(g["gen"]), _n(g["gold"])])
+	lines.append("[color=#8d88a0]Heirs folded into the Ages keep their deaths and counts, but not their gold.[/color]")
+	return "\n".join(lines)
 
 
 ## One entry per Age lived through: its heirs, the greatest of them, the legends slain, the dead.
