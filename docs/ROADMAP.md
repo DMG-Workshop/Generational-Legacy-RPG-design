@@ -41,7 +41,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 **Player experience**
 10. **A first-heir tutorial:** Hunt, Rest, Train, founding a family and the first succession. Done: a one-line tip strip above the life screen's actions names the next thing to do and marks its button, and the succession screen carries the last tip. The tips come from the game's own state (so old saves need nothing), are written in `data/ui/tutorial.json`, and are switched off by Skip tips, by choosing the first heir, or under Menu > Tutorial tips.
 11. **Several save slots and a backup export.** Done: three slots on the title screen (slot 1 is the existing save file), each saved atomically with a `.bak` it falls back to, and a text backup that Copy backup puts on the clipboard (title screen and game menu) and Restore backup reads back into any slot. Covering or erasing a house asks first. Backups pass through the clipboard only; a file export for phones is not built.
-12. **A family tree viewer:** ancestors, traits, deaths and legacy echoes.
+12. **A family tree viewer:** ancestors, traits, deaths and legacy echoes. Progress: a Family Tree tab in the chronicle shows each generation with parents, spouse, children, deaths, traits and the echoes from that generation (`GameFamilyTree`). Heirs folded into the Ages are counted, not named.
 13. **A dynasty statistics screen:** deaths by cause, best heir, Ages reached, gold over time.
 14. **Accessibility options:** colour-blind palette, high contrast, reduced motion.
 15. **Sound and music:** battle cues, a death sting, ambient tracks per Age.

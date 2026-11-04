@@ -26,6 +26,10 @@ func _ready() -> void:
 	lin.name = "Lineage"
 	lin.text = _lineage_text()
 	tabs.add_child(lin)
+	var tree := Kit.rich()
+	tree.name = "Family Tree"
+	tree.text = _tree_text()
+	tabs.add_child(tree)
 	var ages := Kit.rich()
 	ages.name = "Ages"
 	ages.text = _ages_text()
@@ -70,6 +74,43 @@ func _record(r: Dictionary) -> String:
 	if r["archetype"] != "":
 		line += "\n      shaped by fate as a %s" % GameFate.ARCHETYPES[r["archetype"]]["name"]
 	return line
+
+
+## The tree, generation by generation: each heir with their parents, spouse, children, death, traits
+## and the legacy echoes from their generation. Heirs folded into the Ages are counted, not named.
+func _tree_text() -> String:
+	var t := GameFamilyTree.tree(dynasty)
+	var blocks: Array = []
+	if int(t["folded"]) > 0:
+		blocks.append("[color=#8d88a0][i]%s earlier heirs are told in the Ages tab.[/i][/color]" % _n(t["folded"]))
+	for entry in t["generations"]:
+		var lines: Array = ["[b]Generation %s[/b]" % _n(entry["gen"])]
+		for h in entry["heirs"]:
+			lines.append(_tree_heir(h))
+		blocks.append("\n".join(lines))
+	if blocks.is_empty():
+		blocks.append("[color=#8d88a0]No family yet.[/color]")
+	return "\n\n".join(blocks)
+
+
+func _tree_heir(h: Dictionary) -> String:
+	var cname := "%s %s" % [GameData.races[h["race_id"]]["name"], GameData.classes[h["class_id"]]["name"]]
+	var fate := "living, level %s" % _n(h["level"]) if h["living"] else "died %s, level %s" % [h["cause"], _n(h["level"])]
+	var head := "%s  (%s, %s)" % [h["name"], cname, fate]
+	if h["living"]:
+		head = "[color=#e0b341]%s[/color]" % head
+	var out := "  " + head
+	if not (h["parents"] as Array).is_empty():
+		out += "\n      child of %s" % " & ".join(h["parents"])
+	if str(h["spouse"]) != "":
+		out += "\n      married to %s" % h["spouse"]
+	if not (h["children"] as Array).is_empty():
+		out += "\n      children: %s" % ", ".join(h["children"])
+	if not (h["traits"] as Array).is_empty():
+		out += "\n      traits: %s" % ", ".join(h["traits"])
+	for e in h["echoes"]:
+		out += "\n      legacy: %s" % e
+	return out
 
 
 ## One entry per Age lived through: its heirs, the greatest of them, the legends slain, the dead.
