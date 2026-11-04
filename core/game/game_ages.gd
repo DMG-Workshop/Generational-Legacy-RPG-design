@@ -197,6 +197,11 @@ static func _add(rows: Array, rec: Dictionary) -> void:
 		row["greatest"] = me
 	var cause := str(rec.get("cause", "old age"))
 	row["causes"][cause] = int(row["causes"].get(cause, 0)) + 1
+	# The gold each heir had at death, summed per Age, so the average survives folding. An Age saved
+	# before this has no total, and its average counts only the heirs recorded since.
+	if typeof(rec.get("gold")) in [TYPE_INT, TYPE_FLOAT]:
+		row["gold_sum"] = int(row.get("gold_sum", 0)) + int(rec["gold"])
+		row["gold_known"] = int(row.get("gold_known", 0)) + 1
 	var kills: Dictionary = rec.get("kills", {})
 	var ids: Array = kills.keys()
 	ids.sort()   # a reloaded save lists kills in another order; the summary must not depend on it
