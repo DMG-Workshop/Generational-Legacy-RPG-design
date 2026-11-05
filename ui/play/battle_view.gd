@@ -902,8 +902,8 @@ func _command_hint(by: int, rows: Array) -> String:
 	return head
 
 
-## Auto for the active member, and Back (or, before anything is chosen, Repeat): the two round
-## controls a party gets beside the commands, never more.
+## Auto for the active member, their standing Cover, and Back (or, before anything is chosen, Repeat):
+## the round controls a party gets beside the commands. A short screen deals them two to a column.
 func _round_buttons(by: int) -> Array:
 	if strip == null:
 		return []
@@ -984,8 +984,8 @@ func _short() -> bool:
 
 ## Three columns of commands; a short screen deals them into two rows instead, so the field keeps
 ## its height. The order (attacks, skills, spells and escape) reads the same either way. A party's
-## round controls (`extra`: Auto, and Back or Repeat) stand in a column of their own, last, so the
-## fit below sizes them with the rest.
+## round controls (`extra`: Auto, Cover, and Back or Repeat) stand in columns of their own, last,
+## dealt two to a column on a short screen like the commands, so the fit below sizes them with the rest.
 func _lay_out_commands(cols: Array, extra: Array = []) -> void:
 	var per := 2 if _short() else 0
 	if per > 0:
@@ -1000,11 +1000,10 @@ func _lay_out_commands(cols: Array, extra: Array = []) -> void:
 			if k % per == 0:
 				cols.append(VBoxContainer.new())
 			cols.back().add_child(all[k])
-	if not extra.is_empty():
-		var rc := VBoxContainer.new()
-		for btn in extra:
-			rc.add_child(btn)
-		cols.append(rc)
+	for k in extra.size():
+		if k == 0 or (per > 0 and k % per == 0):
+			cols.append(VBoxContainer.new())
+		cols.back().add_child(extra[k])
 	for c in cols:
 		c.add_theme_constant_override("separation", 6)
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
