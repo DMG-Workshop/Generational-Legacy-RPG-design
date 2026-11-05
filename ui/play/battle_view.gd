@@ -707,6 +707,15 @@ func _repeat() -> void:
 		hint.text = "%s fight%s on their own this round." % [GameParty.names_text(fallback), "s" if fallback.size() == 1 else ""]
 
 
+## The Cover button: the next member for this one to cover (none after the last). It is a standing
+## reaction, so it stays set from round to round.
+func _cycle_cover(by: int) -> void:
+	if busy or cmd_round == null or _guarded():
+		return
+	cmd_round.set_cover(by, cmd_round.next_cover(by))
+	_build_commands()
+
+
 func _set_member_auto(by: int) -> void:
 	if busy or cmd_round == null or _guarded():
 		return
@@ -902,6 +911,12 @@ func _round_buttons(by: int) -> Array:
 	var ab := Kit.button("Auto", func(): _set_member_auto(by))
 	ab.tooltip_text = "%s %s their name to take over again." % [GameSkills.style_text(b.unit(by)), Kit.click().capitalize()]
 	out.append(ab)
+	var cref := str(cmd_round.covers.get(by, ""))
+	var cname := "none" if cref == "" else b.unit(GameRound._party_index(cref)).name
+	var cb := Kit.button("Cover: %s" % cname, func(): _cycle_cover(by))
+	cb.set_meta("compact", "Cover")
+	cb.tooltip_text = "%s steps in front of this member when a foe swings at them below %d%% health, once a round. %s again for the next member." % [b.unit(by).name, int(round(float(GameRound.setting("cover_below")) * 100.0)), Kit.click().capitalize()]
+	out.append(cb)
 	var v := cmd_round.view()
 	if v["can_back"]:
 		var back_b := Kit.button("Back", func(): _undo())
@@ -1771,6 +1786,8 @@ func _play_one(ev: Dictionary) -> void:
 				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), UiSettings.motion_time(0.3))
 		"defend":
 			_float_text(_unit_node(by).position + Vector2(30, 0), "guard", Kit.MP_BLUE)
+		"cover":   # a standing cover steps in front of a hurt member
+			_float_text(_unit_node(int(ev["by"])).position + Vector2(30, 0), "covers", Kit.MP_BLUE)
 		"act":   # a party member's move begins: their chip lights up
 			if strip != null:
 				strip.mark_acting(by)

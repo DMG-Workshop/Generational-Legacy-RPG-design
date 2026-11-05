@@ -67,6 +67,10 @@
 ##       # note: Auto members decide at their own turn, so an Auto heir may drink a potion a companion had reserved;
 ##       # that companion then "improvises" (acts as Auto).
 ##   func set_auto(by: int, on: bool) -> void   # the Auto switch; drops by's decision; remembered (prefs / party record)
+##   func set_cover(by: int, ref: String) -> String   # by's standing reaction: step in front of `ref` when a foe swings
+##       # at them below settings.cover_below of their health, once a round ("" takes it back); "" ok, else the reason.
+##       # Kept from round to round; it costs no action and draws no dice.
+##   func next_cover(by: int) -> String  # the next choice for by's cover, "" (none) after the last member
 ##   func repeat_last() -> Dictionary    # {"repeated": [by..], "fallback": [by..]}: re-queues last round's choices
 ##   func can_repeat() -> bool           # last round had hand-made choices and nothing is queued yet
 ##   func coat(item: String) -> void     # the heir's free toxin coat: immediate, not undoable (events left in battle.events)
@@ -89,7 +93,8 @@
 ##       "state": "ready"|"held"|"ko", "auto": bool,
 ##       "decision": "queued"|"empty"|"auto"|"held"|"cover"|"fallback"|"ko",
 ##       "chip": {"full", "short", "tiny"}, "kind": "attack"|"skill"|"spell"|"feat"|"item"|"defend"|"flee"|"auto"|"held"|"ko"|"empty",
-##       "statuses": [String], "tip": String}]}      # every companion of the battle, fallen ones included, in index order
+##       "statuses": [String], "tip": String, "cover": String ("" none, else the ref covered)}]}
+##       # every companion of the battle, fallen ones included, in index order
 ##
 ## EVENTS (in battle.events during resolve(); everything else is the existing vocabulary):
 ##   {"type": "round", "n": int}                                       first
@@ -97,6 +102,7 @@
 ##                                                                     (a fallback marker follows the first one of the same member)
 ##   {"type": "foes"}                                                  before the first foe acts
 ##   a companion's Defend is {"type": "defend", "by": ai}; the heir's old {"type": "defend"} has no "by" (read it as -1).
+##   {"type": "cover", "by": -1|ai, "for": -1|ai, "index": foe}       a standing cover takes a foe's blow (before the hit)
 ## ====================================================================================================
 class_name GameRound
 extends RefCounted
@@ -112,6 +118,7 @@ var _order: Array = []       # members in the order they were queued, for Back
 var _stash: Dictionary = {}  # entries a queued Flee covered, to give back if it is taken back
 var _prefs: Dictionary = {}  # GameDynasty.auto_party (shared reference)
 var _party: GameParty = null
+var covers: Dictionary = {}  # by -> ref of the member they cover: the standing reaction, kept round to round
 
 
 # ---------------------------------------------------------------- data
@@ -126,7 +133,7 @@ static func validate() -> Array:
 	GameData.load_all()
 	var out: Array = []
 	var s: Dictionary = GameData.combat.get("rounds", {}).get("settings", {})
-	for key in ["default_auto", "flee_covers_party", "confirm_single", "ally_defend", "defend_mp_pct", "brace_taken", "potion_for_companions", "chip_texts"]:
+	for key in ["default_auto", "flee_covers_party", "confirm_single", "ally_defend", "defend_mp_pct", "brace_taken", "cover_below", "potion_for_companions", "chip_texts"]:
 		if not s.has(key):
 			out.append("rounds: settings has no %s" % key)
 	if not out.is_empty():
@@ -141,6 +148,8 @@ static func validate() -> Array:
 		out.append("rounds: defend_mp_pct must be a fraction from 0 to 1")
 	if typeof(s["brace_taken"]) not in [TYPE_FLOAT, TYPE_INT] or float(s["brace_taken"]) <= 0.0 or float(s["brace_taken"]) > 1.0:
 		out.append("rounds: brace_taken must be above 0 and at most 1")
+	if typeof(s["cover_below"]) not in [TYPE_FLOAT, TYPE_INT] or float(s["cover_below"]) <= 0.0 or float(s["cover_below"]) > 1.0:
+		out.append("rounds: cover_below must be above 0 and at most 1")
 	var ct = s["chip_texts"]
 	if typeof(ct) != TYPE_DICTIONARY:
 		out.append("rounds: chip_texts must be an object")
@@ -807,7 +816,7 @@ func view() -> Dictionary:
 			tip += "\n" + GameSkills.style_text(u)
 		list.append({"by": by, "ref": GameBattle.ref_of(by), "name": u.name, "hp": u.hp, "max_hp": int(b.unit_numbers(by)["max_hp"]),
 			"mp": u.mp, "max_mp": int(b.unit_numbers(by)["max_mp"]), "state": state, "auto": bool(auto.get(by, false)),
-			"decision": decision, "chip": chip, "kind": kind, "statuses": statuses, "tip": tip})
+			"decision": decision, "chip": chip, "kind": kind, "statuses": statuses, "tip": tip, "cover": str(covers.get(by, ""))})
 	return {"number": number, "cursor": cursor, "ready": ready(), "can_back": not _order.is_empty(), "can_repeat": can_repeat(),
 		"flee": flee_by != -2, "auto_commit": auto_commits(), "manual_count": manual_count(), "over": b.is_over(), "members": list}
 
@@ -815,6 +824,52 @@ func view() -> Dictionary:
 # ---------------------------------------------------------------- playing the round
 
 ## The heir's slot: the plan through the battle's own public methods (the old buttons).
+# ---------------------------------------------------------------- standing covers
+
+## by's standing reaction: they step in front of the member `ref` names when a foe swings at that member
+## below settings.cover_below of their health, once a round. ref "" takes it back. "" ok, else the reason.
+func set_cover(by: int, ref: String) -> String:
+	if ref == "":
+		covers.erase(by)
+		return ""
+	if by not in members():
+		return "Only someone still standing can cover."
+	var who := _party_index(ref)
+	if who == -2 or who not in members():
+		return "Choose someone still standing to cover."
+	if who == by:
+		return "No one can cover themselves."
+	covers[by] = ref
+	return ""
+
+
+## The next choice for by's cover, in party order, "" (none) after the last member.
+func next_cover(by: int) -> String:
+	var opts: Array = [""]
+	for m in members():
+		if m != by:
+			opts.append(GameBattle.ref_of(m))
+	var at := opts.find(str(covers.get(by, "")))
+	return opts[(at + 1) % opts.size()]
+
+
+## The covers that can apply this round, keyed by the covered member's ref: both standing, the coverer
+## free to act (not held). When two cover the same member, the first in initiative order steps in.
+func _live_covers() -> Dictionary:
+	var out := {}
+	var up := members()
+	for by in up:
+		if not covers.has(by) or state_of(by) != "ready":
+			continue
+		var who := _party_index(str(covers[by]))
+		if who == -2 or who == by or who not in up:
+			continue
+		var ref := GameBattle.ref_of(who)
+		if not out.has(ref):
+			out[ref] = by
+	return out
+
+
 func _heir_act(plan: Dictionary) -> void:
 	if str(plan.get("act", "")) == "defend":
 		b.defend()
@@ -869,6 +924,7 @@ func resolve() -> Dictionary:
 			plans[ai] = {"act": "pass", "cover": true, "text": "%s covers the retreat." % b.allies[ai].name}
 		elif str(e["src"]) in ["manual", "repeat"] and str(e["cmd"].get("act", "")) != "flee":
 			plans[ai] = e["cmd"]
+	b.round_covers = _live_covers()
 	b.end_round(plans)
 	# ---- bookkeeping
 	if not fleeing:
