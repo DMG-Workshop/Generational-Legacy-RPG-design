@@ -37,6 +37,8 @@ var round_on: bool = false     # a GameRound is running: the heir's action no lo
 var round_acted: bool = false  # the heir's slot was used (acted or passed) while round_on
 var round_marks: bool = false  # tell round, act and foes markers in `events` (only inside GameRound.resolve)
 var round_cmds: Dictionary = {}   # ally index -> plan the player chose for this round; absent = the class's own choice
+var round_covers: Dictionary = {} # covered ref -> member who steps in (GameRound.set_cover); set only for end_round
+var _covered: Dictionary = {}     # members who have stepped in this round
 var braced: Dictionary = {}    # ref -> true: a companion braced this round (see GameRound, settings.brace_taken)
 
 
@@ -1263,10 +1265,12 @@ func begin_round() -> void:
 ## status tick. The one exit from round mode; nothing else may leave round_on set.
 func end_round(ally_plans: Dictionary) -> void:
 	round_on = false
+	_covered = {}
 	if result == "":   # a successful flee already ended the fight
 		round_cmds = ally_plans
 		_end_player_turn()
 	round_cmds = {}
+	round_covers = {}
 	round_marks = false
 
 
@@ -1406,7 +1410,7 @@ func _enemy_turn(i: int) -> void:
 
 func _enemy_act(i: int) -> void:
 	var e: Dictionary = enemies[i]
-	var who := _enemy_target()
+	var who := _cover_for(i, _enemy_target())
 	if who >= 0:
 		_enemy_hit_ally(i, who)
 		return
@@ -1431,6 +1435,27 @@ func _enemy_act(i: int) -> void:
 	if heir.hp > 0:
 		_after_blow("heir")
 		_inflict(i, "heir")
+
+
+## A standing cover (GameRound.set_cover): when a foe swings at a member below cover_below of their
+## health, the member covering them takes the blow instead, once a round. It draws no dice, so a fight
+## with no cover set plays exactly as before.
+func _cover_for(i: int, who: int) -> int:
+	if round_covers.is_empty():
+		return who
+	var ref := ref_of(who)
+	if not round_covers.has(ref):
+		return who
+	var by: int = int(round_covers[ref])
+	if by == who or _covered.has(by) or unit(by).hp <= 0 or (by >= 0 and by not in conscious_allies()):
+		return who
+	var hurt := float(unit(who).hp) / maxf(1.0, float(unit_numbers(who)["max_hp"]))
+	if hurt >= float(GameRound.setting("cover_below")):
+		return who
+	_covered[by] = true
+	events.append({"type": "cover", "by": by, "for": who, "index": i})
+	_say("%s steps in front of %s." % [unit(by).name, unit(who).name])
+	return by
 
 
 func _enemy_hit_ally(i: int, ai: int) -> void:

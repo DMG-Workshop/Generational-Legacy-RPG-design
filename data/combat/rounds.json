@@ -6,6 +6,7 @@
     "ally_defend": true,
     "defend_mp_pct": 0.15,
     "brace_taken": 0.5,
+    "cover_below": 0.3,
     "potion_for_companions": true,
     "chip_texts": {
       "short_chars": 10,
