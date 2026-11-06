@@ -64,6 +64,15 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_saves.gd` | Save slots and backups without screens: slot files, atomic saving with its `.bak`, loading from the `.bak`, the slot summary, backup text out and back in, every way a pasted backup can be wrong |
 | `test_game_saves_ui.gd` | Slots on the real screens: the title's slot list, begin and continue per slot, the ask before covering or erasing a house, Copy and Restore backup, the game menu's Copy backup |
 | `test_game_tutorial_ui.gd` | The tips on the real screens: the strip follows play and marks buttons, Skip tips and the menu switch, the succession tip |
+| `test_game_access.gd` | The accessibility options: the three settings, a damaged value reading as off, the colour and contrast variants, reduced motion, and the menu's Accessibility row |
+| `test_game_adoption.gd` | Adoption: with no children, companions are offered as heirs; the one chosen leaves the company, and saves keep where they came from |
+| `test_game_family_tree.gd` | The family tree: one entry per generation, folded heirs counted, damaged names dropped, and the chronicle's Family Tree tab |
+| `test_game_house_ui.gd` | The House panel on the life screen: Build raises a track and takes the gold, and a row that cannot be built says why |
+| `test_game_mates.gd` | Mates: opposite-sex candidates, looking at them changes no dice, the one chosen becomes the spouse, and the random spouse without a choice |
+| `test_game_mates_ui.gd` | The mate picker on the life screen: Found family opens the candidates and a pick marries that one |
+| `test_game_reactions.gd` | Standing covers: setting and cycling a cover, the health threshold, once a round, a fallen coverer, and an unused cover leaving the fight unchanged |
+| `test_game_reaction_prompt.gd` | Reactions that ask first: the round stops on "Cover this ally?", an answer plays it on, letting it land is the old round exactly, and the battle screen's question |
+| `test_game_stats.gd` | The dynasty statistics: heirs, causes of death, the greatest heir, gold per kept heir and per Age, folding, and the chronicle's Statistics tab |
 | `test_round_determinism.gd` | Seeded battles around party rounds match the golden fixture (see below) |
 
 Each suite's header comment says what it proves and gives its own run command.

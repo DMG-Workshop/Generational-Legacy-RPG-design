@@ -71,6 +71,16 @@
 ##       # at them below settings.cover_below of their health, once a round ("" takes it back); "" ok, else the reason.
 ##       # Kept from round to round; it costs no action and draws no dice.
 ##   func next_cover(by: int) -> String  # the next choice for by's cover, "" (none) after the last member
+##
+## REACTIONS THAT ASK FIRST (only when ask_reactions is true: the battle screen sets it; tests, scenarios and
+## the autopilots leave it off, so their rounds always play through):
+##   var ask_reactions: bool             # a foe about to strike a member below settings.cover_below stops the
+##       # round to ask who of the members on manual control steps in front (once per covered member a round)
+##   func asking() -> bool               # the round stopped on a question; nothing can be queued or resolved
+##   func reaction_view() -> Dictionary  # {} or {"foe": i, "foe_name", "for": by, "for_name", "hp", "max_hp",
+##       #   "by": [members who can step in], "names": [their names]}
+##   func answer(by: int) -> Dictionary  # by steps in (one of reaction_view().by), or -2 lets the blow land; the
+##       # round plays on and may ask again. Returns as resolve() does.
 ##   func repeat_last() -> Dictionary    # {"repeated": [by..], "fallback": [by..]}: re-queues last round's choices
 ##   func can_repeat() -> bool           # last round had hand-made choices and nothing is queued yet
 ##   func coat(item: String) -> void     # the heir's free toxin coat: immediate, not undoable (events left in battle.events)
@@ -78,7 +88,8 @@
 ##   func describe(by: int, cmd: Dictionary) -> Dictionary   # {"full", "short", "tiny"} chip texts, no pixels
 ##   func resolve() -> Dictionary        # plays the round: {"log_from": int, "over": bool, "result": String, "played": bool}
 ##       # played is false (nothing happened) when not ready() or the fight is over. A new round opens
-##       # by itself afterwards unless the fight ended.
+##       # by itself afterwards unless the fight ended. "asking": true when it stopped on a question
+##       # (ask_reactions): answer() plays the rest.
 ##
 ## ROW (menu(by) entry):
 ##   {"cmd": Dictionary (target "" for foe/ally aims: the UI fills it), "group": "basic"|"skill"|"spell"|"feat"|"item",
@@ -119,6 +130,7 @@ var _stash: Dictionary = {}  # entries a queued Flee covered, to give back if it
 var _prefs: Dictionary = {}  # GameDynasty.auto_party (shared reference)
 var _party: GameParty = null
 var covers: Dictionary = {}  # by -> ref of the member they cover: the standing reaction, kept round to round
+var ask_reactions: bool = false  # the caller can answer a reaction mid-round (the battle screen)
 
 
 # ---------------------------------------------------------------- data
@@ -250,7 +262,7 @@ func next_unset() -> int:
 
 
 func ready() -> bool:
-	return not b.is_over() and not members().is_empty() and next_unset() == -2
+	return not b.is_over() and not asking() and not members().is_empty() and next_unset() == -2
 
 
 func auto_commits() -> bool:
@@ -818,7 +830,8 @@ func view() -> Dictionary:
 			"mp": u.mp, "max_mp": int(b.unit_numbers(by)["max_mp"]), "state": state, "auto": bool(auto.get(by, false)),
 			"decision": decision, "chip": chip, "kind": kind, "statuses": statuses, "tip": tip, "cover": str(covers.get(by, ""))})
 	return {"number": number, "cursor": cursor, "ready": ready(), "can_back": not _order.is_empty(), "can_repeat": can_repeat(),
-		"flee": flee_by != -2, "auto_commit": auto_commits(), "manual_count": manual_count(), "over": b.is_over(), "members": list}
+		"flee": flee_by != -2, "auto_commit": auto_commits(), "manual_count": manual_count(), "over": b.is_over(), "members": list,
+		"asking": asking()}
 
 
 # ---------------------------------------------------------------- playing the round
@@ -880,7 +893,7 @@ func _heir_act(plan: Dictionary) -> void:
 func resolve() -> Dictionary:
 	var log_from := b.log.size()
 	if not ready():
-		return {"log_from": log_from, "over": b.is_over(), "result": b.result, "played": false}
+		return {"log_from": log_from, "over": b.is_over(), "result": b.result, "played": false, "asking": asking()}
 	var fleeing := flee_by != -2
 	var entry: Dictionary = entries.get(-1, {})
 	var src := str(entry.get("src", ""))
@@ -925,14 +938,64 @@ func resolve() -> Dictionary:
 		elif str(e["src"]) in ["manual", "repeat"] and str(e["cmd"].get("act", "")) != "flee":
 			plans[ai] = e["cmd"]
 	b.round_covers = _live_covers()
+	b.round_asks = _askers() if ask_reactions and not fleeing else {}
 	b.end_round(plans)
-	# ---- bookkeeping
+	if asking():
+		return {"log_from": log_from, "over": false, "result": "", "played": true, "asking": true}
+	return _finish(log_from, fleeing)
+
+
+## The round has played out: this round's hand-made choices become the ones Repeat offers, and the
+## next round opens unless the fight is over.
+func _finish(log_from: int, fleeing: bool) -> Dictionary:
 	if not fleeing:
 		last = {}
 		for by in entries:
 			if str(entries[by]["src"]) in ["manual", "repeat"]:
 				last[by] = (entries[by]["cmd"] as Dictionary).duplicate(true)
-	var out := {"log_from": log_from, "over": b.is_over(), "result": b.result, "played": true}
+	var out := {"log_from": log_from, "over": b.is_over(), "result": b.result, "played": true, "asking": false}
 	if not b.is_over():
 		begin_round()
 	return out
+
+
+# ---------------------------------------------------------------- reactions that ask first
+
+## Members who can be asked to step in this round: on manual control (not Auto) and free to act.
+func _askers() -> Dictionary:
+	var out := {}
+	for by in members():
+		if state_of(by) == "ready" and not bool(auto.get(by, false)):
+			out[by] = true
+	return out
+
+
+func asking() -> bool:
+	return not b.reaction.is_empty()
+
+
+## The question the round stopped on, for the screen: {} when none.
+func reaction_view() -> Dictionary:
+	if not asking():
+		return {}
+	var r := b.reaction
+	var i := int(r["foe"])
+	var who := int(r["for"])
+	var names: Array = []
+	for by in r["by"]:
+		names.append(b.unit(int(by)).name)
+	return {"foe": i, "foe_name": str(b.enemies[i]["name"]), "for": who, "for_name": b.unit(who).name,
+		"hp": b.unit(who).hp, "max_hp": int(b.unit_numbers(who)["max_hp"]), "by": (r["by"] as Array).duplicate(), "names": names}
+
+
+## The player's answer: `by` steps in front of the blow (one of reaction_view().by), or -2 lets it land.
+## The round plays on from the blow and may stop to ask again. Returns as resolve() does, with "log_from"
+## where this answer's part of the round began.
+func answer(by: int) -> Dictionary:
+	var log_from := b.log.size()
+	if not asking():
+		return {"log_from": log_from, "over": b.is_over(), "result": b.result, "played": false, "asking": false}
+	b.answer_reaction(by)
+	if asking():
+		return {"log_from": log_from, "over": false, "result": "", "played": true, "asking": true}
+	return _finish(log_from, false)
