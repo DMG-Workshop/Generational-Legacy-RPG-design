@@ -55,6 +55,51 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 21. **A family house that grows across generations.** Upgrades bought between hunts and passed down the line: more party slots, crafting, better training and shops. Idea from the base between expeditions in *The Shattered Isles*, fitted to the dynasty. Builds on item 18 (heirloom upgrades) and the persistent estates the README promises. Progress: the core rules and the first two tracks (Hall and Training Yard) are in, and the House button on the life screen buys them. The autopilot does not buy upgrades, so the battle figures do not move with the screen.
 22. **Reactions that ask first.** When a hurt party member is about to be hit, the player is offered a reaction such as "Cover this ally?"; a member on Auto decides for itself. Idea from *The Shattered Isles*, fitted to party commands. It changes battle results, so it is a balance change: show before and after numbers. Progress: a standing version is in. In a party round each member's Cover button picks someone to cover; when a foe swings at that member below 30% of their health (`cover_below` in rounds.json), the coverer takes the blow instead, once a round. It is set before the round and kept from round to round, with no pause yet. The autopilot and auto-battle never set a cover, so their results and the balance figures do not change. Still to do: the prompt that pauses the round, and Auto members deciding for themselves.
 
+**Before the 2D/3D sandbox: groundwork**
+
+Proposed order: items 23 to 26 first (they change how saves and views work, and get harder later), then the rendering trial (36), then the world systems in text (41 onwards) while the art catches up.
+
+23. **Save versioning.** A save version number and a chain of tested upgrade steps from each version to the next. Today old saves load because new keys are optional; world chunks, inventories and positions need more than that.
+24. **Saving in the middle of a fight.** A battle, and a round waiting on a question, saved and loaded exactly. A phone can close the app at any moment, and the sandbox needs mid-action state anyway.
+25. **A fixed list of events for views.** Every event the core emits (battle and life), with its fields, written down, plus a test that each one emitted is on the list. The isometric view becomes a second renderer on the same events as the text screens.
+26. **Cosmetic randomness kept apart.** Visuals (particles, idle animations, camera shake) get their own random numbers, never the dynasty's, with a test that the golden digests are the same with the view on or off.
+27. **A world clock apart from actions.** Today years pass per action; the sandbox runs in time. One clock that both can drive, so ageing, disease, upkeep and the Ages keep working.
+28. **Text out of code, and one data check.** The log lines and messages in `core/game` move into data with keys (ready for translation and sound cues), and one command runs every data validator, in CI.
+29. **Replay files.** A run's seed and commands saved to a small file and played back exactly: bug reports from players, the balance harness, and proof that the new view keeps determinism.
+30. **Long runs on a schedule, with budgets.** The autopilot playing many dynasties to the end every night, tracking deaths, save size, load time and time per generation against set limits, so performance limits are known before the world adds load.
+31. **Save files beyond the clipboard.** Export and import a save file (the share sheet on phones), and optional cloud sync. World saves will outgrow the clipboard backup.
+
+**Before the 2D/3D sandbox: art and presentation**
+
+32. **Battle sprites from data.** Pixel figures for every creature, race and class, stored as text grids in `data/art/` and drawn on the battle screen in place of the blocks. The same art and pipeline feed the isometric world.
+33. **Animation states.** Idle, attack, hurt and down frames for each figure, driven by the battle's events, so the isometric view animates the same events.
+34. **An art style guide and texture atlases.** The palette, outline, light, sizes and facing rules written down, so new art matches; generated textures packed into atlases when a screen loads.
+35. **Screenshot tests.** A CI job that renders key screens under a virtual display and compares them with stored images, so changes to the UI or the art are seen in review.
+36. **A rendering trial on a real phone.** A throwaway isometric pixel-art scene in Godot's 3D (orthographic camera, pixel snapping, sprites and lights) on the target Android phone: frame time, battery, heat and APK size. Then decide the technique, and how art files are stored (Git LFS, import settings), before making art for it.
+37. **Graphics settings.** Quality presets (pixel scale, effects, frame cap) and a battery saver, ready for the 3D renderer.
+38. **Gear shown on figures.** Weapon, armour and cloak layers on the sprites, so equipment changes how a hero looks; it builds on the race and class layering of item 32.
+39. **Input for a world.** Movement, camera, digging and building by touch, mouse and keyboard, and gamepad. Reduced motion and the colour-blind colours carry over.
+40. **Localisation.** Translation files for every player-facing text, a font that covers the target languages, and a pseudo-language test that catches text that no longer fits.
+
+**Before the 2D/3D sandbox: world systems, settled in text first**
+
+The text game is the cheap place to get these rules right: they are core rules and data with headless tests, and a text screen where one helps.
+
+41. **World spaces and coordinates.** The roadmap's world-space IDs given to towns, dungeons, the house and interiors now, with map positions, so travel already speaks the sandbox's language.
+42. **One item and material list.** Stable IDs and tags (material, tier, stack size, weight) for every item, validated, so harvesting, mining and crafting extend one list.
+43. **Inventory with stacks and weight.** Built on item 42, with carry limits; the text game can use it for loot first.
+44. **Gathering and crafting.** The "one-of-a-kind crafting system" designed as rules and data with a text screen, so the sandbox inherits a tested system.
+45. **Mining as data.** Strata, ores by depth, and how digging changes the ground, all testable without graphics.
+46. **World generation from the dynasty's seed.** Biomes, terrain, strata and the placement of nodes and ores, the same for the same seed, checked headless.
+47. **Spawn tables.** Which creatures appear where and when, by biome, depth and Age, as data; hunts can use them before the world does.
+48. **Creature behaviour as data.** Wander, chase, flee, guard and swarm rules by tag, tested headless, so creatures in the open world need no hand-written code each.
+49. **Pathfinding over dug and built ground.** A grid and height pathfinder that digging and building change, with headless tests.
+50. **Building and placement rules.** What can stand where (support, height, rooms), grown from the family house (item 21), which becomes the first base.
+51. **Day, night and weather.** A cycle on the world clock (item 27), with weather that changes hunts and the look of the world; battles already have weather.
+52. **Companions in the world.** Following, idling and helping (gathering, guarding), built on the party rules.
+53. **Sandbox tips.** The first-heir tips extended to moving, digging and building, from data like today's.
+54. **Desktop builds and crash reports.** Windows, Linux and macOS exports with gamepad menus, store images from the screenshot tool, and opt-in error reports that carry a save, so problems on phones can be reproduced.
+
 ## After the text game: the 2D/3D sandbox
 
 Starts only once the text game is complete. The text game's systems (lineage, Fate, battles, diseases, companions, Ages) carry over: logic stays apart from rendering, so the new world is a new view on the same core.
