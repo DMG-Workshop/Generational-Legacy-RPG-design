@@ -95,6 +95,8 @@ func _ready() -> void:
 		_place_strip()
 	if not auto:
 		cmd_round = d.battle_round()
+		if cmd_round != null:
+			cmd_round.ask_reactions = true   # this screen answers "Cover this ally?" mid-round
 
 	var ap := Kit.panel(Color("#191726"))
 	ap.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -657,7 +659,7 @@ func _ability_keys(by: int, cmd: Dictionary) -> Array:
 ## Queues the member's command. A refused one says why and nothing changes; once the round is
 ## ready and only one member took orders, it plays at once (a solo hunt, as ever).
 func _submit(by: int, cmd: Dictionary) -> void:
-	if busy or cmd_round == null:
+	if busy or cmd_round == null or cmd_round.asking():   # a question is open: the round is mid-play
 		return
 	_close_spells()
 	_close_skills()
@@ -671,6 +673,41 @@ func _submit(by: int, cmd: Dictionary) -> void:
 		_commit()
 	else:
 		_build_commands()
+
+
+## A foe is about to strike a hurt member and the round waits: one button for each member on manual
+## control who can step in front, and one to let the blow land. Auto waits until it is answered.
+func _build_reaction() -> void:
+	var r := cmd_round.reaction_view()
+	auto_button.disabled = true
+	aiming = {}
+	_show_area({}, -1)
+	var tag := "%s (%s/%s)" % [r["for_name"], GameText.num(int(r["hp"])), GameText.num(int(r["max_hp"]))]
+	hint.text = "Cover %s?" % r["for_name"]
+	for text in ["%s swings at %s. Who steps in?" % [r["foe_name"], tag], "%s is about to be hit. Cover?" % tag]:
+		if _fits(text, 14, cmd_w - 40.0):
+			hint.text = text
+			break
+	var col := VBoxContainer.new()
+	for k in (r["by"] as Array).size():
+		var by := int(r["by"][k])
+		var name: String = r["names"][k]
+		var btn := Kit.button("%s covers" % name, func(): _answer(by))
+		btn.set_meta("compact", name)
+		btn.tooltip_text = "%s steps in front of the blow aimed at %s and takes it instead." % [name, r["for_name"]]
+		col.add_child(btn)
+	var no := Kit.button("Let it land", func(): _answer(-2))
+	no.set_meta("compact", "No")
+	no.tooltip_text = "Nobody steps in; you are not asked about %s again this round." % r["for_name"]
+	col.add_child(no)
+	_lay_out_commands([col])
+
+
+## The answer to the question: the blow lands on whoever was chosen, and the round plays on from there.
+func _answer(by: int) -> void:
+	if busy or cmd_round == null or not cmd_round.asking() or _guarded():
+		return
+	_do(func(): cmd_round.answer(by), b.events.size())
 
 
 ## Fight! (or Flee!), or the only command a solo hunt needs: the round plays out.
@@ -727,7 +764,7 @@ func _set_member_auto(by: int) -> void:
 ## member (a queued one to change their mind, an Auto one to take over). Held and fallen members
 ## cannot be asked.
 func _on_chip(by: int) -> void:
-	if busy or cmd_round == null or auto or result_shown:
+	if busy or cmd_round == null or auto or result_shown or cmd_round.asking():
 		return
 	if str(aiming.get("aim", "")) == "ally":
 		_confirm_ally(by)
@@ -773,12 +810,16 @@ func _build_commands() -> void:
 	Kit.clear(command_box)
 	aim_info = null
 	_arm_guard()
+	auto_button.disabled = false
 	if auto and not b.is_over():
 		_build_auto_commands()
 		return
 	if cmd_round == null or b.is_over():
 		return
 	_sync_strip()
+	if cmd_round.asking():
+		_build_reaction()
+		return
 	if not aiming.is_empty():
 		_build_aim_commands()
 		return
@@ -1076,6 +1117,8 @@ func _column_need(col: Node) -> float:
 ## Switches auto-battle on or off, for this fight and the hunts after it. Off hands the next
 ## command back to the player at once; on lets the heir fight from their next turn.
 func set_auto(on: bool) -> void:
+	if cmd_round != null and cmd_round.asking():   # a question is open: it is answered first
+		return
 	auto = on
 	d.auto_battle = on
 	_show_auto()
@@ -1084,6 +1127,7 @@ func set_auto(on: bool) -> void:
 	if not on:   # taking over: a fresh round, nothing queued
 		cmd_round = d.battle_round()
 		if cmd_round != null:
+			cmd_round.ask_reactions = true
 			cmd_round.begin_round()
 	_sync_strip()
 	if busy:
@@ -1624,7 +1668,9 @@ func _close_feats() -> void:
 
 # ---------------------------------------------------------------- playing a turn
 
-func _do(action: Callable) -> void:
+## Plays `action` and shows what it did: the new log lines and the events from `from_event` on (an answer
+## to a question picks the round up where the shown events stopped).
+func _do(action: Callable, from_event: int = 0) -> void:
 	if busy or b.is_over():
 		return
 	busy = true
@@ -1640,7 +1686,7 @@ func _do(action: Callable) -> void:
 	action.call()
 	for i in range(log_start, b.log.size()):
 		_say(b.log[i])
-	await _play_events(b.events)
+	await _play_events(b.events.slice(from_event))
 	busy = false
 	target = b.first_target() if target < 0 or target >= b.enemies.size() or b.enemies[target]["hp"] <= 0 else target
 	_update_view()
