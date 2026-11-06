@@ -38,7 +38,12 @@ var round_acted: bool = false  # the heir's slot was used (acted or passed) whil
 var round_marks: bool = false  # tell round, act and foes markers in `events` (only inside GameRound.resolve)
 var round_cmds: Dictionary = {}   # ally index -> plan the player chose for this round; absent = the class's own choice
 var round_covers: Dictionary = {} # covered ref -> member who steps in (GameRound.set_cover); set only for end_round
+var round_asks: Dictionary = {}   # by -> true: members the player may be asked to step in (GameRound.ask_reactions)
+var reaction: Dictionary = {}     # a blow waiting on the player's answer: {"foe": i, "for": by, "by": [who may step in]}
 var _covered: Dictionary = {}     # members who have stepped in this round
+var _asked_for: Dictionary = {}   # members the player has been asked about this round
+var _foe_queue: Array = []        # foes still to act this round, in order
+var _foe_step: int = 0            # where the foe at the head of _foe_queue is in its turn (see _foe_turn_steps)
 var braced: Dictionary = {}    # ref -> true: a companion braced this round (see GameRound, settings.brace_taken)
 
 
@@ -1266,12 +1271,44 @@ func begin_round() -> void:
 func end_round(ally_plans: Dictionary) -> void:
 	round_on = false
 	_covered = {}
+	_asked_for = {}
+	reaction = {}
 	if result == "":   # a successful flee already ended the fight
 		round_cmds = ally_plans
 		_end_player_turn()
+	if reaction.is_empty():   # else answer_reaction() plays the rest of the round
+		_close_round()
+
+
+## The round is over: the plans, covers and asks it was given are dropped.
+func _close_round() -> void:
 	round_cmds = {}
 	round_covers = {}
+	round_asks = {}
 	round_marks = false
+
+
+## The player's answer to `reaction`: `by` (one of reaction.by) steps in front of the blow, or -2 lets it
+## land. The waiting blow is struck, then the foes and the round go on, and may stop to ask again.
+func answer_reaction(by: int) -> void:
+	if reaction.is_empty():
+		return
+	var i := int(reaction["foe"])
+	var who := int(reaction["for"])
+	var choices: Array = reaction["by"]
+	reaction = {}
+	_asked_for[who] = true
+	if by in choices:
+		_covered[by] = true
+		events.append({"type": "cover", "by": by, "for": who, "index": i})
+		_say("%s steps in front of %s." % [unit(by).name, unit(who).name])
+		who = by
+	_enemy_strike(i, who)
+	_foe_step = 2 if _foe_step == 1 else 4   # the action that waited is done
+	if _foe_phase():
+		_round_tail()
+	if reaction.is_empty():
+		_close_round()
 
 
 func _won() -> bool:
@@ -1296,16 +1333,36 @@ func _end_player_turn() -> void:
 			return
 	if round_marks:
 		events.append({"type": "foes"})
-	for i in living_enemies():
-		if enemies[i]["hp"] <= 0:
+	_foe_queue = living_enemies()
+	_foe_step = 0
+	if _foe_phase():
+		_round_tail()
+
+
+## The foes still to act this round (_foe_queue), each turn in steps so one blow can wait on the player's
+## answer (answer_reaction). True when every foe has acted and the round goes on; false when it stopped to
+## ask, or the fight ended.
+func _foe_phase() -> bool:
+	while not _foe_queue.is_empty():
+		var i := int(_foe_queue[0])
+		if _foe_step == 0 and enemies[i]["hp"] <= 0:
+			_foe_queue.pop_front()
 			continue
-		_enemy_turn(i)
+		if not _foe_turn_steps(i):
+			return false
+		_foe_queue.pop_front()
+		_foe_step = 0
 		if heir.hp <= 0:
 			result = "defeat"
 			_say("%s has fallen..." % heir.name)
-			return
+			return false
 		if _won():
-			return
+			return false
+	return true
+
+
+## After the foes: guards and fields wear off, the turn ends, mana returns and the heir's turn begins.
+func _round_tail() -> void:
 	defending = false
 	braced.clear()
 	if not fields.is_empty():
@@ -1397,23 +1454,57 @@ func _enemy_target() -> int:
 	return up[rng.randi() % up.size()]
 
 
+## One whole foe turn (fields, statuses, the action and any bonus action), as the foes' phase plays it.
 func _enemy_turn(i: int) -> void:
+	_foe_step = 0
+	_foe_turn_steps(i)
+	_foe_step = 0
+
+
+## One foe's turn in steps, so it can stop and pick up again: 0 the turn begins (fields, statuses), 1 the
+## action, 2 whether a bonus action comes, 3 the bonus action, 4 done. False when a blow stopped to wait
+## on the player's answer; answer_reaction() strikes it and moves _foe_step on.
+func _foe_turn_steps(i: int) -> bool:
 	var ref := enemy_ref(i)
-	if not fields.is_empty():
-		_tread(i)
-	if not _start_turn(ref):
-		return
-	_enemy_act(i)
-	if result == "" and heir.hp > 0 and _extra_action(ref):
-		_enemy_act(i)
+	if _foe_step == 0:
+		if not fields.is_empty():
+			_tread(i)
+		_foe_step = 1 if _start_turn(ref) else 4
+	if _foe_step == 1:
+		if not _enemy_act(i):
+			return false
+		_foe_step = 2
+	if _foe_step == 2:
+		_foe_step = 3 if result == "" and heir.hp > 0 and _extra_action(ref) else 4
+	if _foe_step == 3:
+		if not _enemy_act(i):
+			return false
+		_foe_step = 4
+	return true
 
 
-func _enemy_act(i: int) -> void:
-	var e: Dictionary = enemies[i]
+## A foe's action: it picks whom to strike, and a standing cover may step in. When the player can be
+## asked to cover that member (round_asks), the blow waits in `reaction` and this returns false; else
+## it strikes and returns true. Asking draws no dice, so a fight with nobody to ask plays as before.
+func _enemy_act(i: int) -> bool:
 	var who := _cover_for(i, _enemy_target())
+	var can := _askable_for(who)
+	if not can.is_empty():
+		reaction = {"foe": i, "for": who, "by": can}
+		return false
+	_enemy_strike(i, who)
+	return true
+
+
+func _enemy_strike(i: int, who: int) -> void:
 	if who >= 0:
 		_enemy_hit_ally(i, who)
-		return
+	else:
+		_enemy_hit_heir(i)
+
+
+func _enemy_hit_heir(i: int) -> void:
+	var e: Dictionary = enemies[i]
 	var me := unit_numbers(-1)
 	if not bool(me["no_dodge"]) and rng.randf() < clampf(float(me["dodge"]) + float(weather.get("dodge", 0.0)) + status_mod("heir", "dodge"), 0.0, 0.6):
 		events.append({"type": "miss", "side": "player", "index": i})
@@ -1449,13 +1540,32 @@ func _cover_for(i: int, who: int) -> int:
 	var by: int = int(round_covers[ref])
 	if by == who or _covered.has(by) or unit(by).hp <= 0 or (by >= 0 and by not in conscious_allies()):
 		return who
-	var hurt := float(unit(who).hp) / maxf(1.0, float(unit_numbers(who)["max_hp"]))
-	if hurt >= float(GameRound.setting("cover_below")):
+	if not _below_cover(who):
 		return who
 	_covered[by] = true
 	events.append({"type": "cover", "by": by, "for": who, "index": i})
 	_say("%s steps in front of %s." % [unit(by).name, unit(who).name])
 	return by
+
+
+## Whether a member is hurt enough to be covered: below cover_below of their health.
+func _below_cover(who: int) -> bool:
+	return float(unit(who).hp) / maxf(1.0, float(unit_numbers(who)["max_hp"])) < float(GameRound.setting("cover_below"))
+
+
+## Members the player may be asked to step in front of a blow aimed at `who`: on manual control this round
+## (round_asks), standing, not `who`, and not yet stepped in. Only while `who` is below cover_below and has
+## not been asked about this round. [] when there is nothing to ask.
+func _askable_for(who: int) -> Array:
+	var out: Array = []
+	if round_asks.is_empty() or _asked_for.has(who) or not _below_cover(who):
+		return out
+	for by in round_asks:
+		var m := int(by)
+		if m == who or _covered.has(m) or unit(m).hp <= 0 or (m >= 0 and m not in conscious_allies()):
+			continue
+		out.append(m)
+	return out
 
 
 func _enemy_hit_ally(i: int, ai: int) -> void:
