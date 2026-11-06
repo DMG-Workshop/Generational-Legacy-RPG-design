@@ -9,6 +9,7 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
@@ -249,17 +250,23 @@ func _build_actors() -> void:
 	var cls := d.heir.cls()
 	hero_node = Control.new()
 	hero_node.size = Vector2(124, 220)
+	var hero_tex := SpriteArt.hero(d.heir.race_id, d.heir.class_id, Color(cls["color"]))
 	var hero_body := ColorRect.new()
-	hero_body.color = Color(cls["color"])
-	hero_body.size = Vector2(80, 110)
-	hero_body.position = Vector2(22, 34)
 	hero_body.gui_input.connect(func(ev: InputEvent): _on_party_input(-1, ev))
 	hero_node.add_child(hero_body)
-	var head := ColorRect.new()
-	head.color = Color("#f0d9b5")
-	head.size = Vector2(40, 40)
-	head.position = Vector2(42, 0)
-	hero_node.add_child(head)
+	if hero_tex != null:   # the figure from data/art; the clear body under it takes the taps and the flashes
+		hero_body.color = Color(0, 0, 0, 0)
+		hero_body.size = Vector2(124, 144)
+		hero_body.add_child(SpriteArt.sprite_node(hero_tex, hero_body.size))
+	else:   # no figure for this class: the old block
+		hero_body.color = Color(cls["color"])
+		hero_body.size = Vector2(80, 110)
+		hero_body.position = Vector2(22, 34)
+		var head := ColorRect.new()
+		head.color = Color("#f0d9b5")
+		head.size = Vector2(40, 40)
+		head.position = Vector2(42, 0)
+		hero_node.add_child(head)
 	hero_label = Kit.label("%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)], 14)
 	hero_label.position = Vector2(0, 146)
 	hero_label.size = Vector2(124, 20)
@@ -303,21 +310,25 @@ func _build_actors() -> void:
 		sel.visible = false
 		sel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		root.add_child(sel)
+		var tex := SpriteArt.creature(str(e.get("id", "")))
 		var body := ColorRect.new()
-		body.color = Color(e["color"])
+		body.color = Color(e["color"]) if tex == null else Color(0, 0, 0, 0)
 		body.size = Vector2(w, h)
 		body.mouse_filter = Control.MOUSE_FILTER_STOP
 		var idx := i
 		body.gui_input.connect(func(ev: InputEvent): _on_foe_input(idx, ev))
 		TouchHint.on_hover(body, func(): _on_foe_hover(idx, true), func(): _on_foe_hover(idx, false))
 		root.add_child(body)
-		for ex in [0.28, 0.62]:
-			var eye := ColorRect.new()
-			eye.color = Color("#101010")
-			eye.size = Vector2(w * 0.1, w * 0.1)
-			eye.position = Vector2(w * ex, h * 0.22)
-			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			body.add_child(eye)
+		if tex != null:   # the creature from data/art, standing on the bottom of its box
+			body.add_child(SpriteArt.sprite_node(tex, Vector2(w, h)))
+		else:   # no sprite: the old block with two eyes
+			for ex in [0.28, 0.62]:
+				var eye := ColorRect.new()
+				eye.color = Color("#101010")
+				eye.size = Vector2(w * 0.1, w * 0.1)
+				eye.position = Vector2(w * ex, h * 0.22)
+				eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				body.add_child(eye)
 		var lv_text := "Lv %s" % GameText.num(int(e.get("level", 1)))
 		# Late-generation levels are long: the text shrinks to stay inside the body. It is inked
 		# against the body's colour, no outline: an outline smears once a full arena is shrunk to fit.
@@ -325,9 +336,11 @@ func _build_actors() -> void:
 		var font := get_theme_default_font()
 		while lv_size > 8 and font.get_string_size(lv_text, HORIZONTAL_ALIGNMENT_LEFT, -1, lv_size).x > w - 8.0:
 			lv_size -= 1
-		var pale := Color(e["color"]).get_luminance() > 0.45
+		var pale := tex == null and Color(e["color"]).get_luminance() > 0.45
 		var elite := str(e["name"]).begins_with("Elite")
 		var lv := Kit.label(lv_text, lv_size, (Kit.ACCENT.darkened(0.6) if elite else Kit.BG) if pale else (Kit.ACCENT if elite else Kit.TEXT))
+		if tex != null:   # over a sprite the level sits on a dark tag, so it reads on any colour
+			lv.add_theme_stylebox_override("normal", _level_tag())
 		lv.position = Vector2(4, h - 22)
 		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(lv)
@@ -353,18 +366,24 @@ func _build_actors() -> void:
 func _build_ally(a: GameHeir) -> Dictionary:
 	var root := Control.new()
 	root.size = Vector2(110, 172)
+	var tex := SpriteArt.hero(a.race_id, a.class_id, Color(a.cls()["color"]))
 	var body := ColorRect.new()
-	body.color = Color(a.cls()["color"])
-	body.size = Vector2(58, 72)
-	body.position = Vector2(26, 28)
 	var by := ally_nodes.size()   # this companion's index: the figures are built in party order
 	body.gui_input.connect(func(ev: InputEvent): _on_party_input(by, ev))
 	root.add_child(body)
-	var head := ColorRect.new()
-	head.color = Color(a.race().get("color", "#f0d9b5"))
-	head.size = Vector2(30, 30)
-	head.position = Vector2(40, 0)
-	root.add_child(head)
+	if tex != null:   # the figure from data/art; the clear body under it takes the taps, flashes and the KO dimming
+		body.color = Color(0, 0, 0, 0)
+		body.size = Vector2(110, 100)
+		body.add_child(SpriteArt.sprite_node(tex, body.size))
+	else:   # no figure for this class: the old block with a race-tinted head
+		body.color = Color(a.cls()["color"])
+		body.size = Vector2(58, 72)
+		body.position = Vector2(26, 28)
+		var head := ColorRect.new()
+		head.color = Color(a.race().get("color", "#f0d9b5"))
+		head.size = Vector2(30, 30)
+		head.position = Vector2(40, 0)
+		root.add_child(head)
 	var ko := Kit.label("KO", 22, Kit.bad())
 	ko.add_theme_color_override("font_outline_color", Color.BLACK)
 	ko.add_theme_constant_override("outline_size", 6)
@@ -392,6 +411,16 @@ func _build_ally(a: GameHeir) -> Dictionary:
 		body.modulate = Color(0.35, 0.35, 0.4)
 	arena.add_child(root)
 	return {"root": root, "body": body, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
+
+
+## The dark tag a foe's level sits on when the foe is drawn from a sprite.
+func _level_tag() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Kit.BG, 0.78)
+	sb.set_corner_radius_all(3)
+	sb.content_margin_left = 3
+	sb.content_margin_right = 3
+	return sb
 
 
 ## A bar exactly `size` tall (Kit bars pad to the stylebox margins).
