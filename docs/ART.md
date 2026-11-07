@@ -101,7 +101,8 @@ follow. A layer can carry changes for a season, used in it: `"autumn": {"colors"
 
 A scene is painted at `size` (384 x 120) and scaled up by whole pixels like the sprites. Each place is
 painted with its own dice, seeded from the place, never the game's, so a place always looks the same. The
-screen covers the arena with it from its top, so a short arena loses the near ground and never the sky.
+screen stretches it over the arena, cut to the arena's shape from its top (`SceneryArt.crop`), so a short
+arena loses the near ground and never the sky.
 `horizon` is where the sky meets the ground, as a fraction of the height.
 
 Each layer is one `op` with its own settings. Colours run from lit to shaded, or from far to near.

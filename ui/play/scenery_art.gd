@@ -152,12 +152,15 @@ static func texture(place_id: String, weather: String, season: String) -> Textur
 	return tex
 
 
-## Where a scene of `tex_size` lies to cover a box: as small as still covers it, centred across, its top on
-## the box's top so the sky and the horizon stay in sight and any cut is taken from the near ground.
-static func cover(tex_size: Vector2, box: Vector2) -> Rect2:
-	var k := maxf(box.x / maxf(1.0, tex_size.x), box.y / maxf(1.0, tex_size.y))
-	var size := tex_size * k
-	return Rect2(Vector2((box.x - size.x) * 0.5, 0.0), size)
+## The part of a scene of `tex_size` that covers a box of another shape when stretched over it: the box's
+## shape, as large as the scene allows, centred across and taken from the top, so the sky and the horizon
+## stay in sight and any cut comes off the near ground. The whole scene for an empty box.
+static func crop(tex_size: Vector2, box: Vector2) -> Rect2:
+	if box.x <= 0.0 or box.y <= 0.0 or tex_size.x <= 0.0 or tex_size.y <= 0.0:
+		return Rect2(Vector2.ZERO, tex_size)
+	var k := maxf(box.x / tex_size.x, box.y / tex_size.y)   # screen pixels per scene pixel
+	var size := Vector2(minf(tex_size.x, box.x / k), minf(tex_size.y, box.y / k))
+	return Rect2(Vector2((tex_size.x - size.x) * 0.5, 0.0), size)
 
 
 ## A place's scene in a weather and season at its own resolution (the tools and the tests look at this).

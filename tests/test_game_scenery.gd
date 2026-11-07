@@ -1,8 +1,8 @@
 ## Battle scenery (ui/play/scenery_art.gd): the scenery data is sound, every place in the world has a scene, a
 ## scene is painted the same every time with its own dice (never the dynasty's), the weather and the season
-## change it out of doors but not under the ground, scenes are kept and scaled by whole pixels, the cover fit
-## keeps the sky in sight, and the battle screen draws the scene of the place a fight is in behind the
-## figures, under a veil (thicker with high contrast), with plates under the names.
+## change it out of doors but not under the ground, scenes are kept and scaled by whole pixels, the crop to
+## the arena's shape keeps the sky in sight, and the battle screen draws the scene of the place a fight is in
+## behind the figures, under a veil (thicker with high contrast), with plates under the names.
 ## Run: godot --headless --path . -s res://tests/test_game_scenery.gd
 extends SceneTree
 
@@ -36,7 +36,7 @@ func _run() -> void:
 	test_same_every_time()
 	test_weather_and_seasons()
 	test_kept_and_whole_pixels()
-	test_cover()
+	test_crop()
 	await test_battle_screen()
 	for f in DirAccess.get_files_at(DIR):
 		DirAccess.remove_absolute(DIR + f)
@@ -99,12 +99,13 @@ func test_kept_and_whole_pixels() -> void:
 	ok(SceneryArt.texture("mirefen", "fog", "spring") != a, "only the last few scenes are kept")
 
 
-func test_cover() -> void:
-	var r := SceneryArt.cover(Vector2(384, 120), Vector2(1200, 400))
-	ok(r.size.x >= 1199.9 and r.size.y >= 399.9 and r.position.y == 0.0, "a scene covers its box from the top: %s" % str(r))
-	ok(is_equal_approx(r.position.x, (1200.0 - r.size.x) * 0.5), "centred across it")
-	var short := SceneryArt.cover(Vector2(384, 120), Vector2(1600, 300))
-	ok(is_equal_approx(short.size.x, 1600.0) and short.position.y == 0.0 and short.size.y >= 299.9, "a short box loses the near ground, not the sky: %s" % str(short))
+func test_crop() -> void:
+	var r := SceneryArt.crop(Vector2(384, 120), Vector2(1200, 400))
+	ok(is_equal_approx(r.size.y, 120.0) and r.position.y == 0.0 and is_equal_approx(r.size.x / r.size.y, 3.0), "a taller box shows the whole height of a scene, cut to its shape: %s" % str(r))
+	ok(is_equal_approx(r.position.x, (384.0 - r.size.x) * 0.5), "taken from the middle across")
+	var short := SceneryArt.crop(Vector2(384, 120), Vector2(1600, 300))
+	ok(is_equal_approx(short.size.x, 384.0) and short.position == Vector2.ZERO and is_equal_approx(short.size.y, 72.0), "a short box loses the near ground, not the sky: %s" % str(short))
+	ok(SceneryArt.crop(Vector2(384, 120), Vector2.ZERO) == Rect2(0, 0, 384, 120), "an empty box gets the whole scene")
 
 
 # ---------------------------------------------------------------- the battle screen
@@ -154,18 +155,20 @@ func test_battle_screen() -> void:
 	d.party.rest(d)
 	var bv := _fight("emberpeak", "heat")
 	await _frames(5)
-	ok(bv.scenery != null and bv.scenery.texture == SceneryArt.for_world(d.world), "a fight is drawn in the scene of its place")
+	ok(bv.scenery != null and bv.scenery.texture is AtlasTexture and (bv.scenery.texture as AtlasTexture).atlas == SceneryArt.for_world(d.world), "a fight is drawn in the scene of its place")
 	ok(bv.arena.get_child(0) == bv.scenery, "behind everything in the arena")
-	ok(bv.scenery.size.x >= bv.arena.size.x - 0.5 and bv.scenery.size.y >= bv.arena.size.y - 0.5 and bv.scenery.position.y == 0.0, "covering it from the top")
+	ok(bv.scenery.position == Vector2.ZERO and bv.scenery.size.is_equal_approx(bv.arena.size), "filling it exactly, so nothing sticks out of it")
+	var land: Texture2D = (bv.scenery.texture as AtlasTexture).atlas
+	ok((bv.scenery.texture as AtlasTexture).region.is_equal_approx(SceneryArt.crop(Vector2(land.get_width(), land.get_height()), bv.arena.size)), "showing the part of the scene cut to the arena's shape")
 	var veil = bv.arena.get_child(1)
 	ok(veil is ColorRect and is_equal_approx((veil as ColorRect).color.a, SceneryArt.veil(false)), "under a veil")
 	ok(_plates(bv.hero_node) == 1 and _plates(bv.ally_nodes[0]["root"]) == 1 and _plates(bv.enemy_nodes[0]["root"]) == 1, "the names sit on plates")
 	ok(bv.hero_node.get_child(0) is ColorRect, "and the hero's body is still the first thing in the hero")
-	var tex: Texture2D = bv.scenery.texture
+	var tex: Texture2D = (bv.scenery.texture as AtlasTexture).atlas
 	UiSettings.set_access("high_contrast", true)
 	bv = _fight("the_rift", "clear")
 	await _frames(5)
 	veil = bv.arena.get_child(1)
-	ok(bv.scenery.texture != tex, "another place, another scene")
+	ok((bv.scenery.texture as AtlasTexture).atlas != tex, "another place, another scene")
 	ok(veil is ColorRect and is_equal_approx((veil as ColorRect).color.a, SceneryArt.veil(true)) and SceneryArt.veil(true) > SceneryArt.veil(false), "a thicker veil with high contrast on")
 	UiSettings.set_access("high_contrast", false)

@@ -425,19 +425,25 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	return {"root": root, "body": body, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
 
 
-## The land the fight is in (SceneryArt: the place's scene in its weather and season), behind everything in
-## the arena, under a veil of the panel's colour so the fighters and their names stand out; a thicker veil
-## with high contrast on. Nothing is drawn for a place without a scene.
+## The land the fight is in (SceneryArt: the place's scene in its weather and season), filling the arena
+## behind everything in it (cropped to the arena's shape in _layout), under a veil of the panel's colour so
+## the fighters and their names stand out; a thicker veil with high contrast on. Nothing is drawn for a
+## place without a scene.
 func _build_scenery() -> void:
 	var tex := SceneryArt.for_world(d.world)
 	if tex == null:
 		return
+	var shown := AtlasTexture.new()
+	shown.atlas = tex
+	shown.filter_clip = true
+	shown.region = Rect2(Vector2.ZERO, Vector2(tex.get_width(), tex.get_height()))
 	scenery = TextureRect.new()
-	scenery.texture = tex
+	scenery.texture = shown
 	scenery.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	scenery.stretch_mode = TextureRect.STRETCH_SCALE
 	scenery.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	scenery.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scenery.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	arena.add_child(scenery)
 	var veil := ColorRect.new()
 	veil.color = Color(Kit.BG, SceneryArt.veil(UiSettings.high_contrast()))
@@ -522,10 +528,9 @@ func _layout() -> void:
 		ally_nodes[i]["root"].position = _spot(ally_nodes[i]["root"], _px(b.unit_point(i)), 64.0)
 	for i in enemy_nodes.size():
 		enemy_nodes[i]["root"].position = _foe_spot(i)
-	if scenery != null:
-		var r := SceneryArt.cover(Vector2(scenery.texture.get_width(), scenery.texture.get_height()), arena.size)
-		scenery.position = r.position
-		scenery.size = r.size
+	if scenery != null:   # the scene stretched over the arena, cropped to its shape so nothing sticks out
+		var land := (scenery.texture as AtlasTexture).atlas
+		(scenery.texture as AtlasTexture).region = SceneryArt.crop(Vector2(land.get_width(), land.get_height()), arena.size)
 	field.queue_redraw()
 
 
