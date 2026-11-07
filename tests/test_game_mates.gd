@@ -1,5 +1,5 @@
 ## Mates: the candidates are opposite-sex, looking at them changes no dice, the one chosen becomes the spouse,
-## the autopilot picks the candidate with the most traits, and the old random spouse still works without a choice.
+## and without a choice (the autopilot's way) the old random spouse still comes, as before.
 ## Run: godot --headless --path . -s res://tests/test_game_mates.gd
 extends SceneTree
 

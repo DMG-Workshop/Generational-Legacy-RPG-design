@@ -41,6 +41,10 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | Suite | Covers |
 |-------|--------|
 | `test_game_aging.gd` | Companion ageing, old age, death and retirement, successors, saves and the autopilot |
+| `test_game_art.gd` | The battle sprites: the art data is sound, every creature, class and race has art, race and shirt colours, whole-pixel scaling, and the battle screen drawing from sprites with the old blocks as fallback. Shirts: everyone wears one picked for them, the Looks panel chooses another, and a choice is saved |
+| `test_game_gear.gd` | Gear on figures: the gear data is sound and every weapon and armour has a look; armour finishes go on metal and leather outside the weapon's box and weapon finishes on the blade or wood inside it; capes and glows; nothing changes without gear; figures kept per gear; the heir drawn in their gear on the battle screen |
+| `test_game_poses.gd` | The battle figures' poses: every sprite figure breathes, out of step with its neighbours; blows, misses, casts and guards play as moves in whole art pixels; the knocked out, the beaten hero and the slain fall; a block figure takes events without a pose; reduced motion stills it all but the falls; and no dice are drawn |
+| `test_game_scenery.gd` | The battle scenery: the data is sound, every place has a scene painted the same every time without the game's dice, weather and seasons change it outdoors only, whole-pixel scaling and the crop to the arena's shape, and the battle screen drawing the place's scene behind the figures under a veil with plates under the names |
 | `test_game_balance_tool.gd` | The balance harness's logic: seed lists, the 95% range, the verdict against the band, and a small reproducible autopilot batch |
 | `test_game_bot.gd` | The autopilot's Hard hunt choice and the `bot_hard_hunt` rules in `balance.json` |
 | `test_game_combat.gd` | Battlefield geometry, the ability pipeline and spellbook, statuses, elements, packs, spell costs and saves |
@@ -64,6 +68,15 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_saves.gd` | Save slots and backups without screens: slot files, atomic saving with its `.bak`, loading from the `.bak`, the slot summary, backup text out and back in, every way a pasted backup can be wrong |
 | `test_game_saves_ui.gd` | Slots on the real screens: the title's slot list, begin and continue per slot, the ask before covering or erasing a house, Copy and Restore backup, the game menu's Copy backup |
 | `test_game_tutorial_ui.gd` | The tips on the real screens: the strip follows play and marks buttons, Skip tips and the menu switch, the succession tip |
+| `test_game_access.gd` | The accessibility options: the three settings, a damaged value reading as off, the colour and contrast variants, reduced motion, and the menu's Accessibility row |
+| `test_game_adoption.gd` | Adoption: with no children, companions are offered as heirs; the one chosen leaves the company, and saves keep where they came from |
+| `test_game_family_tree.gd` | The family tree: one entry per generation, folded heirs counted, damaged names dropped, and the chronicle's Family Tree tab |
+| `test_game_house_ui.gd` | The House panel on the life screen: Build raises a track and takes the gold, and a row that cannot be built says why |
+| `test_game_mates.gd` | Mates: opposite-sex candidates, looking at them changes no dice, the one chosen becomes the spouse, and the random spouse without a choice |
+| `test_game_mates_ui.gd` | The mate picker on the life screen: Found family opens the candidates and a pick marries that one |
+| `test_game_reactions.gd` | Standing covers: setting and cycling a cover, the health threshold, once a round, a fallen coverer, and an unused cover leaving the fight unchanged |
+| `test_game_reaction_prompt.gd` | Reactions that ask first: the round stops on "Cover this ally?", an answer plays it on, letting it land is the old round exactly, and the battle screen's question |
+| `test_game_stats.gd` | The dynasty statistics: heirs, causes of death, the greatest heir, gold per kept heir and per Age, folding, and the chronicle's Statistics tab |
 | `test_round_determinism.gd` | Seeded battles around party rounds match the golden fixture (see below) |
 
 Each suite's header comment says what it proves and gives its own run command.

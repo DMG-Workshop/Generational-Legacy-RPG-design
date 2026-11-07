@@ -9,6 +9,9 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const SpriteArt := preload("res://ui/play/sprite_art.gd")
+const SceneryArt := preload("res://ui/play/scenery_art.gd")
+const FigurePose := preload("res://ui/play/figure_pose.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
@@ -17,8 +20,10 @@ var app: Node
 var d: GameDynasty
 var b: GameBattle
 var arena: Control
+var scenery: TextureRect = null   # the land the fight is in (SceneryArt), under everything in the arena
 var field: Control             # draws the area being aimed, under the figures
 var hero_node: Control
+var hero_pose: Control = null   # the hero's FigurePose, when drawn from a sprite
 var hero_hp: ProgressBar
 var hero_mp: ProgressBar
 var hero_label: Label
@@ -95,6 +100,8 @@ func _ready() -> void:
 		_place_strip()
 	if not auto:
 		cmd_round = d.battle_round()
+		if cmd_round != null:
+			cmd_round.ask_reactions = true   # this screen answers "Cover this ally?" mid-round
 
 	var ap := Kit.panel(Color("#191726"))
 	ap.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -103,6 +110,7 @@ func _ready() -> void:
 	arena = Control.new()
 	arena.clip_contents = true
 	ap.add_child(arena)
+	_build_scenery()
 	field = Control.new()
 	field.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	field.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -249,17 +257,26 @@ func _build_actors() -> void:
 	var cls := d.heir.cls()
 	hero_node = Control.new()
 	hero_node.size = Vector2(124, 220)
+	var hero_tex := SpriteArt.figure(d.heir)
 	var hero_body := ColorRect.new()
-	hero_body.color = Color(cls["color"])
-	hero_body.size = Vector2(80, 110)
-	hero_body.position = Vector2(22, 34)
 	hero_body.gui_input.connect(func(ev: InputEvent): _on_party_input(-1, ev))
 	hero_node.add_child(hero_body)
-	var head := ColorRect.new()
-	head.color = Color("#f0d9b5")
-	head.size = Vector2(40, 40)
-	head.position = Vector2(42, 0)
-	hero_node.add_child(head)
+	if hero_tex != null:   # the figure from data/art; the clear body under it takes the taps and the flashes
+		hero_body.color = Color(0, 0, 0, 0)
+		hero_body.size = Vector2(124, 144)
+		hero_pose = _pose(hero_tex, hero_body.size, 1.0, 0)
+		hero_body.add_child(hero_pose)
+	else:   # no figure for this class: the old block
+		hero_body.color = Color(cls["color"])
+		hero_body.size = Vector2(80, 110)
+		hero_body.position = Vector2(22, 34)
+		var head := ColorRect.new()
+		head.color = Color("#f0d9b5")
+		head.size = Vector2(40, 40)
+		head.position = Vector2(42, 0)
+		hero_node.add_child(head)
+	if scenery != null:
+		hero_node.add_child(_plate(Vector2(-3, 144), Vector2(130, 57)))
 	hero_label = Kit.label("%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)], 14)
 	hero_label.position = Vector2(0, 146)
 	hero_label.size = Vector2(124, 20)
@@ -303,21 +320,29 @@ func _build_actors() -> void:
 		sel.visible = false
 		sel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		root.add_child(sel)
+		var tex := SpriteArt.creature(str(e.get("id", "")))
 		var body := ColorRect.new()
-		body.color = Color(e["color"])
+		body.color = Color(e["color"]) if tex == null else Color(0, 0, 0, 0)
 		body.size = Vector2(w, h)
 		body.mouse_filter = Control.MOUSE_FILTER_STOP
 		var idx := i
 		body.gui_input.connect(func(ev: InputEvent): _on_foe_input(idx, ev))
 		TouchHint.on_hover(body, func(): _on_foe_hover(idx, true), func(): _on_foe_hover(idx, false))
 		root.add_child(body)
-		for ex in [0.28, 0.62]:
-			var eye := ColorRect.new()
-			eye.color = Color("#101010")
-			eye.size = Vector2(w * 0.1, w * 0.1)
-			eye.position = Vector2(w * ex, h * 0.22)
-			eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			body.add_child(eye)
+		var pose: Control = null
+		if tex != null:   # the creature from data/art, standing on the bottom of its box
+			pose = _pose(tex, Vector2(w, h), -1.0, i + 1)
+			body.add_child(pose)
+			if int(e["hp"]) <= 0:
+				pose.fall(true)
+		else:   # no sprite: the old block with two eyes
+			for ex in [0.28, 0.62]:
+				var eye := ColorRect.new()
+				eye.color = Color("#101010")
+				eye.size = Vector2(w * 0.1, w * 0.1)
+				eye.position = Vector2(w * ex, h * 0.22)
+				eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				body.add_child(eye)
 		var lv_text := "Lv %s" % GameText.num(int(e.get("level", 1)))
 		# Late-generation levels are long: the text shrinks to stay inside the body. It is inked
 		# against the body's colour, no outline: an outline smears once a full arena is shrunk to fit.
@@ -325,12 +350,17 @@ func _build_actors() -> void:
 		var font := get_theme_default_font()
 		while lv_size > 8 and font.get_string_size(lv_text, HORIZONTAL_ALIGNMENT_LEFT, -1, lv_size).x > w - 8.0:
 			lv_size -= 1
-		var pale := Color(e["color"]).get_luminance() > 0.45
+		var pale := tex == null and Color(e["color"]).get_luminance() > 0.45
 		var elite := str(e["name"]).begins_with("Elite")
 		var lv := Kit.label(lv_text, lv_size, (Kit.ACCENT.darkened(0.6) if elite else Kit.BG) if pale else (Kit.ACCENT if elite else Kit.TEXT))
+		if tex != null:   # over a sprite the level sits on a dark tag, so it reads on any colour
+			lv.add_theme_stylebox_override("normal", _level_tag())
 		lv.position = Vector2(4, h - 22)
 		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(lv)
+		if scenery != null:
+			var name_w := get_theme_default_font().get_string_size(str(e["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+			root.add_child(_plate(Vector2(-3, h + 1), Vector2(maxf(w, minf(name_w, w + 64.0)) + 6.0, 32)))
 		var lbl := Kit.label(e["name"], 13, GamePlague.infected_color() if e.has("infected") else Kit.TEXT)
 		lbl.position = Vector2(0, h + 3)
 		lbl.size = Vector2(w + 64, 18)
@@ -346,31 +376,43 @@ func _build_actors() -> void:
 		chips.z_index = 1
 		root.add_child(chips)
 		arena.add_child(root)
-		enemy_nodes.append({"root": root, "body": body, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h})
+		enemy_nodes.append({"root": root, "body": body, "pose": pose, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h})
 
 
 ## A companion: smaller figure in class colours with a race-tinted head, name, level and HP.
 func _build_ally(a: GameHeir) -> Dictionary:
 	var root := Control.new()
 	root.size = Vector2(110, 172)
+	var tex := SpriteArt.figure(a)
+	var pose: Control = null
 	var body := ColorRect.new()
-	body.color = Color(a.cls()["color"])
-	body.size = Vector2(58, 72)
-	body.position = Vector2(26, 28)
 	var by := ally_nodes.size()   # this companion's index: the figures are built in party order
 	body.gui_input.connect(func(ev: InputEvent): _on_party_input(by, ev))
 	root.add_child(body)
-	var head := ColorRect.new()
-	head.color = Color(a.race().get("color", "#f0d9b5"))
-	head.size = Vector2(30, 30)
-	head.position = Vector2(40, 0)
-	root.add_child(head)
+	if tex != null:   # the figure from data/art; the clear body under it takes the taps, flashes and the KO dimming
+		body.color = Color(0, 0, 0, 0)
+		body.size = Vector2(110, 100)
+		pose = _pose(tex, body.size, 1.0, ally_nodes.size() + 5)
+		body.add_child(pose)
+		if a.hp <= 0:
+			pose.fall(true)
+	else:   # no figure for this class: the old block with a race-tinted head
+		body.color = Color(a.cls()["color"])
+		body.size = Vector2(58, 72)
+		body.position = Vector2(26, 28)
+		var head := ColorRect.new()
+		head.color = Color(a.race().get("color", "#f0d9b5"))
+		head.size = Vector2(30, 30)
+		head.position = Vector2(40, 0)
+		root.add_child(head)
 	var ko := Kit.label("KO", 22, Kit.bad())
 	ko.add_theme_color_override("font_outline_color", Color.BLACK)
 	ko.add_theme_constant_override("outline_size", 6)
 	ko.position = Vector2(38, 46)
 	ko.visible = a.hp <= 0
 	root.add_child(ko)
+	if scenery != null:
+		root.add_child(_plate(Vector2(-3, 101), Vector2(116, 54)))
 	var nm := Kit.label(a.name, 13)
 	nm.position = Vector2(0, 103)
 	nm.size = Vector2(110, 18)
@@ -391,7 +433,58 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	if a.hp <= 0:
 		body.modulate = Color(0.35, 0.35, 0.4)
 	arena.add_child(root)
-	return {"root": root, "body": body, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
+	return {"root": root, "body": body, "pose": pose, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
+
+
+## The land the fight is in (SceneryArt: the place's scene in its weather and season), filling the arena
+## behind everything in it (cropped to the arena's shape in _layout), under a veil of the panel's colour so
+## the fighters and their names stand out; a thicker veil with high contrast on. Nothing is drawn for a
+## place without a scene.
+func _build_scenery() -> void:
+	var tex := SceneryArt.for_world(d.world)
+	if tex == null:
+		return
+	var shown := AtlasTexture.new()
+	shown.atlas = tex
+	shown.filter_clip = true
+	shown.region = Rect2(Vector2.ZERO, Vector2(tex.get_width(), tex.get_height()))
+	scenery = TextureRect.new()
+	scenery.texture = shown
+	scenery.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	scenery.stretch_mode = TextureRect.STRETCH_SCALE
+	scenery.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	scenery.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scenery.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	arena.add_child(scenery)
+	var veil := ColorRect.new()
+	veil.color = Color(Kit.BG, SceneryArt.veil(UiSettings.high_contrast()))
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	arena.add_child(veil)
+
+
+## The dark plate under a figure's name and bars when scenery is drawn, so they read over any ground.
+func _plate(at: Vector2, size: Vector2) -> Panel:
+	var p := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Kit.BG, 0.72)
+	sb.set_corner_radius_all(4)
+	p.add_theme_stylebox_override("panel", sb)
+	p.position = at
+	p.size = size
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.set_meta("plate", true)
+	return p
+
+
+## The dark tag a foe's level sits on when the foe is drawn from a sprite.
+func _level_tag() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Kit.BG, 0.78)
+	sb.set_corner_radius_all(3)
+	sb.content_margin_left = 3
+	sb.content_margin_right = 3
+	return sb
 
 
 ## A bar exactly `size` tall (Kit bars pad to the stylebox margins).
@@ -446,6 +539,9 @@ func _layout() -> void:
 		ally_nodes[i]["root"].position = _spot(ally_nodes[i]["root"], _px(b.unit_point(i)), 64.0)
 	for i in enemy_nodes.size():
 		enemy_nodes[i]["root"].position = _foe_spot(i)
+	if scenery != null:   # the scene stretched over the arena, cropped to its shape so nothing sticks out
+		var land := (scenery.texture as AtlasTexture).atlas
+		(scenery.texture as AtlasTexture).region = SceneryArt.crop(Vector2(land.get_width(), land.get_height()), arena.size)
 	field.queue_redraw()
 
 
@@ -657,7 +753,7 @@ func _ability_keys(by: int, cmd: Dictionary) -> Array:
 ## Queues the member's command. A refused one says why and nothing changes; once the round is
 ## ready and only one member took orders, it plays at once (a solo hunt, as ever).
 func _submit(by: int, cmd: Dictionary) -> void:
-	if busy or cmd_round == null:
+	if busy or cmd_round == null or cmd_round.asking():   # a question is open: the round is mid-play
 		return
 	_close_spells()
 	_close_skills()
@@ -671,6 +767,41 @@ func _submit(by: int, cmd: Dictionary) -> void:
 		_commit()
 	else:
 		_build_commands()
+
+
+## A foe is about to strike a hurt member and the round waits: one button for each member on manual
+## control who can step in front, and one to let the blow land. Auto waits until it is answered.
+func _build_reaction() -> void:
+	var r := cmd_round.reaction_view()
+	auto_button.disabled = true
+	aiming = {}
+	_show_area({}, -1)
+	var tag := "%s (%s/%s)" % [r["for_name"], GameText.num(int(r["hp"])), GameText.num(int(r["max_hp"]))]
+	hint.text = "Cover %s?" % r["for_name"]
+	for text in ["%s swings at %s. Who steps in?" % [r["foe_name"], tag], "%s is about to be hit. Cover?" % tag]:
+		if _fits(text, 14, cmd_w - 40.0):
+			hint.text = text
+			break
+	var col := VBoxContainer.new()
+	for k in (r["by"] as Array).size():
+		var by := int(r["by"][k])
+		var name: String = r["names"][k]
+		var btn := Kit.button("%s covers" % name, func(): _answer(by))
+		btn.set_meta("compact", name)
+		btn.tooltip_text = "%s steps in front of the blow aimed at %s and takes it instead." % [name, r["for_name"]]
+		col.add_child(btn)
+	var no := Kit.button("Let it land", func(): _answer(-2))
+	no.set_meta("compact", "No")
+	no.tooltip_text = "Nobody steps in; you are not asked about %s again this round." % r["for_name"]
+	col.add_child(no)
+	_lay_out_commands([col])
+
+
+## The answer to the question: the blow lands on whoever was chosen, and the round plays on from there.
+func _answer(by: int) -> void:
+	if busy or cmd_round == null or not cmd_round.asking() or _guarded():
+		return
+	_do(func(): cmd_round.answer(by), b.events.size())
 
 
 ## Fight! (or Flee!), or the only command a solo hunt needs: the round plays out.
@@ -727,7 +858,7 @@ func _set_member_auto(by: int) -> void:
 ## member (a queued one to change their mind, an Auto one to take over). Held and fallen members
 ## cannot be asked.
 func _on_chip(by: int) -> void:
-	if busy or cmd_round == null or auto or result_shown:
+	if busy or cmd_round == null or auto or result_shown or cmd_round.asking():
 		return
 	if str(aiming.get("aim", "")) == "ally":
 		_confirm_ally(by)
@@ -773,12 +904,16 @@ func _build_commands() -> void:
 	Kit.clear(command_box)
 	aim_info = null
 	_arm_guard()
+	auto_button.disabled = false
 	if auto and not b.is_over():
 		_build_auto_commands()
 		return
 	if cmd_round == null or b.is_over():
 		return
 	_sync_strip()
+	if cmd_round.asking():
+		_build_reaction()
+		return
 	if not aiming.is_empty():
 		_build_aim_commands()
 		return
@@ -1076,6 +1211,8 @@ func _column_need(col: Node) -> float:
 ## Switches auto-battle on or off, for this fight and the hunts after it. Off hands the next
 ## command back to the player at once; on lets the heir fight from their next turn.
 func set_auto(on: bool) -> void:
+	if cmd_round != null and cmd_round.asking():   # a question is open: it is answered first
+		return
 	auto = on
 	d.auto_battle = on
 	_show_auto()
@@ -1084,6 +1221,7 @@ func set_auto(on: bool) -> void:
 	if not on:   # taking over: a fresh round, nothing queued
 		cmd_round = d.battle_round()
 		if cmd_round != null:
+			cmd_round.ask_reactions = true
 			cmd_round.begin_round()
 	_sync_strip()
 	if busy:
@@ -1624,7 +1762,9 @@ func _close_feats() -> void:
 
 # ---------------------------------------------------------------- playing a turn
 
-func _do(action: Callable) -> void:
+## Plays `action` and shows what it did: the new log lines and the events from `from_event` on (an answer
+## to a question picks the round up where the shown events stopped).
+func _do(action: Callable, from_event: int = 0) -> void:
 	if busy or b.is_over():
 		return
 	busy = true
@@ -1640,7 +1780,7 @@ func _do(action: Callable) -> void:
 	action.call()
 	for i in range(log_start, b.log.size()):
 		_say(b.log[i])
-	await _play_events(b.events)
+	await _play_events(b.events.slice(from_event))
 	busy = false
 	target = b.first_target() if target < 0 or target >= b.enemies.size() or b.enemies[target]["hp"] <= 0 else target
 	_update_view()
@@ -1697,6 +1837,7 @@ func _play_one(ev: Dictionary) -> void:
 		"cast":
 			_lunge(_unit_node(by), 22.0)
 			var el := str(ev.get("element", ""))
+			_move(_party_pose(by), "cast", Color(GameCombat.element_color(el)) if el != "" else Kit.ACCENT)
 			_float_text(_unit_node(by).position + Vector2(0, -30), str(ev["name"]), Color(GameCombat.element_color(el)) if el != "" else Kit.ACCENT, 20)
 			for t in ev.get("targets", []):
 				if ev.get("aoe", false):
@@ -1705,6 +1846,8 @@ func _play_one(ev: Dictionary) -> void:
 			if ev["side"] == "enemy":
 				if int(ev.get("cast", 0)) == 0:
 					_lunge(_unit_node(by), 22.0)
+					_move(_party_pose(by), "attack")
+				_move(_foe_pose(ev["index"]), "hurt")
 				var en: Dictionary = enemy_nodes[ev["index"]]
 				var txt := GameText.num(int(ev["amount"])) + ("!" if ev["crit"] else "")
 				if ev.get("shatter", false):
@@ -1714,12 +1857,16 @@ func _play_one(ev: Dictionary) -> void:
 				en["hp"].value = maxf(float(b.enemies[ev["index"]]["hp"]), en["hp"].value - float(ev["amount"]))
 			elif ev["side"] == "ally":
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+				_move(_foe_pose(ev["index"]), "attack")
+				_move(_party_pose(int(ev["ally"])), "hurt")
 				var an: Dictionary = ally_nodes[ev["ally"]]
 				_float_text(an["root"].position + Vector2(34, -6), _hurt_text(ev), Kit.bad())
 				_flash(an["body"])
 				_step_ally_hp(ev["ally"], -int(ev["amount"]))
 			else:
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+				_move(_foe_pose(ev["index"]), "attack")
+				_move(hero_pose, "hurt")
 				_float_text(hero_node.position + Vector2(40, 0), _hurt_text(ev), Kit.bad())
 				_flash(hero_node.get_child(0))
 				_step_heir_hp(-int(ev["amount"]))
@@ -1762,10 +1909,14 @@ func _play_one(ev: Dictionary) -> void:
 			if ev["side"] == "enemy":   # a foe slipped the party's blow
 				if int(ev.get("cast", 0)) == 0:
 					_lunge(_unit_node(by), 22.0)
+					_move(_party_pose(by), "attack")
+				_move(_foe_pose(ev["index"]), "dodge")
 				var en4: Dictionary = enemy_nodes[ev["index"]]
 				_float_text(en4["root"].position + Vector2(en4["w"] * 0.2, 6), "dodge", Kit.dim())
 				return
 			_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+			_move(_foe_pose(ev["index"]), "attack")
+			_move(_party_pose(int(ev["ally"]) if ev["side"] == "ally" else -1), "dodge")
 			if ev["side"] == "ally":
 				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.dim())
 			else:
@@ -1778,12 +1929,15 @@ func _play_one(ev: Dictionary) -> void:
 		"death":
 			var en2: Dictionary = enemy_nodes[ev["index"]]
 			en2["mark"].visible = false
+			if en2["pose"] != null:
+				en2["pose"].fall()
 			var t := create_tween()
 			t.tween_property(en2["root"], "modulate:a", 0.0, UiSettings.motion_time(0.4))
 		"advance":   # the back rank steps up into the fallen front rank's place
 			for k in ev["indices"]:
 				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), UiSettings.motion_time(0.3))
 		"defend":
+			_move(_party_pose(by), "guard")
 			_float_text(_unit_node(by).position + Vector2(30, 0), "guard", Kit.MP_BLUE)
 		"cover":   # a standing cover steps in front of a hurt member
 			_float_text(_unit_node(int(ev["by"])).position + Vector2(30, 0), "covers", Kit.MP_BLUE)
@@ -1853,6 +2007,8 @@ func _step_heir_hp(delta: int) -> void:
 	_heir_info(int(hero_hp.value))
 	if strip != null:
 		strip.set_hp(-1, hero_hp.value)
+	if hero_hp.value <= 0.0 and hero_pose != null:   # the heir is down: the fight is lost
+		hero_pose.fall()
 
 
 func _heir_info(hp: int) -> void:
@@ -1883,9 +2039,36 @@ func _knock_out(i: int) -> void:
 		return
 	an["down"] = true
 	an["ko"].visible = true
+	if an["pose"] != null:
+		an["pose"].fall()
 	_float_text(an["root"].position + Vector2(10, -6), "knocked out", Kit.bad())
 	var t := create_tween()
 	t.tween_property(an["body"], "modulate", Color(0.35, 0.35, 0.4), UiSettings.motion_time(0.4))
+
+
+## A figure drawn from a sprite, in a FigurePose holder that breathes and plays the moves. `n` spreads the
+## figures' breathing beats so they do not bob together.
+func _pose(tex: Texture2D, box: Vector2, faces: float, n: int) -> Control:
+	var p: Control = FigurePose.new()
+	p.setup(tex, box, faces, 0.55 + 0.07 * float(n % 5))
+	return p
+
+
+## The pose of the hero (-1) or a companion; null for a figure still drawn as a block.
+func _party_pose(by: int) -> Control:
+	if by < 0:
+		return hero_pose
+	return ally_nodes[by]["pose"] if by < ally_nodes.size() else null
+
+
+func _foe_pose(i: int) -> Control:
+	return enemy_nodes[i]["pose"] if i >= 0 and i < enemy_nodes.size() else null
+
+
+## Plays a move on a figure's pose, if it has one.
+func _move(pose: Control, move: String, tint: Color = Color(0, 0, 0, 0)) -> void:
+	if pose != null:
+		pose.play(move, tint)
 
 
 ## A short step towards the other side and back, so it is clear who acted.
