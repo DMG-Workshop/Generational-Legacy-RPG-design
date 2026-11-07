@@ -13,6 +13,7 @@ const FeatsPanel := preload("res://ui/play/feats_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const MatePanel := preload("res://ui/play/mate_panel.gd")
 const HousePanel := preload("res://ui/play/house_panel.gd")
+const LooksPanel := preload("res://ui/play/looks_panel.gd")
 const LootPanel := preload("res://ui/play/loot_panel.gd")
 const Cooldown := preload("res://ui/play/autopilot_cooldown.gd")
 const TutorialTip := preload("res://ui/play/tutorial_tip.gd")
@@ -317,6 +318,8 @@ func _build_actions() -> void:
 	fam.tooltip_text = "Requires age %d+ and no family yet. Children inherit traits from both parents." % int(h.family_min_age())
 	var house := _act("House", func(): _open(HousePanel))
 	house.tooltip_text = "Build the House Hall (companion places) and the Training Yard (training XP) with the heir's gold."
+	var looks := _act("Looks", func(): _open(LooksPanel))
+	looks.tooltip_text = "Choose the shirt colours %s and the companions wear in battle." % h.name
 	var ret := _act("Retire", func(): _do(func(): return d.retire()))
 	ret.disabled = not d.can_retire()
 	_auto_button("life", "Auto: this life", "Plays a whole life on autopilot.", 1)

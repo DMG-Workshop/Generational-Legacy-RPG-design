@@ -367,6 +367,28 @@ func can_retire() -> bool:
 	return heir.family_founded or heir.age >= heir.midlife_age()
 
 
+## Dresses the heir (by -1) or a companion (their place in the party) in a shirt colour from
+## data/art/shirts.json; "" gives back the one picked for them. Only the look changes: nothing is rolled.
+func set_shirt(by: int, shirt_id: String) -> void:
+	if by < 0:
+		heir.shirt = shirt_id
+	elif by < party.members.size():
+		if shirt_id == "":
+			party.members[by].erase("shirt")
+		else:
+			party.members[by]["shirt"] = shirt_id
+
+
+## The shirt colour chosen for the heir (by -1) or a companion; "" when none is.
+func shirt_of(by: int) -> String:
+	if by < 0:
+		return heir.shirt
+	if by < party.members.size():
+		var v = party.members[by].get("shirt", "")
+		return str(v) if typeof(v) == TYPE_STRING else ""
+	return ""
+
+
 func buy_potion() -> String:
 	var price := potion_price()
 	if heir.gold < price:
