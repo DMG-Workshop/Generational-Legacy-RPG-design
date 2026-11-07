@@ -137,7 +137,9 @@ func _ready() -> void:
 	command_box.add_theme_constant_override("separation", 8)
 	cv.add_child(command_box)
 	_fit_bottom()
+	SpriteArt.begin_batch()   # the whole party and every foe go to the graphics card together
 	_build_actors()
+	SpriteArt.end_batch()
 	_build_commands()
 	target = b.first_target()
 	_update_view()

@@ -90,6 +90,9 @@ glowing eyes, lightning yellow sparks, earth stone browns, and nature greens.
 
 ## Style
 
+The full style guide, with the palette and the checked rules, is `docs/ART_STYLE.md`; its numbers are in
+`data/art/style.json`. In short:
+
 - Clean pixel art like a 16-bit JRPG battle sprite, with a 1-pixel outline in `#1b1626`.
 - Light comes from the top left: 2 or 3 shades per material, and about 12 colours at most.
 - No stray single pixels, dithering or anti-aliasing. The silhouette should read at a glance at 3x scale on
@@ -100,7 +103,12 @@ glowing eyes, lightning yellow sparks, earth stone browns, and nature greens.
 
 `SpriteArt` scales each grid up by whole pixels (`UPSCALE`, 4) before the screen fits it into its box. The
 screen then shrinks it smoothly, so every pixel stays the same size whatever the box. Each texture is made
-once and kept.
+once and kept, packed with the others into a few 1024 x 1024 atlas pages (`ui/play/texture_atlas.gd`, sized by
+`atlas` in `data/art/style.json`): what `SpriteArt` hands out is a region of a page, with clear padding round it so
+smooth scaling never picks up a neighbour. A screen that builds many figures at once brackets the building with
+`SpriteArt.begin_batch()` and `end_batch()`, so its pages go to the graphics card once (the battle screen does).
+A sprite too big for a page gets a texture of its own. The scenery, which is one large picture per place, is not
+in the atlas.
 
 The battle screen keeps a clear body under every sprite, which takes taps, holds and flashes as the old
 blocks did. A foe's level sits on a dark tag, so it reads over any sprite.
