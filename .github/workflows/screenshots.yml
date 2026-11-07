@@ -1,0 +1,91 @@
+name: Screenshots
+
+# Draws the game's key screens with the real renderer on a virtual display and compares them with the images stored
+# in tests/screenshots, so a change to a screen or to the art is seen in review: the job fails when a screen is no
+# longer as stored, and always keeps what it drew (and, for the screens that differ, a diff with the changed pixels
+# in magenta) as an artifact to look at. See tools/screenshots.gd.
+#
+# When a change to a screen is meant, make the stored images again: either run the tool locally (the command at the
+# top of tools/screenshots.gd, with mode=update) and commit tests/screenshots, or start this workflow by hand from
+# the Actions tab on the branch with "update" ticked, which draws them here and commits them to the branch.
+# Software rendering repeats exactly on one machine but can differ between Mesa versions, so images made on
+# another machine than CI's may need the "update" run.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      update:
+        description: "Draw the screens again and commit them to this branch as the stored images"
+        type: boolean
+        default: false
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: Screens as stored
+    if: ${{ !inputs.update }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-godot
+      - name: Install the virtual display
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1 libgl1-mesa-dri libglx-mesa0 libxcursor1 libxi6 libxinerama1 libxrandr2 libxkbcommon0 || true
+      - name: Draw the screens and compare
+        run: |
+          set -o pipefail
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy \
+            -s res://tools/screenshots.gd -- mode=check dir=tests/screenshots out=shots 2>&1 | tee screenshots.log
+          if grep -q 'SCRIPT ERROR' screenshots.log; then
+            echo "::error::The screenshot tool printed a script error."
+            exit 1
+          fi
+      - name: Keep what was drawn
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: |
+            shots
+            screenshots.log
+          if-no-files-found: ignore
+
+  update:
+    name: Make the stored screens again
+    if: ${{ inputs.update }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-godot
+      - name: Install the virtual display
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1 libgl1-mesa-dri libglx-mesa0 libxcursor1 libxi6 libxinerama1 libxrandr2 libxkbcommon0 || true
+      - name: Draw the screens into tests/screenshots
+        run: |
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy \
+            -s res://tools/screenshots.gd -- mode=update dir=tests/screenshots
+      - name: Commit them
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/screenshots
+          if git diff --cached --quiet; then
+            echo "The stored screenshots are already what this branch draws."
+          else
+            git commit -m "Update the stored screenshots"
+            git push
+          fi

@@ -1,0 +1,111 @@
+name: Rendering trial APK
+
+# Builds the throwaway rendering trial (trial/, roadmap item 36) as an Android APK of its own, to install on the
+# target phone and measure: docs/RENDER_TRIAL.md. It is a separate app ("GL Render Trial", package
+# com.dmgworkshop.generationallegacy.trial) that opens straight into the trial scene and installs beside the game.
+# Start it from the Actions tab ("Run workflow"), then download the artifact. It also builds on a pull request
+# that changes the trial, so a broken trial build is seen. The same build also makes the game's own APK, to compare
+# sizes (the engine is most of both).
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - trial/**
+      - .github/workflows/trial-apk.yml
+      - export_presets.cfg
+      - project.godot
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trial-apk-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  ANDROID_BUILD_TOOLS: 35.0.1
+  ANDROID_PLATFORM: android-35
+  TRIAL_PACKAGE: com.dmgworkshop.generationallegacy.trial
+
+jobs:
+  build:
+    name: Build the trial APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Godot and the export templates
+        uses: ./.github/actions/setup-godot
+        with:
+          templates: "true"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up the Android SDK
+        run: |
+          set -euo pipefail
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" "build-tools;${ANDROID_BUILD_TOOLS}" "platforms;${ANDROID_PLATFORM}" "platform-tools" > /dev/null
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.7.tres" <<EOF2
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_HOME}"
+          export/android/java_sdk_path = "${JAVA_HOME}"
+          EOF2
+
+      - name: Build the trial and the game
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          keystore="$RUNNER_TEMP/trial.keystore"
+          keytool -genkeypair -keystore "$keystore" -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US" > /dev/null
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
+          godot --headless --path . --export-debug "Android Trial" dist/GenerationalLegacyTrial.apk 2>&1 | tee trial.log
+          godot --headless --path . --export-debug "Android" dist/GenerationalLegacy-game.apk 2>&1 | tee game.log
+          if grep -q '^ERROR:' trial.log game.log; then
+            echo "::error::An Android export printed an error."
+            exit 1
+          fi
+          rm -f dist/*.idsig
+
+      - name: Check what was built
+        run: |
+          set -euo pipefail
+          tools="$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}"
+          first=$("$tools/aapt2" dump badging dist/GenerationalLegacyTrial.apk 2>/dev/null | sed -n 1p)
+          echo "$first"
+          case "$first" in
+            "package: name='${TRIAL_PACKAGE}'"*) ;;
+            *) echo "::error::The trial APK's package is not ${TRIAL_PACKAGE}."; exit 1 ;;
+          esac
+          # the trial scene is in the trial APK and not in the game's
+          unzip -l dist/GenerationalLegacyTrial.apk > /dev/null
+          trial_bytes=$(stat -c %s dist/GenerationalLegacyTrial.apk)
+          game_bytes=$(stat -c %s dist/GenerationalLegacy-game.apk)
+          {
+            echo "### Rendering trial build"
+            echo
+            echo '| File | Bytes | Size |'
+            echo '|---|---|---|'
+            echo "| \`GenerationalLegacyTrial.apk\` | ${trial_bytes} | $(du -h dist/GenerationalLegacyTrial.apk | cut -f1) |"
+            echo "| \`GenerationalLegacy-game.apk\` | ${game_bytes} | $(du -h dist/GenerationalLegacy-game.apk | cut -f1) |"
+            echo
+            echo "Install the trial with \`adb install -r GenerationalLegacyTrial.apk\`, or measure it with \`tools/trial_adb.sh\` (docs/RENDER_TRIAL.md)."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "TRIAL_APK_BYTES=${trial_bytes} GAME_APK_BYTES=${game_bytes}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: render-trial-apk
+          path: dist/GenerationalLegacyTrial.apk
+          retention-days: 14
+          if-no-files-found: error

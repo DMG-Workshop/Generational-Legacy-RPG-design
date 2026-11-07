@@ -10,6 +10,7 @@ config/name="Generational Legacy RPG"
 config/version="0.1.0"
 config/icon="res://icon.svg"
 run/main_scene="res://ui/main.tscn"
+run/main_scene.trial="res://trial/iso_trial.tscn"
 config/quit_on_go_back=false
 
 [display]
