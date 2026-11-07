@@ -100,6 +100,7 @@ func unit(d: GameDynasty, m: Dictionary) -> GameHeir:
 ## carrying their sickness.
 func _body(d: GameDynasty, m: Dictionary) -> GameHeir:
 	var u := build_unit(m["id"], int(m["level"]), int(m["gen"]), m["name"], decline(d, m["id"]))
+	u.shirt = str(m.get("shirt", "")) if typeof(m.get("shirt", "")) == TYPE_STRING else ""
 	if not m.has("diseases"):
 		m["diseases"] = []
 	u.diseases = m["diseases"]
@@ -674,6 +675,8 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 		}
 		if typeof(raw.get("auto")) == TYPE_BOOL:   # the player's Auto switch for this companion (see GameRound); absent or mistyped = never set
 			m["auto"] = raw["auto"]
+		if typeof(raw.get("shirt")) == TYPE_STRING and str(raw["shirt"]) != "":   # the shirt chosen in Looks; absent = the one picked for them
+			m["shirt"] = raw["shirt"]
 		p.members.append(m)
 	var h = v.get("history", {})
 	if typeof(h) != TYPE_DICTIONARY:

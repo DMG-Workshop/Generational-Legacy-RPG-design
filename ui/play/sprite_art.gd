@@ -1,6 +1,6 @@
 ## Battle sprites: pixel art kept as text grids in data/art/ (one character per pixel, "." clear) and turned
 ## into textures the first time they are asked for. A hero or companion is a class figure (24x40, facing
-## right) with the race's skin and hair in its S/s/H/h pixels, the class colour in its C/c pixels, and the
+## right) with the race's skin and hair in its S/s/H/h pixels, its shirt colour in its C/c pixels, and the
 ## race's own layers drawn under and over it. Creatures face left. The grids are scaled up by whole pixels
 ## (UPSCALE) before the screen shrinks them to fit, so every pixel stays the same size. Rendering only:
 ## nothing here touches the game's state or its dice.
@@ -9,6 +9,7 @@ extends RefCounted
 const CLASSES := "res://data/art/classes.json"
 const RACES := "res://data/art/races.json"
 const CREATURES := "res://data/art/creatures.json"
+const SHIRTS := "res://data/art/shirts.json"
 const FIGURE := Vector2i(24, 40)   # every class figure and race layer
 const UPSCALE := 4
 const RESERVED := "SsHhCc"
@@ -16,6 +17,7 @@ const RESERVED := "SsHhCc"
 static var _classes: Dictionary = {}
 static var _races: Dictionary = {}
 static var _creatures: Dictionary = {}
+static var _shirts: Array = []
 static var _loaded := false
 static var _cache: Dictionary = {}   # key -> Texture2D
 
@@ -27,6 +29,10 @@ static func _load() -> void:
 	_classes = _read(CLASSES).get("sprites", {})
 	_races = _read(RACES).get("races", {})
 	_creatures = _read(CREATURES).get("sprites", {})
+	_shirts = []
+	for s in _read(SHIRTS).get("shirts", []):
+		if typeof(s) == TYPE_DICTIONARY and Color.html_is_valid(str(s.get("color", ""))) and str(s.get("id", "")) != "":
+			_shirts.append(s)
 
 
 static func _read(path: String) -> Dictionary:
@@ -42,6 +48,7 @@ static func reset() -> void:
 	_classes = {}
 	_races = {}
 	_creatures = {}
+	_shirts = []
 	_cache = {}
 
 
@@ -93,6 +100,44 @@ static func hero(race_id: String, class_id: String, class_color: Color) -> Textu
 			_blend(img, _paint({"size": [FIGURE.x, FIGURE.y], "palette": rp, "rows": r["over"]}, fill))
 		_cache[key] = _texture(img)
 	return _cache[key]
+
+
+## A hero's or companion's figure: their class figure in their race's colours, wearing their shirt. Null when
+## the class has no figure.
+static func figure(u: GameHeir) -> Texture2D:
+	return hero(u.race_id, u.class_id, shirt_color(u))
+
+
+## The shirts a figure can wear, as data/art/shirts.json lists them: [{id, name, color}].
+static func shirts() -> Array:
+	_load()
+	return _shirts
+
+
+## A figure's shirt colour: the one chosen for them, else one picked from who they are, never from the game's
+## dice, so the same person always wears the same shirt and two people seldom match. The class colour when
+## there are no shirts at all.
+static func shirt_color(u: GameHeir) -> Color:
+	_load()
+	if _shirts.is_empty():
+		return Color(str(u.cls().get("color", "#888888")))
+	return Color.html(str(_shirts[shirt_index(u)]["color"]))
+
+
+## The place in shirts() of the shirt a figure wears.
+static func shirt_index(u: GameHeir) -> int:
+	_load()
+	for i in _shirts.size():
+		if str(_shirts[i]["id"]) == u.shirt:
+			return i
+	return posmod(shirt_key(u).hash(), maxi(1, _shirts.size()))
+
+
+## Who a figure is, for picking their shirt: a companion by their id and name, anyone else by id and name.
+static func shirt_key(u: GameHeir) -> String:
+	if u.has_meta("companion"):
+		return "companion:%s:%s" % [str(u.get_meta("companion")), u.name]
+	return "heir:%d:%s" % [u.id, u.name]
 
 
 ## Skin and hair for a figure whose race has no entry: the human look of the reference figure.
@@ -175,6 +220,17 @@ static func validate() -> Array:
 		if size.size() != 2 or int(size[0]) < 1 or int(size[1]) < 1 or int(size[0]) > 64 or int(size[1]) > 64:
 			out.append("creature %s: size must be 1 to 64 a side" % id)
 		out.append_array(_grid_problems("creature " + id, s.get("rows", []), size, s.get("palette", {}), false))
+	var raw_shirts: Array = _read(SHIRTS).get("shirts", [])
+	var seen := {}
+	if raw_shirts.size() < 2:
+		out.append("shirts: at least two shirts are needed")
+	for s in raw_shirts:
+		if typeof(s) != TYPE_DICTIONARY or str(s.get("id", "")) == "" or str(s.get("name", "")) == "" or not Color.html_is_valid(str(s.get("color", ""))):
+			out.append("shirts: %s needs an id, a name and a colour" % str(s))
+		elif seen.has(str(s["id"])):
+			out.append("shirts: %s is listed twice" % s["id"])
+		else:
+			seen[str(s["id"])] = true
 	for id in _races:
 		var r: Dictionary = _races[id]
 		for k in ["skin", "skin_shade", "hair", "hair_shade"]:

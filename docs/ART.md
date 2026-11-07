@@ -14,6 +14,7 @@ The same sprites are meant for the later isometric pixel-art version of the game
 | `data/art/classes.json` | One figure per class: `{"sprites": {class_id: SPRITE}}` |
 | `data/art/races.json` | Each race's colours and layers: `{"races": {race_id: RACE}}` |
 | `data/art/creatures.json` | One sprite per creature id in `data/creatures/creatures.json`, bosses included |
+| `data/art/shirts.json` | The shirt colours a hero or companion can wear: `{"shirts": [{"id", "name", "color"}]}` |
 | `data/art/scenery.json` | The battle scenery: a scene per kind of land, what some places add, the weather, the seasons and props |
 
 `tests/test_game_art.gd` checks that the data is sound and that every creature, class and race has art, and
@@ -37,13 +38,20 @@ The last one draws a place in every weather and then in every season.
 - `rows` has exactly `h` strings of exactly `w` characters. `.` is clear. Any other character is a one-letter
   key of the sprite's own `palette`.
 - Reserved keys are filled in when the game draws the sprite and never go in a palette: `S` skin, `s` skin
-  shade, `H` hair, `h` hair shade (from the race), `C` class colour and `c` its shade (from the class's
-  `color` in `classes.json`). Only class figures and race layers use them.
+  shade, `H` hair, `h` hair shade (from the race), `C` shirt colour and `c` its shade (from the figure's
+  shirt). Only class figures and race layers use them.
 
 ## Heroes and companions
 
 A hero or companion is drawn in three layers: the race's `under` layer, the class figure, and the race's
-`over` layer. The race's colours fill the figure's `S`/`s`/`H`/`h` pixels, and the class colour fills `C`/`c`.
+`over` layer. The race's colours fill the figure's `S`/`s`/`H`/`h` pixels, and the figure's shirt fills `C`/`c`.
+
+Everyone wears a shirt from `shirts.json`. Until the player chooses one, the shirt is picked from who the
+figure is (an heir's id and name, a companion's id and name), never from the game's dice, so the same person
+always wears the same shirt. The Looks button on the life screen opens `ui/play/looks_panel.gd`, where the
+player chooses the heir's and each companion's shirt. `GameDynasty.set_shirt` keeps the choice as `shirt`
+on the heir or on the party member. It is saved only once something is chosen, so older saves and the golden
+digests are unchanged.
 
 - **Class figures** are exactly 24 x 40 and face right, towards the foes. Rows 0-3 are headroom for hats.
   Rows 4-16 are the shared head: every class keeps the same face pixels (skin, eye and nose at x 10-18,

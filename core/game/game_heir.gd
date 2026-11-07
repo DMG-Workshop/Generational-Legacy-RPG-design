@@ -34,6 +34,7 @@ var clean_streak: int = 0   # clean wins in a row (little HP lost); a costly win
 var kills: Dictionary = {}
 var parent_names: Array = []
 var companion_id: String = ""   # the party member this heir was adopted from (see GameDynasty._adoptees); "" otherwise
+var shirt: String = ""          # the shirt colour chosen for this figure (data/art/shirts.json); "" for the one picked for them
 var children: Array = []     # Array[GameHeir], born to this heir
 var spouse: GameHeir = null
 var heirloom_bonus: float = 0.0
@@ -264,7 +265,7 @@ func to_dict() -> Dictionary:
 	var kids: Array = []
 	for c in children:
 		kids.append(c.to_dict())
-	return {
+	var out := {
 		"id": id, "sex": sex, "name": name, "surname": surname, "class_id": class_id, "race_id": race_id, "gen": gen,
 		"age": age, "hazard_age": hazard_age, "lifespan": lifespan, "level": level, "xp": xp, "hp": hp, "mp": mp,
 		"gold": gold, "potions": potions, "traits": traits, "dormant": dormant,
@@ -278,6 +279,9 @@ func to_dict() -> Dictionary:
 		"feat_level": feat_level, "feat_news": feat_news, "downtime": downtime, "skill_tree": GameSkillTree.to_dict(self),
 		"spouse": spouse.to_dict() if spouse != null else null,
 	}
+	if shirt != "":   # only once chosen, so a save (and its golden digest) is unchanged until then
+		out["shirt"] = shirt
+	return out
 
 
 static func from_dict(d: Dictionary) -> GameHeir:
@@ -299,6 +303,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 		h.kills[k] = int(d["kills"][k])
 	h.parent_names = Array(d["parent_names"])
 	h.companion_id = str(d.get("companion_id", "")) if typeof(d.get("companion_id", "")) == TYPE_STRING else ""
+	h.shirt = str(d.get("shirt", "")) if typeof(d.get("shirt", "")) == TYPE_STRING else ""
 	h.heirloom_bonus = float(d["heirloom_bonus"])
 	h.equipment = d.get("equipment", {"weapon": "", "armor": "", "trinket": ""})
 	h.inventory = Array(d.get("inventory", []))
