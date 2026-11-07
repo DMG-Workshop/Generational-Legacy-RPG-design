@@ -11,6 +11,7 @@ const RACES := "res://data/art/races.json"
 const CREATURES := "res://data/art/creatures.json"
 const SHIRTS := "res://data/art/shirts.json"
 const GEAR := "res://data/art/gear.json"
+const STYLE := "res://data/art/style.json"
 const FIGURE := Vector2i(24, 40)   # every class figure and race layer
 const UPSCALE := 4
 const RESERVED := "SsHhCc"
@@ -20,8 +21,10 @@ static var _races: Dictionary = {}
 static var _creatures: Dictionary = {}
 static var _shirts: Array = []
 static var _gear: Dictionary = {}
+static var _style: Dictionary = {}
 static var _loaded := false
-static var _cache: Dictionary = {}   # key -> Texture2D
+static var _cache: Dictionary = {}   # key -> Texture2D (a region of an atlas page)
+static var _atlas: TextureAtlas = null
 
 
 static func _load() -> void:
@@ -32,6 +35,7 @@ static func _load() -> void:
 	_races = _read(RACES).get("races", {})
 	_creatures = _read(CREATURES).get("sprites", {})
 	_gear = _read(GEAR)
+	_style = _read(STYLE)
 	_shirts = []
 	for s in _read(SHIRTS).get("shirts", []):
 		if typeof(s) == TYPE_DICTIONARY and Color.html_is_valid(str(s.get("color", ""))) and str(s.get("id", "")) != "":
@@ -53,7 +57,9 @@ static func reset() -> void:
 	_creatures = {}
 	_shirts = []
 	_gear = {}
+	_style = {}
 	_cache = {}
+	_atlas = null
 
 
 static func has_creature(id: String) -> bool:
@@ -267,7 +273,26 @@ static func _blend(base: Image, top: Image) -> void:
 static func _texture(img: Image) -> Texture2D:
 	var big := img.duplicate() as Image
 	big.resize(img.get_width() * UPSCALE, img.get_height() * UPSCALE, Image.INTERPOLATE_NEAREST)
-	return ImageTexture.create_from_image(big)
+	return atlas().add(big)
+
+
+## The atlas the sprites' textures are packed into (page size and padding from data/art/style.json).
+static func atlas() -> TextureAtlas:
+	_load()
+	if _atlas == null:
+		var a: Dictionary = _style.get("atlas", {})
+		_atlas = TextureAtlas.new(int(a.get("page", 1024)), int(a.get("padding", 2)))
+	return _atlas
+
+
+## Hold the upload of new sprites until end_batch(): a screen that builds many figures at once calls these
+## around building them, so its sprites go to the graphics card together rather than one at a time.
+static func begin_batch() -> void:
+	atlas().begin_batch()
+
+
+static func end_batch() -> void:
+	atlas().end_batch()
 
 
 ## Where a sprite of `tex_size` sits inside a box: as large as fits, centred, standing on the box's bottom.
@@ -319,6 +344,7 @@ static func validate() -> Array:
 		else:
 			seen[str(s["id"])] = true
 	out.append_array(_gear_problems())
+	out.append_array(style_problems())
 	for id in _races:
 		var r: Dictionary = _races[id]
 		for k in ["skin", "skin_shade", "hair", "hair_shade"]:
@@ -402,3 +428,101 @@ static func _grid_problems(name: String, rows: Variant, size: Variant, palette: 
 			elif not (palette as Dictionary).has(ch):
 				out.append("%s: '%s' at %d,%d is not in the palette" % [name, ch, x, y])
 	return out
+
+
+# ---------------------------------------------------------------- the style (data/art/style.json)
+
+## The style numbers (data/art/style.json); {} when the file is missing.
+static func style() -> Dictionary:
+	_load()
+	return _style
+
+
+## Skin, hair and shirt colours a class figure is checked with: any colours will do, so the plain human ones.
+const CHECK_FILL := {"S": "#e8b98f", "s": "#c48d68", "H": "#5a3a24", "h": "#3e2718", "C": "#cc3333", "c": "#992222"}
+
+
+## Every class figure and creature held to the style numbers. One readable line each; [] when all hold.
+static func style_problems() -> Array:
+	_load()
+	var out: Array = []
+	if _style.is_empty():
+		return ["style: data/art/style.json is missing or unreadable"]
+	var fill := {}
+	for k in CHECK_FILL:
+		fill[k] = Color.html(CHECK_FILL[k])
+	for id in _classes:
+		out.append_array(check_sprite("class " + id, _paint(_classes[id], fill), "figure"))
+	var bosses := {}
+	for c in GameData.creatures:
+		bosses[str(c["id"])] = bool(c.get("boss", false))
+	for id in _creatures:
+		out.append_array(check_sprite("creature " + id, _paint(_creatures[id], {}), "boss" if bosses.get(id, false) else "creature"))
+	return out
+
+
+## One painted sprite held to the rules of its `kind` ("figure", "creature" or "boss"): its size, a silhouette
+## outlined in the outline colour, no stray single pixels, no more colours than the cap, clear margins where the
+## kind asks for them, and standing on the bottom rows.
+static func check_sprite(name: String, img: Image, kind: String) -> Array:
+	var out: Array = []
+	var rules: Dictionary = _style.get(kind, {})
+	if rules.is_empty():
+		return ["%s: the style has no rules for a %s" % [name, kind]]
+	var w := img.get_width()
+	var h := img.get_height()
+	if rules.has("size") and (w != int(rules["size"][0]) or h != int(rules["size"][1])):
+		out.append("%s: a %s must be %dx%d, this is %dx%d" % [name, kind, int(rules["size"][0]), int(rules["size"][1]), w, h])
+	if rules.has("max_size") and (w > int(rules["max_size"][0]) or h > int(rules["max_size"][1])):
+		out.append("%s: a %s is at most %dx%d, this is %dx%d" % [name, kind, int(rules["max_size"][0]), int(rules["max_size"][1]), w, h])
+	var outline := Color.html(str(_style.get("outline", "#1b1626")))
+	var colors := {}
+	var minx := w
+	var miny := h
+	var maxx := -1
+	var maxy := -1
+	var stray := 0
+	var edge := 0
+	var edge_outline := 0
+	for y in h:
+		for x in w:
+			var c := img.get_pixel(x, y)
+			if c.a <= 0.0:
+				continue
+			colors[c.to_html()] = true
+			minx = mini(minx, x)
+			miny = mini(miny, y)
+			maxx = maxi(maxx, x)
+			maxy = maxi(maxy, y)
+			var touching := false
+			for dy in [-1, 0, 1]:
+				for dx in [-1, 0, 1]:
+					if (dx != 0 or dy != 0) and _opaque(img, x + dx, y + dy):
+						touching = true
+			if not touching:
+				stray += 1
+			if not (_opaque(img, x + 1, y) and _opaque(img, x - 1, y) and _opaque(img, x, y + 1) and _opaque(img, x, y - 1)):
+				edge += 1
+				if c.is_equal_approx(outline):
+					edge_outline += 1
+	if maxx < 0:
+		return out + ["%s: nothing is drawn" % name]
+	var share := 100.0 * float(edge_outline) / float(maxi(1, edge))
+	if share < float(_style.get("outline_share_min", 90)):
+		out.append("%s: only %.0f%% of its edge is outlined in %s (at least %d%%)" % [name, share, outline.to_html(false), int(_style.get("outline_share_min", 90))])
+	if stray > int(_style.get("stray_pixels_max", 0)):
+		out.append("%s: %d stray single pixel%s" % [name, stray, "" if stray == 1 else "s"])
+	if colors.size() > int(_style.get("colors_max", 14)):
+		out.append("%s: %d colours, at most %d (aim for %d)" % [name, colors.size(), int(_style.get("colors_max", 14)), int(_style.get("colors_target", 12))])
+	for side in [["left", minx], ["top", miny], ["right", w - 1 - maxx]]:
+		var need := int(rules.get("margin_" + side[0], 0))
+		if int(side[1]) < need:
+			out.append("%s: it touches the %s edge, which needs %d clear pixel%s" % [name, side[0], need, "" if need == 1 else "s"])
+	var gap := h - 1 - maxy
+	if rules.has("bottom_gap_max") and gap > int(rules["bottom_gap_max"]):
+		out.append("%s: it floats %d rows above the ground, at most %d" % [name, gap, int(rules["bottom_gap_max"])])
+	return out
+
+
+static func _opaque(img: Image, x: int, y: int) -> bool:
+	return x >= 0 and y >= 0 and x < img.get_width() and y < img.get_height() and img.get_pixel(x, y).a > 0.0

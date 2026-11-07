@@ -1,0 +1,13 @@
+{
+	"note": "The art style as numbers (docs/ART_STYLE.md explains them). SpriteArt.style_problems checks every class figure and creature against them; the atlas settings size the texture pages. Measured on the art as it stood when this file was added: outlines on 93 to 100 percent of silhouette edges, no stray pixels, 13 colours at most.",
+	"outline": "#1b1626",
+	"background": "#14121c",
+	"outline_share_min": 90,
+	"colors_target": 12,
+	"colors_max": 14,
+	"stray_pixels_max": 0,
+	"figure": {"size": [24, 40], "margin_left": 1, "margin_top": 1, "bottom_gap_max": 0},
+	"creature": {"max_size": [40, 40], "margin_left": 1, "margin_top": 1, "margin_right": 1, "bottom_gap_max": 3},
+	"boss": {"max_size": [64, 64], "margin_left": 1, "margin_top": 1, "margin_right": 1, "bottom_gap_max": 3},
+	"atlas": {"page": 1024, "padding": 2}
+}
