@@ -1,6 +1,6 @@
 ## One command that checks all the game's data: every JSON file under data/ parses, every system's own
 ## validator reports nothing (rounds, ages, feats, events, skills, diseases, combat, skill trees, sprites,
-## scenery), and the text catalog and its uses in the code agree.
+## scenery), the battle events list is sound, and the text catalog and its uses in the code agree.
 ## Run: godot --headless --path . -s res://tools/check_data.gd   (exit 1 and the problems, one per line, if any)
 ## tests/test_game_data.gd runs the same check, so CI runs it on every pull request.
 extends SceneTree
@@ -26,7 +26,7 @@ static func problems() -> Array:
 	for pair in [["rounds", GameRound.validate()], ["ages", GameAges.validate()], ["feats", GameFeats.validate()],
 			["events", GameEvents.validate()], ["skills", GameSkills.validate()], ["diseases", GameDisease.validate()],
 			["combat", GameCombat.validate()], ["skill trees", GameSkillTree.validate()], ["sprites", SpriteArt.validate()],
-			["scenery", SceneryArt.validate()], ["text", _text()]]:
+			["scenery", SceneryArt.validate()], ["battle events", _event_list()], ["text", _text()]]:
 		for p in pair[1]:
 			out.append("%s: %s" % [pair[0], p])
 	return out
@@ -45,6 +45,25 @@ static func _parse(out: Array) -> void:
 			var text := FileAccess.get_file_as_string(dir + f)
 			if text == "" or JSON.parse_string(text) == null:
 				out.append("json: %s%s does not parse" % [dir, f])
+
+
+static func _event_list() -> Array:
+	var out: Array = []
+	var spec := GameEventSpec.spec()
+	if spec.is_empty():
+		return ["the list is empty or unreadable"]
+	for t in spec:
+		var s: Dictionary = spec[t]
+		if str(s.get("about", "")) == "":
+			out.append("'%s' says nothing about itself" % t)
+		for group in ["fields", "optional"]:
+			for k in s.get(group, {}):
+				if str(s[group][k]) not in ["int", "number", "bool", "string", "ints"]:
+					out.append("'%s'.%s has the unknown kind '%s'" % [t, k, s[group][k]])
+		for k in s.get("optional", {}):
+			if s.get("fields", {}).has(k):
+				out.append("'%s'.%s is both required and optional" % [t, k])
+	return out
 
 
 ## The text catalog: every key the code asks for exists, every key is asked for, and a call gives exactly
