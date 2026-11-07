@@ -252,7 +252,7 @@ func _build_actors() -> void:
 	var cls := d.heir.cls()
 	hero_node = Control.new()
 	hero_node.size = Vector2(124, 220)
-	var hero_tex := SpriteArt.hero(d.heir.race_id, d.heir.class_id, Color(cls["color"]))
+	var hero_tex := SpriteArt.figure(d.heir)
 	var hero_body := ColorRect.new()
 	hero_body.gui_input.connect(func(ev: InputEvent): _on_party_input(-1, ev))
 	hero_node.add_child(hero_body)
@@ -368,7 +368,7 @@ func _build_actors() -> void:
 func _build_ally(a: GameHeir) -> Dictionary:
 	var root := Control.new()
 	root.size = Vector2(110, 172)
-	var tex := SpriteArt.hero(a.race_id, a.class_id, Color(a.cls()["color"]))
+	var tex := SpriteArt.figure(a)
 	var body := ColorRect.new()
 	var by := ally_nodes.size()   # this companion's index: the figures are built in party order
 	body.gui_input.connect(func(ev: InputEvent): _on_party_input(by, ev))

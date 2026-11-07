@@ -1,0 +1,20 @@
+{
+ "shirts": [
+  {"id": "crimson", "name": "Crimson", "color": "#b8403a"},
+  {"id": "rust", "name": "Rust", "color": "#b8653a"},
+  {"id": "ochre", "name": "Ochre", "color": "#c49a3c"},
+  {"id": "moss", "name": "Moss", "color": "#6e8a3c"},
+  {"id": "forest", "name": "Forest", "color": "#3f7a4a"},
+  {"id": "teal", "name": "Teal", "color": "#2f8a84"},
+  {"id": "sky", "name": "Sky", "color": "#4a86c0"},
+  {"id": "navy", "name": "Navy", "color": "#3a4f8a"},
+  {"id": "violet", "name": "Violet", "color": "#7048a0"},
+  {"id": "plum", "name": "Plum", "color": "#8a3a6e"},
+  {"id": "rose", "name": "Rose", "color": "#c06a88"},
+  {"id": "sand", "name": "Sand", "color": "#c8b088"},
+  {"id": "linen", "name": "Linen", "color": "#d8d2c4"},
+  {"id": "slate", "name": "Slate", "color": "#5f6a78"},
+  {"id": "charcoal", "name": "Charcoal", "color": "#3e3a44"},
+  {"id": "umber", "name": "Umber", "color": "#7a5236"}
+ ]
+}

@@ -1,7 +1,8 @@
 ## Battle sprites (ui/play/sprite_art.gd): the art in data/art/ is sound, every creature, class and race has
-## art, a figure takes its race's skin and hair and its class's colour, textures are kept and scaled by whole
+## art, a figure takes its race's skin and hair and its shirt colour, textures are kept and scaled by whole
 ## pixels, sprites stand on the bottom of their box, and the battle screen draws the hero, the companions and
-## the foes from them, keeping the old blocks for anything without art.
+## the foes from them, keeping the old blocks for anything without art. Shirts: everyone wears one picked
+## for them (always the same), the Looks panel chooses another, and a choice is saved.
 ## Run: godot --headless --path . -s res://tests/test_game_art.gd
 extends SceneTree
 
@@ -9,6 +10,7 @@ const GameApp := preload("res://ui/play/game_app.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
+const LooksPanel := preload("res://ui/play/looks_panel.gd")
 const TRIO := ["sister_oriel", "bren_cask", "tarsk_ember_eye"]
 const DIR := "user://test_art/"
 
@@ -35,7 +37,10 @@ func _run() -> void:
 	test_race_and_class_colours()
 	test_kept_and_whole_pixels()
 	test_fit_stands_on_the_bottom()
+	test_shirts()
+	test_shirts_saved()
 	await test_battle_screen()
+	await test_looks_panel()
 	for f in DirAccess.get_files_at(DIR):
 		DirAccess.remove_absolute(DIR + f)
 	print("art tests: %d checks, %d failures" % [checks, fails])
@@ -118,6 +123,67 @@ func test_fit_stands_on_the_bottom() -> void:
 	ok(wide.size == Vector2(100, 50) and wide.position == Vector2(0, 50), "a wide sprite stands on the bottom of its box: %s" % str(wide))
 
 
+# ---------------------------------------------------------------- shirts
+
+func _garment(tex: Texture2D) -> Color:
+	var rows: Array = _json("res://data/art/classes.json")["sprites"]["warrior"]["rows"]
+	var at := _free_pixel(rows, _json("res://data/art/races.json")["races"]["human"], "C")
+	return tex.get_image().get_pixel(at.x * SpriteArt.UPSCALE, at.y * SpriteArt.UPSCALE)
+
+
+func _person(id: int, name: String) -> GameHeir:
+	var u := GameHeir.new()
+	u.id = id
+	u.name = name
+	u.class_id = "warrior"
+	u.race_id = "human"
+	return u
+
+
+func test_shirts() -> void:
+	var list := SpriteArt.shirts()
+	ok(list.size() >= 8, "there are shirts to choose from: %d" % list.size())
+	var tess := _person(1, "Tess")
+	var first := SpriteArt.shirt_color(tess)
+	ok(SpriteArt.shirt_color(_person(1, "Tess")) == first, "the same person always wears the same shirt")
+	ok(_garment(SpriteArt.figure(tess)).is_equal_approx(first), "and the figure wears it")
+	var seen := {}
+	for i in 24:
+		seen[SpriteArt.shirt_color(_person(i + 1, "Heir %d" % i)).to_html()] = true
+	for c in GameData.companions:
+		var m := GameParty.build_unit(str(c["id"]), 1, 1)
+		seen[SpriteArt.shirt_color(m).to_html()] = true
+	ok(seen.size() >= 6, "people are picked different shirts: %d colours among them" % seen.size())
+	var pick: Dictionary = list[(SpriteArt.shirt_index(tess) + 3) % list.size()]
+	tess.shirt = str(pick["id"])
+	ok(SpriteArt.shirt_color(tess).is_equal_approx(Color(str(pick["color"]))), "a chosen shirt is worn")
+	ok(_garment(SpriteArt.figure(tess)).is_equal_approx(Color(str(pick["color"]))), "and the figure shows it")
+	tess.shirt = "no_such_shirt"
+	ok(SpriteArt.shirt_color(tess) == first, "a shirt no longer listed falls back to the one picked for them")
+
+
+func test_shirts_saved() -> void:
+	var d := GameDynasty.new_game(31, "Tess", "warrior", "faetouched", "human")
+	d.party.members.append({"id": "bren_cask", "name": GameParty.def("bren_cask")["name"], "hp": 1, "mp": 0, "level": 1, "gen": 1,
+		"due": 0.0, "battles": 0, "hired_gen": 1, "diseases": []})
+	ok(JSON.stringify(d.to_dict()).find("\"shirt\"") < 0, "nothing about shirts is saved until one is chosen, so old digests hold")
+	var red := str(SpriteArt.shirts()[0]["id"])
+	var blue := str(SpriteArt.shirts()[6]["id"])
+	d.set_shirt(-1, red)
+	d.set_shirt(0, blue)
+	ok(d.shirt_of(-1) == red and d.shirt_of(0) == blue, "the heir's and a companion's shirts are chosen")
+	ok(d.party.unit(d, d.party.members[0]).shirt == blue, "and the companion's figure wears theirs")
+	var back := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(d.to_dict())))
+	ok(back.shirt_of(-1) == red and back.shirt_of(0) == blue, "chosen shirts are kept through a save")
+	back.set_shirt(0, "")
+	ok(back.shirt_of(0) == "" and not back.party.members[0].has("shirt"), "Random gives the companion's picked shirt back")
+	var old: Dictionary = JSON.parse_string(JSON.stringify(d.to_dict()))
+	old["heir"].erase("shirt")
+	old["heir"]["shirt"] = 7   # a corrupt value
+	var loaded := GameDynasty.from_dict(old)
+	ok(loaded.heir.shirt == "", "a save with a broken shirt loads with the picked one")
+
+
 # ---------------------------------------------------------------- the battle screen
 
 func _frames(n: int = 3) -> void:
@@ -177,6 +243,72 @@ func test_battle_screen() -> void:
 		ok((body as ColorRect).color.a == 0.0, "and its body under the sprite is clear")
 	var odd: ColorRect = bv.enemy_nodes[2]["body"]
 	ok(not _has_sprite(odd) and _eyes(odd) == 2 and odd.color == Color(unknown["color"]), "a creature without art keeps the old block and its eyes")
+	ok(_sprite_tex(bv.hero_node.get_child(0)) == SpriteArt.figure(d.heir), "the hero wears their shirt")
+	ok(_sprite_tex(bv.ally_nodes[0]["body"]) == SpriteArt.figure(d.battle.allies[0]), "and so does a companion")
+
+
+func _sprite_tex(n: Node) -> Texture2D:
+	for c in n.get_children():
+		if c is TextureRect:
+			return (c as TextureRect).texture
+	return null
+
+
+func _find_all(n: Node, pred: Callable) -> Array:
+	var out: Array = []
+	for c in n.get_children():
+		if pred.call(c):
+			out.append(c)
+		out.append_array(_find_all(c, pred))
+	return out
+
+
+func _swatches(p: Node) -> Array:
+	return _find_all(p, func(n): return n is Button and n.has_meta("shirt"))
+
+
+func test_looks_panel() -> void:
+	app.new_game("Ann", "mage", "faetouched", 12, "elf")
+	var d: GameDynasty = app.dynasty
+	d.pending_event = {}
+	d.party.members.append({"id": "bren_cask", "name": GameParty.def("bren_cask")["name"], "hp": 1, "mp": 0, "level": 1, "gen": 1,
+		"due": 0.0, "battles": 0, "hired_gen": 1, "diseases": []})
+	app.show_state()
+	await _frames(3)
+	var looks := _find_all(app.current, func(n): return n is Button and n.text == "Looks")
+	ok(looks.size() == 1, "the life screen has a Looks button")
+	if looks.is_empty():
+		return
+	(looks[0] as Button).pressed.emit()
+	await _frames(2)
+	var panels := _find_all(app.current, func(n): return n.get_script() == LooksPanel)
+	ok(panels.size() == 1, "and it opens the Looks panel")
+	if panels.is_empty():
+		return
+	var p: Control = panels[0]
+	ok(_swatches(p).size() == SpriteArt.shirts().size(), "which offers every shirt")
+	var pick: Button = _swatches(p)[2]
+	var id := str(pick.get_meta("shirt"))
+	pick.pressed.emit()
+	await _frames(1)
+	ok(d.shirt_of(-1) == id, "a tap dresses the heir")
+	var bren := _find_all(p, func(n): return n is Button and n.text == d.party.members[0]["name"])
+	ok(bren.size() == 1, "each companion can be picked by name")
+	if bren.is_empty():
+		return
+	(bren[0] as Button).pressed.emit()
+	await _frames(1)
+	pick = _swatches(p)[5]
+	var id5 := str(pick.get_meta("shirt"))
+	pick.pressed.emit()
+	await _frames(1)
+	ok(p.who == 0 and d.shirt_of(0) == id5 and d.shirt_of(-1) == id, "and dressed on their own")
+	var rnd := _find_all(p, func(n): return n is Button and n.text == "Random")
+	(rnd[0] as Button).pressed.emit()
+	await _frames(1)
+	ok(d.shirt_of(0) == "" and d.shirt_of(-1) == id, "Random gives the companion the shirt picked for them")
+	p.queue_free()
+	await _frames(1)
 
 
 func _json(path: String) -> Dictionary:

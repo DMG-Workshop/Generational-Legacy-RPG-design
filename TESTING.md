@@ -41,7 +41,7 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | Suite | Covers |
 |-------|--------|
 | `test_game_aging.gd` | Companion ageing, old age, death and retirement, successors, saves and the autopilot |
-| `test_game_art.gd` | The battle sprites: the art data is sound, every creature, class and race has art, race and class colours, whole-pixel scaling, and the battle screen drawing from sprites with the old blocks as fallback |
+| `test_game_art.gd` | The battle sprites: the art data is sound, every creature, class and race has art, race and shirt colours, whole-pixel scaling, and the battle screen drawing from sprites with the old blocks as fallback. Shirts: everyone wears one picked for them, the Looks panel chooses another, and a choice is saved |
 | `test_game_balance_tool.gd` | The balance harness's logic: seed lists, the 95% range, the verdict against the band, and a small reproducible autopilot batch |
 | `test_game_bot.gd` | The autopilot's Hard hunt choice and the `bot_hard_hunt` rules in `balance.json` |
 | `test_game_combat.gd` | Battlefield geometry, the ability pipeline and spellbook, statuses, elements, packs, spell costs and saves |
