@@ -10,6 +10,8 @@ class_name GameSaves
 extends RefCounted
 
 const BACKUP_PREFIX := "GLBK1:"
+const FILE_EXT := "glsave"                      # a save file is the backup block in a text file with this ending
+const MAX_FILE_BYTES := 16 * 1024 * 1024        # the biggest save file read: the backup block is base64 of a gzip
 const MAX_BACKUP_BYTES := 8 * 1024 * 1024   # what a backup may unpack to; real saves are about 20 KB
 
 ## What a saved dynasty must hold, and of what kind, before from_dict may read it: it indexes these
@@ -166,6 +168,42 @@ static func export_text(slot: int) -> String:
 	if not shape_ok(parse(text)):
 		return ""
 	return BACKUP_PREFIX + Marshalls.raw_to_base64(text.to_utf8_buffer().compress(FileAccess.COMPRESSION_GZIP))
+
+
+## A name for a slot's save file, from its house and generation: "house-ashford-gen12.glsave" ("save.glsave" when the
+## slot holds nothing readable). Letters and digits only, so it is a safe name on every system.
+static func file_name(slot: int) -> String:
+	var info := peek(slot)
+	if not info["valid"]:
+		return "save." + FILE_EXT
+	var clean := RegEx.create_from_string("[^a-z0-9]+").sub(str(info["house"]).to_lower(), "-", true).trim_prefix("-").trim_suffix("-")
+	return "house-%s-gen%d.%s" % [clean if clean != "" else "unnamed", int(info["gen"]), FILE_EXT]
+
+
+## Writes a slot's backup block to `path` as a text file. Returns {ok, error}.
+static func export_file(slot: int, path: String) -> Dictionary:
+	var text := export_text(slot)
+	if text.is_empty():
+		return {"ok": false, "error": "Nothing in this slot can be saved to a file."}
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return {"ok": false, "error": "The file could not be written to %s." % path}
+	f.store_string(text)
+	f.close()
+	return {"ok": true, "error": ""}
+
+
+## Reads a save file, with the same checks and the same result as import_text, plus a reason when the file cannot
+## be opened or is too big to be a save.
+static func import_file(path: String) -> Dictionary:
+	if path == "" or not FileAccess.file_exists(path):
+		return {"ok": false, "error": "That file is not there.", "json": "", "house": "", "gen": 0}
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return {"ok": false, "error": "That file could not be opened.", "json": "", "house": "", "gen": 0}
+	if f.get_length() > MAX_FILE_BYTES:
+		return {"ok": false, "error": "That file is too big to be a save.", "json": "", "house": "", "gen": 0}
+	return import_text(f.get_as_text())
 
 
 ## Reads a backup block. Returns {ok, error, json, house, gen}: `json` is the save to write into a slot.
