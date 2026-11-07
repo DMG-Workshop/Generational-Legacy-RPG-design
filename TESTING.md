@@ -47,6 +47,7 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_scenery.gd` | The battle scenery: the data is sound, every place has a scene painted the same every time without the game's dice, weather and seasons change it outdoors only, whole-pixel scaling and the crop to the arena's shape, and the battle screen drawing the place's scene behind the figures under a veil with plates under the names |
 | `test_game_balance_tool.gd` | The balance harness's logic: seed lists, the 95% range, the verdict against the band, and a small reproducible autopilot batch |
 | `test_game_bot.gd` | The autopilot's Hard hunt choice and the `bot_hard_hunt` rules in `balance.json` |
+| `test_game_clock.gd` | The world clock (`GameClock`): seconds add up to whole spans with the rest carried and saved; spans fed end exactly as the same years passed through `pass_time` (heir, party wages, weather, dice); the clock holds during a fight, a waiting event and a succession; left running it carries a line through three old-age deaths with the Ages recording them; the carry loads from old and damaged saves |
 | `test_game_combat.gd` | Battlefield geometry, the ability pipeline and spellbook, statuses, elements, packs, spell costs and saves |
 | `test_game_disease.gd` | Diseases: catching, worsening, cures, contagion, the black market and saves |
 | `test_game_events.gd` | Events with skill checks: check math, gating, every outcome and event fights |
