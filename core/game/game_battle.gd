@@ -619,11 +619,11 @@ func _ward(ref: String) -> int:
 func _say_blow(who: String, whom: String, lost: int, absorbed: int, crit: bool) -> void:
 	var tail := " (CRIT!)" if crit else ""
 	if absorbed <= 0:
-		_say("%s hits %s for %d%s." % [who, whom, lost, tail])
+		_say(GameMessages.line("hit", {"who": who, "whom": whom, "n": lost, "tail": tail}))
 	elif lost > 0:
-		_say("%s hits %s for %d (%d absorbed)%s." % [who, whom, lost, absorbed, tail])
+		_say(GameMessages.line("hit_ward", {"who": who, "whom": whom, "n": lost, "absorbed": absorbed, "tail": tail}))
 	else:
-		_say("%s hits %s, and the ward absorbs all %d." % [who, whom, absorbed])
+		_say(GameMessages.line("hit_ward_all", {"who": who, "whom": whom, "absorbed": absorbed}))
 
 
 ## A shield soaks up damage before HP does; returns the amount it absorbed. A blow tells the
@@ -658,12 +658,12 @@ func _lose_hp(ref: String, n: int) -> void:
 			e["hp"] = maxi(0, int(e["hp"]) - n)
 			if was > 0 and e["hp"] == 0:
 				events.append({"type": "death", "side": "enemy", "index": i})
-				_say("%s is defeated." % e["name"])
+				_say(GameMessages.line("foe_defeated", {"name": e["name"]}))
 				statuses.erase(ref)
 				var moved := GameCombat.close_ranks(enemies)
 				if not moved.is_empty():
 					events.append({"type": "advance", "indices": moved})
-					_say("%s steps up to the front." % (enemies[moved[0]]["name"] if moved.size() == 1 else "The back rank"))
+					_say(GameMessages.line("foe_steps_up", {"name": enemies[moved[0]]["name"]}) if moved.size() == 1 else GameMessages.line("back_rank_steps_up"))
 		"ally":
 			var ai := _index(ref)
 			var a: GameHeir = allies[ai]
@@ -672,7 +672,7 @@ func _lose_hp(ref: String, n: int) -> void:
 			if was > 0 and a.hp == 0:
 				statuses.erase(ref)
 				events.append({"type": "ko", "side": "ally", "ally": ai, "foe_scale": _scale_foes_to_party()})
-				_say("%s is knocked senseless and out of the fight." % a.name)
+				_say(GameMessages.line("ally_knocked_out", {"name": a.name}))
 
 
 ## Extra damage fraction the next blow on a frozen unit gets (see _break_ice).
@@ -741,7 +741,7 @@ func open_with_breath() -> void:
 			_lose_hp(enemy_ref(i), amount)
 			hit.append(i)
 	events.append({"type": "cast", "by": -1, "name": "Dragon's Breath", "cast": casts, "aoe": true, "element": "fire", "targets": hit})
-	_say("%s breathes fire over the foes." % heir.name)
+	_say(GameMessages.line("dragons_breath", {"name": heir.name}))
 
 
 ## A status with "spent_on": "blow" (hidden) rides on the next blow the unit lands and ends there.
@@ -770,7 +770,7 @@ func _hit_enemy(idx: int, power: float, mult: float, pierce: float, crit_bonus: 
 	var dodge := foe_dodge(idx)
 	if dodge > 0.0 and rng.randf() < dodge:
 		events.append({"type": "miss", "side": "enemy", "index": idx, "by": by, "cast": cast})
-		_say("%s dodges %s's attack." % [e["name"], _unit(by).name])
+		_say(GameMessages.line("foe_dodged", {"foe": e["name"], "name": _unit(by).name}))
 		return -1
 	var r := _calc_damage(power, mult, idx, pierce, crit_bonus, by, element)
 	var amount: int = r["amount"]
@@ -928,7 +928,7 @@ func _pay(by: int, mp_cost: int) -> bool:
 	if hp > 0:
 		u.hp -= hp
 		events.append({"type": "hp_cost", "by": by, "amount": hp})
-		_say("Blood Magic costs %s %d HP." % [u.name, hp])
+		_say(GameMessages.line("blood_magic_cost", {"name": u.name, "n": hp}))
 	return true
 
 
@@ -1015,7 +1015,7 @@ func _spend_feat(by: int, id: String) -> void:
 		return
 	u.hp -= cost
 	events.append({"type": "hp_cost", "by": by, "amount": cost})
-	_say("%s costs %s %d HP." % [GameFeats.feat_name(id), u.name, cost])
+	_say(GameMessages.line("feat_hp_cost", {"feat": GameFeats.feat_name(id), "name": u.name, "n": cost}))
 
 
 ## Execute and its like strike harder at a foe already badly hurt; a bane ({"undead": 1.5}) at a
@@ -1125,7 +1125,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 	events.append({"type": "cast", "by": by, "name": name, "cast": casts, "aoe": aoe, "element": str(ab.get("element", "")),
 		"targets": hits.map(func(h): return h[0])})
 	if ab.has("group") or aoe or ab.has("feat"):
-		_say("%s %s %s." % [u.name, "casts" if ab.has("group") else "uses", name])
+		_say(GameMessages.line("casts", {"name": u.name, "ability": name}) if ab.has("group") else GameMessages.line("uses", {"name": u.name, "ability": name}))
 	var src := ref_of(by)
 	var key := "%s/%s" % [src, name]
 	uses[key] = int(uses.get(key, 0)) + 1
@@ -1177,7 +1177,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 						shrugged.append(enemies[h[0]]["name"])
 				if not shrugged.is_empty() and _tells_resist(st):
 					var what := str(GameCombat.status_def(str(st["id"])).get("name", st["id"]))
-					_say("%s resist%s %s." % [shrugged[0] if shrugged.size() == 1 else "%d foes" % shrugged.size(), "s" if shrugged.size() == 1 else "", what])
+					_say(GameMessages.line("foe_resists", {"name": shrugged[0], "what": what}) if shrugged.size() == 1 else GameMessages.line("foes_resist", {"n": shrugged.size(), "what": what}))
 	if ab.has("field") and not hits.is_empty():
 		_lay_field(by, ab, target, power)
 	var drain := float(ab.get("drain", 0.0))
@@ -1205,7 +1205,7 @@ func resolve_ability(by: int, ab: Dictionary, target: int, power: float = -1.0) 
 		var before := u.mp
 		u.mp = mini(u.max_mp(), u.mp + int(ceil(float(u.max_mp()) * float(GameCombat.setting("mana_tap_pct")))))
 		events.append({"type": "mana", "by": by, "amount": u.mp - before})
-		_say("%s draws in %d MP." % [u.name, u.mp - before])
+		_say(GameMessages.line("mana_drawn", {"name": u.name, "n": u.mp - before}))
 
 
 ## Haste on the heir: a free follow-up blow on the same foe.
@@ -1282,7 +1282,7 @@ func defend() -> void:
 	defending = true
 	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * float(GameRound.setting("defend_mp_pct")))))
 	events.append({"type": "defend"})
-	_say("%s braces for impact." % heir.name)
+	_say(GameMessages.line("brace", {"name": heir.name}))
 	_end_player_turn()
 
 
@@ -1299,7 +1299,7 @@ func use_potion() -> void:
 func pass_turn() -> void:
 	if not _begin_action():
 		return
-	_say("%s holds back." % heir.name)
+	_say(GameMessages.line("hold_back", {"name": heir.name}))
 	_end_player_turn()
 
 
@@ -1315,9 +1315,9 @@ func flee() -> void:
 	if rng.randf() < chance:
 		result = "fled"
 		events.append({"type": "flee"})
-		_say("%s escapes!" % heir.name if allies.is_empty() else "%s and the party escape!" % heir.name)
+		_say(GameMessages.line("escape_alone" if allies.is_empty() else "escape_party", {"name": heir.name}))
 		return
-	_say("%s fails to escape!" % heir.name)
+	_say(GameMessages.line("escape_failed", {"name": heir.name}))
 	_end_player_turn()
 
 
@@ -1326,9 +1326,9 @@ func _heal_player(amount: int, source: String, by: int = -1) -> void:
 	heir.hp = mini(heir.max_hp(), heir.hp + amount)
 	events.append({"type": "heal", "side": "player", "amount": heir.hp - before, "by": by})
 	if by < 0:
-		_say("%s restores %d HP (%s)." % [heir.name, heir.hp - before, source])
+		_say(GameMessages.line("restores", {"name": heir.name, "n": heir.hp - before, "source": source}))
 	else:
-		_say("%s tends %s: +%d HP (%s)." % [allies[by].name, heir.name, heir.hp - before, source])
+		_say(GameMessages.line("tends", {"healer": allies[by].name, "name": heir.name, "n": heir.hp - before, "source": source}))
 
 
 func _heal_ally(ai: int, amount: int, source: String, by: int = -2) -> void:
@@ -1336,7 +1336,7 @@ func _heal_ally(ai: int, amount: int, source: String, by: int = -2) -> void:
 	var before := a.hp
 	a.hp = mini(a.max_hp(), a.hp + amount)
 	events.append({"type": "heal", "side": "ally", "ally": ai, "amount": a.hp - before, "by": ai if by == -2 else by})
-	_say("%s restores %d HP (%s)." % [a.name, a.hp - before, source])
+	_say(GameMessages.line("restores", {"name": a.name, "n": a.hp - before, "source": source}))
 
 
 func _valid_target(t: int) -> int:
@@ -1390,7 +1390,7 @@ func answer_reaction(by: int) -> void:
 	if by in choices:
 		_covered[by] = true
 		events.append({"type": "cover", "by": by, "for": who, "index": i})
-		_say("%s steps in front of %s." % [unit(by).name, unit(who).name])
+		_say(GameMessages.line("steps_in_front", {"by": unit(by).name, "who": unit(who).name}))
 		who = by
 	_enemy_strike(i, who)
 	_foe_step = 2 if _foe_step == 1 else 4   # the action that waited is done
@@ -1403,7 +1403,7 @@ func answer_reaction(by: int) -> void:
 func _won() -> bool:
 	if living_enemies().is_empty():
 		result = "victory"
-		_say("Victory!")
+		_say(GameMessages.line("victory"))
 		return true
 	return false
 
@@ -1443,7 +1443,7 @@ func _foe_phase() -> bool:
 		_foe_step = 0
 		if heir.hp <= 0:
 			result = "defeat"
-			_say("%s has fallen..." % heir.name)
+			_say(GameMessages.line("fallen", {"name": heir.name}))
 			return false
 		if _won():
 			return false
@@ -1472,7 +1472,7 @@ func _start_heir_turn() -> void:
 		return
 	if heir.hp <= 0:
 		result = "defeat"
-		_say("%s has fallen..." % heir.name)
+		_say(GameMessages.line("fallen", {"name": heir.name}))
 	else:
 		heir_skip = true
 
@@ -1498,7 +1498,7 @@ func _ally_act(ai: int) -> void:
 		plan = GameRound.plan_for(self, ai, round_cmds[ai])
 		round_cmds.erase(ai)
 		if plan.is_empty():   # no longer possible at its turn: the class decides
-			_say("%s improvises." % allies[ai].name)
+			_say(GameMessages.line("improvises", {"name": allies[ai].name}))
 			if round_marks:
 				events.append({"type": "act", "by": ai, "manual": false, "fallback": true})
 	if plan.is_empty():
@@ -1519,14 +1519,14 @@ func _ally_do(ai: int, plan: Dictionary) -> void:
 			var mp_pct := float(GameRound.setting("defend_mp_pct"))
 			a.mp = mini(a.max_mp(), a.mp + int(ceil(float(a.max_mp()) * mp_pct)))
 			events.append({"type": "defend", "by": ai})
-			_say("%s braces for impact." % a.name)
+			_say(GameMessages.line("brace", {"name": a.name}))
 		"potion":
 			if heir.potions > 0:   # the house's stock, shared; the plan was checked just before
 				heir.potions -= 1
 				var amt := int(round(float(a.max_hp()) * float(GameData.bal("potion_heal_pct")) * (1.0 + a.trait_total("healing_power"))))
 				_heal_ally(ai, amt, "Potion")
 		"pass":
-			_say(str(plan.get("text", "%s holds back." % a.name)))
+			_say(str(plan.get("text", GameMessages.line("hold_back", {"name": a.name}))))
 		_:
 			_hit_enemy(_valid_target(int(plan.get("target", focus))), float(unit_numbers(ai)["str"]), 1.0, 0.0, 0.0, ai)
 
@@ -1597,7 +1597,7 @@ func _enemy_hit_heir(i: int) -> void:
 	var me := unit_numbers(-1)
 	if not bool(me["no_dodge"]) and rng.randf() < clampf(float(me["dodge"]) + float(weather.get("dodge", 0.0)) + status_mod("heir", "dodge"), 0.0, 0.6):
 		events.append({"type": "miss", "side": "player", "index": i})
-		_say("%s attacks, but %s dodges." % [e["name"], heir.name])
+		_say(GameMessages.line("foe_missed", {"foe": e["name"], "name": heir.name}))
 		return
 	var dmg: float = maxf(1.0, float(e["atk"]) * rng.randf_range(0.85, 1.15) - float(me["def"]) * 0.6)
 	if e["element"] == "fire":
@@ -1633,7 +1633,7 @@ func _cover_for(i: int, who: int) -> int:
 		return who
 	_covered[by] = true
 	events.append({"type": "cover", "by": by, "for": who, "index": i})
-	_say("%s steps in front of %s." % [unit(by).name, unit(who).name])
+	_say(GameMessages.line("steps_in_front", {"by": unit(by).name, "who": unit(who).name}))
 	return by
 
 
@@ -1664,7 +1664,7 @@ func _enemy_hit_ally(i: int, ai: int) -> void:
 	var nums := unit_numbers(ai)
 	if not bool(nums["no_dodge"]) and rng.randf() < clampf(float(nums["dodge"]) + float(weather.get("dodge", 0.0)) + status_mod(ref, "dodge"), 0.0, 0.6):
 		events.append({"type": "miss", "side": "ally", "index": i, "ally": ai})
-		_say("%s attacks, but %s dodges." % [e["name"], a.name])
+		_say(GameMessages.line("foe_missed", {"foe": e["name"], "name": a.name}))
 		return
 	var dmg: float = maxf(1.0, float(e["atk"]) * rng.randf_range(0.85, 1.15) - float(nums["def"]) * 0.6)
 	if e["element"] == "fire":
@@ -1700,7 +1700,7 @@ func _mind_over_matter(by: int, n: int) -> int:
 	if mp > 0 and take > 0:
 		u.mp -= mp
 		events.append({"type": "mana", "by": by, "amount": -mp})
-		_say("%s's mana takes %d of the blow." % [u.name, take])
+		_say(GameMessages.line("mana_blow", {"name": u.name, "n": take}))
 		return take
 	return 0
 

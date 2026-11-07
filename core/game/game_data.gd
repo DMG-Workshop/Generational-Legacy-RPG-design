@@ -32,6 +32,7 @@ static var feats: Dictionary = {}      # {settings, kinds, weapon_kinds, statuse
 static var skill_trees: Dictionary = {}   # {settings, trees}: read through GameSkillTree
 static var keystones: Dictionary = {}     # {keystones}: read through GameSkillTree
 static var mobile: Dictionary = {}        # {settings}: touch hints and UI scale, read through ui/play/ui_settings.gd
+static var messages: Dictionary = {}      # {lines}: player-facing text by key, read through core/game/game_messages.gd
 static var tutorial: Dictionary = {}      # {wounded_below, steps}: the first-heir tips, read through core/game/game_tutorial.gd
 
 
@@ -87,6 +88,7 @@ static func load_all() -> void:
 	keystones = load_json("res://data/keystones/keystones.json")
 	mobile = load_json("res://data/ui/mobile.json")
 	tutorial = load_json("res://data/ui/tutorial.json")
+	messages = load_json("res://data/text/battle.json")
 	_loaded = true
 
 

@@ -48,6 +48,7 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_balance_tool.gd` | The balance harness's logic: seed lists, the 95% range, the verdict against the band, and a small reproducible autopilot batch |
 | `test_game_bot.gd` | The autopilot's Hard hunt choice and the `bot_hard_hunt` rules in `balance.json` |
 | `test_game_combat.gd` | Battlefield geometry, the ability pipeline and spellbook, statuses, elements, packs, spell costs and saves |
+| `test_game_data.gd` | The data check (`tools/check_data.gd`: every JSON file parses, every system's validator is clean, the text catalog and the code agree) finds nothing and finds a broken catalog; every fight log line is spelled out word for word against `data/text/battle.json`; no log line is written in the battle code; fights give no unfilled placeholder or missing key |
 | `test_game_disease.gd` | Diseases: catching, worsening, cures, contagion, the black market and saves |
 | `test_game_events.gd` | Events with skill checks: check math, gating, every outcome and event fights |
 | `test_game_feats.gd` | Feats by class, gates, companions, MAG and STR scaling, and the autopilot's use of them |
