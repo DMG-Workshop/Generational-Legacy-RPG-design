@@ -10,6 +10,7 @@ const CLASSES := "res://data/art/classes.json"
 const RACES := "res://data/art/races.json"
 const CREATURES := "res://data/art/creatures.json"
 const SHIRTS := "res://data/art/shirts.json"
+const GEAR := "res://data/art/gear.json"
 const FIGURE := Vector2i(24, 40)   # every class figure and race layer
 const UPSCALE := 4
 const RESERVED := "SsHhCc"
@@ -18,6 +19,7 @@ static var _classes: Dictionary = {}
 static var _races: Dictionary = {}
 static var _creatures: Dictionary = {}
 static var _shirts: Array = []
+static var _gear: Dictionary = {}
 static var _loaded := false
 static var _cache: Dictionary = {}   # key -> Texture2D
 
@@ -29,6 +31,7 @@ static func _load() -> void:
 	_classes = _read(CLASSES).get("sprites", {})
 	_races = _read(RACES).get("races", {})
 	_creatures = _read(CREATURES).get("sprites", {})
+	_gear = _read(GEAR)
 	_shirts = []
 	for s in _read(SHIRTS).get("shirts", []):
 		if typeof(s) == TYPE_DICTIONARY and Color.html_is_valid(str(s.get("color", ""))) and str(s.get("id", "")) != "":
@@ -49,6 +52,7 @@ static func reset() -> void:
 	_races = {}
 	_creatures = {}
 	_shirts = []
+	_gear = {}
 	_cache = {}
 
 
@@ -80,32 +84,105 @@ static func creature(id: String) -> Texture2D:
 
 
 ## A hero's or companion's figure: the class figure in the race's colours with the race's layers, or null
-## when the class has no figure. A race with no entry is drawn with the class figure's own colours.
-static func hero(race_id: String, class_id: String, class_color: Color) -> Texture2D:
+## when the class has no figure. A race with no entry is drawn with the class figure's own colours. `gear`
+## ({"weapon": item id, "armor": item id}) dresses it in the looks data/art/gear.json gives those items.
+static func hero(race_id: String, class_id: String, class_color: Color, gear: Dictionary = {}) -> Texture2D:
 	_load()
 	if not _classes.has(class_id):
 		return null
-	var key := "hero:%s:%s:%s" % [race_id, class_id, class_color.to_html(false)]
+	var key := "hero:%s:%s:%s:%s:%s" % [race_id, class_id, class_color.to_html(false), gear.get("weapon", ""), gear.get("armor", "")]
 	if not _cache.has(key):
 		var r: Dictionary = _races.get(race_id, {})
 		var fill := {"C": class_color, "c": class_color.darkened(0.32)}
 		for k in RACE_KEYS:
 			fill[k] = Color.html(str(r.get(RACE_KEYS[k], DEFAULTS[k])))
+		var look := _look(class_id, gear)
 		var img := Image.create_empty(FIGURE.x, FIGURE.y, false, Image.FORMAT_RGBA8)
+		if look.has("cape"):   # behind everything, the race's tail included
+			var cape: Color = look["cape"]
+			_blend(img, _paint(_gear.get("cape", {}), {"a": cape.lightened(0.18), "b": cape, "d": cape.darkened(0.35)}))
 		var rp: Dictionary = r.get("palette", {})
 		if r.has("under"):
 			_blend(img, _paint({"size": [FIGURE.x, FIGURE.y], "palette": rp, "rows": r["under"]}, fill))
-		_blend(img, _paint(_classes[class_id], fill))
+		_blend(img, _paint(_classes[class_id], fill, look))
 		if r.has("over"):
 			_blend(img, _paint({"size": [FIGURE.x, FIGURE.y], "palette": rp, "rows": r["over"]}, fill))
+		if look.has("glow"):
+			_glow(img, look["box"], look["glow"])
 		_cache[key] = _texture(img)
 	return _cache[key]
+
+
+## What a figure's gear changes: the weapon's finish on the class's blade and wood keys inside the weapon's
+## box, the armour's finish on its metal and leather keys outside it, a cape behind the figure and a glow
+## around the weapon. {} with no gear or no note for the class in gear.json.
+static func _look(class_id: String, gear: Dictionary) -> Dictionary:
+	var note = _gear.get("classes", {}).get(class_id, {})
+	if typeof(note) != TYPE_DICTIONARY or gear.is_empty():
+		return {}
+	var items: Dictionary = _gear.get("items", {})
+	var weapon = items.get(str(gear.get("weapon", "")), {})
+	var armor = items.get(str(gear.get("armor", "")), {})
+	var out := {"inside": {}, "outside": {}}
+	var w: Array = note.get("weapon", [])
+	if w.size() == 4:
+		out["box"] = Rect2i(int(w[0]), int(w[1]), int(w[2]) - int(w[0]) + 1, int(w[3]) - int(w[1]) + 1)
+	if typeof(weapon) == TYPE_DICTIONARY and out.has("box"):
+		_finish(out["inside"], str(note.get("blade", "")), _gear.get("metals", {}).get(str(weapon.get("metal", "")), []))
+		_finish(out["inside"], str(note.get("wood", "")), _gear.get("woods", {}).get(str(weapon.get("wood", "")), []))
+		if Color.html_is_valid(str(weapon.get("glow", ""))):
+			out["glow"] = Color.html(str(weapon["glow"]))
+	if typeof(armor) == TYPE_DICTIONARY:
+		_finish(out["outside"], str(note.get("metal", "")), _gear.get("metals", {}).get(str(armor.get("metal", "")), []))
+		_finish(out["outside"], str(note.get("leather", "")), _gear.get("leathers", {}).get(str(armor.get("leather", "")), []))
+		if Color.html_is_valid(str(armor.get("cape", ""))):
+			out["cape"] = Color.html(str(armor["cape"]))
+	return out
+
+
+## Spreads a finish's colours, light to dark, over palette keys listed light to dark.
+static func _finish(into: Dictionary, keys: String, colors: Array) -> void:
+	if keys.is_empty() or colors.is_empty():
+		return
+	for i in keys.length():
+		var j := 0 if keys.length() == 1 else int(round(float(i) * float(colors.size() - 1) / float(keys.length() - 1)))
+		if Color.html_is_valid(str(colors[j])):
+			into[keys[i]] = Color.html(str(colors[j]))
+
+
+## A ring of light around what is drawn inside the weapon's box: the weapon and the hand that holds it.
+static func _glow(img: Image, box: Rect2i, glow: Color) -> void:
+	var ring: Array = []
+	var area := box.grow(1).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+	for y in range(area.position.y, area.end.y):
+		for x in range(area.position.x, area.end.x):
+			if img.get_pixel(x, y).a > 0.0:
+				continue
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n: Vector2i = Vector2i(x, y) + d
+				if box.has_point(n) and img.get_pixel(n.x, n.y).a > 0.0:
+					ring.append(Vector2i(x, y))
+					break
+	for p in ring:
+		img.set_pixel(p.x, p.y, Color(glow, 0.65))
 
 
 ## A hero's or companion's figure: their class figure in their race's colours, wearing their shirt. Null when
 ## the class has no figure.
 static func figure(u: GameHeir) -> Texture2D:
-	return hero(u.race_id, u.class_id, shirt_color(u))
+	return hero(u.race_id, u.class_id, shirt_color(u), gear_of(u))
+
+
+## The gear a figure shows: the weapon and armour it has equipped that gear.json gives a look.
+static func gear_of(u: GameHeir) -> Dictionary:
+	_load()
+	var out := {}
+	var items: Dictionary = _gear.get("items", {})
+	for slot in ["weapon", "armor"]:
+		var id := str(u.equipment.get(slot, "")) if typeof(u.equipment) == TYPE_DICTIONARY else ""
+		if items.has(id):
+			out[slot] = id
+	return out
 
 
 ## The shirts a figure can wear, as data/art/shirts.json lists them: [{id, name, color}].
@@ -146,8 +223,9 @@ const DEFAULTS := {"S": "#e8b98f", "s": "#c48d68", "H": "#5a3a24", "h": "#3e2718
 const RACE_KEYS := {"S": "skin", "s": "skin_shade", "H": "hair", "h": "hair_shade"}
 
 
-## One grid as an image: its palette, with the reserved keys from `fill` ("." and anything unknown stay clear).
-static func _paint(s: Dictionary, fill: Dictionary) -> Image:
+## One grid as an image: its palette, with the reserved keys from `fill` ("." and anything unknown stay
+## clear). A `look` from _look recolours keys inside its weapon box and outside it.
+static func _paint(s: Dictionary, fill: Dictionary, look: Dictionary = {}) -> Image:
 	var size: Array = s.get("size", [1, 1])
 	var w := int(size[0])
 	var h := int(size[1])
@@ -158,13 +236,22 @@ static func _paint(s: Dictionary, fill: Dictionary) -> Image:
 		pal[k] = Color.html(str(raw[k]))
 	for k in fill:
 		pal[k] = fill[k]
+	var inside: Dictionary = look.get("inside", {})
+	var outside: Dictionary = look.get("outside", {})
+	var box: Rect2i = look.get("box", Rect2i())
 	var rows: Array = s.get("rows", [])
 	for y in mini(h, rows.size()):
 		var line := str(rows[y])
 		for x in mini(w, line.length()):
 			var ch := line[x]
-			if ch != "." and pal.has(ch):
-				img.set_pixel(x, y, pal[ch])
+			if ch == "." or not pal.has(ch):
+				continue
+			var c: Color = pal[ch]
+			if box.has_point(Vector2i(x, y)):
+				c = inside.get(ch, c)
+			else:
+				c = outside.get(ch, c)
+			img.set_pixel(x, y, c)
 	return img
 
 
@@ -231,6 +318,7 @@ static func validate() -> Array:
 			out.append("shirts: %s is listed twice" % s["id"])
 		else:
 			seen[str(s["id"])] = true
+	out.append_array(_gear_problems())
 	for id in _races:
 		var r: Dictionary = _races[id]
 		for k in ["skin", "skin_shade", "hair", "hair_shade"]:
@@ -239,6 +327,50 @@ static func validate() -> Array:
 		for layer in ["under", "over"]:
 			if r.has(layer):
 				out.append_array(_grid_problems("race %s %s" % [id, layer], r[layer], [FIGURE.x, FIGURE.y], r.get("palette", {}), true))
+	return out
+
+
+## Problems with gear.json: each class note's weapon box inside the figure and its keys in the class's
+## palette, every finish a list of colours, every item's finish known, and the cape a sound grid.
+static func _gear_problems() -> Array:
+	var out: Array = []
+	if _gear.is_empty():
+		return out
+	for id in _gear.get("classes", {}):
+		var note = _gear["classes"][id]
+		if not _classes.has(id) or typeof(note) != TYPE_DICTIONARY:
+			out.append("gear: no class figure called %s" % id)
+			continue
+		var w: Array = note.get("weapon", [])
+		if not w.is_empty() and (w.size() != 4 or int(w[0]) < 0 or int(w[1]) < 0 or int(w[2]) >= FIGURE.x or int(w[3]) >= FIGURE.y or int(w[0]) > int(w[2]) or int(w[1]) > int(w[3])):
+			out.append("gear %s: the weapon box must be [x0, y0, x1, y1] inside the figure" % id)
+		var pal: Dictionary = _classes[id].get("palette", {})
+		for role in ["blade", "wood", "metal", "leather"]:
+			for k in str(note.get(role, "")):
+				if not pal.has(k):
+					out.append("gear %s: %s key '%s' is not in the class's palette" % [id, role, k])
+	for group in ["metals", "woods", "leathers"]:
+		for f in _gear.get(group, {}):
+			var cols = _gear[group][f]
+			if typeof(cols) != TYPE_ARRAY or cols.is_empty() or not cols.all(func(c): return Color.html_is_valid(str(c))):
+				out.append("gear: %s %s must be a list of colours" % [group, f])
+	for id in _gear.get("items", {}):
+		var look = _gear["items"][id]
+		if typeof(look) != TYPE_DICTIONARY:
+			out.append("gear: the look of %s must be a dictionary" % id)
+			continue
+		for pair in [["metal", "metals"], ["wood", "woods"], ["leather", "leathers"]]:
+			if look.has(pair[0]) and not _gear.get(pair[1], {}).has(str(look[pair[0]])):
+				out.append("gear %s: no %s finish called %s" % [id, pair[0], look[pair[0]]])
+		for k in ["glow", "cape"]:
+			if look.has(k) and not Color.html_is_valid(str(look[k])):
+				out.append("gear %s: %s is not a colour" % [id, k])
+	var cape = _gear.get("cape", {})
+	if typeof(cape) == TYPE_DICTIONARY and not cape.is_empty():
+		var cp: Dictionary = (cape.get("palette", {}) as Dictionary).duplicate()
+		for k in ["a", "b", "d"]:   # filled from the armour's cape colour
+			cp[k] = "#000000"
+		out.append_array(_grid_problems("gear cape", cape.get("rows", []), [FIGURE.x, FIGURE.y], cp, false))
 	return out
 
 
