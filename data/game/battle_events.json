@@ -1,0 +1,27 @@
+{
+	"note": "Every typed event a fight puts in GameBattle.events, for views to draw. `fields` must all be there; `optional` may be. Kinds: int, number (int or float), bool, string, ints (an array of ints). A ref is a string: \"heir\", \"ally:N\" or \"enemy:N\". `by` is -1 for the heir, else the companion's index. A side is \"player\" (the heir), \"ally\" or \"enemy\".",
+	"events": {
+		"round": {"about": "A party round begins (GameRound.resolve only).", "fields": {"n": "int"}},
+		"act": {"about": "A party member is about to act (GameRound.resolve only); a fallback marker follows the first one of the same member.", "fields": {"by": "int", "manual": "bool"}, "optional": {"fallback": "bool", "flee": "bool", "held": "bool"}},
+		"foes": {"about": "The foes start acting (GameRound.resolve only).", "fields": {}},
+		"cast": {"about": "An ability or spell is used; the blows it causes carry the same `cast` number.", "fields": {"by": "int", "name": "string", "cast": "int", "aoe": "bool", "element": "string", "targets": "ints"}},
+		"damage": {"about": "A blow lands. side is who was hit: enemy (index), player (the heir) or ally (index of the foe, and ally of the companion).", "fields": {"side": "string", "index": "int", "amount": "int"}, "optional": {"ally": "int", "by": "int", "crit": "bool", "cast": "int", "element": "string", "shatter": "bool", "absorbed": "int"}},
+		"miss": {"about": "A blow is dodged. side is who dodged.", "fields": {"side": "string", "index": "int"}, "optional": {"ally": "int", "by": "int", "cast": "int"}},
+		"heal": {"about": "Hit points restored to the heir (side player) or a companion (side ally).", "fields": {"side": "string", "amount": "int", "by": "int"}, "optional": {"ally": "int"}},
+		"mana": {"about": "Mana gained (positive) or taken by a blow (negative).", "fields": {"by": "int", "amount": "int"}},
+		"hp_cost": {"about": "An ability or feat costs its user hit points.", "fields": {"by": "int", "amount": "int"}},
+		"status": {"about": "A status is applied (applied true, with turns) or ends (applied false; removed says why, and is left out when it was resisted).", "fields": {"ref": "string", "id": "string", "applied": "bool"}, "optional": {"turns": "int", "removed": "string"}},
+		"skip": {"about": "A status takes a unit's turn.", "fields": {"ref": "string", "id": "string"}},
+		"tick": {"about": "A status's damage or healing at the start of a turn.", "fields": {"ref": "string", "id": "string", "amount": "int"}, "optional": {"absorbed": "int", "heal": "bool"}},
+		"death": {"about": "A foe is slain.", "fields": {"side": "string", "index": "int"}},
+		"advance": {"about": "Foes step up to the front rank.", "fields": {"indices": "ints"}},
+		"ko": {"about": "A companion is knocked out for the rest of the fight; foe_scale is the factor the foes' health was rescaled by.", "fields": {"side": "string", "ally": "int", "foe_scale": "number"}},
+		"cover": {"about": "A covering member takes a foe's blow meant for another, just before the hit.", "fields": {"by": "int", "for": "int", "index": "int"}},
+		"defend": {"about": "The heir braces (no `by`, read it as -1) or a companion defends.", "fields": {}, "optional": {"by": "int"}},
+		"flee": {"about": "The party escapes.", "fields": {}},
+		"coat": {"about": "The heir coats the blade with a toxin.", "fields": {"item": "string"}},
+		"coat_end": {"about": "The coating is spent.", "fields": {"item": "string"}},
+		"field": {"about": "An area is fouled (caltrops, a mire).", "fields": {"name": "string", "x": "number", "y": "number", "radius": "number"}},
+		"field_end": {"about": "A fouled area clears.", "fields": {"name": "string"}}
+	}
+}
