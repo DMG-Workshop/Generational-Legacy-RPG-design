@@ -80,6 +80,7 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_house_ui.gd` | The House panel on the life screen: Build raises a track and takes the gold, and a row that cannot be built says why |
 | `test_game_mates.gd` | Mates: opposite-sex candidates, looking at them changes no dice, the one chosen becomes the spouse, and the random spouse without a choice |
 | `test_game_mates_ui.gd` | The mate picker on the life screen: Found family opens the candidates and a pick marries that one |
+| `test_game_long_run.gd` | The nightly long run's logic (`tools/long_run.gd`, `data/game/budgets.json`): a dynasty played for several generations is measured (generations reached, save size, load time, time per generation, journal) and loads back; each budget catches what it is for and a normal run reports nothing; the size budget grows with the generations reached; the death band is judged only with enough lives; the budgets leave room over what the autopilot measures |
 | `test_game_reactions.gd` | Standing covers: setting and cycling a cover, the health threshold, once a round, a fallen coverer, and an unused cover leaving the fight unchanged |
 | `test_game_reaction_prompt.gd` | Reactions that ask first: the round stops on "Cover this ally?", an answer plays it on, letting it land is the old round exactly, and the battle screen's question |
 | `test_game_stats.gd` | The dynasty statistics: heirs, causes of death, the greatest heir, gold per kept heir and per Age, folding, and the chronicle's Statistics tab |

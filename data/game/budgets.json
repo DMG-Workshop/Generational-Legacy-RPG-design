@@ -1,0 +1,9 @@
+{
+	"note": "Limits for the nightly long runs (tools/long_run_check.gd). Measured with the autopilot at the commit that added them: a save is about 13 KB after 10 generations and 42 KB after 100, loading takes under 10 ms, a generation takes 0.7 to 1.6 s of play and the journal stops at 300 lines. The limits leave room for a slower, noisier machine; size and carrying on are exact, times are generous.",
+	"max_save_bytes_base": 20000,
+	"max_save_bytes_per_generation": 500,
+	"max_load_ms": 250,
+	"max_ms_per_generation": 5000,
+	"max_journal_lines": 400,
+	"min_lives_for_death_band": 400
+}
