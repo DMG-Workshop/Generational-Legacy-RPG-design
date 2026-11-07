@@ -26,7 +26,7 @@ class Canvas:
 	var w := 0
 	var h := 0
 	var hz := 0   # the horizon: the first row of the ground
-	var rng := RandomNumberGenerator.new()
+	var rng: RandomNumberGenerator = CosmeticRng.keyed("")
 	var season := ""
 	var props: Dictionary = {}
 
@@ -175,7 +175,7 @@ static func paint(place_id: String, weather: String, season: String) -> Image:
 	cv.hz = clampi(int(round(float(sz.y) * float(scene.get("horizon", _data.get("horizon", 0.35))))), 1, sz.y - 1)
 	cv.img = Image.create_empty(cv.w, cv.h, false, Image.FORMAT_RGBA8)
 	cv.img.fill(_col(scene.get("base", "#14121c"), Color("#14121c")))
-	cv.rng.seed = ("%s:%s" % [place_id, sid]).hash()
+	cv.rng = CosmeticRng.keyed("%s:%s" % [place_id, sid])
 	cv.season = season
 	cv.props = _data.get("props", {})
 	var own = _data.get("places", {}).get(place_id, {})
