@@ -71,13 +71,13 @@ Proposed order: items 23 to 26 first (they change how saves and views work, and 
 
 **Before the 2D/3D sandbox: art and presentation**
 
-32. **Battle sprites from data.** Pixel figures for every creature, race and class, stored as text grids in `data/art/` and drawn on the battle screen in place of the blocks. The same art and pipeline feed the isometric world.
-33. **Animation states.** Idle, attack, hurt and down frames for each figure, driven by the battle's events, so the isometric view animates the same events.
+32. **Battle sprites from data.** Done. Pixel figures for every creature (the five bosses included), race and class, stored as text grids in `data/art/` and drawn on the battle screen in place of the blocks (`ui/play/sprite_art.gd`, `docs/ART.md`). The same art and pipeline feed the isometric world. Also done with it: every hero and companion wears a shirt colour of their own, picked for them or chosen on the Looks screen, and every fight is drawn in front of the land it is fought in, with its weather and season (`ui/play/scenery_art.gd`).
+33. **Animation states.** Done as poses on the sprites, driven by the battle's events (`ui/play/figure_pose.gd`): figures breathe when standing, hop to attack and cast, flinch when hurt, step back to dodge, crouch to guard and fall when knocked out or slain, in whole pixels of the art. Reduced motion stills them. Drawn frames for a figure can replace a pose later.
 34. **An art style guide and texture atlases.** The palette, outline, light, sizes and facing rules written down, so new art matches; generated textures packed into atlases when a screen loads.
 35. **Screenshot tests.** A CI job that renders key screens under a virtual display and compares them with stored images, so changes to the UI or the art are seen in review.
 36. **A rendering trial on a real phone.** A throwaway isometric pixel-art scene in Godot's 3D (orthographic camera, pixel snapping, sprites and lights) on the target Android phone: frame time, battery, heat and APK size. Then decide the technique, and how art files are stored (Git LFS, import settings), before making art for it.
 37. **Graphics settings.** Quality presets (pixel scale, effects, frame cap) and a battery saver, ready for the 3D renderer.
-38. **Gear shown on figures.** Weapon, armour and cloak layers on the sprites, so equipment changes how a hero looks; it builds on the race and class layering of item 32.
+38. **Gear shown on figures.** Done. The heir's weapon and armour change their figure (`data/art/gear.json`): metal, wood and leather finishes land on the weapon or the armour only, magic weapons glow, and plate, vestments, shadow weave, dragonscale and barrow plate hang a cape. Gear drawn as its own layers (a different weapon shape, a helmet) is still to come.
 39. **Input for a world.** Movement, camera, digging and building by touch, mouse and keyboard, and gamepad. Reduced motion and the colour-blind colours carry over.
 40. **Localisation.** Translation files for every player-facing text, a font that covers the target languages, and a pseudo-language test that catches text that no longer fits.
 
