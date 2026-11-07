@@ -1,10 +1,14 @@
 ## A contact sheet of the battle art, drawn by the game's own SpriteArt on the game's background, for looking
 ## at the sprites together: every creature (in creatures.json order), or every race (rows) by class (columns).
-## It first prints any problems SpriteArt.validate() finds. Runs headless: images only, no screen.
-## godot --headless --path . -s res://tools/art_sheet.gd -- out=/abs/path/sheet.png [what=creatures|heroes]
+## what=scenery draws every place's battle scenery (in a weather and season, clear summer by default), or with
+## place=<id> that place in every weather and then every season; scale=<n> enlarges each scene.
+## It first prints any problems SpriteArt.validate() and SceneryArt.validate() find. Runs headless: images
+## only, no screen.
+## godot --headless --path . -s res://tools/art_sheet.gd -- out=/abs/path/sheet.png [what=creatures|heroes|scenery]
 extends SceneTree
 
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
+const SceneryArt := preload("res://ui/play/scenery_art.gd")
 const BG := Color("#14121c")
 const CELL := Color("#221f30")
 const PAD := 8
@@ -13,13 +17,31 @@ const PAD := 8
 func _init() -> void:
 	GameData.load_all()
 	var problems := SpriteArt.validate()
+	problems.append_array(SceneryArt.validate())
 	for p in problems:
 		print("art problem: ", p)
 	var what := _arg("what", "creatures")
 	var out := _arg("out", "art_sheet.png")
 	var tiles: Array = []
 	var cols := 8
-	if what == "heroes":
+	if what == "scenery":
+		var place := _arg("place", "")
+		var names: Array = []
+		if place == "":
+			cols = 3
+			for l in GameData.world["locations"]:
+				tiles.append(_scene(str(l["id"]), _arg("weather", "clear"), _arg("season", "summer")))
+				names.append("%s (%s)" % [l["id"], SceneryArt.scene_id(str(l["id"]))])
+		else:
+			cols = 4
+			for w in GameData.world["weather"]:
+				tiles.append(_scene(place, str(w["id"]), "summer"))
+				names.append(str(w["id"]))
+			for s in GameData.world["seasons"]:
+				tiles.append(_scene(place, "clear", str(s["id"])))
+				names.append(str(s["id"]))
+		print("in order: %s" % ", ".join(names))
+	elif what == "heroes":
 		var classes: Array = GameData.classes.keys()
 		cols = classes.size()
 		for r in GameData.races:
@@ -55,6 +77,14 @@ func _init() -> void:
 	sheet.save_png(out)
 	print("saved %s (%d tiles, %d problems)" % [out, tiles.size(), problems.size()])
 	quit(1 if not problems.is_empty() else 0)
+
+
+## A place's scene as a texture, enlarged by whole pixels.
+func _scene(place: String, weather: String, season: String) -> Texture2D:
+	var img := SceneryArt.paint(place, weather, season)
+	var k := maxi(1, int(_arg("scale", "1")))
+	img.resize(img.get_width() * k, img.get_height() * k, Image.INTERPOLATE_NEAREST)
+	return ImageTexture.create_from_image(img)
 
 
 func _arg(name: String, fallback: String) -> String:

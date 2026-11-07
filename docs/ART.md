@@ -14,14 +14,19 @@ The same sprites are meant for the later isometric pixel-art version of the game
 | `data/art/classes.json` | One figure per class: `{"sprites": {class_id: SPRITE}}` |
 | `data/art/races.json` | Each race's colours and layers: `{"races": {race_id: RACE}}` |
 | `data/art/creatures.json` | One sprite per creature id in `data/creatures/creatures.json`, bosses included |
+| `data/art/scenery.json` | The battle scenery: a scene per kind of land, what some places add, the weather, the seasons and props |
 
-`tests/test_game_art.gd` checks that the data is sound and that every creature, class and race has art.
-`tools/art_sheet.gd` draws all of it on one sheet:
+`tests/test_game_art.gd` checks that the data is sound and that every creature, class and race has art, and
+`tests/test_game_scenery.gd` that every place has scenery. `tools/art_sheet.gd` draws all of it on one sheet:
 
 ```bash
 godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/creatures.png
 godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/heroes.png what=heroes
+godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/places.png what=scenery
+godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/swamp.png what=scenery place=mirefen scale=2
 ```
+
+The last one draws a place in every weather and then in every season.
 
 ## The format
 
@@ -71,3 +76,52 @@ once and kept.
 
 The battle screen keeps a clear body under every sprite, which takes taps, holds and flashes as the old
 blocks did. A foe's level sits on a dark tag, so it reads over any sprite.
+
+## Scenery
+
+A fight is drawn in front of the land it happens in: `ui/play/scenery_art.gd` paints the scene of the place in
+the world's weather and season, behind everything in the battle arena. The battle screen veils it toward its
+background (`veil`, thicker with high contrast: `veil_high_contrast`) and puts a dark plate under each name,
+so the figures stand out.
+
+A place takes its own scene from `places` (`"elderglade": {"scene": "fae"}`), else the scene of its first
+biome in `data/world/world.json`, else the `fallback` scene. A place can add `layers` of its own: a town on
+the skyline, a ship, sea cliffs. They go where the scene has `{"op": "place"}`, or last. Out of doors (a
+scene without `"indoor": true`), the layers of the season (`seasons`) and then of the weather (`weather`)
+follow. A layer can carry changes for a season, used in it: `"autumn": {"colors": [...]}`,
+`"winter": {"kind": "dead"}`.
+
+A scene is painted at `size` (384 x 120) and scaled up by whole pixels like the sprites. Each place is
+painted with its own dice, seeded from the place, never the game's, so a place always looks the same. The
+screen covers the arena with it from its top, so a short arena loses the near ground and never the sky.
+`horizon` is where the sky meets the ground, as a fraction of the height.
+
+Each layer is one `op` with its own settings. Colours run from lit to shaded, or from far to near.
+
+| op | Draws | Settings |
+|----|-------|----------|
+| `sky` | Flat bands from the top to the horizon | `colors` top to bottom |
+| `wall` | Courses of blocks: rock, masonry, a floor | `y` [from, to] of the height, `brick` [w, h], `colors`, `mortar`, `rough`, `grow` (each course taller), `edge` |
+| `clouds` | Domes on a flat base | `count`, `y` [from, to] of the sky, `w` [min, max], `colors` [lit, shade] |
+| `stars` | Points, some with rays | `count`, `y`, `bright`, `colors` |
+| `orb` | A sun or moon with rings of glow | `x`, `y` (of the sky), `r`, `colors` [face, rim], `glow`, `glow_alpha` |
+| `ridge` | Mountains (`"kind": "peaks"`) or hills (`"round"`) on the horizon | `base` (rows below the horizon), `height` [min, max], `spacing` [min, max], `x` [from, to], `colors` [lit, shade], `snow`, `snow_at` |
+| `trees` | A line of trees | `kind` pine, broad or dead, `base`, `size` [min, max], `gap` [min, max] or `count`, `drop`, `x`, `colors` [lit, mid, shade], `trunk` |
+| `columns` | Columns at fractions of the width | `x` [...], `base`, `height`, `w`, `broken` (a chance), `colors` [lit, mid, shade] |
+| `spikes` | Stalactites (`"from": "top"`) or spikes standing on the horizon | `count`, `len`, `w`, `base`, `colors` [lit, shade] |
+| `islands` | Rocks floating in the sky | `count`, `w`, `y`, `colors` [top, lit, shade] |
+| `town` | Towers, houses with lit windows, a wall | `x` [from, to], `base`, `height`, `towers`, `tower_height`, `wall`, `wall_height`, `colors` [wall lit, wall shade, roof lit, roof shade], `lights` |
+| `ground` | Bands from the horizon down, nearer ones taller | `colors` far to near |
+| `water` | A band of water with glints and foam | `y` [from, to] of the ground, `colors`, `glint`, `glints`, `foam` |
+| `road` | A winding track with ruts | `y`, `wave`, `colors` [dirt, ruts, verge] |
+| `pools` | Pools lying on the ground | `count`, `w`, `y`, `colors` [water, rim] |
+| `cracks` | Glowing cracks: lava, the rift | `count`, `len`, `y`, `colors` [hot, bright] |
+| `details` | Grass `tuft`, `flower`, `pebble`, `dash` or `rock`, nearer ones larger | `kind`, `count`, `y`, `x`, `colors` [lit, shade, accent] |
+| `scatter` | Props from `props`, the far ones first | `props` [ids], `count`, `y`, `x`, `recolor` {key: colour} |
+| `prop` | One prop | `id`, `x`, `base`, `flip`, `recolor` |
+| `band` | A see-through band: mist, smoke, a glow | `y` [from, to] of the height, `color`, `alpha` |
+| `tint` | The sky, the ground or all of it moved toward a colour | `region`, `color`, `amount` |
+| `particles` | Rain, snow, embers, motes | `shape` dot, plus, streak or flake, `count`, `y` (of the height), `len`, `alpha`, `colors` |
+
+Props are grids in the sprites' format, without the reserved keys, drawn standing on their bottom row.
+`SceneryArt.validate()` reports unknown layers, props and colours.

@@ -10,6 +10,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
+const SceneryArt := preload("res://ui/play/scenery_art.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
@@ -18,6 +19,7 @@ var app: Node
 var d: GameDynasty
 var b: GameBattle
 var arena: Control
+var scenery: TextureRect = null   # the land the fight is in (SceneryArt), under everything in the arena
 var field: Control             # draws the area being aimed, under the figures
 var hero_node: Control
 var hero_hp: ProgressBar
@@ -106,6 +108,7 @@ func _ready() -> void:
 	arena = Control.new()
 	arena.clip_contents = true
 	ap.add_child(arena)
+	_build_scenery()
 	field = Control.new()
 	field.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	field.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -269,6 +272,8 @@ func _build_actors() -> void:
 		head.size = Vector2(40, 40)
 		head.position = Vector2(42, 0)
 		hero_node.add_child(head)
+	if scenery != null:
+		hero_node.add_child(_plate(Vector2(-3, 144), Vector2(130, 57)))
 	hero_label = Kit.label("%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)], 14)
 	hero_label.position = Vector2(0, 146)
 	hero_label.size = Vector2(124, 20)
@@ -346,6 +351,9 @@ func _build_actors() -> void:
 		lv.position = Vector2(4, h - 22)
 		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(lv)
+		if scenery != null:
+			var name_w := get_theme_default_font().get_string_size(str(e["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+			root.add_child(_plate(Vector2(-3, h + 1), Vector2(maxf(w, minf(name_w, w + 64.0)) + 6.0, 32)))
 		var lbl := Kit.label(e["name"], 13, GamePlague.infected_color() if e.has("infected") else Kit.TEXT)
 		lbl.position = Vector2(0, h + 3)
 		lbl.size = Vector2(w + 64, 18)
@@ -392,6 +400,8 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	ko.position = Vector2(38, 46)
 	ko.visible = a.hp <= 0
 	root.add_child(ko)
+	if scenery != null:
+		root.add_child(_plate(Vector2(-3, 101), Vector2(116, 54)))
 	var nm := Kit.label(a.name, 13)
 	nm.position = Vector2(0, 103)
 	nm.size = Vector2(110, 18)
@@ -413,6 +423,41 @@ func _build_ally(a: GameHeir) -> Dictionary:
 		body.modulate = Color(0.35, 0.35, 0.4)
 	arena.add_child(root)
 	return {"root": root, "body": body, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
+
+
+## The land the fight is in (SceneryArt: the place's scene in its weather and season), behind everything in
+## the arena, under a veil of the panel's colour so the fighters and their names stand out; a thicker veil
+## with high contrast on. Nothing is drawn for a place without a scene.
+func _build_scenery() -> void:
+	var tex := SceneryArt.for_world(d.world)
+	if tex == null:
+		return
+	scenery = TextureRect.new()
+	scenery.texture = tex
+	scenery.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	scenery.stretch_mode = TextureRect.STRETCH_SCALE
+	scenery.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	scenery.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arena.add_child(scenery)
+	var veil := ColorRect.new()
+	veil.color = Color(Kit.BG, SceneryArt.veil(UiSettings.high_contrast()))
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	arena.add_child(veil)
+
+
+## The dark plate under a figure's name and bars when scenery is drawn, so they read over any ground.
+func _plate(at: Vector2, size: Vector2) -> Panel:
+	var p := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Kit.BG, 0.72)
+	sb.set_corner_radius_all(4)
+	p.add_theme_stylebox_override("panel", sb)
+	p.position = at
+	p.size = size
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.set_meta("plate", true)
+	return p
 
 
 ## The dark tag a foe's level sits on when the foe is drawn from a sprite.
@@ -477,6 +522,10 @@ func _layout() -> void:
 		ally_nodes[i]["root"].position = _spot(ally_nodes[i]["root"], _px(b.unit_point(i)), 64.0)
 	for i in enemy_nodes.size():
 		enemy_nodes[i]["root"].position = _foe_spot(i)
+	if scenery != null:
+		var r := SceneryArt.cover(Vector2(scenery.texture.get_width(), scenery.texture.get_height()), arena.size)
+		scenery.position = r.position
+		scenery.size = r.size
 	field.queue_redraw()
 
 

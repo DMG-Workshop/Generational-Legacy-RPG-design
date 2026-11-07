@@ -1,0 +1,379 @@
+{
+ "size": [384, 120],
+ "horizon": 0.36,
+ "veil": 0.38,
+ "veil_high_contrast": 0.62,
+ "fallback": "plains",
+ "scenes": {
+  "plains": {"horizon": 0.36, "layers": [
+   {"op": "sky", "colors": ["#3f5f8f", "#4d6f9e", "#5f81ac", "#7595ba", "#8eaac7"]},
+   {"op": "clouds", "count": 4, "y": [0.2, 0.6], "w": [26, 56], "colors": ["#dfe7f1", "#b4c4d8"]},
+   {"op": "ridge", "kind": "round", "height": [6, 13], "spacing": [50, 110], "colors": ["#7d97ae", "#6f88a0"]},
+   {"op": "place"},
+   {"op": "trees", "kind": "broad", "base": 1, "size": [6, 10], "gap": [4, 26], "drop": [0, 1], "colors": ["#5f8f4f", "#4c7a43", "#3b6337"], "trunk": ["#5a4030"], "autumn": {"colors": ["#c8873c", "#a8682f", "#7f4c26"]}, "winter": {"kind": "dead", "colors": ["#6a5a4c", "#4f4338"]}},
+   {"op": "ground", "colors": ["#6f9a50", "#669149", "#5d8743", "#547c3d", "#4b7137"], "autumn": {"colors": ["#8d9a52", "#84904b", "#7a8545", "#707a3f", "#666f39"]}},
+   {"op": "details", "kind": "dash", "count": 40, "colors": ["#5a8340"]},
+   {"op": "details", "kind": "tuft", "count": 70, "colors": ["#86b25f", "#4a7136"]},
+   {"op": "details", "kind": "flower", "count": 18, "y": [0.1, 1.0], "colors": ["#86b25f", "#4a7136", "#f2d96b"]},
+   {"op": "details", "kind": "flower", "count": 12, "y": [0.1, 1.0], "colors": ["#86b25f", "#4a7136", "#e88aa0"]},
+   {"op": "details", "kind": "rock", "count": 8, "y": [0.1, 1.0], "colors": ["#a3a39a", "#7c7c74", "#3f5a2f"]}
+  ]},
+  "road": {"horizon": 0.36, "layers": [
+   {"op": "sky", "colors": ["#456592", "#5373a1", "#6585af", "#7a99bc", "#93aec9"]},
+   {"op": "clouds", "count": 3, "y": [0.2, 0.6], "w": [30, 60], "colors": ["#e1e8f1", "#b6c5d8"]},
+   {"op": "ridge", "kind": "round", "height": [5, 11], "spacing": [60, 120], "colors": ["#7f98ad", "#71899f"]},
+   {"op": "place"},
+   {"op": "ground", "colors": ["#6f9a50", "#669149", "#5d8743", "#547c3d", "#4b7137"], "autumn": {"colors": ["#8d9a52", "#84904b", "#7a8545", "#707a3f", "#666f39"]}},
+   {"op": "wall", "y": [0.36, 0.47], "brick": [44, 2], "grow": 1.0, "rough": true, "colors": ["#7ea35a", "#a6a35c", "#6b9450", "#b8a868", "#5f8a4a"], "mortar": "#4a6e3a", "autumn": {"colors": ["#b89a52", "#a68848", "#c8a95c", "#8f8a4a", "#9c7a44"]}},
+   {"op": "trees", "kind": "broad", "base": 2, "size": [6, 11], "gap": [3, 9], "x": [0.0, 0.3], "colors": ["#5f8f4f", "#4c7a43", "#3b6337"], "trunk": ["#5a4030"], "autumn": {"colors": ["#c8873c", "#a8682f", "#7f4c26"]}, "winter": {"kind": "dead", "colors": ["#6a5a4c", "#4f4338"]}},
+   {"op": "trees", "kind": "broad", "base": 3, "size": [6, 10], "gap": [3, 9], "x": [0.72, 1.0], "colors": ["#5f8f4f", "#4c7a43", "#3b6337"], "trunk": ["#5a4030"], "autumn": {"colors": ["#c8873c", "#a8682f", "#7f4c26"]}, "winter": {"kind": "dead", "colors": ["#6a5a4c", "#4f4338"]}},
+   {"op": "road", "y": [0.2, 0.36], "wave": 2.5, "colors": ["#a08a62", "#857150", "#8a7a56"]},
+   {"op": "details", "kind": "tuft", "count": 60, "colors": ["#86b25f", "#4a7136"], "y": [0.36, 1.0]},
+   {"op": "details", "kind": "flower", "count": 14, "y": [0.4, 1.0], "colors": ["#86b25f", "#4a7136", "#f2d96b"]},
+   {"op": "details", "kind": "pebble", "count": 16, "y": [0.2, 0.34], "colors": ["#b8a684", "#7d6a4c"]},
+   {"op": "details", "kind": "rock", "count": 6, "y": [0.4, 1.0], "colors": ["#a3a39a", "#7c7c74", "#3f5a2f"]}
+  ]},
+  "forest": {"horizon": 0.42, "layers": [
+   {"op": "sky", "colors": ["#3d5a6e", "#4b6b7a", "#5c7e86", "#709290"]},
+   {"op": "trees", "kind": "pine", "size": [14, 24], "gap": [3, 6], "colors": ["#56786c", "#4d6f63", "#45665a"], "trunk": ["#3a3a32"], "winter": {"colors": ["#c3d0d2", "#9fb2b0", "#7d948e"]}},
+   {"op": "trees", "kind": "pine", "base": 2, "size": [20, 34], "gap": [5, 10], "drop": [0, 2], "colors": ["#4c7a50", "#3f6b45", "#335a3a"], "trunk": ["#4a3628"], "winter": {"colors": ["#d6e0e2", "#93aca2", "#5f7a6c"]}},
+   {"op": "trees", "kind": "broad", "base": 4, "size": [16, 26], "count": 6, "colors": ["#5a8a4a", "#4a7740", "#3a6234"], "trunk": ["#4a3628", "#35271d"], "autumn": {"colors": ["#c9803a", "#a8622c", "#7c4724"]}, "winter": {"kind": "dead", "colors": ["#5d4e42", "#43382f"]}},
+   {"op": "ground", "colors": ["#4a6b3c", "#436336", "#3c5a31", "#35512c", "#2f4927"], "autumn": {"colors": ["#6e6438", "#665c33", "#5e542e", "#564c2a", "#4e4526"]}},
+   {"op": "details", "kind": "tuft", "count": 50, "colors": ["#6b9152", "#3a5a2e"]},
+   {"op": "scatter", "props": ["fern", "fern", "mushroom", "log"], "count": 14, "y": [0.1, 1.0]},
+   {"op": "details", "kind": "rock", "count": 6, "colors": ["#8a8a80", "#66665e", "#2f4927"]},
+   {"op": "band", "y": [0.26, 0.44], "color": "#a8c0b0", "alpha": 0.12}
+  ]},
+  "fae": {"horizon": 0.4, "layers": [
+   {"op": "sky", "colors": ["#2b2452", "#382e66", "#483a78", "#5c4a88", "#755f9a"]},
+   {"op": "stars", "count": 30, "y": [0.0, 0.6], "colors": ["#f4efff", "#c9bdf0"]},
+   {"op": "orb", "x": 0.78, "y": 0.3, "r": 6, "colors": ["#f4f0ff", "#c9c0ea"], "glow": "#b5a4ff", "glow_alpha": 0.1},
+   {"op": "trees", "kind": "broad", "size": [12, 20], "gap": [5, 10], "colors": ["#4a4f7e", "#404473", "#363a66"], "trunk": ["#2e2a48"]},
+   {"op": "ground", "colors": ["#3f6a5a", "#396253", "#33594c", "#2d5045", "#27473e"]},
+   {"op": "prop", "id": "standing_stone", "x": 0.31, "base": 2},
+   {"op": "prop", "id": "standing_stone", "x": 0.42, "base": 1, "flip": true},
+   {"op": "prop", "id": "standing_stone", "x": 0.56, "base": 1},
+   {"op": "prop", "id": "standing_stone", "x": 0.67, "base": 2, "flip": true},
+   {"op": "details", "kind": "tuft", "count": 46, "colors": ["#5f9a80", "#2f5a4a"]},
+   {"op": "scatter", "props": ["glowcap", "glowcap", "mushroom"], "count": 14, "y": [0.15, 1.0]},
+   {"op": "particles", "shape": "plus", "count": 26, "y": [0.2, 0.95], "alpha": 0.8, "colors": ["#9ff3ff", "#ffb8f0", "#d8ff9f"]}
+  ]},
+  "swamp": {"horizon": 0.4, "layers": [
+   {"op": "sky", "colors": ["#3b4a44", "#47584e", "#566758", "#677766", "#7a8774"]},
+   {"op": "trees", "kind": "dead", "size": [8, 16], "gap": [8, 22], "colors": ["#4d544a", "#3f453c"]},
+   {"op": "ground", "colors": ["#56603e", "#4e5838", "#465033", "#3e472e", "#373f29"]},
+   {"op": "pools", "count": 7, "w": [18, 50], "y": [0.08, 0.95], "colors": ["#2f3f3c", "#6d8079"]},
+   {"op": "trees", "kind": "dead", "base": 8, "size": [22, 32], "count": 3, "colors": ["#5a5246", "#3d372f"]},
+   {"op": "scatter", "props": ["reeds", "reeds", "reeds", "log"], "count": 22, "y": [0.05, 1.0]},
+   {"op": "details", "kind": "tuft", "count": 30, "colors": ["#7a8a52", "#4a5634"]},
+   {"op": "band", "y": [0.3, 0.5], "color": "#b2bfa8", "alpha": 0.18}
+  ]},
+  "hills": {"horizon": 0.38, "layers": [
+   {"op": "sky", "colors": ["#4a6a96", "#5b7aa4", "#6e8db2", "#86a2c2", "#a2bad3"]},
+   {"op": "clouds", "count": 3, "y": [0.15, 0.5], "w": [26, 50], "colors": ["#e3eaf2", "#b9c8da"]},
+   {"op": "ridge", "kind": "round", "height": [12, 24], "spacing": [60, 120], "colors": ["#8299ad", "#7189a0"]},
+   {"op": "ridge", "kind": "round", "base": 1, "height": [6, 14], "spacing": [40, 90], "colors": ["#6f9363", "#5f8256"]},
+   {"op": "place"},
+   {"op": "ridge", "kind": "round", "base": 3, "height": [3, 7], "spacing": [30, 70], "colors": ["#6a8c55", "#5b7b4a"]},
+   {"op": "ground", "colors": ["#6e9450", "#658a49", "#5c8043", "#53763d", "#4a6b37"], "autumn": {"colors": ["#8f9450", "#868a49", "#7c8043", "#72763d", "#686b37"]}},
+   {"op": "details", "kind": "tuft", "count": 60, "colors": ["#88b062", "#4a6e38"]},
+   {"op": "details", "kind": "rock", "count": 14, "y": [0.1, 1.0], "colors": ["#a5a296", "#7d7a6f", "#46603a"]},
+   {"op": "details", "kind": "flower", "count": 10, "y": [0.2, 1.0], "colors": ["#88b062", "#4a6e38", "#e8e0f0"]}
+  ]},
+  "mountains": {"horizon": 0.42, "layers": [
+   {"op": "sky", "colors": ["#3a5684", "#4a6894", "#5d7ca4", "#7592b6", "#8faac8"]},
+   {"op": "clouds", "count": 2, "y": [0.15, 0.4], "w": [30, 50], "colors": ["#e6ecf3", "#bcc9d9"]},
+   {"op": "ridge", "kind": "peaks", "height": [30, 46], "spacing": [50, 90], "colors": ["#a3b2c6", "#91a1b8"], "snow": ["#f2f6fb", "#d4dce8"], "snow_at": 30},
+   {"op": "ridge", "kind": "peaks", "height": [18, 36], "spacing": [26, 56], "colors": ["#7f8ea6", "#66758e"], "snow": ["#eef3f9", "#c5d0de"], "snow_at": 24},
+   {"op": "ridge", "kind": "peaks", "base": 2, "height": [8, 18], "spacing": [18, 40], "colors": ["#6b7078", "#565b64"]},
+   {"op": "ground", "colors": ["#77756b", "#6d6b62", "#636158", "#59574f", "#4f4d46"]},
+   {"op": "details", "kind": "pebble", "count": 30, "colors": ["#9a978c", "#55534c"]},
+   {"op": "details", "kind": "rock", "count": 22, "colors": ["#a19e92", "#7a776d", "#46443d"]},
+   {"op": "details", "kind": "tuft", "count": 18, "colors": ["#8a9a62", "#5a6640"]}
+  ]},
+  "tundra": {"horizon": 0.4, "layers": [
+   {"op": "sky", "colors": ["#6884aa", "#7d97ba", "#94abc9", "#adc1d8", "#c6d4e3"]},
+   {"op": "orb", "x": 0.2, "y": 0.42, "r": 5, "colors": ["#fffaf0", "#f0e6d0"], "glow": "#fff4d6", "glow_alpha": 0.12},
+   {"op": "ridge", "kind": "peaks", "height": [10, 22], "spacing": [26, 52], "colors": ["#cfdaea", "#aebfd6"]},
+   {"op": "ground", "colors": ["#e3eaf3", "#d8e2ed", "#cdd9e7", "#c2d0e0", "#b7c7da"]},
+   {"op": "details", "kind": "dash", "count": 40, "colors": ["#c0cfe0"]},
+   {"op": "trees", "kind": "dead", "base": 3, "count": 4, "size": [6, 10], "colors": ["#6d6a66", "#55524f"]},
+   {"op": "scatter", "props": ["crystal"], "count": 8, "y": [0.1, 1.0], "recolor": {"a": "#f4fbff", "b": "#bcd8ee", "d": "#86a8cc"}},
+   {"op": "details", "kind": "rock", "count": 8, "colors": ["#8b97a6", "#6c7787", "#c0cfe0"]}
+  ]},
+  "coast": {"horizon": 0.36, "layers": [
+   {"op": "sky", "colors": ["#4a70a2", "#5a80ae", "#6e92bb", "#88a8c9", "#a5c0d8"]},
+   {"op": "clouds", "count": 4, "y": [0.15, 0.6], "w": [28, 56], "colors": ["#e6edf5", "#bccbdc"]},
+   {"op": "ground", "colors": ["#c9b78a", "#c0ad80", "#b6a376", "#ab986c", "#a08d62"]},
+   {"op": "water", "y": [0.0, 0.3], "colors": ["#4a7ba6", "#43719a", "#3c678e"], "glint": "#a8cbe6", "glints": 30, "foam": "#e8f2f8"},
+   {"op": "place"},
+   {"op": "details", "kind": "dash", "count": 30, "y": [0.35, 1.0], "colors": ["#b09d70"]},
+   {"op": "scatter", "props": ["shell", "shell", "driftwood"], "count": 10, "y": [0.4, 1.0]},
+   {"op": "details", "kind": "rock", "count": 8, "y": [0.35, 1.0], "colors": ["#8d8a80", "#6b6860", "#a08d62"]},
+   {"op": "details", "kind": "tuft", "count": 14, "y": [0.6, 1.0], "colors": ["#9aa86a", "#6f7a48"]}
+  ]},
+  "cave": {"horizon": 0.42, "indoor": true, "layers": [
+   {"op": "wall", "y": [0.0, 0.43], "brick": [18, 9], "rough": true, "colors": ["#3f3946", "#463f4d", "#3a3440", "#4b4452"], "mortar": "#24202a"},
+   {"op": "band", "y": [0.0, 0.14], "color": "#120f16", "alpha": 0.55},
+   {"op": "spikes", "from": "top", "count": 18, "len": [6, 22], "w": [4, 10], "colors": ["#4f4858", "#3a3442"]},
+   {"op": "spikes", "from": "ground", "base": 1, "count": 10, "len": [4, 14], "w": [5, 10], "colors": ["#56505e", "#403a48"]},
+   {"op": "orb", "x": 0.22, "y": 0.62, "r": 1, "colors": ["#ffcf6a"], "glow": "#ff9a3c", "glow_alpha": 0.08},
+   {"op": "orb", "x": 0.74, "y": 0.62, "r": 1, "colors": ["#ffcf6a"], "glow": "#ff9a3c", "glow_alpha": 0.08},
+   {"op": "prop", "id": "torch", "x": 0.22, "base": -10},
+   {"op": "prop", "id": "torch", "x": 0.74, "base": -10},
+   {"op": "ground", "colors": ["#4a4446", "#443e40", "#3e383a", "#383234", "#322d2f"]},
+   {"op": "details", "kind": "pebble", "count": 40, "colors": ["#6a6466", "#3a3436"]},
+   {"op": "details", "kind": "rock", "count": 10, "colors": ["#625c60", "#4a4448", "#2c2729"]},
+   {"op": "scatter", "props": ["crystal", "bones"], "count": 7, "y": [0.1, 0.9]}
+  ]},
+  "halls": {"horizon": 0.45, "indoor": true, "layers": [
+   {"op": "wall", "y": [0.0, 0.46], "brick": [16, 6], "colors": ["#57504a", "#5d5650", "#524b45"], "mortar": "#2f2a26"},
+   {"op": "band", "y": [0.0, 0.18], "color": "#141114", "alpha": 0.6},
+   {"op": "orb", "x": 0.21, "y": 0.6, "r": 1, "colors": ["#ffcf6a"], "glow": "#ff9a3c", "glow_alpha": 0.08},
+   {"op": "orb", "x": 0.79, "y": 0.6, "r": 1, "colors": ["#ffcf6a"], "glow": "#ff9a3c", "glow_alpha": 0.08},
+   {"op": "prop", "id": "torch", "x": 0.21, "base": -12},
+   {"op": "prop", "id": "torch", "x": 0.79, "base": -12},
+   {"op": "columns", "x": [0.08, 0.34, 0.66, 0.92], "height": [60, 60], "w": 12, "broken": 0.25, "colors": ["#8a8075", "#6f665c", "#564f47"]},
+   {"op": "wall", "y": [0.45, 1.0], "brick": [24, 3], "grow": 0.6, "edge": false, "colors": ["#4f4843", "#544c47", "#4a433e"], "mortar": "#2b2623"},
+   {"op": "scatter", "props": ["rubble", "rubble", "bones"], "count": 8, "y": [0.05, 1.0]}
+  ]},
+  "crypt": {"horizon": 0.44, "indoor": true, "layers": [
+   {"op": "wall", "y": [0.0, 0.45], "brick": [12, 5], "colors": ["#4a4656", "#45414f", "#504b5c"], "mortar": "#29262f"},
+   {"op": "band", "y": [0.0, 0.16], "color": "#100e14", "alpha": 0.6},
+   {"op": "prop", "id": "niche", "x": 0.2, "base": -8},
+   {"op": "prop", "id": "niche", "x": 0.38, "base": -8},
+   {"op": "prop", "id": "niche", "x": 0.62, "base": -8},
+   {"op": "prop", "id": "niche", "x": 0.8, "base": -8},
+   {"op": "columns", "x": [0.06, 0.5, 0.94], "height": [56, 56], "w": 9, "colors": ["#6c6878", "#575363", "#45414f"]},
+   {"op": "wall", "y": [0.44, 1.0], "brick": [20, 3], "grow": 0.55, "edge": false, "colors": ["#3e3a47", "#423e4b", "#3a3643"], "mortar": "#24212a"},
+   {"op": "orb", "x": 0.29, "y": 0.96, "r": 1, "colors": ["#ffd98a"], "glow": "#ffb35c", "glow_alpha": 0.07},
+   {"op": "orb", "x": 0.71, "y": 0.96, "r": 1, "colors": ["#ffd98a"], "glow": "#ffb35c", "glow_alpha": 0.07},
+   {"op": "prop", "id": "candles", "x": 0.29, "base": 2},
+   {"op": "prop", "id": "candles", "x": 0.71, "base": 2, "flip": true},
+   {"op": "scatter", "props": ["bones", "skull", "rubble"], "count": 10, "y": [0.1, 1.0], "recolor": {"a": "#6c6878", "b": "#45414f"}}
+  ]},
+  "ruins": {"horizon": 0.44, "indoor": true, "layers": [
+   {"op": "wall", "y": [0.0, 0.45], "brick": [14, 6], "rough": true, "colors": ["#3f5552", "#465c58", "#3a4f4c"], "mortar": "#22302e"},
+   {"op": "band", "y": [0.0, 0.2], "color": "#0e1614", "alpha": 0.55},
+   {"op": "columns", "x": [0.12, 0.3, 0.7, 0.88], "height": [44, 56], "w": 10, "broken": 0.6, "colors": ["#7d948c", "#627870", "#4a5d57"]},
+   {"op": "ground", "colors": ["#3d524c", "#384b46", "#334540", "#2e3f3a"]},
+   {"op": "water", "y": [0.0, 0.55], "colors": ["#2f5a5a", "#2b5353", "#274c4c"], "glint": "#7fc0b8", "glints": 30, "foam": "#5f9a92"},
+   {"op": "scatter", "props": ["lily", "lily", "rubble"], "count": 10, "y": [0.05, 0.5], "recolor": {"a": "#7d948c", "b": "#4a5d57"}},
+   {"op": "scatter", "props": ["rubble"], "count": 6, "y": [0.6, 1.0], "recolor": {"a": "#7d948c", "b": "#4a5d57"}},
+   {"op": "particles", "shape": "plus", "count": 14, "y": [0.1, 0.8], "alpha": 0.6, "colors": ["#8ff0e0"]}
+  ]},
+  "volcanic": {"horizon": 0.42, "layers": [
+   {"op": "sky", "colors": ["#2a1a20", "#3a2026", "#4e2828", "#66322a", "#83422e"]},
+   {"op": "ridge", "kind": "peaks", "height": [26, 44], "spacing": [30, 60], "colors": ["#3d2e2f", "#2f2324"], "snow": ["#ff8a3a", "#c0501f"], "snow_at": 38},
+   {"op": "band", "y": [0.0, 0.3], "color": "#1a1214", "alpha": 0.35},
+   {"op": "band", "y": [0.34, 0.42], "color": "#ff6a2a", "alpha": 0.12},
+   {"op": "ridge", "kind": "peaks", "base": 2, "height": [8, 16], "spacing": [16, 30], "colors": ["#3a2c2a", "#2c2120"]},
+   {"op": "ground", "colors": ["#3e3230", "#382d2b", "#322826", "#2c2322", "#271f1e"]},
+   {"op": "cracks", "count": 12, "len": [8, 22], "y": [0.05, 1.0], "colors": ["#e0541f", "#ffb347"]},
+   {"op": "details", "kind": "rock", "count": 12, "colors": ["#5a4a46", "#3e3230", "#1e1716"]},
+   {"op": "scatter", "props": ["bones"], "count": 3, "y": [0.2, 1.0]},
+   {"op": "particles", "shape": "dot", "count": 40, "y": [0.05, 0.9], "alpha": 0.9, "colors": ["#ff9a3c", "#ffd04a", "#ff6a2a"]}
+  ]},
+  "rift": {"horizon": 0.44, "indoor": true, "layers": [
+   {"op": "sky", "colors": ["#0c0916", "#140e24", "#1e1433", "#2a1a45", "#382158"]},
+   {"op": "stars", "count": 60, "bright": 0.2, "colors": ["#e2d6ff", "#a88cff", "#7fd8ff"]},
+   {"op": "orb", "x": 0.72, "y": 0.34, "r": 8, "colors": ["#08060e", "#c79bff"], "glow": "#8a5cff", "glow_alpha": 0.12},
+   {"op": "islands", "count": 7, "w": [6, 24], "y": [0.12, 0.8], "colors": ["#7a5aa0", "#4f3a6e", "#382a52"]},
+   {"op": "ridge", "kind": "peaks", "height": [6, 16], "spacing": [12, 30], "colors": ["#3a2a55", "#2a1f40"]},
+   {"op": "ground", "colors": ["#2c2244", "#271e3d", "#221a36", "#1d162f", "#191329"]},
+   {"op": "cracks", "count": 12, "len": [8, 24], "colors": ["#8a5cff", "#e0ccff"]},
+   {"op": "scatter", "props": ["crystal"], "count": 8, "y": [0.05, 0.9], "recolor": {"a": "#f0e0ff", "b": "#b48cff", "d": "#6a3fc0"}},
+   {"op": "particles", "shape": "plus", "count": 20, "alpha": 0.7, "colors": ["#b48cff", "#7fd8ff"]}
+  ]}
+ },
+ "places": {
+  "hearthmere": {"layers": [
+   {"op": "town", "x": [0.56, 0.84], "height": [5, 9], "towers": 1, "tower_height": [14, 18], "wall": true, "colors": ["#a89a8a", "#8a7d70", "#8a5a48", "#6e4639"], "lights": "#ffd27a"}
+  ]},
+  "greenvale": {"scene": "road"},
+  "kingshold": {"layers": [
+   {"op": "town", "x": [0.5, 0.92], "height": [6, 11], "towers": 4, "tower_height": [18, 28], "wall": true, "wall_height": 6, "colors": ["#b8b2a8", "#958f86", "#5a6a8a", "#46536e"], "lights": "#ffd27a"}
+  ]},
+  "elderglade": {"scene": "fae"},
+  "ironford": {"layers": [
+   {"op": "town", "x": [0.14, 0.4], "height": [5, 8], "towers": 2, "tower_height": [12, 16], "colors": ["#9a8f84", "#7c7268", "#6a5a4e", "#53463c"], "lights": "#ffb35c"}
+  ]},
+  "hollow_barrow": {"scene": "crypt"},
+  "brinehaven": {"layers": [
+   {"op": "town", "x": [0.6, 0.95], "height": [5, 9], "towers": 1, "tower_height": [14, 18], "colors": ["#d8d0c4", "#b5ada0", "#4d6f8c", "#3c5770"], "lights": "#ffd27a"},
+   {"op": "prop", "id": "ship", "x": 0.3, "base": 7}
+  ]},
+  "stormcoast": {"layers": [
+   {"op": "ridge", "kind": "peaks", "x": [0.66, 1.0], "base": 9, "height": [24, 40], "spacing": [14, 26], "colors": ["#6e675d", "#57514a"]}
+  ]},
+  "sunken_temple": {"scene": "ruins"},
+  "deepstone_halls": {"scene": "halls"}
+ },
+ "seasons": {
+  "winter": [
+   {"op": "tint", "region": "ground", "color": "#e9eff6", "amount": 0.45}
+  ]
+ },
+ "weather": {
+  "overcast": [
+   {"op": "tint", "region": "sky", "color": "#8a90a0", "amount": 0.45},
+   {"op": "clouds", "count": 6, "y": [0.1, 0.6], "w": [30, 70], "colors": ["#a9afbd", "#8c93a3"]}
+  ],
+  "rain": [
+   {"op": "tint", "region": "sky", "color": "#5f6878", "amount": 0.5},
+   {"op": "tint", "region": "ground", "color": "#3a4250", "amount": 0.15},
+   {"op": "clouds", "count": 6, "y": [0.1, 0.6], "w": [30, 70], "colors": ["#7f8796", "#666e7d"]},
+   {"op": "particles", "shape": "streak", "count": 200, "len": 4, "alpha": 0.45, "colors": ["#b4c4dc"]}
+  ],
+  "storm": [
+   {"op": "tint", "region": "sky", "color": "#2f3545", "amount": 0.62},
+   {"op": "tint", "region": "ground", "color": "#1f2430", "amount": 0.3},
+   {"op": "clouds", "count": 7, "y": [0.05, 0.6], "w": [34, 80], "colors": ["#4b5263", "#3a404f"]},
+   {"op": "particles", "shape": "streak", "count": 300, "len": 5, "alpha": 0.5, "colors": ["#a9b8d0"]}
+  ],
+  "fog": [
+   {"op": "tint", "region": "all", "color": "#9aa2ad", "amount": 0.22},
+   {"op": "band", "y": [0.2, 0.62], "color": "#c0c7cf", "alpha": 0.32}
+  ],
+  "heat": [
+   {"op": "tint", "region": "sky", "color": "#e8b070", "amount": 0.2},
+   {"op": "orb", "x": 0.84, "y": 0.22, "r": 6, "colors": ["#fff3c4", "#ffd88a"], "glow": "#ffe2a0", "glow_alpha": 0.12},
+   {"op": "tint", "region": "ground", "color": "#c8a868", "amount": 0.12}
+  ],
+  "snow": [
+   {"op": "tint", "region": "sky", "color": "#a3acbb", "amount": 0.35},
+   {"op": "tint", "region": "ground", "color": "#eef3f8", "amount": 0.55},
+   {"op": "particles", "shape": "flake", "count": 150, "alpha": 0.85, "colors": ["#f6f9ff", "#dfe7f2"]}
+  ]
+ },
+ "props": {
+  "fern": {"size": [9, 5], "palette": {"a": "#7aa35a", "b": "#4f7a3f", "d": "#3a5a2e"}, "rows": [
+   "...a.b...",
+   ".aa.a.bb.",
+   "a..aab..b",
+   "..aaabb..",
+   "...dbd..."]},
+  "mushroom": {"size": [5, 5], "palette": {"r": "#c8443c", "q": "#8f2f2a", "w": "#f2e8dc", "e": "#e8dcc8", "f": "#b8a892"}, "rows": [
+   ".rrr.",
+   "rwrrq",
+   "rrrwq",
+   ".qqq.",
+   "..ef."]},
+  "glowcap": {"size": [5, 6], "palette": {"g": "#6fe0e6", "G": "#d8fbff", "t": "#3aa0b0", "e": "#cfe8e8", "f": "#8fb8bc"}, "rows": [
+   ".ggg.",
+   "gGggt",
+   "ggggt",
+   ".ttt.",
+   "..ef.",
+   "..ef."]},
+  "log": {"size": [12, 4], "palette": {"b": "#7a5a3c", "d": "#5e432c", "e": "#43301f", "o": "#c8a878", "p": "#9c7c56"}, "rows": [
+   ".bbbbbbbbbo.",
+   "bdddddddddop",
+   "bdddddddddop",
+   ".eeeeeeeeeo."]},
+  "reeds": {"size": [5, 9], "palette": {"b": "#6b4a2e", "g": "#7a8a4a", "n": "#556032"}, "rows": [
+   ".b...",
+   ".b..g",
+   ".b.bg",
+   ".g.bg",
+   "gg.b.",
+   ".g.g.",
+   ".gng.",
+   "gg.gg",
+   ".ggg."]},
+  "standing_stone": {"size": [7, 15], "palette": {"a": "#a3a0b0", "b": "#7d7a8c", "d": "#5f5c6c", "m": "#6f9058", "r": "#8ff0ff"}, "rows": [
+   "..ab...",
+   ".aabb..",
+   ".aabbd.",
+   "aaabbd.",
+   "aarabbd",
+   "aaabbbd",
+   "amabbbd",
+   "aaabbbd",
+   "aarabbd",
+   "aaabbbd",
+   "amaabbd",
+   "aaabbbd",
+   "aaabbbd",
+   "maabbmd",
+   "mmabmmd"]},
+  "bones": {"size": [7, 3], "palette": {"e": "#e6dcc6", "f": "#b3a68c"}, "rows": [
+   "e....fe",
+   ".eeeef.",
+   "ef....f"]},
+  "skull": {"size": [5, 4], "palette": {"e": "#e6dcc6", "f": "#b3a68c", "k": "#2a2430"}, "rows": [
+   ".eee.",
+   "ekeke",
+   "eeeef",
+   ".efe."]},
+  "crystal": {"size": [5, 9], "palette": {"a": "#bff4ff", "b": "#6fd0e8", "d": "#3a8ab0"}, "rows": [
+   "..a..",
+   ".aab.",
+   ".aab.",
+   ".abd.",
+   "a.bd.",
+   "aabdb",
+   "aabdd",
+   "abbdd",
+   ".bdd."]},
+  "shell": {"size": [3, 2], "palette": {"e": "#f0d8c8", "f": "#c8a090"}, "rows": [
+   ".e.",
+   "efe"]},
+  "driftwood": {"size": [10, 3], "palette": {"b": "#b8ab98", "d": "#8f8270"}, "rows": [
+   "......b...",
+   ".bbbbbbbb.",
+   "bdddddddd."]},
+  "torch": {"size": [3, 9], "palette": {"y": "#ffe08a", "o": "#ff9a3c", "r": "#d8502a", "b": "#6a4a30"}, "rows": [
+   ".y.",
+   "yoy",
+   "oro",
+   ".o.",
+   ".b.",
+   ".b.",
+   "bbb",
+   ".b.",
+   ".b."]},
+  "candles": {"size": [7, 6], "palette": {"y": "#ffe08a", "o": "#ff9a3c", "e": "#e8dcc0", "f": "#b8a888"}, "rows": [
+   ".y.....",
+   ".o..y..",
+   ".e..o..",
+   ".e..e.y",
+   ".e..e.o",
+   "ef.efef"]},
+  "niche": {"size": [11, 12], "palette": {"k": "#1c1922", "e": "#d8cdb6", "f": "#a89c84", "a": "#6c6878", "b": "#4a4656"}, "rows": [
+   "...kkkkk...",
+   "..kkkkkkk..",
+   ".kkkkkkkkk.",
+   ".kkkkkkkkk.",
+   ".kkkeeekkk.",
+   ".kkekekekk.",
+   ".kkeeeeekk.",
+   ".kkkefekkk.",
+   ".kkkkkkkkk.",
+   ".kkkkkkkkk.",
+   "aaaaaaaaaaa",
+   ".bbbbbbbbb."]},
+  "rubble": {"size": [8, 3], "palette": {"a": "#8a8478", "b": "#5f5a52"}, "rows": [
+   "..ab....",
+   ".aabb.ab",
+   "aabbbaab"]},
+  "lily": {"size": [5, 2], "palette": {"g": "#5f9a4a", "d": "#3f6f35", "p": "#f0a0c0"}, "rows": [
+   ".gpg.",
+   "ggggd"]},
+  "ship": {"size": [24, 14], "palette": {"r": "#c8443c", "m": "#5a3e28", "w": "#ece4d0", "v": "#c4b89e", "u": "#7a5232", "q": "#553820"}, "rows": [
+   "...........rr...........",
+   "...........m............",
+   "......wwwwwm............",
+   ".......wwwwmvvvv........",
+   ".......wwwwmvvvvv.......",
+   "........wwwmvvvvv.......",
+   "........wwwmvvvvvv......",
+   ".........wwmvvvvvv......",
+   ".........wwmvvvvv.......",
+   "...........m.......uuu..",
+   "..uuuuuuuuuuuuuuuuuuuu..",
+   "...uuuuuuuuuuuuuuuuuuu..",
+   "....qqqqqqqqqqqqqqqqq...",
+   ".....qqqqqqqqqqqqqqq...."]}
+ }
+}
