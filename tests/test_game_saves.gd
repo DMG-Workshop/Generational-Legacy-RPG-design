@@ -75,7 +75,9 @@ func test_save_and_load() -> void:
 	var back := GameDynasty.load_from_disk()
 	ok(back != null and JSON.stringify(back.to_dict()) == JSON.stringify(d.to_dict()), "and loads back identical")
 	d.start_hunt("hunt")
-	ok(d.battle != null and not d.save_to_disk(), "a fight is not saved")
+	ok(d.battle != null and d.save_to_disk(), "a fight is saved with the dynasty")
+	var mid := GameDynasty.load_from_disk()
+	ok(mid != null and mid.battle != null and mid.battle.turn == d.battle.turn, "and loads back still going (see test_game_battle_saves)")
 	ok(GameDynasty.has_save(), "has_save sees the file")
 
 
@@ -83,7 +85,7 @@ func test_bak_fallback() -> void:
 	_wipe()
 	var d := _dynasty(6, 1)
 	d.save_to_disk()
-	var first := JSON.stringify(d.to_dict())
+	var first := JSON.stringify(d.to_save())
 	d.heir.gold += 1
 	d.save_to_disk()
 	ok(FileAccess.get_file_as_string(GameSaves.base + ".bak") == first, "the second save keeps the first as .bak")
@@ -91,7 +93,7 @@ func test_bak_fallback() -> void:
 	f.store_string("{ not json")
 	f.close()
 	var back := GameDynasty.load_from_disk()
-	ok(back != null and JSON.stringify(back.to_dict()) == first, "a damaged save loads from the .bak")
+	ok(back != null and JSON.stringify(back.to_save()) == first, "a damaged save loads from the .bak")
 	DirAccess.remove_absolute(GameSaves.base)
 	ok(GameDynasty.has_save() and GameDynasty.load_from_disk() != null, "a missing save with a .bak is still a save")
 	_wipe()

@@ -1080,8 +1080,8 @@ func test_saves() -> void:
 	ok(g.auto_party.get("heir", false) == true and g.party.members[0].get("auto", false) == true and not g.party.members[1].has("auto"), "and read back")
 	var again := g.to_dict()
 	ok(again["auto_party"] == d.auto_party, "a save round-trips")
-	# Saving mid-battle is refused as before.
-	ok(not d.save_to_disk(), "no save during a battle")
+	# A save made mid-battle holds the fight (its round and switches included; see test_game_battle_saves).
+	ok(d.battle != null and d.to_save().has("battle"), "a save during a battle holds the fight")
 	# Keys removed: defaults.
 	var stripped: Dictionary = JSON.parse_string(text)
 	stripped.erase("auto_party")
