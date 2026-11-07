@@ -105,6 +105,17 @@ once and kept.
 The battle screen keeps a clear body under every sprite, which takes taps, holds and flashes as the old
 blocks did. A foe's level sits on a dark tag, so it reads over any sprite.
 
+## Poses
+
+On the battle screen every figure drawn from a sprite stands in a pose holder, `ui/play/figure_pose.gd`, which
+moves the sprite without touching the body under it that takes the taps. Standing, a figure breathes: a
+two-frame bob of one art pixel, each figure on a beat of its own. The battle's events play as moves (`MOVES`
+in the script): **attack** a hop toward the other side, **cast** a hop lit in the spell's element colour,
+**hurt** knocked back with a shake, **dodge** a step back, **guard** a crouch. A move jumps between whole art
+pixels, like the frames of a sprite, so the figure stays crisp. A knocked-out companion, a beaten hero and a
+slain foe **fall**: the figure lies down with its head toward its back. With reduced motion nothing breathes
+or moves, and a fall shows at once. A figure still drawn as a block takes the events without a pose.
+
 ## Scenery
 
 A fight is drawn in front of the land it happens in: `ui/play/scenery_art.gd` paints the scene of the place in
