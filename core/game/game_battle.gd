@@ -45,6 +45,7 @@ var _asked_for: Dictionary = {}   # members the player has been asked about this
 var _foe_queue: Array = []        # foes still to act this round, in order
 var _foe_step: int = 0            # where the foe at the head of _foe_queue is in its turn (see _foe_turn_steps)
 var braced: Dictionary = {}    # ref -> true: a companion braced this round (see GameRound, settings.brace_taken)
+var resumed: bool = false      # not saved: this fight was loaded from a save made in the middle of it
 
 
 func _init(p_heir: GameHeir, p_enemies: Array, p_rng: RandomNumberGenerator) -> void:
@@ -52,6 +53,94 @@ func _init(p_heir: GameHeir, p_enemies: Array, p_rng: RandomNumberGenerator) -> 
 	enemies = p_enemies
 	rng = p_rng
 	GameCombat.place_enemies(enemies)
+
+
+## A fight in progress as plain values, for a save made in the middle of it (GameDynasty.to_save). The heir and
+## the dice are the dynasty's and saved with it; each companion is kept as who they are and their health and
+## mana, and rebuilt from the party on load. The worked-out numbers (_nums, _gear) are worked out again.
+func to_dict() -> Dictionary:
+	return {
+		"enemies": enemies, "damage_bonus": damage_bonus, "slayer_bonus": slayer_bonus, "weather": weather,
+		"biomes": biomes, "allies": allies.map(func(a): return {"id": str(a.get_meta("companion", "")), "hp": a.hp, "mp": a.mp}),
+		"foe_hp_mult": foe_hp_mult, "result": result, "defending": defending, "turn": turn, "focus": focus,
+		"log": log, "events": events, "statuses": statuses, "immune": immune, "heir_skip": heir_skip, "casts": casts,
+		"uses": uses, "struck": struck, "feat_ready": feat_ready, "fields": fields, "coating": coating,
+		"exposures": exposures, "blade": _blade, "round_on": round_on, "round_acted": round_acted,
+		"round_marks": round_marks, "round_cmds": round_cmds, "round_covers": round_covers, "round_asks": round_asks,
+		"reaction": reaction, "covered": _covered, "asked_for": _asked_for, "foe_queue": _foe_queue,
+		"foe_step": _foe_step, "braced": braced,
+	}
+
+
+## The fight a to_dict() saved, given back its heir, its dice and its companions (rebuilt from the party in
+## the saved order, as add_allies made them, without scaling the foes again: their saved health already is).
+## Null when a value is missing or of the wrong kind, or the companions do not match: the fight is not loaded.
+static func restore(v: Dictionary, p_heir: GameHeir, p_rng: RandomNumberGenerator, p_allies: Array) -> GameBattle:
+	var kinds := {
+		"enemies": TYPE_ARRAY, "damage_bonus": TYPE_FLOAT, "slayer_bonus": TYPE_DICTIONARY, "weather": TYPE_DICTIONARY,
+		"biomes": TYPE_ARRAY, "allies": TYPE_ARRAY, "foe_hp_mult": TYPE_FLOAT, "result": TYPE_STRING, "defending": TYPE_BOOL,
+		"turn": TYPE_INT, "focus": TYPE_INT, "log": TYPE_ARRAY, "events": TYPE_ARRAY, "statuses": TYPE_DICTIONARY,
+		"immune": TYPE_DICTIONARY, "heir_skip": TYPE_BOOL, "casts": TYPE_INT, "uses": TYPE_DICTIONARY,
+		"struck": TYPE_DICTIONARY, "feat_ready": TYPE_DICTIONARY, "fields": TYPE_ARRAY, "coating": TYPE_DICTIONARY,
+		"exposures": TYPE_ARRAY, "blade": TYPE_BOOL, "round_on": TYPE_BOOL, "round_acted": TYPE_BOOL,
+		"round_marks": TYPE_BOOL, "round_cmds": TYPE_DICTIONARY, "round_covers": TYPE_DICTIONARY,
+		"round_asks": TYPE_DICTIONARY, "reaction": TYPE_DICTIONARY, "covered": TYPE_DICTIONARY,
+		"asked_for": TYPE_DICTIONARY, "foe_queue": TYPE_ARRAY, "foe_step": TYPE_INT, "braced": TYPE_DICTIONARY,
+	}
+	for k in kinds:
+		if typeof(v.get(k)) != kinds[k]:
+			return null
+	var saved: Array = v["allies"]
+	if saved.size() != p_allies.size():
+		return null
+	var b := GameBattle.new(p_heir, [], p_rng)   # no placing: the foes keep the places they had
+	b.enemies = v["enemies"]
+	b.biomes = v["biomes"]
+	b.allies = p_allies
+	for i in p_allies.size():
+		var a: GameHeir = p_allies[i]
+		var s = saved[i]
+		if typeof(s) != TYPE_DICTIONARY or str(s.get("id", "")) != str(a.get_meta("companion", "")):
+			return null
+		a.learn_spells()
+		GameFeats.ready_companion(a, b.biomes, 1 + p_allies.size())
+		a.hp = int(s.get("hp", a.hp))
+		a.mp = int(s.get("mp", a.mp))
+	b.damage_bonus = v["damage_bonus"]
+	b.slayer_bonus = v["slayer_bonus"]
+	b.weather = v["weather"]
+	b.foe_hp_mult = v["foe_hp_mult"]
+	b.result = v["result"]
+	b.defending = v["defending"]
+	b.turn = v["turn"]
+	b.focus = v["focus"]
+	b.log = v["log"]
+	b.events = v["events"]
+	b.statuses = v["statuses"]
+	b.immune = v["immune"]
+	b.heir_skip = v["heir_skip"]
+	b.casts = v["casts"]
+	b.uses = v["uses"]
+	b.struck = v["struck"]
+	b.feat_ready = v["feat_ready"]
+	b.fields = v["fields"]
+	b.coating = v["coating"]
+	b.exposures = v["exposures"]
+	b._blade = v["blade"]
+	b.round_on = v["round_on"]
+	b.round_acted = v["round_acted"]
+	b.round_marks = v["round_marks"]
+	b.round_cmds = v["round_cmds"]
+	b.round_covers = v["round_covers"]
+	b.round_asks = v["round_asks"]
+	b.reaction = v["reaction"]
+	b._covered = v["covered"]
+	b._asked_for = v["asked_for"]
+	b._foe_queue = v["foe_queue"]
+	b._foe_step = v["foe_step"]
+	b.braced = v["braced"]
+	b.resumed = true
+	return b
 
 
 func living_enemies() -> Array:

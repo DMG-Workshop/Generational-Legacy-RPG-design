@@ -903,15 +903,14 @@ func test_pause_saves() -> void:
 	back = GameDynasty.load_from_disk()
 	ok(back != null and back.heir.gold == 999, "a desktop losing focus does not write the save")
 	ok(JSON.stringify(back.to_dict()) == JSON.stringify(GameDynasty.from_dict(JSON.parse_string(JSON.stringify(back.to_dict()))).to_dict()), "the paused save round-trips")
-	# Mid-fight the rule stands: battles are saved when they end, so the save on disk is the one
-	# from before it, and pausing changes nothing.
+	# Mid-fight a pause saves the fight itself, so the game reopens in it (see test_game_battle_saves).
 	d.save_to_disk()
-	var disk := FileAccess.get_file_as_string(GameDynasty.save_path)
 	d.start_hunt("hunt")
 	app.show_state()
 	await _frames(2)
 	root.propagate_notification(Node.NOTIFICATION_APPLICATION_PAUSED)
-	ok(FileAccess.get_file_as_string(GameDynasty.save_path) == disk, "a pause mid-fight keeps the save from before the fight")
+	var mid := GameDynasty.load_from_disk()
+	ok(mid != null and mid.battle != null and mid.battle.enemies.size() == d.battle.enemies.size(), "a pause mid-fight saves the fight")
 	d.battle = null
 	app.show_state()
 	await _frames(2)

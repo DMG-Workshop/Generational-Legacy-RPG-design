@@ -990,7 +990,50 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
 		GameAges.end_saga(g, [])
 	_fill_sexes(g)
+	if typeof(d.get("battle")) == TYPE_STRING and g.state == "life":
+		g._restore_battle(str(d["battle"]))
 	return g
+
+
+## The dynasty as its save file holds it: to_dict() at this game's save version (GameSaveVersion), with the
+## fight in progress when there is one. The fight is kept exactly, ints and floats as they were (Godot's own
+## encoding in base64, values only), so after a load it plays on as if the game had never closed. to_dict()
+## keeps the shape the golden digests were taken from and never holds the fight.
+func to_save() -> Dictionary:
+	var out := to_dict()
+	out["version"] = GameSaveVersion.CURRENT
+	if battle != null:
+		var fight := {"kind": battle_kind, "battle": battle.to_dict()}
+		if command_round != null and command_round.b == battle:
+			fight["round"] = command_round.to_dict()
+		out["battle"] = Marshalls.variant_to_base64(fight)
+	return out
+
+
+## Brings back a fight saved by to_save(): its companions rebuilt from the party, its round, its kind. A save
+## that does not hold a whole fight (damaged, or its companions gone) loads without it, as before the fight.
+func _restore_battle(text: String) -> void:
+	var shape := RegEx.create_from_string("^[A-Za-z0-9+/]+={0,2}$")   # checked first so the engine never logs a decode error
+	if text.length() % 4 != 0 or shape.search(text) == null:
+		return
+	var v = Marshalls.base64_to_variant(text, false)   # values only: a save can never carry an object in
+	if typeof(v) != TYPE_DICTIONARY or typeof(v.get("battle")) != TYPE_DICTIONARY:
+		return
+	var saved: Dictionary = v["battle"]
+	var allies: Array = []
+	for a in saved.get("allies", []):
+		var m := party.member(str(a.get("id", ""))) if typeof(a) == TYPE_DICTIONARY else {}
+		if m.is_empty():
+			return
+		allies.append(party.unit(self, m))
+	var b := GameBattle.restore(saved, heir, rng, allies)
+	if b == null:
+		return
+	battle = b
+	battle_kind = str(v.get("kind", "hunt"))
+	command_round = null
+	if typeof(v.get("round")) == TYPE_DICTIONARY:
+		command_round = GameRound.restore(v["round"], b, auto_party, party)
 
 
 ## JSON parsing turns every number into a float; restore whole numbers to ints.
@@ -1008,10 +1051,10 @@ static func _ints(v: Variant) -> Variant:
 	return v
 
 
+## Saves the dynasty, a fight in progress included: closing the game mid-fight neither loses the fight nor
+## undoes it.
 func save_to_disk() -> bool:
-	if battle != null:
-		return false
-	return GameSaves.write_atomic(save_path, JSON.stringify(to_dict()))
+	return GameSaves.write_atomic(save_path, JSON.stringify(to_save()))
 
 
 ## True when the save file, or the ".bak" kept beside it, exists.

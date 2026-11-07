@@ -142,6 +142,13 @@ func _ready() -> void:
 	target = b.first_target()
 	_update_view()
 	call_deferred("_layout")
+	if b.resumed:   # loaded from a save made mid-fight: the last of its log, and it plays on
+		for line in b.log.slice(maxi(0, b.log.size() - 8)):
+			_say(line)
+		_say("The battle goes on.")
+		if b.is_over():   # saved after the last blow, before its result was shown
+			call_deferred("_show_result")
+		return
 	_say("A battle begins!")
 	if not b.allies.is_empty():
 		var party: Array = b.allies.map(func(a): return a.name)

@@ -58,7 +58,7 @@ static func write_atomic(path: String, text: String) -> bool:
 ## The dynasty in a file, or null when it is missing, not JSON, or not shaped like a save.
 static func load_file(path: String) -> GameDynasty:
 	var parsed: Variant = read_json(path)
-	if not shape_ok(parsed):
+	if not shape_ok(parsed) or GameSaveVersion.upgrade(parsed) != "":
 		return null
 	return GameDynasty.from_dict(parsed)
 
@@ -76,6 +76,11 @@ static func parse(text: String) -> Variant:
 	if j.parse(text) != OK:
 		return null
 	return j.data
+
+
+## A save this game can load: shaped like one, and not from a newer game.
+static func _loadable(d: Variant) -> bool:
+	return shape_ok(d) and GameSaveVersion.readable(d)
 
 
 ## True when `d` is a dictionary with the keys a saved dynasty has, of the right kinds.
@@ -106,10 +111,10 @@ static func peek(slot: int) -> Dictionary:
 		return out
 	out["exists"] = true
 	var parsed: Variant = read_json(path)
-	if not shape_ok(parsed):
+	if not _loadable(parsed):
 		parsed = read_json(path + ".bak")   # a damaged main file with a good ".bak": the slot is still playable
-		out["restorable"] = shape_ok(parsed)
-		if not shape_ok(parsed):
+		out["restorable"] = _loadable(parsed)
+		if not _loadable(parsed):
 			return out
 	out["valid"] = true
 	var h: Dictionary = parsed["heir"]
@@ -191,6 +196,11 @@ static func import_text(text: String) -> Dictionary:
 	if not shape_ok(parsed):
 		fail["error"] = "The backup does not hold a house."
 		return fail
+	var too_new := GameSaveVersion.upgrade((parsed as Dictionary).duplicate())
+	if too_new != "":
+		fail["error"] = too_new
+		return fail
+	GameSaveVersion.upgrade(parsed)
 	var d := GameDynasty.from_dict(parsed)
 	if d == null:
 		fail["error"] = "The backup does not hold a playable house."

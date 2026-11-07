@@ -184,6 +184,36 @@ static func validate() -> Array:
 
 ## The round for a battle that has just begun. `prefs` is GameDynasty.auto_party and `party` the
 ## dynasty's GameParty: the Auto switches are read from them and written back to them.
+## The round as plain values, for a save made in the middle of a fight (GameDynasty.to_save).
+func to_dict() -> Dictionary:
+	return {"auto": auto, "entries": entries, "last": last, "cursor": cursor, "flee_by": flee_by, "number": number,
+		"order": _order, "stash": _stash, "covers": covers}
+
+
+## The round a to_dict() saved, on its restored battle; null when a value is of the wrong kind. Unlike open(),
+## it begins no round: the battle's own round state was saved with it.
+static func restore(v: Dictionary, p_b: GameBattle, prefs: Dictionary = {}, party: GameParty = null) -> GameRound:
+	var kinds := {"auto": TYPE_DICTIONARY, "entries": TYPE_DICTIONARY, "last": TYPE_DICTIONARY, "cursor": TYPE_INT,
+		"flee_by": TYPE_INT, "number": TYPE_INT, "order": TYPE_ARRAY, "stash": TYPE_DICTIONARY, "covers": TYPE_DICTIONARY}
+	for k in kinds:
+		if typeof(v.get(k)) != kinds[k]:
+			return null
+	var r := GameRound.new()
+	r.b = p_b
+	r._prefs = prefs
+	r._party = party
+	r.auto = v["auto"]
+	r.entries = v["entries"]
+	r.last = v["last"]
+	r.cursor = v["cursor"]
+	r.flee_by = v["flee_by"]
+	r.number = v["number"]
+	r._order = v["order"]
+	r._stash = v["stash"]
+	r.covers = v["covers"]
+	return r
+
+
 static func open(p_b: GameBattle, prefs: Dictionary = {}, party: GameParty = null) -> GameRound:
 	var r := GameRound.new()
 	r.b = p_b
