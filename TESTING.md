@@ -58,6 +58,7 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_items.gd` | Shops, equipment and the temple; every item reaches the player somehow |
 | `test_game_mobile.gd` | Phones and tablets: hold-for-details, no hover previews from a finger, tooltips in the shipped UI |
 | `test_game_party.gd` | Companions: hire, dismiss, upkeep, level sync, rest, succession, battles with allies and saves |
+| `test_game_replay.gd` | Replay files (`GameReplay`): the autopilot's lives and hand-given commands (rest, train, hunts fought by turn and by the heir's own commands, the world clock) are recorded, written as one line of text, read back and played to exactly the same dynasty; a changed or missing command is found at its command; commands the game does not allow are refused; damaged, foreign, newer or hand-made replays are turned away with a reason |
 | `test_game_party_ui.gd` | The party command screen: a solo hunt is unchanged, and with companions each member is asked in turn |
 | `test_game_plague.gd` | The battle side of sickness: carriers, toxins, plague vials, sick companions and determinism |
 | `test_game_quests.gd` | Notice-board quests: content, rules, rewards, saves and the board |
