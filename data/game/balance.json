@@ -102,5 +102,7 @@
   "companion_ko_recover_hp": 0.15,
   "companion_mend_per_year": 0.2,
   "companion_kin_gens": 2,
-  "companion_bot_reserve_years": 10
+  "companion_bot_reserve_years": 10,
+  "clock_span_years": 1.0,
+  "clock_seconds_per_year": 60.0
 }

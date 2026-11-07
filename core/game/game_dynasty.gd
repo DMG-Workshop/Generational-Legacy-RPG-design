@@ -15,6 +15,7 @@ var state: String = "life"     # "life", "succession", or "ended" once the last 
 var history: Array = []         # the founder and the latest dead heirs in full; older ones live in `ages`
 var echoes: Array = []          # [{kind,key,text,strength,gen}]
 var heirlooms: Array = []       # [{name, boss, gen}]
+var clock_carry: float = 0.0    # years the world clock has been fed but not yet lived through (see GameClock); saved only when above 0
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
@@ -716,6 +717,12 @@ func _finish_time(action: String, msgs: Array) -> Array:
 	return _pass_years(float(years_for(action)), msgs)
 
 
+## The one way time passes: `years` go by for the heir, the party and the world. Actions reach it through
+## _finish_time with whole years; the world clock (GameClock) reaches it with the spans real time adds up to.
+func pass_time(years: float, msgs: Array = []) -> Array:
+	return _pass_years(years, msgs)
+
+
 ## Time passes for the heir and the world: ageing, milestones, weather, death of old age.
 func _pass_years(years: float, msgs: Array) -> Array:
 	loot = {}   # moving on leaves the dead unsearched
@@ -939,6 +946,8 @@ func to_dict() -> Dictionary:
 	}
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
 		out["house"] = house
+	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
+		out["clock_carry"] = clock_carry
 	if not auto_party.is_empty():   # only once the player has set a switch: older saves and fresh ones stay alike
 		out["auto_party"] = auto_party
 	return out
@@ -978,6 +987,8 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
 	g.party = GameParty.from_dict(d.get("party", {}), g)
 	g.house = GameHouse.from_dict(d.get("house", {}))
+	var carry = d.get("clock_carry", 0.0)
+	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
 	g.auto_battle = bool(d.get("auto_battle", false))
