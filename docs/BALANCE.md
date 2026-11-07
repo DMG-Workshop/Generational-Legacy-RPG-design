@@ -63,3 +63,13 @@ By race of the heir:
 - The long-lived races (dwarf, elf, gnome, halfling) sit at 4.7-5.2%, a little above humans and inside the band. Nothing here says a long life stacks up too many chances to die.
 - The short-lived ones stand out the other way: **the autopilot almost never loses an orc or a beastkin in battle** (1 in 754 lives). They die of old age at a mean level of 31-35, before the autopilot's Hard hunt rules (level 40 and up) let it take the risky fights. That is the autopilot's caution more than the game's difficulty, but it is where the numbers differ most.
 - The hybrids appear only through marriages, so their rows rest on 70 to 90 lives and are good to several points at best.
+
+## Long runs and budgets
+
+The harness above answers "are battle deaths in the band?". The **long run** answers "is anything getting heavier?": `tools/long_run_check.gd` plays whole dynasties for many generations with the autopilot and measures, per dynasty, the generations reached, the size of the final save, how long it takes to load, how long a generation takes to play and the journal's size, against `data/game/budgets.json`.
+
+```bash
+godot --headless --path . -s res://tools/long_run_check.gd -- seeds=1-2 gens=60 races=human,elf check
+```
+
+`check` makes it exit 1 when something is over budget. The size and "the line carries on" limits are exact; the time limits are generous because a shared machine is slow. A save grows about 0.3 KB per generation (older heirs fold into the Ages), so the size budget is a base plus an allowance per generation reached. A generation takes about a second to play, so 60 generations is a minute per dynasty. `.github/workflows/long-runs.yml` runs it every night, one race per job, and from the Actions tab by hand with other seeds or generations. When a night fails, `tools/replay.gd -- record` on the same seed and a replay play it again exactly.
