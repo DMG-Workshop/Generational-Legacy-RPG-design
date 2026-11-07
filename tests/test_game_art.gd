@@ -191,11 +191,20 @@ func _frames(n: int = 3) -> void:
 		await process_frame
 
 
-func _has_sprite(n: Node) -> bool:
+## The figure's sprite under `n`: in its pose holder, or right under it.
+func _sprite_of(n: Node) -> TextureRect:
 	for c in n.get_children():
 		if c is TextureRect and (c as TextureRect).texture != null:
-			return true
-	return false
+			return c
+		if not (c is ColorRect):
+			for g in c.get_children():
+				if g is TextureRect and (g as TextureRect).texture != null:
+					return g
+	return null
+
+
+func _has_sprite(n: Node) -> bool:
+	return _sprite_of(n) != null
 
 
 func _eyes(n: Node) -> int:
@@ -248,10 +257,8 @@ func test_battle_screen() -> void:
 
 
 func _sprite_tex(n: Node) -> Texture2D:
-	for c in n.get_children():
-		if c is TextureRect:
-			return (c as TextureRect).texture
-	return null
+	var t := _sprite_of(n)
+	return t.texture if t != null else null
 
 
 func _find_all(n: Node, pred: Callable) -> Array:

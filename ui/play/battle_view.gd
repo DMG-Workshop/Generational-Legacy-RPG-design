@@ -11,6 +11,7 @@ const TouchHint := preload("res://ui/play/touch_hint.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const SceneryArt := preload("res://ui/play/scenery_art.gd")
+const FigurePose := preload("res://ui/play/figure_pose.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
@@ -22,6 +23,7 @@ var arena: Control
 var scenery: TextureRect = null   # the land the fight is in (SceneryArt), under everything in the arena
 var field: Control             # draws the area being aimed, under the figures
 var hero_node: Control
+var hero_pose: Control = null   # the hero's FigurePose, when drawn from a sprite
 var hero_hp: ProgressBar
 var hero_mp: ProgressBar
 var hero_label: Label
@@ -262,7 +264,8 @@ func _build_actors() -> void:
 	if hero_tex != null:   # the figure from data/art; the clear body under it takes the taps and the flashes
 		hero_body.color = Color(0, 0, 0, 0)
 		hero_body.size = Vector2(124, 144)
-		hero_body.add_child(SpriteArt.sprite_node(hero_tex, hero_body.size))
+		hero_pose = _pose(hero_tex, hero_body.size, 1.0, 0)
+		hero_body.add_child(hero_pose)
 	else:   # no figure for this class: the old block
 		hero_body.color = Color(cls["color"])
 		hero_body.size = Vector2(80, 110)
@@ -326,8 +329,12 @@ func _build_actors() -> void:
 		body.gui_input.connect(func(ev: InputEvent): _on_foe_input(idx, ev))
 		TouchHint.on_hover(body, func(): _on_foe_hover(idx, true), func(): _on_foe_hover(idx, false))
 		root.add_child(body)
+		var pose: Control = null
 		if tex != null:   # the creature from data/art, standing on the bottom of its box
-			body.add_child(SpriteArt.sprite_node(tex, Vector2(w, h)))
+			pose = _pose(tex, Vector2(w, h), -1.0, i + 1)
+			body.add_child(pose)
+			if int(e["hp"]) <= 0:
+				pose.fall(true)
 		else:   # no sprite: the old block with two eyes
 			for ex in [0.28, 0.62]:
 				var eye := ColorRect.new()
@@ -369,7 +376,7 @@ func _build_actors() -> void:
 		chips.z_index = 1
 		root.add_child(chips)
 		arena.add_child(root)
-		enemy_nodes.append({"root": root, "body": body, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h})
+		enemy_nodes.append({"root": root, "body": body, "pose": pose, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h})
 
 
 ## A companion: smaller figure in class colours with a race-tinted head, name, level and HP.
@@ -377,6 +384,7 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	var root := Control.new()
 	root.size = Vector2(110, 172)
 	var tex := SpriteArt.figure(a)
+	var pose: Control = null
 	var body := ColorRect.new()
 	var by := ally_nodes.size()   # this companion's index: the figures are built in party order
 	body.gui_input.connect(func(ev: InputEvent): _on_party_input(by, ev))
@@ -384,7 +392,10 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	if tex != null:   # the figure from data/art; the clear body under it takes the taps, flashes and the KO dimming
 		body.color = Color(0, 0, 0, 0)
 		body.size = Vector2(110, 100)
-		body.add_child(SpriteArt.sprite_node(tex, body.size))
+		pose = _pose(tex, body.size, 1.0, ally_nodes.size() + 5)
+		body.add_child(pose)
+		if a.hp <= 0:
+			pose.fall(true)
 	else:   # no figure for this class: the old block with a race-tinted head
 		body.color = Color(a.cls()["color"])
 		body.size = Vector2(58, 72)
@@ -422,7 +433,7 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	if a.hp <= 0:
 		body.modulate = Color(0.35, 0.35, 0.4)
 	arena.add_child(root)
-	return {"root": root, "body": body, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
+	return {"root": root, "body": body, "pose": pose, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
 
 
 ## The land the fight is in (SceneryArt: the place's scene in its weather and season), filling the arena
@@ -1826,6 +1837,7 @@ func _play_one(ev: Dictionary) -> void:
 		"cast":
 			_lunge(_unit_node(by), 22.0)
 			var el := str(ev.get("element", ""))
+			_move(_party_pose(by), "cast", Color(GameCombat.element_color(el)) if el != "" else Kit.ACCENT)
 			_float_text(_unit_node(by).position + Vector2(0, -30), str(ev["name"]), Color(GameCombat.element_color(el)) if el != "" else Kit.ACCENT, 20)
 			for t in ev.get("targets", []):
 				if ev.get("aoe", false):
@@ -1834,6 +1846,8 @@ func _play_one(ev: Dictionary) -> void:
 			if ev["side"] == "enemy":
 				if int(ev.get("cast", 0)) == 0:
 					_lunge(_unit_node(by), 22.0)
+					_move(_party_pose(by), "attack")
+				_move(_foe_pose(ev["index"]), "hurt")
 				var en: Dictionary = enemy_nodes[ev["index"]]
 				var txt := GameText.num(int(ev["amount"])) + ("!" if ev["crit"] else "")
 				if ev.get("shatter", false):
@@ -1843,12 +1857,16 @@ func _play_one(ev: Dictionary) -> void:
 				en["hp"].value = maxf(float(b.enemies[ev["index"]]["hp"]), en["hp"].value - float(ev["amount"]))
 			elif ev["side"] == "ally":
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+				_move(_foe_pose(ev["index"]), "attack")
+				_move(_party_pose(int(ev["ally"])), "hurt")
 				var an: Dictionary = ally_nodes[ev["ally"]]
 				_float_text(an["root"].position + Vector2(34, -6), _hurt_text(ev), Kit.bad())
 				_flash(an["body"])
 				_step_ally_hp(ev["ally"], -int(ev["amount"]))
 			else:
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+				_move(_foe_pose(ev["index"]), "attack")
+				_move(hero_pose, "hurt")
 				_float_text(hero_node.position + Vector2(40, 0), _hurt_text(ev), Kit.bad())
 				_flash(hero_node.get_child(0))
 				_step_heir_hp(-int(ev["amount"]))
@@ -1891,10 +1909,14 @@ func _play_one(ev: Dictionary) -> void:
 			if ev["side"] == "enemy":   # a foe slipped the party's blow
 				if int(ev.get("cast", 0)) == 0:
 					_lunge(_unit_node(by), 22.0)
+					_move(_party_pose(by), "attack")
+				_move(_foe_pose(ev["index"]), "dodge")
 				var en4: Dictionary = enemy_nodes[ev["index"]]
 				_float_text(en4["root"].position + Vector2(en4["w"] * 0.2, 6), "dodge", Kit.dim())
 				return
 			_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
+			_move(_foe_pose(ev["index"]), "attack")
+			_move(_party_pose(int(ev["ally"]) if ev["side"] == "ally" else -1), "dodge")
 			if ev["side"] == "ally":
 				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.dim())
 			else:
@@ -1907,12 +1929,15 @@ func _play_one(ev: Dictionary) -> void:
 		"death":
 			var en2: Dictionary = enemy_nodes[ev["index"]]
 			en2["mark"].visible = false
+			if en2["pose"] != null:
+				en2["pose"].fall()
 			var t := create_tween()
 			t.tween_property(en2["root"], "modulate:a", 0.0, UiSettings.motion_time(0.4))
 		"advance":   # the back rank steps up into the fallen front rank's place
 			for k in ev["indices"]:
 				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), UiSettings.motion_time(0.3))
 		"defend":
+			_move(_party_pose(by), "guard")
 			_float_text(_unit_node(by).position + Vector2(30, 0), "guard", Kit.MP_BLUE)
 		"cover":   # a standing cover steps in front of a hurt member
 			_float_text(_unit_node(int(ev["by"])).position + Vector2(30, 0), "covers", Kit.MP_BLUE)
@@ -1982,6 +2007,8 @@ func _step_heir_hp(delta: int) -> void:
 	_heir_info(int(hero_hp.value))
 	if strip != null:
 		strip.set_hp(-1, hero_hp.value)
+	if hero_hp.value <= 0.0 and hero_pose != null:   # the heir is down: the fight is lost
+		hero_pose.fall()
 
 
 func _heir_info(hp: int) -> void:
@@ -2012,9 +2039,36 @@ func _knock_out(i: int) -> void:
 		return
 	an["down"] = true
 	an["ko"].visible = true
+	if an["pose"] != null:
+		an["pose"].fall()
 	_float_text(an["root"].position + Vector2(10, -6), "knocked out", Kit.bad())
 	var t := create_tween()
 	t.tween_property(an["body"], "modulate", Color(0.35, 0.35, 0.4), UiSettings.motion_time(0.4))
+
+
+## A figure drawn from a sprite, in a FigurePose holder that breathes and plays the moves. `n` spreads the
+## figures' breathing beats so they do not bob together.
+func _pose(tex: Texture2D, box: Vector2, faces: float, n: int) -> Control:
+	var p: Control = FigurePose.new()
+	p.setup(tex, box, faces, 0.55 + 0.07 * float(n % 5))
+	return p
+
+
+## The pose of the hero (-1) or a companion; null for a figure still drawn as a block.
+func _party_pose(by: int) -> Control:
+	if by < 0:
+		return hero_pose
+	return ally_nodes[by]["pose"] if by < ally_nodes.size() else null
+
+
+func _foe_pose(i: int) -> Control:
+	return enemy_nodes[i]["pose"] if i >= 0 and i < enemy_nodes.size() else null
+
+
+## Plays a move on a figure's pose, if it has one.
+func _move(pose: Control, move: String, tint: Color = Color(0, 0, 0, 0)) -> void:
+	if pose != null:
+		pose.play(move, tint)
 
 
 ## A short step towards the other side and back, so it is clear who acted.
