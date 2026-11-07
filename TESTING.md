@@ -45,6 +45,7 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_gear.gd` | Gear on figures: the gear data is sound and every weapon and armour has a look; armour finishes go on metal and leather outside the weapon's box and weapon finishes on the blade or wood inside it; capes and glows; nothing changes without gear; figures kept per gear; the heir drawn in their gear on the battle screen |
 | `test_game_poses.gd` | The battle figures' poses: every sprite figure breathes, out of step with its neighbours; blows, misses, casts and guards play as moves in whole art pixels; the knocked out, the beaten hero and the slain fall; a block figure takes events without a pose; reduced motion stills it all but the falls; and no dice are drawn |
 | `test_game_scenery.gd` | The battle scenery: the data is sound, every place has a scene painted the same every time without the game's dice, weather and seasons change it outdoors only, whole-pixel scaling and the crop to the arena's shape, and the battle screen drawing the place's scene behind the figures under a veil with plates under the names |
+| `test_game_screenshots.gd` | The screenshot check's logic and stored images, headless: the comparison finds a changed label (about 400 pixels) and not a repeat, a shade a few steps off, another pixel format or ten stray pixels; a different size, a missing or empty image are differences; the diff image marks changed pixels in magenta; the images in `tests/screenshots` are exactly the screens `tools/screenshots.gd` draws, at the right sizes and not blank. Drawing the screens needs a window, so that runs in `.github/workflows/screenshots.yml` |
 | `test_game_balance_tool.gd` | The balance harness's logic: seed lists, the 95% range, the verdict against the band, and a small reproducible autopilot batch |
 | `test_game_bot.gd` | The autopilot's Hard hunt choice and the `bot_hard_hunt` rules in `balance.json` |
 | `test_game_clock.gd` | The world clock (`GameClock`): seconds add up to whole spans with the rest carried and saved; spans fed end exactly as the same years passed through `pass_time` (heir, party wages, weather, dice); the clock holds during a fight, a waiting event and a succession; left running it carries a line through three old-age deaths with the Ages recording them; the carry loads from old and damaged saves |
@@ -102,3 +103,15 @@ Autopilot changes are balance changes. The balance harness is `tools/balance_har
 ## Older prototype tests
 
 The `tests/test_*.gd` files that don't start with `test_game_` test the older prototype code (`core/battle`, `core/lineage`, `world/`, `ui/screens` and others) that the game does not use. Many of them extend `GutTest`, and the GUT addon is not in this repo, so they don't run as they are. Don't treat them as a gate. Check them before relying on them.
+
+## Screenshots
+
+`tools/screenshots.gd` draws 14 key screens (the title, the life screen, the shop, map, house, looks, skill tree and chronicle panels, the menu, an event, two battles in different lands, and the life and battle screens at phone size) with the real renderer on a virtual display, with reduced motion and fixed seeds, and compares them with the PNGs in `tests/screenshots`. It takes about 10 seconds. On one machine the drawing repeats exactly: a second run differs by 0 pixels, and a renamed button moves about 400. So the allowance is tiny (`tools/screenshot_diff.gd`), and `.github/workflows/screenshots.yml` fails a pull request that changes a screen without updating its stored image. The workflow always keeps what it drew, with a diff image for each screen that differs, as an artifact.
+
+To see the screens yourself, or to make the stored images again after a meant change:
+
+```bash
+xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy -s res://tools/screenshots.gd -- mode=update
+```
+
+`mode=render out=/tmp/shots` only draws them. Software rendering can differ between Mesa versions, so images made on your machine may not match CI's: start the workflow by hand on the branch with "update" ticked and it draws them on CI's machine and commits them to the branch.
