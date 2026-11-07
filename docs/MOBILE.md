@@ -215,3 +215,7 @@ left and right on iPhone and iPad). Copy the whole `build/ios/` folder to a Mac,
 open the `.xcodeproj` in Xcode, pick your team under **Signing & Capabilities**,
 plug in the device and press Run. For TestFlight or the App Store use
 **Product > Archive** in Xcode.
+
+## Save files
+
+Export to file and Import from file (title screen) write and read a `.glsave` file: the same text block as Copy backup. Where the platform has a native file dialog the game uses it (`DisplayServer.FEATURE_NATIVE_DIALOG_FILE`); otherwise the file is written to the Downloads folder, or to the game's own `exports` folder when there is none, and Import from file picks the newest `.glsave` there. Copy backup still works everywhere. **Not yet checked on a real phone:** whether the engine's file dialog is offered on Android and iOS and whether the Downloads folder is writable there (Android's scoped storage may refuse it, in which case the screen says the file could not be written and points to Copy backup). A share sheet needs a native plugin and is not built.

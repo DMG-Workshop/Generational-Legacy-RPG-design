@@ -6,6 +6,7 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Clipboard := preload("res://ui/play/clipboard.gd")
+const FilePicker := preload("res://ui/play/file_picker.gd")
 
 var app: Node
 var note: Label
@@ -112,9 +113,18 @@ func _ready() -> void:
 				else:
 					Clipboard.set_text(text)
 					note.text = "Backup of slot %d copied. Paste it into a note to keep it." % app.slot, Vector2(0, 40)))
+			v.add_child(Kit.button("Export to file", func():
+				app.autosave()
+				var slot: int = app.slot
+				FilePicker.save("Save the house to a file", GameSaves.file_name(slot), func(path: String):
+					if path == "":
+						note.text = "Nothing was saved."
+						return
+					var r := GameSaves.export_file(slot, path)
+					note.text = "Saved to %s." % path if r["ok"] else r["error"] + " Copy backup works too."), Vector2(0, 40)))
 			v.add_child(Kit.button("Title screen", func(): app.show_title(), Vector2(0, 40)))
 		"battle":
-			var l := Kit.label("A fight is not saved until it ends; the house is as it was before it began.", 14, Kit.dim())
+			var l := Kit.label("The fight is saved as you go: closing the game now reopens it where you left off.", 14, Kit.dim())
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 	v.add_child(note)

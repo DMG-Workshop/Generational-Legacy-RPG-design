@@ -3,6 +3,7 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Clipboard := preload("res://ui/play/clipboard.gd")
+const FilePicker := preload("res://ui/play/file_picker.gd")
 
 var app: Node
 var name_edit: LineEdit
@@ -200,6 +201,18 @@ func _build_slots() -> void:
 	del.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	del.disabled = not here["exists"]
 	acts.add_child(del)
+	var files := HBoxContainer.new()
+	files.add_theme_constant_override("separation", 8)
+	slot_box.add_child(files)
+	var export := Kit.button("Export to file", _export_file, Vector2(0, 0))
+	export.custom_minimum_size.y = UiSettings.tap_h(0)
+	export.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	export.disabled = not here["valid"]
+	files.add_child(export)
+	var import := Kit.button("Import from file", func(): _ask_if_full(_import_file, "Import the file over this slot's house?"), Vector2(0, 0))
+	import.custom_minimum_size.y = UiSettings.tap_h(0)
+	import.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	files.add_child(import)
 	confirm_row = HBoxContainer.new()
 	confirm_row.add_theme_constant_override("separation", 8)
 	confirm_row.visible = false
@@ -256,8 +269,30 @@ func _copy_backup() -> void:
 	_say("Backup copied (%d characters). Paste it into a note to keep it." % text.length())
 
 
+func _export_file() -> void:
+	var slot: int = app.slot
+	FilePicker.save("Save the house to a file", GameSaves.file_name(slot), func(path: String):
+		if path == "":
+			_say("Nothing was saved.")
+			return
+		var r := GameSaves.export_file(slot, path)
+		_say("Saved to %s." % path if r["ok"] else r["error"] + " Copy backup works too."))
+
+
+func _import_file() -> void:
+	FilePicker.open("Choose a save file", func(path: String):
+		if path == "":
+			_say("No save file was chosen. Put a .%s file in %s, or use Restore backup." % [FilePicker.EXT, FilePicker.fallback_dir()] if not FilePicker.fake and not FilePicker.native() else "No save file was chosen.")
+			return
+		_restore(GameSaves.import_file(path)))
+
+
 func _restore_backup() -> void:
-	var r := GameSaves.import_text(Clipboard.get_text())
+	_restore(GameSaves.import_text(Clipboard.get_text()))
+
+
+## Writes a read backup or file into the picked slot, or says why it cannot.
+func _restore(r: Dictionary) -> void:
 	if not r["ok"]:
 		_say(r["error"])
 		return
