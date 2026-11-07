@@ -15,6 +15,7 @@ The same sprites are meant for the later isometric pixel-art version of the game
 | `data/art/races.json` | Each race's colours and layers: `{"races": {race_id: RACE}}` |
 | `data/art/creatures.json` | One sprite per creature id in `data/creatures/creatures.json`, bosses included |
 | `data/art/shirts.json` | The shirt colours a hero or companion can wear: `{"shirts": [{"id", "name", "color"}]}` |
+| `data/art/gear.json` | How gear shows on figures: a note per class, the finishes, a look per weapon and armour, and the cape |
 | `data/art/scenery.json` | The battle scenery: a scene per kind of land, what some places add, the weather, the seasons and props |
 
 `tests/test_game_art.gd` checks that the data is sound and that every creature, class and race has art, and
@@ -23,6 +24,7 @@ The same sprites are meant for the later isometric pixel-art version of the game
 ```bash
 godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/creatures.png
 godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/heroes.png what=heroes
+godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/gear.png what=gear
 godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/places.png what=scenery
 godot --headless --path . -s res://tools/art_sheet.gd -- out=/tmp/swamp.png what=scenery place=mirefen scale=2
 ```
@@ -60,6 +62,24 @@ digests are unchanged.
 - **Races** set `skin`, `skin_shade`, `hair` and `hair_shade`, and may add full 24 x 40 `under` and `over`
   layers with their own `palette`. `under` is for things behind the body (tails, horns behind a hood) and
   `over` for things in front (beards, tusks, snouts, ears).
+
+## Gear
+
+What the heir wears shows on their figure. `data/art/gear.json` gives each weapon and armour a look, and
+`SpriteArt.gear_of` reads the heir's equipped weapon and armour (companions wear none):
+
+- **Finishes** are colour lists, light to dark: `metals` (iron, steel, mithril, sun, dragon, barrow, rust,
+  shadow), `woods` and `leathers`. They are spread over a class's own palette keys, listed light to dark.
+- **A note per class** (`classes`) says where its weapon is (`weapon`, a box `[x0, y0, x1, y1]`, or `[]` for
+  none) and which of its palette keys are the weapon's `blade` and `wood` (inside the box) and the armour's
+  `metal` and `leather` (outside it).
+- **An item's look** (`items`): a weapon's `metal` or `wood` finish and a `glow` colour, a ring of light
+  around what the weapon's box holds; an armour's `metal` and `leather` finishes and a `cape` colour, which
+  hangs the `cape` grid behind the figure, behind the race's under layer too. An item may have no look
+  (`{}`): a robe changes nothing.
+
+Every weapon and armour in `data/items/items.json` needs a look and every class a note;
+`tests/test_game_gear.gd` checks both. `tools/art_sheet.gd` with `what=gear` draws every class in five gear sets.
 
 ## Creatures
 

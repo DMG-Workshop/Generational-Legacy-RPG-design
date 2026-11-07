@@ -4,7 +4,8 @@
 ## place=<id> that place in every weather and then every season; scale=<n> enlarges each scene.
 ## It first prints any problems SpriteArt.validate() and SceneryArt.validate() find. Runs headless: images
 ## only, no screen.
-## godot --headless --path . -s res://tools/art_sheet.gd -- out=/abs/path/sheet.png [what=creatures|heroes|scenery]
+## what=gear draws every class (as race=<id>, human by default) in a row of gear sets, the first with none.
+## godot --headless --path . -s res://tools/art_sheet.gd -- out=/abs/path/sheet.png [what=creatures|heroes|scenery|gear]
 extends SceneTree
 
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
@@ -41,6 +42,15 @@ func _init() -> void:
 				tiles.append(_scene(place, "clear", str(s["id"])))
 				names.append(str(s["id"]))
 		print("in order: %s" % ", ".join(names))
+	elif what == "gear":
+		var classes: Array = GameData.classes.keys()
+		cols = classes.size()
+		var sets: Array = [{}, {"weapon": "steel_sword", "armor": "plate_armor"}, {"weapon": "sunblade", "armor": "dragonscale_mail"},
+			{"weapon": "staff_of_ages", "armor": "shadow_weave"}, {"weapon": "mithril_blade", "armor": "barrow_plate"}, {"weapon": "archmage_staff", "armor": "archmage_vestments"}]
+		for g in sets:
+			for c in classes:
+				tiles.append(SpriteArt.hero(_arg("race", "human"), str(c), Color(GameData.classes[c]["color"]), g))
+		print("rows: no gear, %s\ncolumns: %s" % [", ".join(sets.slice(1).map(func(g): return "%s + %s" % [g["armor"], g["weapon"]])), ", ".join(classes)])
 	elif what == "heroes":
 		var classes: Array = GameData.classes.keys()
 		cols = classes.size()
