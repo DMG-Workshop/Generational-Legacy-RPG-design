@@ -310,16 +310,16 @@ func _build_gear() -> void:
 		if GameItems.stack_max(iid) > 0:
 			rows.add_child(_consumable_row(iid, can_sell))
 			continue
-		var eb := Kit.button("Equip", func(): _act(GameItems.equip(dynasty, iid)), Vector2(80, 34))
+		var eb := Kit.button("Equip", func(): _act(GameItems.equip(dynasty, iid)), Vector2(68, 34))
 		eb.disabled = GameItems.slot_of(iid) not in GameItems.SLOTS
-		var sb := Kit.button("Sell", func(): _sell(iid), Vector2(80, 34))
+		var sb := Kit.button("Sell", func(): _sell(iid), Vector2(60, 34))
 		sb.disabled = not can_sell
 		if not can_sell:
 			sb.tooltip_text = "No one in %s buys gear." % dynasty.world.here()["name"]
 		if confirm_sell == iid:
 			sb.text = "Sure?"
 			sb.tooltip_text = "%s again to sell the %s. It cannot be bought back." % [Kit.click().capitalize(), GameItems.item_name(iid)]
-		var db := Kit.button("Drop", func(): _drop(iid), Vector2(80, 34))
+		var db := Kit.button("Drop", func(): _drop(iid), Vector2(60, 34))
 		if confirm_drop == iid:
 			db.text = "Sure?"
 			db.tooltip_text = "%s again to leave the %s behind. It cannot be picked up again." % [Kit.click().capitalize(), GameItems.item_name(iid)]
@@ -332,7 +332,7 @@ func _build_gear() -> void:
 ## toxins and vials are for battle.
 func _consumable_row(id: String, can_sell: bool) -> PanelContainer:
 	var h := dynasty.heir
-	var ub := Kit.button("Use", func(): _act(GameDisease.use_remedy(dynasty, id)), Vector2(80, 34))
+	var ub := Kit.button("Use", func(): _act(GameDisease.use_remedy(dynasty, id)), Vector2(60, 34))
 	if GameDisease.remedy_power(id) > 0:
 		var cures: String = ", ".join(GameDisease.treatable_by(id).map(func(x): return GameDisease.disease_name(x)))
 		ub.disabled = GameDisease.remedy_target(h, id) == ""
@@ -340,11 +340,11 @@ func _consumable_row(id: String, can_sell: bool) -> PanelContainer:
 	else:
 		ub.disabled = true
 		ub.tooltip_text = "Only in battle."
-	var sb := Kit.button("Sell", func(): _act(GameItems.sell(dynasty, id)), Vector2(80, 34))
+	var sb := Kit.button("Sell", func(): _act(GameItems.sell(dynasty, id)), Vector2(60, 34))
 	sb.disabled = not can_sell
 	if not can_sell:
 		sb.tooltip_text = "No one in %s buys gear." % dynasty.world.here()["name"]
-	var db := Kit.button("Drop", func(): _drop(id), Vector2(80, 34))
+	var db := Kit.button("Drop", func(): _drop(id), Vector2(60, 34))
 	db.tooltip_text = "Leave one behind to lighten the load."
 	return _item_row(id, "sells %sg" % GameText.num(GameItems.sell_price(dynasty, id)), [ub, sb, db])
 
