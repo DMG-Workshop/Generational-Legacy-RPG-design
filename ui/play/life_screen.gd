@@ -173,7 +173,7 @@ func _build_left() -> void:
 	var arch := ""
 	if h.archetype != "":
 		arch = "  -  %s" % GameFate.ARCHETYPES[h.archetype]["name"]
-	left.add_child(Kit.label("Level %s %s %s%s" % [GameText.num(h.level), h.race()["name"], h.cls()["name"], arch], 15, Kit.dim()))
+	left.add_child(Kit.label("Level %s %s %s%s%s" % [GameText.num(h.level), h.race()["name"], h.cls()["name"], (" (%s)" % GameSubclass.name_of(h.subclass)) if h.subclass != "" else "", arch], 15, Kit.dim()))
 	left.add_child(Kit.label("Age %d / ~%d%s" % [int(h.age), int(h.lifespan), "  (living on borrowed time)" if h.age > h.lifespan else ""], 15))
 	left.add_child(Kit.label("Fate Value: %d%%" % int(round(h.fate_value * 100.0)), 15, Kit.bad() if h.fate_value > 0.2 else Kit.TEXT))
 	left.add_child(Kit.label("HP %s / %s" % [GameText.num(h.hp), GameText.num(h.max_hp())], 14))

@@ -101,12 +101,13 @@ static func pairs(d: GameDynasty) -> Array:
 
 
 ## A pair's chance of young in a year: by kind, and by the parents' traits.
-static func fertility(mother: Dictionary, father: Dictionary) -> float:
+static func fertility(mother: Dictionary, father: Dictionary, d: GameDynasty = null) -> float:
 	var k := kind(str(mother["species"]), str(father["species"]))
 	if k == "":
 		return 0.0
 	var base := float(setting("fertility")[k])
-	return clampf(base * trait_mult(mother, "fertility_mult") * trait_mult(father, "fertility_mult"), 0.0, 1.0)
+	var skill := GameSubclass.perk(d.heir, "fertility_mult") if d != null else 1.0
+	return clampf(base * trait_mult(mother, "fertility_mult") * trait_mult(father, "fertility_mult") * skill, 0.0, 1.0)
 
 
 static func _rng(d: GameDynasty, parts: Array) -> RandomNumberGenerator:
@@ -133,7 +134,7 @@ static func on_years(d: GameDynasty, years: float, msgs: Array, year_end: float 
 			var mother: Dictionary = pair[0]
 			var father: Dictionary = pair[1]
 			var r := _rng(d, [y, int(mother["id"]), int(father["id"])])
-			if r.randf() >= fertility(mother, father):
+			if r.randf() >= fertility(mother, father, d):
 				continue
 			for line in _birth(d, mother, father, r):
 				d._say(line)
@@ -175,7 +176,7 @@ static func _birth(d: GameDynasty, mother: Dictionary, father: Dictionary, r: Ra
 	var pool: Array = data()["traits"].keys()
 	pool.sort()
 	var mutated := ""
-	if r.randf() < float(setting("mutation_chance")):
+	if r.randf() < float(setting("mutation_chance")) * GameSubclass.perk(d.heir, "mutation_mult"):
 		var t := str(pool[r.randi() % pool.size()])
 		if t not in traits:
 			traits.append(t)

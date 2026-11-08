@@ -32,6 +32,7 @@ static func chance(h: GameHeir, species: String, place: String = "search") -> fl
 	c *= float(setting("class_bonus").get(h.class_id, 1.0))
 	for t in h.all_traits():
 		c *= float(setting("trait_bonus").get(str(t), 1.0))
+	c *= GameSubclass.perk(h, "find_mult")
 	return clampf(c, 0.0, float(setting("max_chance")))
 
 

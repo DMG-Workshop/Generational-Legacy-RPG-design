@@ -91,7 +91,7 @@ static func yearly_keep(e: Dictionary, d: GameDynasty = null) -> float:
 	var k := float(size_of(str(e["species"]))["keep"])
 	if str(e.get("stage")) == "egg":
 		k *= float(setting("egg_keep_share"))
-	return k * (ranch_factor(d, e, "keep") if d != null else 1.0)
+	return k * (ranch_factor(d, e, "keep") * GameSubclass.perk(d.heir, "keep_mult") if d != null else 1.0)
 
 
 ## What work a species does: {kind, gold} or {} (grown creatures only; see work_share).
@@ -248,11 +248,11 @@ static func _live_years(d: GameDynasty, e: Dictionary, years: float, mood_change
 
 
 ## What a creature would sell for: its size's value, by stage, by how well it has been kept.
-static func sell_price(e: Dictionary) -> int:
+static func sell_price(e: Dictionary, d: GameDynasty = null) -> int:
 	var v := float(size_of(str(e["species"])).get("value", 0))
 	var stage_mult := float(setting("stage_value").get(str(e.get("stage")), 1.0))
 	var mood := float(clampi(int(e.get("mood", setting("start_mood"))), 0, int(setting("mood_max")))) / float(setting("mood_max"))
-	return maxi(1, int(round(v * stage_mult * mood * GameBreeding.trait_mult(e, "value_mult"))))
+	return maxi(1, int(round(v * stage_mult * mood * GameBreeding.trait_mult(e, "value_mult") * (GameSubclass.perk(d.heir, "value_mult") if d != null else 1.0))))
 
 
 ## Sells a kept creature for gold. Returns the line told, or "" if it could not be sold (not in a life, no such creature).
@@ -260,7 +260,7 @@ static func sell(d: GameDynasty, id: int) -> String:
 	var e := find(d, id)
 	if e.is_empty() or d.state != "life":
 		return ""
-	var gold := sell_price(e)
+	var gold := sell_price(e, d)
 	d.heir.gold += gold
 	return _part(d, e, "sold", {"gold": GameText.num(gold)})
 
