@@ -509,20 +509,21 @@ Every few generations, dragon raids, rival houses, monster surges, or undead arm
 - **Reactive story:** breaking in early changes the outcome (waking the dragon too soon can trigger a failure)
 - **Anchor zones:** authored regions the Strata system never destroys
 
-## Taming, Ranching and Breeding
+## Eggs, Young, Ranching and Breeding
 
-The Beast Tamer job ("recruit defeated monsters") and the Familiar Breeder job grow into a system of their own. This is design intent, not built; `docs/ROADMAP.md` items 55 to 58 hold the plan.
+Creatures are not tamed. They are found young and raised. This replaces the Beast Tamer job's "recruit defeated monsters" idea as the way a creature joins the family (the table above still lists it; whether a tamer keeps any way to recruit grown creatures is open). This is design intent, not built; `docs/ROADMAP.md` items 55 to 58 hold the plan.
 
-- **Taming.** After a win, the heir may try to tame a foe instead of searching it. The chance depends on the creature (temperament and how hard it is to tame), the heir (job, traits, class), what is offered (bait, food) and how hurt it is. A failed try can anger it. Bosses and legends are never tamed, but some creatures may be bargained with.
-- **The ranch.** A part of the family house with pens, feeding, care and a mood. Creatures grow up (young, adult, elder), live their own lifespans, and die; the ranch is inherited by the next heir like the rest of the house. Creatures there can go out with the party, work, be sold or be set free.
-- **Breeding.** Two creatures can have young. The same species breed true; traits pass on and can mutate. A **hybrid** is a pairing the game defines: it is a species of its own (a wolf and a drake make an ember hound). A **cross-breed** is any other pairing of kin species that can breed at all: one animal carrying two lines, with traits from each, less fertile and sometimes sterile (as a mule is). A line can be kept pure for generations and named, as the dynasty is.
-- **Across worlds.** Each realm has creatures of its own. A creature can be taken to another realm and may need to adapt, and creatures of different realms can be crossed: the young carry traits of both worlds, some stable, some unstable. Crossing realms needs the gates and circles that link them.
+- **How creatures are born.** Every creature either **lays eggs** (dragons, drakes, birds, reptiles, spiders) or bears **live young** (wolves, bears, cats), and its young have a name: hatchling or whelp, pup, cub, kit, foal.
+- **Finding young.** The heir may find a clutch of eggs or a litter: in a nest or lair after a hunt, at an Explore event, beside a slain mother. The chance depends on the place and the creature (a legend's clutch is rare and guarded), the Beast Tamer job, traits and class. An egg is kept warm until it hatches, or it spoils; young are fed and sheltered until they grow. A creature raised from the egg or the cub is bonded to the heir who raised it; there is no roll to tame it, and the bond grows with care.
+- **The ranch.** A part of the family house with a hatchery for eggs, a nursery, pens, feeding, care and a mood. Creatures grow up (newborn, young, adult, elder), live their own lifespans, and die; the ranch is inherited by the next heir like the rest of the house. Creatures there can go out with the party, work, be sold or be set free.
+- **Breeding.** Two creatures can have young, by egg or by birth as their kind does. The same species breed true; traits pass on and can mutate. A **hybrid** is a pairing the game defines: it is a species of its own (a wolf and a drake make an ember hound). A **cross-breed** is any other pairing of kin species that can breed at all: one animal carrying two lines, with traits from each, less fertile and sometimes sterile (as a mule is). A line can be kept pure for generations and named, as the dynasty is. Hybrids of an egg-layer and a live-bearer need a rule (the egg-layer's kind wins, or the mother's); that is open.
+- **Across worlds.** Each realm has creatures of its own, and its own eggs and young. A creature can be taken to another realm and may need to adapt, and creatures of different realms can be crossed: the young carry traits of both worlds, some stable, some unstable. Crossing realms needs the gates and circles that link them.
 
 The words "hybrid" and "cross-breed" are used here as defined above (a recipe the game knows, against an open mixing of kin); the family's own hybrid *races* (a half-elf, a half-orc) are a separate thing already in the game.
 
 ## Titles
 
-Titles are earned, not bought: the Slayer of Grimfang, the Unbroken, a Master Breeder, a Warden of a Hundred Years, and the noble titles and land claims the Noble Blood bloodline speaks of. A **personal** title belongs to one heir, and goes into the chronicle and the Hollow Below when they die; a **house** title stays with the dynasty. The player chooses which earned title to wear after the name. Some carry a small perk. Achievements (roadmap item 16) can award them, and faction reputation (item 17) confers the noble ones. Roadmap item 59.
+Titles are earned, not bought: the Slayer of Grimfang, the Unbroken, a Master Breeder, a Warden of a Hundred Years, and the noble titles and land claims the Noble Blood bloodline speaks of. A **personal** title belongs to one heir, and goes into the chronicle and the Hollow Below when they die; a **house** title stays with the dynasty. The player chooses which earned title to wear after the name. Some carry a small perk (such as better odds of finding young). Achievements (roadmap item 16) can award them, and faction reputation (item 17) confers the noble ones. Roadmap item 59.
 
 ## Multiple Worlds and Teleportation
 
