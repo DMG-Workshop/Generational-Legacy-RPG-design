@@ -35,6 +35,7 @@ func _ready() -> void:
 
 
 	tabs.add_child(_titles_tab())
+	tabs.add_child(_creatures_tab())
 	var stats := Kit.rich()
 	stats.name = "Statistics"
 	stats.text = _stats_text()
@@ -264,6 +265,34 @@ func _title_row(t: Dictionary, got: bool, on: bool, can_wear: bool) -> void:
 		b.disabled = on or not can_wear
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(b)
+
+
+## The Creatures tab: the eggs and young the family keeps (see GameRoster). Read only for now.
+func _creatures_tab() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Creatures"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 8)
+	scroll.add_child(box)
+	box.add_child(Kit.label(GameFinding.text("kept", {"n": dynasty.roster.size(), "cap": GameRoster.cap()}), 18, Kit.ACCENT))
+	var note := Kit.label(GameFinding.text("note", {}), 14, Kit.dim())
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(note)
+	if dynasty.roster.is_empty():
+		var none := Kit.label(GameFinding.text("empty", {}), 15, Kit.TEXT)
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(none)
+	for e in dynasty.roster:
+		var d := GameRoster.describe(e)
+		var t := Kit.label("%s  (%s)" % [d["name"], d["stage"]], 16, Kit.ACCENT)
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(t)
+		var l := Kit.label(d["line"], 14, Kit.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(l)
+	return scroll
 
 
 ## Puts a title on (or, with "", takes it off), tells the screen behind, and draws the tab again.

@@ -1,11 +1,18 @@
 ## Finding eggs and young beside the dead (roadmap item 55, first part): the chance, the roll on its own dice,
 ## the roster and its saving, and the search the screens call. Nothing here may move a life: the search plays as
 ## before and the find draws nothing from the dynasty's dice.
+## The Chronicle's Creatures tab lists what is kept, and says so when nothing is.
 ## Run: godot --headless --path . -s res://tests/test_game_finding.gd
 extends SceneTree
 
+const GameApp := preload("res://ui/play/game_app.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
+const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
+const DIR := "user://test_finding/"
+
 var fails := 0
 var checks := 0
+var app: Node
 
 
 func ok(cond: bool, what: String) -> void:
@@ -27,6 +34,8 @@ func _run() -> void:
 	test_roster()
 	test_saving()
 	test_search()
+	test_describe()
+	await test_screens()
 	print("%d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -207,3 +216,88 @@ func test_search() -> void:
 		var e := dyn()
 		e.loot = {}
 		ok(GameFinding.search_dead(e).is_empty() and e.roster.is_empty(), "nothing to search, nothing found"))
+
+
+func _frames(n: int) -> void:
+	for i in n:
+		await process_frame
+
+
+func test_describe() -> void:
+	var d := dyn()
+	var w := GameRoster.add(d, "wolf", "Ash")
+	var e := GameRoster.add(d, "drake", "Ember")
+	var dw := GameRoster.describe(w)
+	var de := GameRoster.describe(e)
+	ok(dw["name"] == "Ash" and dw["stage"] == "pup", "a litter is called by its young's name: %s" % dw["stage"])
+	ok(de["name"] == "Ember" and de["stage"] == "hatchling egg", "a clutch is called an egg of its young: %s" % de["stage"])
+	ok("Pup of a dire wolf" in dw["line"] and w["sex"] in dw["line"] and "Tess" in dw["line"] and "generation 1" in dw["line"], "the line says what it is, its sex and who found it: %s" % dw["line"])
+	ok(GameRoster.describe({}).has("line"), "an empty entry still describes without crashing")
+
+
+func _find_label(n: Node, text: String) -> Label:
+	if n is Label and (n as Label).is_visible_in_tree() and (n as Label).text == text:
+		return n
+	for c in n.get_children():
+		var l := _find_label(c, text)
+		if l != null:
+			return l
+	return null
+
+
+func _tab(p: Node, name: String) -> Control:
+	for c in p.get_children():
+		if c is TabContainer:
+			return (c as TabContainer).get_node_or_null(name) as Control
+		var found := _tab(c, name)
+		if found != null:
+			return found
+	return null
+
+
+func _panel(d: GameDynasty) -> Control:
+	var c := ChroniclePanel.new()
+	c.dynasty = d
+	app.current.add_child(c)
+	await _frames(3)
+	var tab := _tab(c, "Creatures")
+	if tab != null:
+		(tab.get_parent() as TabContainer).current_tab = tab.get_index()
+		await _frames(2)
+	return tab
+
+
+func test_screens() -> void:
+	DirAccess.make_dir_recursive_absolute(DIR)
+	GameSaves.base = DIR + "save.json"
+	GameDynasty.save_path = GameSaves.base
+	UiSettings.path = DIR + "settings.cfg"
+	UiSettings.scale = 1.0
+	UiSettings.force_mobile = 0
+	UiSettings.force_touch = 0
+	root.size = Vector2i(1280, 720)
+	await _frames(2)
+	app = GameApp.new()
+	root.add_child(app)
+	await _frames(3)
+	app.new_game("Tess", "warrior", "faetouched", 77, "human")
+	var d: GameDynasty = app.dynasty
+	d.pending_event = {}
+	var tab := await _panel(d)
+	ok(tab != null, "the Chronicle has a Creatures tab")
+	if tab == null:
+		return
+	ok(_find_label(tab, "Kept: 0 of %d" % GameRoster.cap()) != null, "it shows how many places are used")
+	ok(_find_label(tab, GameFinding.text("empty", {})) != null, "and says how to find young when there are none")
+	GameRoster.add(d, "wolf", "Ash")
+	GameRoster.add(d, "drake", "Ember")
+	var tab2 := await _panel(d)
+	ok(_find_label(tab2, "Kept: 2 of %d" % GameRoster.cap()) != null, "the count follows the roster")
+	ok(_find_label(tab2, "Ash  (pup)") != null and _find_label(tab2, "Ember  (hatchling egg)") != null, "each creature is listed with its stage")
+	ok(_find_label(tab2, GameFinding.text("empty", {})) == null, "and the empty note is gone")
+	var before := d.roster.duplicate(true)
+	await _frames(2)
+	ok(d.roster == before, "looking at the tab changes nothing")
+	app.queue_free()
+	await _frames(2)
+	DirAccess.remove_absolute(DIR + "save.json")
