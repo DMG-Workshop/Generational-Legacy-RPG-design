@@ -1,5 +1,5 @@
 {
-  "note": "Growth and keep for the creatures the family holds (roadmap item 56, first part). Years are the world clock's (pass_time). A creature is an egg (egg-layers only), then young, adult, elder, and dies of old age; how long each lasts is set by its size class. Keeping costs gold each year, paid from the heir's gold; unpaid years sink its mood, and at no mood an egg spoils and a creature wanders off. No dice are drawn: the length of an elder's life varies with a value taken from the dynasty seed and the creature's id. The Ranch is the family house's third track (GameHouse): each level adds pens, a hatchery for eggs and a nursery for the young (the `ranch` table). Creatures can be sold or set free.",
+  "note": "Growth and keep for the creatures the family holds (roadmap item 56, first part). Years are the world clock's (pass_time). A creature is an egg (egg-layers only), then young, adult, elder, and dies of old age; how long each lasts is set by its size class. Keeping costs gold each year, paid from the heir's gold; unpaid years sink its mood, and at no mood an egg spoils and a creature wanders off. No dice are drawn: the length of an elder's life varies with a value taken from the dynasty seed and the creature's id. The Ranch is the family house's third track (GameHouse): each level adds pens, a hatchery for eggs and a nursery for the young (the `ranch` table). Creatures can be sold or set free. Grown creatures can work (`work_of`): wool, eggs and venom earn gold each year, and guards turn away a share of the gold an event would take. A creature works only while its mood holds.",
   "settings": {
     "start_mood": 70,
     "mood_max": 100,
@@ -88,7 +88,13 @@
     "free": "Set free",
     "sure_sell": "Sell for {gold}? Tap again",
     "sure_free": "Set free? Tap again",
-    "house_row": "{about}"
+    "house_row": "{about}",
+    "work_income": "The ranch earns {gold} gold: {kinds}.",
+    "work_line": "Work: {kinds}.",
+    "work_none": "Nothing works yet.",
+    "work_income_head": "Work earns about {gold} gold a year.",
+    "guard_head": "Guards turn away {cut}% of what an event would take.",
+    "guard_saved": "Guards save {gold} gold"
   },
   "ranch": {
     "levels": [
@@ -125,5 +131,70 @@
         "about": "Pens for 9 more, a warm hatchery and a big nursery: the cheapest keep and the gentlest."
       }
     ]
+  },
+  "work": {
+    "min_mood": 40,
+    "elder_share": 0.5,
+    "guard_cut_each": 0.2,
+    "guard_cut_max": 0.6,
+    "kinds": {
+      "wool": {
+        "name": "wool",
+        "about": "Gives wool: {gold} gold a year.",
+        "said": "wool"
+      },
+      "eggs": {
+        "name": "eggs",
+        "about": "Lays eggs for the table: {gold} gold a year.",
+        "said": "eggs"
+      },
+      "venom": {
+        "name": "venom",
+        "about": "Is milked for venom: {gold} gold a year.",
+        "said": "venom"
+      },
+      "guard": {
+        "name": "guarding",
+        "about": "Guards the house: turns away {cut}% of a theft or fine.",
+        "said": "guarding"
+      }
+    }
+  },
+  "work_of": {
+    "frost_wolf": {
+      "kind": "wool",
+      "gold": 8
+    },
+    "harpy": {
+      "kind": "eggs",
+      "gold": 4
+    },
+    "drake": {
+      "kind": "eggs",
+      "gold": 20
+    },
+    "shard_crawler": {
+      "kind": "venom",
+      "gold": 6
+    },
+    "ash_wyrm": {
+      "kind": "venom",
+      "gold": 60
+    },
+    "wolf": {
+      "kind": "guard"
+    },
+    "grimfang": {
+      "kind": "guard"
+    },
+    "ogre": {
+      "kind": "guard"
+    },
+    "bog_troll": {
+      "kind": "guard"
+    },
+    "elder_dragon": {
+      "kind": "guard"
+    }
   }
 }
