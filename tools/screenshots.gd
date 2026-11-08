@@ -34,6 +34,7 @@ const SHOTS := [
 	["looks", DESKTOP, false, "looks"],
 	["skill_tree", DESKTOP, false, "skills"],
 	["chronicle", DESKTOP, false, "chronicle"],
+	["chronicle_titles", DESKTOP, false, "titles"],
 	["menu", DESKTOP, false, "menu"],
 	["event", DESKTOP, false, "event"],
 	["battle_town", DESKTOP, false, "battle:kingshold"],
@@ -187,6 +188,18 @@ func _screen(what: String) -> void:
 		"event":
 			GameEvents.begin(d, "elven_wardens")
 			app.show_state()
+		"titles":
+			d.heir.battles_won = 30   # the Blooded and the Veteran, one worn; the house's first titles come with its generations
+			d.gen = 10
+			GameTitles.update(d)
+			GameTitles.wear(d, "veteran")
+			var c := ChroniclePanel.new()
+			c.dynasty = d
+			c.on_change = func(): pass
+			app.current.add_child(c)
+			await _frames(3)
+			for tc in c.get_children():
+				_select_tab(tc, "Titles")
 		"shop", "map", "house", "looks", "skills", "chronicle":
 			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel}[what]
 			var p: Control = cls.new()
@@ -204,3 +217,14 @@ func _screen(what: String) -> void:
 				d.start_hunt("hunt")
 				d.auto_battle = false
 				app.show_state()
+
+
+## Opens the tab called `name` of the first TabContainer found under `n`.
+func _select_tab(n: Node, name: String) -> void:
+	if n is TabContainer:
+		var tab := (n as TabContainer).get_node_or_null(name)
+		if tab != null:
+			(n as TabContainer).current_tab = tab.get_index()
+		return
+	for c in n.get_children():
+		_select_tab(c, name)
