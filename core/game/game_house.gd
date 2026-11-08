@@ -1,6 +1,7 @@
 ## The family house: upgrades bought with the heir's gold between hunts and kept by the dynasty, so every
-## heir after the first has them. Two tracks: the House Hall (a companion place per level) and the
-## Training Yard (more XP from training per level). All numbers are in balance.json. Level 0 is what
+## heir after the first has them. Three tracks: the House Hall (a companion place per level), the
+## Training Yard (more XP from training per level) and the Ranch (pens, a hatchery and a nursery: GameRanch.ranch).
+## Prices are in balance.json; what a Ranch level does is in data/creatures/ranch.json. Level 0 is what
 ## a new house has, and changes nothing in play.
 ## A save holds only the levels bought, as {track: level}; anything else in it is dropped on load.
 class_name GameHouse
@@ -8,7 +9,8 @@ extends RefCounted
 
 const HALL := "hall"
 const YARD := "yard"
-const TRACKS := [HALL, YARD]
+const RANCH := "ranch"
+const TRACKS := [HALL, YARD, RANCH]
 
 
 ## The level of a track, 0 to house_max_level.
@@ -63,7 +65,7 @@ static func train_xp_mult(d: GameDynasty) -> float:
 
 
 static func track_name(track: String) -> String:
-	return "House Hall" if track == HALL else "Training Yard" if track == YARD else track
+	return "House Hall" if track == HALL else "Training Yard" if track == YARD else "Ranch" if track == RANCH else track
 
 
 ## The saved house, checked: only known tracks with whole-number levels in range survive.

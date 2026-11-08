@@ -549,7 +549,10 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 	if o.has("gold"):
 		var g := gold_amount(d, float(o["gold"]))
 		if g < 0:
-			g = -mini(-g, h.gold)
+			var guarded := -GameRanch.guarded_loss(d, -g)   # the ranch's guards turn some of it away (none, none turned)
+			if guarded != g:
+				fx.append({"t": GameRanch.text("guard_saved", {"gold": GameText.num(guarded - g)}), "k": "good"})
+			g = -mini(-guarded, h.gold)
 		h.gold += g
 		if g != 0:
 			fx.append({"t": "%s gold" % GameText.signed(g), "k": "good" if g > 0 else "bad"})

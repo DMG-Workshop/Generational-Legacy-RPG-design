@@ -6,8 +6,10 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 
 var dynasty: GameDynasty
-var on_change: Callable   # called after a title is put on or taken off (the screen behind redraws)
+var on_change: Callable   # called after a title is put on or taken off, or a creature sold or freed (the screen behind redraws)
 var _titles_box: VBoxContainer
+var _creatures_box: VBoxContainer
+var _sure := {}   # creature id -> "sell" or "free", asked once and waiting for the second tap
 
 
 func _ready() -> void:
@@ -267,34 +269,100 @@ func _title_row(t: Dictionary, got: bool, on: bool, can_wear: bool) -> void:
 		row.add_child(b)
 
 
-## The Creatures tab: the eggs and young the family keeps (see GameRoster). Read only for now.
+## The Creatures tab: the eggs and young the family keeps (see GameRoster), each with Sell and Set free. Each of
+## those takes a second tap to be sure (a creature sold or freed is gone).
 func _creatures_tab() -> Control:
 	var scroll := ScrollContainer.new()
 	scroll.name = "Creatures"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var box := VBoxContainer.new()
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 8)
-	scroll.add_child(box)
-	box.add_child(Kit.label(GameFinding.text("kept", {"n": dynasty.roster.size(), "cap": GameRoster.cap()}), 18, Kit.ACCENT))
+	_creatures_box = VBoxContainer.new()
+	_creatures_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_creatures_box.add_theme_constant_override("separation", 8)
+	scroll.add_child(_creatures_box)
+	_fill_creatures()
+	return scroll
+
+
+func _fill_creatures() -> void:
+	var box := _creatures_box
+	Kit.clear(box)
+	var alive := dynasty.state == "life"
+	box.add_child(Kit.label(GameFinding.text("kept", {"n": dynasty.roster.size(), "cap": GameRoster.cap(dynasty)}), 18, Kit.ACCENT))
 	var note := Kit.label(GameFinding.text("note", {}), 14, Kit.dim())
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 	if not dynasty.roster.is_empty():
 		box.add_child(Kit.label(GameRanch.text("keep", {"gold": GameText.num(GameRanch.keep_total(dynasty))}), 14, Kit.TEXT))
+		var pairs := GameBreeding.pairs(dynasty).size()
+		if pairs > 0:
+			box.add_child(Kit.label(GameBreeding.text("pairs", {"n": str(pairs)}), 14, Kit.TEXT))
+		var work := GameRanch.yearly_work(dynasty)
+		var cut := GameRanch.guard_cut(dynasty)
+		var parts: Array = []
+		if float(work["gold"]) > 0.0:
+			parts.append(GameRanch.text("work_income_head", {"gold": GameText.num(int(round(float(work["gold"]))))}))
+		if cut > 0.0:
+			parts.append(GameRanch.text("guard_head", {"cut": str(int(round(cut * 100.0)))}))
+		if not parts.is_empty():
+			var wl := Kit.label(" ".join(parts), 14, Kit.good())
+			wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(wl)
 	if dynasty.roster.is_empty():
 		var none := Kit.label(GameFinding.text("empty", {}), 15, Kit.TEXT)
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(none)
 	for e in dynasty.roster:
 		var d := GameRoster.describe(e)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.add_child(row)
+		var text := VBoxContainer.new()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(text)
 		var t := Kit.label("%s  (%s)" % [d["name"], d["stage"]], 16, Kit.ACCENT)
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(t)
+		text.add_child(t)
 		var l := Kit.label(d["line"], 14, Kit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(l)
-	return scroll
+		text.add_child(l)
+		var id := int(e["id"])
+		var price := GameText.num(GameRanch.sell_price(e))
+		var btns := VBoxContainer.new()
+		btns.add_theme_constant_override("separation", 6)
+		btns.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(btns)
+		if GameBreeding.can_set(e) or e.get("breeding", false):
+			var on: bool = e.get("breeding", false)
+			var bb := Kit.button(GameBreeding.text("breed_on" if on else "breed_off", {}), func(): _breed(id, not on), Vector2(190, 0))
+			bb.disabled = not alive
+			btns.add_child(bb)
+		for act in ["sell", "free"]:
+			var sure: bool = _sure.get(id, "") == act
+			var label := GameRanch.text(("sure_" if sure else "") + act, {"gold": price})
+			var b := Kit.button(label, func(): _creature_action(id, act), Vector2(190, 0))
+			b.disabled = not alive
+			btns.add_child(b)
+
+
+## Sets a creature to breed or to rest, and redraws the tab.
+func _breed(id: int, on: bool) -> void:
+	if GameBreeding.set_breeding(dynasty, id, on) and on_change.is_valid():
+		on_change.call()
+	_fill_creatures()
+
+
+## First tap asks again; the second does it. A tap on the other button changes what is being asked.
+func _creature_action(id: int, act: String) -> void:
+	if _sure.get(id, "") != act:
+		_sure[id] = act
+		_fill_creatures()
+		return
+	_sure.erase(id)
+	var line := GameRanch.sell(dynasty, id) if act == "sell" else GameRanch.release(dynasty, id)
+	if line != "" and on_change.is_valid():
+		on_change.call()
+	_fill_creatures()
 
 
 ## Puts a title on (or, with "", takes it off), tells the screen behind, and draws the tab again.

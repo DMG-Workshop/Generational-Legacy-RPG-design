@@ -72,6 +72,8 @@ static func _effect(track: String, lv: int) -> String:
 	if track == GameHouse.HALL:
 		var places := lv * int(GameData.bal("house_hall_slots_per_level"))
 		return "%d extra companion place%s." % [places, "" if places == 1 else "s"]
+	if track == GameHouse.RANCH:
+		return str(GameRanch.data()["ranch"]["levels"][clampi(lv, 0, GameHouse.max_level())]["about"])
 	var pct := int(round(float(lv) * float(GameData.bal("house_yard_train_xp_per_level")) * 100.0))
 	return "Training gives %d%% more XP." % pct
 

@@ -32,6 +32,10 @@ func _run() -> void:
 	test_saving()
 	test_untouched()
 	test_through_time()
+	test_ranch_levels()
+	test_selling()
+	test_work()
+	test_guards()
 	print("%d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -114,11 +118,12 @@ func test_growth() -> void:
 	ok(e["stage"] == "adult" and msgs.size() == 1 and "grown" in msgs[0], "it grows up after its young years")
 	msgs.clear()
 	GameRanch.on_years(d, 35.0, msgs)
-	ok(e["stage"] == "elder" and msgs.size() == 1 and "old now" in msgs[0], "and is old after its adult years")
+	var told := msgs.filter(func(m): return "ranch earns" not in str(m))   # the drake also worked, and that is told too
+	ok(e["stage"] == "elder" and told.size() == 1 and "old now" in told[0], "and is old after its adult years")
 	var w := GameRoster.add(d, "wolf", "Ash")
 	msgs.clear()
 	GameRanch.on_years(d, 3.0, msgs)
-	ok(w["stage"] == "adult" and msgs.size() == 1, "a live-born creature never hatches: it grows up")
+	ok(w["stage"] == "adult" and msgs.filter(func(m): return "ranch earns" not in str(m)).size() == 1, "a live-born creature never hatches: it grows up")
 	var long := dyn()
 	var le := GameRoster.add(long, "drake", "Slow")
 	var lm: Array = []
@@ -300,3 +305,252 @@ func test_through_time() -> void:
 	dead.state = "succession"
 	dead.pass_time(5.0)
 	ok(float(dead.roster[0]["age"]) == 0.0, "no time passes for them outside a life")
+
+
+func _build(d: GameDynasty, level: int) -> void:
+	d.house[GameHouse.RANCH] = level
+
+
+func test_ranch_levels() -> void:
+	var d := dyn()
+	ok(GameHouse.TRACKS.has(GameHouse.RANCH) and GameHouse.track_name(GameHouse.RANCH) == "Ranch", "the Ranch is a house track")
+	ok(GameRoster.cap(d) == int(GameFinding.setting("roster_cap")) and GameRanch.extra_pens(d) == 0, "with nothing built there are the family's own places")
+	var prev := GameRoster.cap(d)
+	for lv in range(1, GameHouse.max_level() + 1):
+		_build(d, lv)
+		ok(GameRoster.cap(d) > prev, "each Ranch level adds pens (level %d: %d)" % [lv, GameRoster.cap(d)])
+		prev = GameRoster.cap(d)
+	_build(d, 99)
+	ok(GameRanch.extra_pens(d) == GameRanch.extra_pens(_built(GameHouse.max_level())), "a level past the top is the top")
+	# buying it through the house
+	var b := dyn()
+	b.heir.gold = 100000
+	var price := GameHouse.cost(b, GameHouse.RANCH)
+	var before := b.heir.gold
+	GameHouse.buy(b, GameHouse.RANCH)
+	ok(GameHouse.level(b, GameHouse.RANCH) == 1 and before - b.heir.gold == price, "the Ranch is bought with gold like the other tracks")
+	ok(GameHouse.level(b, GameHouse.HALL) == 0 and GameHouse.level(b, GameHouse.YARD) == 0, "and the others are untouched")
+	# a full roster takes more once the pens are built
+	var f := dyn()
+	for i in GameRoster.cap(f):
+		GameRoster.add(f, "slime", "S%d" % i)
+	ok(GameRoster.full(f) and GameRoster.add(f, "slime", "Over").is_empty(), "a full roster takes no more")
+	_build(f, 1)
+	ok(not GameRoster.full(f) and not GameRoster.add(f, "slime", "More").is_empty(), "but takes more when the pens are built")
+	# the hatchery: eggs cost less and spoil slowly
+	var plain := dyn()
+	var warm := dyn()
+	_build(warm, 1)
+	GameRoster.add(plain, "drake", "E")
+	GameRoster.add(warm, "drake", "E")
+	var gp := plain.heir.gold
+	var gw := warm.heir.gold
+	GameRanch.on_years(plain, 1.0, [])
+	GameRanch.on_years(warm, 1.0, [])
+	ok(gw - warm.heir.gold < gp - plain.heir.gold, "a hatchery makes an egg cheaper to keep")
+	plain.heir.gold = 0
+	warm.heir.gold = 0
+	GameRanch.on_years(plain, 1.0, [])
+	GameRanch.on_years(warm, 1.0, [])
+	ok(warm.roster[0]["mood"] > plain.roster[0]["mood"], "and an unkept egg sours more slowly")
+	# the nursery: the young cost less and take neglect better
+	var np := dyn()
+	var nn := dyn()
+	_build(nn, 2)
+	GameRoster.add(np, "wolf", "Y")
+	GameRoster.add(nn, "wolf", "Y")
+	var g1 := np.heir.gold
+	var g2 := nn.heir.gold
+	GameRanch.on_years(np, 1.0, [])
+	GameRanch.on_years(nn, 1.0, [])
+	ok(g2 - nn.heir.gold < g1 - np.heir.gold, "a nursery makes the young cheaper to keep")
+	var level1 := dyn()
+	_build(level1, 1)
+	GameRoster.add(level1, "wolf", "Y")
+	var g3 := level1.heir.gold
+	GameRanch.on_years(level1, 1.0, [])
+	ok(g3 - level1.heir.gold == g1 - np.heir.gold, "a hatchery alone does not cheapen the young")
+	# grown creatures have no discount at any level
+	var top := dyn()
+	_build(top, GameHouse.max_level())
+	var adult := GameRoster.add(top, "wolf", "A")
+	adult["age"] = 5.0
+	adult["stage"] = "adult"
+	ok(GameRanch.yearly_keep(adult, top) == GameRanch.yearly_keep(adult), "the grown cost the same at any level")
+	# the key to old saves: level 0 plays as it did
+	var z := dyn()
+	GameRoster.add(z, "wolf", "A")
+	ok(GameRanch.yearly_keep(z.roster[0], z) == GameRanch.yearly_keep(z.roster[0]), "with nothing built the keep is exactly what it was")
+	# saving
+	var saved := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(b.to_dict())))
+	ok(GameHouse.level(saved, GameHouse.RANCH) == 1, "the Ranch level survives a save and load")
+	# validation
+	_with(func(x): x["ranch"]["levels"].pop_back(), func(): ok(not GameRanch.validate().is_empty(), "a missing Ranch level is found"))
+	_with(func(x): x["ranch"]["levels"][2]["pens"] = 1, func(): ok(not GameRanch.validate().is_empty(), "pens that fall are found"))
+	_with(func(x): x["ranch"]["levels"][1]["egg_keep"] = 2.0, func(): ok(not GameRanch.validate().is_empty(), "a factor above 1 is found"))
+	_with(func(x): x["ranch"]["levels"][0]["pens"] = 2, func(): ok(not GameRanch.validate().is_empty(), "level 0 giving pens is found"))
+	_with(func(x): x["sizes"]["small"].erase("value"), func(): ok(not GameRanch.validate().is_empty(), "a size with no value is found"))
+	_with(func(x): x["settings"]["stage_value"].erase("egg"), func(): ok(not GameRanch.validate().is_empty(), "a stage with no value is found"))
+
+
+func _built(level: int) -> GameDynasty:
+	var d := dyn()
+	_build(d, level)
+	return d
+
+
+func test_selling() -> void:
+	var d := dyn()
+	var wolf := GameRoster.add(d, "wolf", "Ash")   # medium, value 80, young x0.7, mood 70
+	var egg := GameRoster.add(d, "drake", "Ember")   # large, value 250, egg x0.5
+	ok(GameRanch.sell_price(wolf) == int(round(80.0 * 0.7 * 0.7)), "a young creature sells for its value by stage and mood: %d" % GameRanch.sell_price(wolf))
+	ok(GameRanch.sell_price(egg) == int(round(250.0 * 0.5 * 0.7)), "an egg sells for less")
+	wolf["mood"] = 100
+	var well := GameRanch.sell_price(wolf)
+	wolf["mood"] = 10
+	ok(GameRanch.sell_price(wolf) < well, "a neglected creature sells for less")
+	wolf["mood"] = 70
+	wolf["stage"] = "adult"
+	var adult := GameRanch.sell_price(wolf)
+	wolf["stage"] = "elder"
+	ok(GameRanch.sell_price(wolf) < adult, "an old one sells for less than a grown one")
+	wolf["stage"] = "adult"
+	ok(GameRanch.sell_price(wolf) >= 1 and GameRanch.sell_price({"species": "nonesuch", "stage": "adult", "mood": 1}) >= 1, "a price is never nothing")
+	var gold := d.heir.gold
+	var line := GameRanch.sell(d, int(wolf["id"]))
+	ok(d.heir.gold == gold + adult and "sells Ash" in line and str(adult) in line, "selling pays the price and says so: %s" % line)
+	ok(d.roster.size() == 1 and d.roster[0]["name"] == "Ember", "and the creature is gone")
+	ok(d.journal.back() == line, "it is journalled")
+	ok(GameRanch.sell(d, 999) == "" and GameRanch.release(d, 999) == "", "a creature that is not there cannot be sold or freed")
+	var free := GameRanch.release(d, int(d.roster[0]["id"]))
+	ok(d.roster.is_empty() and "sets Ember" in free and "free" in free and d.heir.gold == gold + adult, "setting free pays nothing and is told: %s" % free)
+	var dead := dyn()
+	GameRoster.add(dead, "wolf", "A")
+	dead.state = "succession"
+	ok(GameRanch.sell(dead, 1) == "" and GameRanch.release(dead, 1) == "" and dead.roster.size() == 1, "nothing is sold or freed outside a life")
+	# freeing one leaves the others' ids alone
+	var r := dyn()
+	GameRoster.add(r, "wolf", "A")
+	GameRoster.add(r, "wolf", "B")
+	GameRanch.release(r, 1)
+	ok(GameRoster.add(r, "wolf", "C")["id"] == 3, "ids keep counting up after one is freed")
+
+
+## A creature of this species, grown to the stage, in this mood.
+func _grown(d: GameDynasty, species: String, stage: String = "adult", mood: int = 70) -> Dictionary:
+	var e := GameRoster.add(d, species, "W")
+	e["stage"] = stage
+	e["mood"] = mood
+	var sz := GameRanch.size_of(species)
+	var adult_from := GameRanch.egg_years(e) + float(sz["young"])
+	e["age"] = (adult_from + GameRanch.adult_at(e)) * 0.5 if stage == "adult" else GameRanch.adult_at(e) + 0.5   # mid-adult, so a year or two keeps the stage
+	return e
+
+
+func test_work() -> void:
+	ok(GameRanch.validate().is_empty(), "the data with work is sound: %s" % str(GameRanch.validate()))
+	var d := dyn()
+	_grown(d, "frost_wolf")   # wool 8
+	_grown(d, "drake")        # eggs 20
+	_grown(d, "ash_wyrm")     # venom 60
+	var y := GameRanch.yearly_work(d)
+	ok(is_equal_approx(float(y["gold"]), 88.0) and y["kinds"].size() == 3, "the grown earn by wool, eggs and venom: %s" % str(y))
+	ok(GameRanch.kinds_text(y["kinds"]) == "eggs 20, venom 60, wool 8", "told by kind: %s" % GameRanch.kinds_text(y["kinds"]))
+	var young := dyn()
+	_grown(young, "drake", "young")
+	var egg := dyn()
+	GameRoster.add(egg, "drake", "E")
+	ok(float(GameRanch.yearly_work(young)["gold"]) == 0.0 and float(GameRanch.yearly_work(egg)["gold"]) == 0.0, "eggs and the young do no work")
+	var old := dyn()
+	_grown(old, "drake", "elder")
+	ok(is_equal_approx(float(GameRanch.yearly_work(old)["gold"]), 10.0), "an old one does half")
+	var sad := dyn()
+	_grown(sad, "drake", "adult", 39)
+	ok(float(GameRanch.yearly_work(sad)["gold"]) == 0.0, "an unhappy creature does not work")
+	var happy := dyn()
+	_grown(happy, "drake", "adult", 40)
+	ok(float(GameRanch.yearly_work(happy)["gold"]) > 0.0, "and does at the threshold")
+	var none := dyn()
+	_grown(none, "slime")
+	ok(float(GameRanch.yearly_work(none)["gold"]) == 0.0 and GameRanch.work_text(none.roster[0]) == "", "a species with no work earns nothing")
+	# paid as the years pass, before the keep
+	var p := dyn()
+	_grown(p, "drake")   # eggs 20, keep 8
+	var gold := p.heir.gold
+	var msgs: Array = []
+	GameRanch.on_years(p, 1.0, msgs)
+	ok(p.heir.gold == gold + 20 - 8, "a year pays the work and the keep: %d" % (p.heir.gold - gold))
+	ok(msgs.size() == 1 and "ranch earns 20 gold" in msgs[0] and "eggs 20" in msgs[0], "and tells it: %s" % str(msgs))
+	ok(p.journal.back() == msgs[0], "in the journal too")
+	var q := dyn()
+	_grown(q, "drake")
+	var g2 := q.heir.gold
+	GameRanch.on_years(q, 0.5, [])
+	ok(q.heir.gold == g2 + 10 - 4, "half a year pays half")
+	# a working ranch keeps itself when the heir has nothing
+	var poor := dyn()
+	poor.heir.gold = 0
+	var grown := _grown(poor, "drake")   # earns 20 against 8 keep
+	GameRanch.on_years(poor, 1.0, [])
+	ok(poor.heir.gold == 12 and grown["mood"] > 70, "a working ranch pays its own keep even when the heir has no gold")
+	var m := dyn()
+	_grown(m, "drake")
+	var before := GameRanch.work_text(m.roster[0])
+	ok("20 gold a year" in before, "the creature's entry says what it does: %s" % before)
+	ok("Lays eggs" in GameRoster.describe(m.roster[0])["line"], "and the entry carries it")
+	ok(GameRanch.work_text(GameRoster.add(dyn(), "drake", "E")) == "", "an egg's says nothing")
+	# validation
+	_with(func(x): x["work_of"]["drake"]["kind"] = "shearing", func(): ok(not GameRanch.validate().is_empty(), "an unknown work kind is found"))
+	_with(func(x): x["work_of"]["skeleton"] = {"kind": "guard"}, func(): ok(not GameRanch.validate().is_empty(), "work for a creature that is not born is found"))
+	_with(func(x): x["work_of"]["drake"]["gold"] = 0, func(): ok(not GameRanch.validate().is_empty(), "work that earns nothing is found"))
+	_with(func(x): x["work"]["guard_cut_max"] = 1.0, func(): ok(not GameRanch.validate().is_empty(), "guards that stop every loss are found"))
+	_with(func(x): x["work"].erase("min_mood"), func(): ok(not GameRanch.validate().is_empty(), "a missing work setting is found"))
+	_with(func(x): x["work"]["kinds"]["eggs"].erase("about"), func(): ok(not GameRanch.validate().is_empty(), "a work kind with no text is found"))
+
+
+func test_guards() -> void:
+	var d := dyn()
+	ok(GameRanch.guard_cut(d) == 0.0 and GameRanch.guarded_loss(d, 40) == 40, "with no guards a loss is whole")
+	_grown(d, "wolf")
+	ok(is_equal_approx(GameRanch.guard_cut(d), 0.2) and GameRanch.guarded_loss(d, 40) == 32, "a guard turns away a fifth: %d" % GameRanch.guarded_loss(d, 40))
+	_grown(d, "grimfang")
+	_grown(d, "ogre")
+	_grown(d, "bog_troll")
+	ok(is_equal_approx(GameRanch.guard_cut(d), 0.6), "guards add up to a ceiling of 60%")
+	_grown(d, "elder_dragon")
+	ok(is_equal_approx(GameRanch.guard_cut(d), 0.6) and GameRanch.guarded_loss(d, 40) == 16, "and no more: %d" % GameRanch.guarded_loss(d, 40))
+	ok(GameRanch.guarded_loss(d, 1) == 1, "a loss rounds in the house's favour, never to nothing")
+	ok(GameRanch.guarded_loss(d, 0) == 0 and GameRanch.guarded_loss(d, -5) == -5, "no loss, or a gain, is left alone")
+	var young := dyn()
+	_grown(young, "wolf", "young")
+	var sad := dyn()
+	_grown(sad, "wolf", "adult", 10)
+	ok(GameRanch.guard_cut(young) == 0.0 and GameRanch.guard_cut(sad) == 0.0, "young and unhappy guards do not guard")
+	var old := dyn()
+	_grown(old, "wolf", "elder")
+	ok(is_equal_approx(GameRanch.guard_cut(old), 0.1), "an old guard is half a guard")
+	# in an event's outcome: the same gold with no guards, less with them
+	var plain := dyn()
+	plain.heir.gold = 500
+	var fx := GameEvents._apply(plain, {}, {"gold": -40.0}, [])
+	var lost := 500 - plain.heir.gold
+	var guarded := dyn()
+	guarded.heir.gold = 500
+	_grown(guarded, "wolf")
+	var fx2 := GameEvents._apply(guarded, {}, {"gold": -40.0}, [])
+	var lost2 := 500 - guarded.heir.gold
+	ok(lost2 < lost and lost > 0, "an event takes less gold from a house with a guard (%d against %d)" % [lost2, lost])
+	ok(fx2.any(func(f): return "Guards save" in str(f["t"])), "and says the guards saved some: %s" % str(fx2))
+	ok(not fx.any(func(f): return "Guards save" in str(f["t"])), "and says nothing without them")
+	var gains := dyn()
+	gains.heir.gold = 100
+	_grown(gains, "wolf")
+	GameEvents._apply(gains, {}, {"gold": 30.0}, [])
+	ok(gains.heir.gold == 100 + GameEvents.gold_amount(gains, 30.0), "a gain is whole whatever the guards")
+	# a house that keeps no creatures plays exactly as before
+	var a := dyn(12)
+	var b := dyn(12)
+	a.heir.gold = 500
+	b.heir.gold = 500
+	GameEvents._apply(a, {}, {"gold": -40.0}, [])
+	ok(a.heir.gold == 500 - GameEvents.gold_amount(a, 40.0) and a.rng.state == b.rng.state, "with no creatures the loss is the event's own and no die is drawn")
