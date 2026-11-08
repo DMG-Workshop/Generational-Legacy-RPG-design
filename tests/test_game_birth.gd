@@ -56,7 +56,7 @@ func test_data() -> void:
 	var count := {"egg": 0, "live": 0, "none": 0}
 	for c in GameData.creatures:
 		count[str(c["born"])] += 1
-	ok(count["egg"] == 9 and count["live"] == 10 and count["none"] == 14, "33 creatures: 9 lay eggs (8 wild, the chicken), 10 bear live young (7 wild, sheep, cattle, pig) and 14 are not born (%s)" % str(count))
+	ok(count["egg"] == 10 and count["live"] == 12 and count["none"] == 14, "36 creatures: 10 lay eggs (8 wild, the chicken and the goose), 12 bear live young (7 wild, sheep, cattle, pig, goat, horse) and 14 are not born (%s)" % str(count))
 	for c in GameData.creatures:
 		var id := str(c["id"])
 		if c["born"] == "none":
