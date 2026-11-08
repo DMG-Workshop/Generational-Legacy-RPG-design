@@ -316,6 +316,7 @@ static func search_dead(d: GameDynasty) -> Array:
 	var foes: Array = d.loot.get("foes", [])
 	var lines := GameFinding.search_dead(d)
 	lines.append_array(after_search(d, foes))
+	lines.append_array(GameCraft.after_search(d, foes))   # and what the dead are made of
 	return lines
 
 

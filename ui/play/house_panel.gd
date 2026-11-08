@@ -4,6 +4,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const CraftPanel := preload("res://ui/play/craft_panel.gd")
 const WIDE := 760.0
 
 var dynasty: GameDynasty
@@ -35,7 +36,18 @@ func _build(column: float) -> void:
 	_body.add_child(note)
 	for track in GameHouse.TRACKS:
 		_body.add_child(_row(track, column))
+	var shop := Kit.button("Workshop: make things, break up gear", func(): _workshop(), Vector2(column, 48))
+	shop.name = "Workshop"
+	_body.add_child(shop)
 	_body.add_child(Kit.button("Close", func(): queue_free(), Vector2(column, 48)))
+
+
+## The workshop opens over the house, so closing it comes back here.
+func _workshop() -> void:
+	var panel: Control = CraftPanel.new()
+	panel.dynasty = dynasty
+	panel.on_change = on_change
+	get_parent().add_child(panel)
 
 
 func _row(track: String, column: float) -> Control:
