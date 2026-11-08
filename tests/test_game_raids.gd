@@ -41,6 +41,7 @@ func _run() -> void:
 	test_defend()
 	test_events()
 	test_house()
+	test_plain_gold()
 	test_untouched()
 	await test_screen()
 	print("%d checks, %d failures" % [checks, fails])
@@ -100,7 +101,8 @@ func test_data() -> void:
 
 func test_chance() -> void:
 	var d := dyn()
-	ok(GameRaids.chance(d) == 0.0 and GameRaids.stock_value(d) == 0, "a house that keeps nothing is never raided")
+	d.heir.gold = 0
+	ok(GameRaids.chance(d) == 0.0 and GameRaids.stock_value(d) == 0, "a house that keeps nothing and holds no gold is never raided")
 	_animal(d, "slime")
 	var small := GameRaids.chance(d)
 	ok(small > float(GameRaids.setting("base_chance")) * 0.999, "a little stock draws a raid at about the base chance: %s" % small)
@@ -151,8 +153,9 @@ func test_coming() -> void:
 		GameRaids.on_years(d, 5.0, again, 6.0)
 		ok(again.is_empty() and int(d.flags.get("raid_count", 0)) == 1, "no second raid while one waits")
 		var none := dyn()
+		none.heir.gold = 0
 		GameRaids.on_years(none, 3.0, [], 3.0)
-		ok(not none.has_pending_event(), "a house that keeps nothing is never raided, however sure")
+		ok(not none.has_pending_event(), "a house that keeps nothing and holds no gold is never raided, however sure")
 		var dead := dyn()
 		_animal(dead, "slime")
 		dead.state = "succession"
@@ -353,7 +356,8 @@ func test_events() -> void:
 ## Raids are not only for animals: a house that has been built is worth taking too.
 func test_house() -> void:
 	var plain := dyn()
-	ok(GameRaids.house_value(plain) == 0 and not GameRaids.has_target(plain) and GameRaids.chance(plain) == 0.0, "a plain house, nothing kept and nothing built, is not raided")
+	plain.heir.gold = 0
+	ok(GameRaids.house_value(plain) == 0 and not GameRaids.has_target(plain) and GameRaids.chance(plain) == 0.0, "a plain house, nothing kept, built or held, is not raided")
 	var hall := dyn()
 	hall.house[GameHouse.HALL] = 1
 	ok(GameRaids.house_value(hall) == 100 and GameRaids.has_target(hall) and GameRaids.chance(hall) > 0.0, "a built Hall is worth taking, with no animals at all (half of its 200 gold): %d" % GameRaids.house_value(hall))
@@ -363,9 +367,13 @@ func test_house() -> void:
 	ok(GameRaids.house_value(full) == 3 * (200 + 400 + 800) / 2, "a house built to the top is worth half of 3 x 1,400: %d" % GameRaids.house_value(full))
 	ok(GameRaids.chance(full) > GameRaids.chance(hall), "the more built, the likelier a raid")
 	var both := dyn()
+	both.heir.gold = 0
 	both.house[GameHouse.HALL] = 1
 	_animal(both, "slime")
 	ok(GameRaids.valuables(both) == GameRaids.stock_value(both) + GameRaids.house_value(both), "stock and house add up for a raider")
+	var c0 := GameRaids.chance(both)
+	both.heir.gold = 400000
+	ok(GameRaids.valuables(both) == GameRaids.stock_value(both) + GameRaids.house_value(both) and GameRaids.chance(both) == c0, "and a purse does not add to them")
 	# only the kinds that have something to take come to a house with no animals
 	var seen := {}
 	_with(_sure, func():
@@ -422,18 +430,47 @@ func test_house() -> void:
 	ok(f.battle != null and f.pending_event["result"]["fight"].size() == 1, "chasing them starts a fight with one burglar")
 	# guards need animals: a house with none has none
 	ok(GameRaids.deterrence(hall) == 0.0 and GameRaids.beat_off_chance(hall) == 0.0, "a house with no animals has no guards (hired guards are not built yet)")
-	# the plain autopilot house is still untouched
+	# a plain house with no gold is untouched
 	var a1 := dyn(9)
 	var a2 := dyn(9)
+	a1.heir.gold = 0
+	a2.heir.gold = 0
 	for i in 20:
 		a1.pass_time(1.0)
 		a2.pass_time(1.0)
-	ok(a1.to_dict() == a2.to_dict() and not a1.flags.has("raid_count"), "a plain house is never raided")
+	ok(a1.to_dict() == a2.to_dict() and not a1.flags.has("raid_count"), "a plain house with no gold is never raided")
+
+
+## A plain house is raided too once the heir holds enough gold: the purse is the target.
+func test_plain_gold() -> void:
+	var d := dyn()
+	var min_gold := int(GameRaids.setting("plain_min_gold"))
+	d.heir.gold = min_gold - 1
+	ok(not GameRaids.has_purse(d) and not GameRaids.has_target(d) and GameRaids.chance(d) == 0.0, "a purse under the minimum is no target")
+	d.heir.gold = min_gold
+	var flat := float(GameRaids.setting("plain_chance"))
+	ok(GameRaids.has_purse(d) and GameRaids.has_target(d) and is_equal_approx(GameRaids.chance(d), flat), "a purse at the minimum is a target, at the flat chance, with no animals and nothing built")
+	d.heir.gold = 1000000
+	ok(is_equal_approx(GameRaids.chance(d), flat), "a fuller purse draws no more raids: the flat chance, however much it holds")
+	ok(flat < float(GameRaids.setting("base_chance")), "and a purse alone is likelier to be left alone than a house that keeps or builds")
+	# over many years a rich plain house is raided, by the kinds that can take gold only (no animals, nothing carried)
+	var hits := 0
+	for sd in 30:
+		var h := dyn(sd + 1)
+		h.heir.gold = 2000
+		h.heir.inventory.clear()
+		GameRaids.on_years(h, 100.0, [], 100.0)
+		if h.has_pending_event():
+			hits += 1
+			ok(h.pending_event["id"] == "raid_thieves", "only thieves come to a house with nothing but gold")
+	ok(hits > 0 and hits < 30, "a rich plain house is raided now and then, not always: %d of 30" % hits)
 
 
 func test_untouched() -> void:
 	var a := dyn(9)
 	var b := dyn(9)
+	a.heir.gold = 0
+	b.heir.gold = 0
 	for i in 20:
 		a.pass_time(1.0)
 		b.pass_time(1.0)

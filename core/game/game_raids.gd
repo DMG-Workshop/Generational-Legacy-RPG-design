@@ -51,9 +51,15 @@ static func house_value(d: GameDynasty) -> int:
 	return int(round(spent * float(setting("house_value_share"))))
 
 
-## Whether there is anything to raid: animals in the pens, or a house that has been built.
+## Whether the heir holds a purse worth a raid, from `plain_min_gold` up: a plain house with a full purse is a target
+## too, but only a small one (see `chance`).
+static func has_purse(d: GameDynasty) -> bool:
+	return d.heir != null and d.heir.gold >= int(setting("plain_min_gold"))
+
+
+## Whether there is anything to raid: animals in the pens, a house that has been built, or a purse worth taking.
 static func has_target(d: GameDynasty) -> bool:
-	return not d.roster.is_empty() or house_value(d) > 0
+	return not d.roster.is_empty() or house_value(d) > 0 or has_purse(d)
 
 
 ## What a raider sees to take: the stock and the house.
@@ -66,10 +72,14 @@ static func deterrence(d: GameDynasty) -> float:
 	return GameRanch.guard_cut(d) / float(GameRanch.data()["work"]["guard_cut_max"]) * float(setting("deter_share"))
 
 
-## The chance that a raid comes in a year: 0 with nothing kept or built, else more with more to take, less with guards.
+## The chance that a raid comes in a year: 0 with nothing kept, built or held. A house with only a purse (no animals,
+## nothing built) is raided at the flat `plain_chance`, whatever the purse (it grows without bound, so counting it
+## would make a rich house a raid a year). Otherwise more with more to take, less with guards.
 static func chance(d: GameDynasty) -> float:
 	if not has_target(d):
 		return 0.0
+	if d.roster.is_empty() and house_value(d) <= 0:
+		return float(setting("plain_chance")) * (1.0 - deterrence(d))
 	var c := float(setting("base_chance")) + float(setting("per_stock_gold")) * float(valuables(d))
 	return clampf(c, 0.0, float(setting("max_chance"))) * (1.0 - deterrence(d))
 
@@ -180,12 +190,12 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["base_chance", "per_stock_gold", "max_chance", "deter_share", "beat_off_max", "steal_gold_share", "steal_gold_min", "counter_flag", "house_value_share"]:
+	for k in ["base_chance", "per_stock_gold", "max_chance", "deter_share", "beat_off_max", "steal_gold_share", "steal_gold_min", "counter_flag", "house_value_share", "plain_min_gold", "plain_chance"]:
 		if not s.has(k):
 			bad.append("raids.json: settings.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
-	for k in ["base_chance", "max_chance", "deter_share", "beat_off_max", "steal_gold_share", "house_value_share"]:
+	for k in ["base_chance", "max_chance", "deter_share", "beat_off_max", "steal_gold_share", "house_value_share", "plain_chance"]:
 		if float(s[k]) < 0.0 or float(s[k]) > 1.0:
 			bad.append("raids.json: %s must be between 0 and 1" % k)
 	if float(s["max_chance"]) < float(s["base_chance"]):
