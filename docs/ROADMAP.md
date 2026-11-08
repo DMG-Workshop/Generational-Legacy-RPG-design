@@ -86,7 +86,7 @@ Proposed order: items 23 to 26 first (they change how saves and views work, and 
 The text game is the cheap place to get these rules right: they are core rules and data with headless tests, and a text screen where one helps.
 
 41. **World spaces and coordinates.** The roadmap's world-space IDs given to towns, dungeons, the house and interiors now, with map positions, so travel already speaks the sandbox's language.
-42. **One item and material list.** Stable IDs and tags (material, tier, stack size, weight) for every item, validated, so harvesting, mining and crafting extend one list.
+42. **One item and material list.** Done (`GameMaterials`, `data/items/materials.json`): 21 materials (tier 1 to 4, with tags such as metal, wood, cloth, precious, light, heavy, magic), and every item in `items.json` now names a `material` and a `weight`; its tags are the material's plus its slot or kind (`GameItems.tags_of`, `has_tag`, `material_of`, `weight_of`). The validator (in `tools/check_data.gd`) wants every item to reach a listed material, a weight, a tier in range, gear that does not stack and consumables that do, and every material and tag used. Nothing the game plays changed. Stable IDs are the existing lower-case ids, checked. Harvesting, mining, crafting (items 43 to 45) and the loot generator build on this list.
 43. **Inventory with stacks and weight.** Built on item 42, with carry limits; the text game can use it for loot first.
 44. **Gathering and crafting.** The "one-of-a-kind crafting system" designed as rules and data with a text screen, so the sandbox inherits a tested system.
 45. **Mining as data.** Strata, ores by depth, and how digging changes the ground, all testable without graphics.

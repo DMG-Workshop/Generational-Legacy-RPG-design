@@ -37,6 +37,35 @@ static func stack_max(id: String) -> int:
 	return int(item_def(id).get("stack", 0))
 
 
+## The material an item is made of (an id from data/items/materials.json), "" for an unknown item.
+static func material_of(id: String) -> String:
+	return str(item_def(id).get("material", ""))
+
+
+## How much an item weighs, 0 for an unknown item (the material list's weight_mult is for building new ones).
+static func weight_of(id: String) -> float:
+	return float(item_def(id).get("weight", 0.0))
+
+
+## An item's tags: its material's, its slot or kind, and any of its own. Empty for an unknown item.
+static func tags_of(id: String) -> Array:
+	var def := item_def(id)
+	if def.is_empty():
+		return []
+	var out: Array = GameMaterials.tags_of(material_of(id)).duplicate()
+	var k := kind_of(id)
+	if k != "" and k not in out:
+		out.append(k)
+	for t in def.get("tags", []):
+		if str(t) not in out:
+			out.append(str(t))
+	return out
+
+
+static func has_tag(id: String, tag: String) -> bool:
+	return tag in tags_of(id)
+
+
 static func count(h: GameHeir, id: String) -> int:
 	return h.inventory.count(id) + h.equipment.values().count(id)
 

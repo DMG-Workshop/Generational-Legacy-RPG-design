@@ -64,6 +64,7 @@ The Godot download, checksum and project import are in `.github/actions/setup-go
 | `test_game_feats.gd` | Feats by class, gates, companions, MAG and STR scaling, and the autopilot's use of them |
 | `test_game_generations.gd` | The long count: Ages, content gates, scaling, bounded saves and the end of the saga at generation 999,999 |
 | `test_game_integration.gd` | Shops, gear, quests, events and companions together, including old-save fixtures |
+| `test_game_item_list.gd` | The one item and material list (`GameMaterials`, `data/items/materials.json`): the data and 10 ways to break it (an unlisted or missing material, no weight, tier 0, gear that stacks, a consumable that cannot, a material no item uses); that all 53 items reach a material and a weight; the tags an item gets; and that prices, stacks and slots are as they were. |
 | `test_game_items.gd` | Shops, equipment and the temple; every item reaches the player somehow |
 | `test_game_mobile.gd` | Phones and tablets: hold-for-details, no hover previews from a finger, tooltips in the shipped UI |
 | `test_game_party.gd` | Companions: hire, dismiss, upkeep, level sync, rest, succession, battles with allies and saves |
