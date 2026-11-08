@@ -26,7 +26,7 @@ const ATTR_LABELS := {
 	"divine_magic_power": "Faith", "dark_magic_power": "Dark arts", "element_power": "Elements",
 	"craft_quality": "Craft",
 }
-const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight", "find"]
+const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight", "find", "defend"]
 const SEEN := "event_seen_"   # once-only events: generation they were last seen
 const LAST := "event_last_"   # repeatable events: generation they last happened
 
@@ -83,6 +83,8 @@ static func place_matches(ev: Dictionary, place: Dictionary) -> bool:
 
 
 static func is_eligible(d: GameDynasty, ev: Dictionary) -> bool:
+	if ev.get("raid", false):   # a raid comes with the years (GameRaids), never while exploring
+		return false
 	if not place_matches(ev, d.world.here()):
 		return false
 	var r: Dictionary = ev.get("requires", {})
@@ -199,7 +201,7 @@ static func explore(d: GameDynasty) -> Array:
 		return d._finish_time("explore", msgs)
 	var span := d.years_for("explore")
 	var out := d._finish_time("explore", ["%s spends %s exploring %s." % [h.name, "a year" if span == 1 else "%d years" % span, place["name"]]])
-	if d.state == "life":
+	if d.state == "life" and not d.has_pending_event():   # a raid that came with the year keeps its place
 		begin(d, ev["id"], "explore")
 		var m := "Something happens: %s." % event_title(d)
 		d._say(m)
@@ -556,6 +558,10 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		h.gold += g
 		if g != 0:
 			fx.append({"t": "%s gold" % GameText.signed(g), "k": "good" if g > 0 else "bad"})
+	if o.has("defend"):   # the heir trusts the guards (see GameRaids.defend)
+		for l in GameRaids.defend(d, str(o["defend"])):
+			msgs.append(str(l["t"]))
+			fx.append(l)
 	if o.has("find"):   # young taken in: the choice's own check was the roll (see GameFinding.take)
 		for line in GameFinding.take(d, o["find"].get("species", []), "event_" + str(ev.get("id", ""))):
 			msgs.append(line)
@@ -839,6 +845,8 @@ static func validate() -> Array:
 					for f in o["fight"].get("foes", []):
 						if not creature_ids.has(f):
 							errs.append("%s/%s: unknown or boss creature %s" % [where, k, f])
+				if o.has("defend") and not GameRaids.data()["kinds"].has(str(o["defend"])):
+					errs.append("%s/%s: defend names '%s', which is not a kind of raid" % [where, k, o["defend"]])
 				if o.has("find"):
 					var sp: Variant = o["find"].get("species") if typeof(o["find"]) == TYPE_DICTIONARY else null
 					if typeof(sp) != TYPE_ARRAY or (sp as Array).is_empty():
