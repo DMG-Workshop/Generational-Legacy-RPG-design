@@ -41,6 +41,7 @@ func _run() -> void:
 	test_yield()
 	test_slaughter()
 	test_breeding()
+	test_more_animals()
 	test_untouched()
 	await test_screens()
 	print("%d checks, %d failures" % [checks, fails])
@@ -76,7 +77,7 @@ func _grown(d: GameDynasty, species: String, stage: String = "adult", mood: int 
 func test_data() -> void:
 	ok(GameFarm.validate().is_empty(), "farm.json is sound: %s" % str(GameFarm.validate()))
 	var farm := GameData.creatures.filter(func(c): return c.get("farm", false))
-	ok(farm.size() == 4 and farm.map(func(c): return str(c["id"])) == ["sheep", "cattle", "pig", "chicken"], "four farm animals: sheep, cattle, pig, chicken")
+	ok(farm.size() == 7 and farm.map(func(c): return str(c["id"])) == ["sheep", "cattle", "pig", "chicken", "goat", "goose", "horse"], "seven farm animals: sheep, cattle, pig, chicken, goat, goose, horse")
 	for c in farm:
 		var id := str(c["id"])
 		ok(GameBirth.born(id) != "none" and GameBirth.young_name(id) != "", "%s is born and its young have a name" % id)
@@ -92,6 +93,9 @@ func test_data() -> void:
 	_with(func(x): x["settings"]["season_mult"]["telepathy"] = {}, func(): ok(not GameFarm.validate().is_empty(), "a season table for no work kind is found"))
 	_with(func(x): x["settings"]["slaughter_stage"]["egg"] = 0.5, func(): ok(not GameFarm.validate().is_empty(), "slaughtering an egg is found"))
 	_with(func(x): x["text"].erase("bought"), func(): ok(not GameFarm.validate().is_empty(), "missing text is found"))
+	_with(func(x): x["settings"]["no_slaughter"].append("wolf"), func(): ok(not GameFarm.validate().is_empty(), "no_slaughter naming a wild creature is found"))
+	_with(func(x): x["settings"]["no_slaughter"].append("sheep"), func(): ok(not GameFarm.validate().is_empty(), "an animal with meat that is also in no_slaughter is found"))
+	_with(func(x): x["settings"]["no_slaughter"].clear(), func(): ok(not GameFarm.validate().is_empty(), "a farm animal with no meat and not in no_slaughter is found (the horse)"))
 	ok(GameFarm.validate().is_empty(), "the data is put back")
 	ok(GameFarm.is_farm("sheep") and not GameFarm.is_farm("wolf") and not GameFarm.is_farm("nonesuch"), "only the farm animals are farm animals")
 
@@ -121,7 +125,7 @@ func test_pools() -> void:
 
 func test_market() -> void:
 	var d := dyn()
-	ok(GameFarm.market_species() == ["cattle", "chicken", "pig", "sheep"], "the market sells four kinds, in a fixed order")
+	ok(GameFarm.market_species() == ["cattle", "chicken", "goat", "goose", "horse", "pig", "sheep"], "the market sells seven kinds, in a fixed order")
 	ok(GameFarm.price("sheep") == 40 and GameFarm.price("nonesuch") == 0, "sheep are forty gold")
 	ok(GameFarm.why_not_buy(d, "sheep") == "", "a house in a town may buy")
 	var gold := d.heir.gold
@@ -259,6 +263,55 @@ func test_breeding() -> void:
 	GameBreeding.on_years(c, 1.0, [], 1.0)
 	GameBreeding._cache = saved
 	ok(c.roster.size() == 3 and c.roster[2]["stage"] == "egg" and c.roster[2]["young"] == "chick", "a pair of chickens lays an egg of chicks")
+
+
+func test_more_animals() -> void:
+	# the goat, the goose and the horse, each with its own work, its market price and its young
+	for row in [["goat", "milk", "kid", "live", 35], ["goose", "eggs", "gosling", "egg", 8], ["horse", "haul", "foal", "live", 120]]:
+		var sp := str(row[0])
+		ok(GameBirth.young_name(sp) == str(row[2]) and GameBirth.born(sp) == str(row[3]), "%s: its young are %ss, born by %s" % [sp, row[2], row[3]])
+		ok(GameRanch.work_of(sp).get("kind", "") == str(row[1]), "%s does %s" % [sp, row[1]])
+		ok(GameFarm.price(sp) == int(row[4]), "and costs %d at the market" % int(row[4]))
+		var d := dyn()
+		var e := _grown(d, sp)
+		ok(str(row[1]) in GameRanch.yearly_work(d)["kinds"] and "gold a year" in GameRanch.work_text(e), "%s earns its keep: %s" % [sp, GameRanch.work_text(e)])
+	var d2 := dyn()
+	GameFarm.buy(d2, "goose")
+	ok(d2.roster[0]["stage"] == "young" and d2.roster[0]["born"] == "egg" and GameRanch.stage_at(d2.roster[0], float(d2.roster[0]["age"])) == "young", "a bought gosling skips its egg like a chick")
+	# the horse is never slaughtered
+	var h := _grown(dyn(), "horse")
+	ok(GameFarm.slaughter_value(h) == 0 and GameFarm.slaughter(dyn(), 1) == "", "a horse has no slaughter value")
+	var hd := dyn()
+	var horse := _grown(hd, "horse")
+	var before := hd.roster.size()
+	ok(GameFarm.slaughter(hd, int(horse["id"])) == "" and hd.roster.size() == before and hd.heir.gold == 100000, "and slaughtering one does nothing")
+	# goats and geese can be, and pay by their own table
+	var g := _grown(dyn(), "goat", "adult", 100)
+	ok(GameFarm.slaughter_value(g) == 35, "a grown goat fetches meat and hide: %d" % GameFarm.slaughter_value(g))
+	var gs := _grown(dyn(), "goose", "adult", 100)
+	ok(GameFarm.slaughter_value(gs) == 12, "a grown goose: %d" % GameFarm.slaughter_value(gs))
+	# the work follows the season: the horse most in spring
+	var w := dyn()
+	var hh := _grown(w, "horse", "adult", 100)
+	w.world.year = 10.01
+	var spring := GameFarm.yield_mult(w, hh)
+	w.world.year = 10.76
+	ok(spring > GameFarm.yield_mult(w, hh), "the horse hauls most in spring and least in winter")
+	# each breeds true, and only with its own kind
+	for sp in ["goat", "goose", "horse"]:
+		ok(GameBreeding.compatible(sp, sp) and not GameBreeding.compatible(sp, "sheep") and not GameBreeding.compatible(sp, "wolf"), "%s breeds with its own kind only" % sp)
+	# never fought, never found
+	var met := {}
+	for s in range(1, 30):
+		var hunt := dyn(s)
+		hunt.world.location = "greenvale"
+		for e in hunt.start_hunt("hunt").enemies:
+			met[str(e["id"])] = true
+	ok(not met.has("goat") and not met.has("goose") and not met.has("horse"), "none of them is met in a hunt")
+	# they can be raided, like the rest of the stock
+	var r := dyn()
+	_grown(r, "horse")
+	ok(GameRaids.stock_value(r) > 0 and GameRaids.chance(r) > 0.0, "a horse in the pens draws raiders")
 
 
 func test_untouched() -> void:

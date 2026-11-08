@@ -105,7 +105,7 @@ static func slaughter_value(e: Dictionary) -> int:
 	var species := str(e.get("species", ""))
 	var table: Dictionary = data()["slaughter"].get(species, {})
 	var stage_mult := float(setting("slaughter_stage").get(str(e.get("stage")), 0.0))
-	if table.is_empty() or stage_mult <= 0.0 or not is_farm(species):
+	if table.is_empty() or stage_mult <= 0.0 or not is_farm(species) or species in setting("no_slaughter"):
 		return 0
 	return maxi(1, int(round((float(table["meat"]) + float(table["hide"])) * stage_mult * mood_scale(e))))
 
@@ -139,7 +139,7 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["mood_floor", "season_mult", "slaughter_stage", "market_place_type"]:
+	for k in ["mood_floor", "season_mult", "slaughter_stage", "market_place_type", "no_slaughter"]:
 		if not s.has(k):
 			bad.append("farm.json: settings.%s is missing" % k)
 	if not bad.is_empty():
@@ -161,6 +161,11 @@ static func validate() -> Array:
 			bad.append("farm.json: the market sells '%s', which is not a born farm animal" % sp)
 		elif int(dat["market"][sp]) <= 0:
 			bad.append("farm.json: the market price of '%s' must be above 0" % sp)
+	for sp in s["no_slaughter"]:
+		if not is_farm(str(sp)):
+			bad.append("farm.json: no_slaughter names '%s', which is not a farm animal" % sp)
+		elif dat["slaughter"].has(str(sp)):
+			bad.append("farm.json: '%s' has meat and hide and is also in no_slaughter" % sp)
 	for sp in dat["slaughter"]:
 		var t: Dictionary = dat["slaughter"][sp]
 		if not is_farm(str(sp)):
@@ -174,8 +179,8 @@ static func validate() -> Array:
 				bad.append("farm.json: farm animal '%s' is not born" % id)
 			if not dat["market"].has(id):
 				bad.append("farm.json: farm animal '%s' is not sold at the market" % id)
-			if not dat["slaughter"].has(id):
-				bad.append("farm.json: farm animal '%s' has no meat and hide" % id)
+			if not dat["slaughter"].has(id) and id not in s["no_slaughter"]:
+				bad.append("farm.json: farm animal '%s' has no meat and hide and is not in no_slaughter" % id)
 			if c.get("boss", false):
 				bad.append("farm.json: farm animal '%s' is a boss" % id)
 	for k in ["buy", "bought", "slaughter", "sure_slaughter", "slaughtered", "market_head", "market_note", "not_in_town", "no_room", "not_enough", "outside_life"]:

@@ -1,5 +1,5 @@
 {
-  "note": "Farm animals and what they are worth (roadmap item 62, first part; core/game/game_farm.gd). They are creatures flagged `farm` in creatures.json: never fought and never found beside the dead, but bought young at a town's market, raised and bred like any creature (ranch.json, breeding_rules.json). Their yearly work (wool, milk, eggs: work_of in ranch.json) follows the season and how well they are kept; meat and hide come once, when one is slaughtered.",
+  "note": "Farm animals and what they are worth (roadmap item 62, first part; core/game/game_farm.gd). They are creatures flagged `farm` in creatures.json: never fought and never found beside the dead, but bought young at a town's market, raised and bred like any creature (ranch.json, breeding_rules.json). Their yearly work (wool, milk, eggs: work_of in ranch.json) follows the season and how well they are kept; meat and hide come once, when one is slaughtered. A horse is a working animal and is never slaughtered (settings.no_slaughter).",
   "settings": {
     "mood_floor": 0.5,
     "season_mult": {
@@ -20,6 +20,12 @@
         "summer": 1.1,
         "autumn": 0.9,
         "winter": 0.6
+      },
+      "haul": {
+        "spring": 1.2,
+        "summer": 1.1,
+        "autumn": 1.0,
+        "winter": 0.6
       }
     },
     "slaughter_stage": {
@@ -27,13 +33,19 @@
       "adult": 1.0,
       "elder": 0.7
     },
-    "market_place_type": "town"
+    "market_place_type": "town",
+    "no_slaughter": [
+      "horse"
+    ]
   },
   "market": {
     "sheep": 40,
     "cattle": 100,
     "pig": 35,
-    "chicken": 6
+    "chicken": 6,
+    "goat": 35,
+    "goose": 8,
+    "horse": 120
   },
   "slaughter": {
     "sheep": {
@@ -51,6 +63,14 @@
     "chicken": {
       "meat": 7,
       "hide": 1
+    },
+    "goat": {
+      "meat": 26,
+      "hide": 9
+    },
+    "goose": {
+      "meat": 9,
+      "hide": 3
     }
   },
   "text": {

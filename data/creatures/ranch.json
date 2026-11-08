@@ -100,7 +100,10 @@
     "sheep": "flock",
     "pig": "swine",
     "cattle": "herd",
-    "chicken": "fowl"
+    "chicken": "fowl",
+    "goat": "flock",
+    "goose": "fowl",
+    "horse": "herd"
   },
   "text": {
     "hatches": "{name} hatches: a {young} of the {species}.",
@@ -198,6 +201,11 @@
         "name": "milk",
         "about": "Is milked: {gold} gold a year.",
         "said": "milk"
+      },
+      "haul": {
+        "name": "hauling",
+        "about": "Hauls and ploughs: {gold} gold a year.",
+        "said": "hauling"
       }
     }
   },
@@ -244,6 +252,18 @@
     "chicken": {
       "kind": "eggs",
       "gold": 4
+    },
+    "goat": {
+      "kind": "milk",
+      "gold": 9
+    },
+    "goose": {
+      "kind": "eggs",
+      "gold": 5
+    },
+    "horse": {
+      "kind": "haul",
+      "gold": 16
     }
   }
 }
