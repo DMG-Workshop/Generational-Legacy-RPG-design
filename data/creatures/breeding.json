@@ -1,0 +1,7 @@
+{
+	"note": "How creatures are born and bred (core/game/game_birth.gd). Each creature in creatures.json says how it is born (`born`: \"egg\" it lays, \"live\" it bears, \"none\" it is not born at all, as the undead, constructs, fiends and the people-like foes: never found young, never bred) and, when it is born, what its young are called (`young`). `mixed_birth_rule` decides how the young of two different creatures that breed with no recipe are born when their parents differ in how they are born: \"mother\" (the way the mother is born: she lays, or she bears), \"father\", \"egg\" (always an egg) or \"live\" (always live). A `recipe` is a hybrid the game defines: {id, name, parents: [creature id, creature id] (either order), born, young}; it says for itself how its young are born, whatever its parents are.",
+	"settings": {
+		"mixed_birth_rule": "mother"
+	},
+	"recipes": []
+}
