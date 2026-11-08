@@ -1,0 +1,14 @@
+{
+  "note": "Carry limits (roadmap item 43; core/game/game_carry.gd, checked by tools/check_data.gd). The heir carries what is worn and what is in the pack, by the weight each item has (items.json, item 42), plus a little for each healing potion. The most they can carry is base_capacity plus per_strength times their Strength. Past that, nothing more is picked up by choice: a purchase is refused and a find (the search of the dead, a drop) is sold on the spot for gold. Gifts that come from events and quests are always taken, and may leave the heir over the limit; nothing is dropped from them, and they simply cannot take more until they put something down. There is no other penalty. The capacity is set so the autopilot, which wears one set and carries a few remedies, is never refused.",
+  "settings": {
+    "base_capacity": 40,
+    "per_strength": 0.6,
+    "potion_weight": 0.3
+  },
+  "text": {
+    "too_heavy": "{h} cannot carry the {name} ({weight} weight) on top of {carried} of {capacity}.",
+    "search_heavy": "{h} finds {find} but cannot carry it, and sells it where it lies for {gold} gold.",
+    "dropped": "{h} leaves the {name} behind.",
+    "cannot_drop": "There is no {name} in the pack to leave."
+  }
+}

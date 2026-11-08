@@ -31,6 +31,7 @@ var scroll: ScrollContainer
 var rows: VBoxContainer
 var side: VBoxContainer
 var confirm_sell: String = ""   # a unique item waiting for a second click before it is sold
+var confirm_drop: String = ""   # a piece of gear waiting for a second click before it is left behind
 var left_w := LEFT_W
 var compact := false            # a narrow screen: no side panel, the heir's numbers in one line
 var stats_line: Label
@@ -164,6 +165,7 @@ func _price_text() -> String:
 ## Act on the dynasty, record the result and refresh everything that shows it.
 func _act(msg: String) -> void:
 	confirm_sell = ""
+	confirm_drop = ""
 	dynasty._say(msg)
 	note.text = msg
 	note.tooltip_text = msg
@@ -181,6 +183,15 @@ func _sell(id: String) -> void:
 		return
 	confirm_sell = ""
 	_act(GameItems.sell(dynasty, id))
+
+
+func _drop(id: String) -> void:
+	if GameItems.stack_max(id) <= 0 and confirm_drop != id:
+		confirm_drop = id
+		_rebuild()
+		return
+	confirm_drop = ""
+	_act(GameCarry.drop(dynasty, id))
 
 
 # ---------------------------------------------------------------- tabs
@@ -308,7 +319,13 @@ func _build_gear() -> void:
 		if confirm_sell == iid:
 			sb.text = "Sure?"
 			sb.tooltip_text = "%s again to sell the %s. It cannot be bought back." % [Kit.click().capitalize(), GameItems.item_name(iid)]
-		rows.add_child(_item_row(iid, "sells %sg" % GameText.num(GameItems.sell_price(dynasty, iid)), [eb, sb]))
+		var db := Kit.button("Drop", func(): _drop(iid), Vector2(80, 34))
+		if confirm_drop == iid:
+			db.text = "Sure?"
+			db.tooltip_text = "%s again to leave the %s behind. It cannot be picked up again." % [Kit.click().capitalize(), GameItems.item_name(iid)]
+		else:
+			db.tooltip_text = "Leave it behind to lighten the load."
+		rows.add_child(_item_row(iid, "sells %sg" % GameText.num(GameItems.sell_price(dynasty, iid)), [eb, sb, db]))
 
 
 ## A stack of remedies, toxins or vials: one row with the count. Remedies are taken here;
@@ -327,7 +344,9 @@ func _consumable_row(id: String, can_sell: bool) -> PanelContainer:
 	sb.disabled = not can_sell
 	if not can_sell:
 		sb.tooltip_text = "No one in %s buys gear." % dynasty.world.here()["name"]
-	return _item_row(id, "sells %sg" % GameText.num(GameItems.sell_price(dynasty, id)), [ub, sb])
+	var db := Kit.button("Drop", func(): _drop(id), Vector2(80, 34))
+	db.tooltip_text = "Leave one behind to lighten the load."
+	return _item_row(id, "sells %sg" % GameText.num(GameItems.sell_price(dynasty, id)), [ub, sb, db])
 
 
 func _build_side() -> void:
@@ -350,6 +369,7 @@ func _build_side() -> void:
 	side.add_child(Kit.label("HP %s / %s" % [GameText.num(h.hp), GameText.num(h.max_hp())], 14))
 	side.add_child(Kit.label("MP %s / %s" % [GameText.num(h.mp), GameText.num(h.max_mp())], 14))
 	side.add_child(Kit.label("Potions %d    Pack %d item%s" % [h.potions, h.inventory.size(), "" if h.inventory.size() == 1 else "s"], 14))
+	side.add_child(Kit.label("Carrying %s%s" % [GameCarry.summary(h), "  (over the limit)" if GameCarry.burdened(h) else ""], 14, Kit.bad() if GameCarry.burdened(h) else Kit.TEXT))
 	if not h.diseases.is_empty():
 		side.add_child(_wrap(Kit.label("Sick: %s" % GameDisease.status_text(h), 14, Kit.bad())))
 	side.add_child(HSeparator.new())
@@ -367,7 +387,7 @@ static func summary_lines(d: GameDynasty) -> Array:
 		return []
 	var out: Array = [", ".join(worn) if not worn.is_empty() else "Nothing worn."]
 	if not h.inventory.is_empty():
-		out.append("Pack: %d item%s" % [h.inventory.size(), "" if h.inventory.size() == 1 else "s"])
+		out.append("Pack: %d item%s, carrying %s" % [h.inventory.size(), "" if h.inventory.size() == 1 else "s", GameCarry.summary(h)])
 	return out
 
 
