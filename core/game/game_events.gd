@@ -645,7 +645,7 @@ static func _build_foes(d: GameDynasty, f: Dictionary) -> Array:
 
 static func _in_era(d: GameDynasty, c: Dictionary) -> bool:
 	var era := d.era_gen()
-	return not c.get("boss", false) and int(c["min_gen"]) <= era and era <= int(c["max_gen"])
+	return not c.get("boss", false) and not c.get("farm", false) and int(c["min_gen"]) <= era and era <= int(c["max_gen"])
 
 
 static func _creature_for(d: GameDynasty, id: String) -> Dictionary:
@@ -654,7 +654,7 @@ static func _creature_for(d: GameDynasty, id: String) -> Dictionary:
 			return c
 	var era := GameData.creatures.filter(func(c): return _in_era(d, c))
 	if era.is_empty():
-		era = GameData.creatures.filter(func(c): return not c.get("boss", false))
+		era = GameData.creatures.filter(func(c): return not c.get("boss", false) and not c.get("farm", false))
 	var biomes: Array = d.world.here().get("biomes", [])
 	var local := era.filter(func(c): return (c.get("biomes", []) as Array).any(func(b): return b in biomes))
 	var pool: Array = local if not local.is_empty() else era
@@ -740,7 +740,7 @@ static func validate() -> Array:
 			biomes[b] = true
 	var creature_ids := {"local": true}
 	for c in GameData.creatures:
-		if not c.get("boss", false):
+		if not c.get("boss", false) and not c.get("farm", false):
 			creature_ids[c["id"]] = true
 	var settable := content_flags()
 	for ev in GameData.events:

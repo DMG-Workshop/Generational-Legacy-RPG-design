@@ -339,12 +339,20 @@ func _fill_creatures() -> void:
 			var bb := Kit.button(GameBreeding.text("breed_on" if on else "breed_off", {}), func(): _breed(id, not on), Vector2(190, 0))
 			bb.disabled = not alive
 			btns.add_child(bb)
-		for act in ["sell", "free"]:
+		var acts: Array = ["sell", "free"]
+		if GameFarm.slaughter_value(e) > 0:
+			acts.insert(1, "slaughter")   # a farm animal that is past its egg can be slaughtered for meat and hide
+		for act in acts:
 			var sure: bool = _sure.get(id, "") == act
-			var label := GameRanch.text(("sure_" if sure else "") + act, {"gold": price})
+			var label: String
+			if act == "slaughter":
+				label = GameFarm.text(("sure_" if sure else "") + "slaughter", {"gold": GameText.num(GameFarm.slaughter_value(e))})
+			else:
+				label = GameRanch.text(("sure_" if sure else "") + act, {"gold": price})
 			var b := Kit.button(label, func(): _creature_action(id, act), Vector2(190, 0))
 			b.disabled = not alive
 			btns.add_child(b)
+	_fill_market(box, alive)
 
 
 ## The Subclass tab: the heir's calling, what its perks do, and the others they could take (for gold).
@@ -400,6 +408,35 @@ func _take_subclass(id: String) -> void:
 	_fill_subclass()
 
 
+## The market: young farm stock to buy, in a town. One line says why it cannot be used when it cannot.
+func _fill_market(box: VBoxContainer, alive: bool) -> void:
+	box.add_child(Kit.label(GameFarm.text("market_head"), 18, Kit.ACCENT))
+	var note := Kit.label(GameFarm.text("market_note"), 14, Kit.dim())
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(note)
+	var shown_why := ""
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	box.add_child(row)
+	for species in GameFarm.market_species():
+		var why := GameFarm.why_not_buy(dynasty, str(species))
+		var b := Kit.button(GameFarm.text("buy", {"young": GameFarm.young_name(str(species)), "gold": GameText.num(GameFarm.price(str(species)))}) + " - " + GameCombat.creature_def(str(species)).get("name", species), func(): _buy(str(species)), Vector2(0, 0))
+		b.disabled = not alive or why != ""
+		row.add_child(b)
+		if why != "" and shown_why == "" and alive and (why == GameFarm.text("not_in_town") or why == GameFarm.text("no_room")):
+			shown_why = why
+	if shown_why != "":
+		var reason := Kit.label(shown_why, 14, Kit.dim())
+		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(reason)
+
+
+func _buy(species: String) -> void:
+	if GameFarm.buy(dynasty, species) != "" and on_change.is_valid():
+		on_change.call()
+	_fill_creatures()
+
+
 ## Sets a creature to breed or to rest, and redraws the tab.
 func _breed(id: int, on: bool) -> void:
 	if GameBreeding.set_breeding(dynasty, id, on) and on_change.is_valid():
@@ -414,7 +451,14 @@ func _creature_action(id: int, act: String) -> void:
 		_fill_creatures()
 		return
 	_sure.erase(id)
-	var line := GameRanch.sell(dynasty, id) if act == "sell" else GameRanch.release(dynasty, id)
+	var line: String
+	match act:
+		"sell":
+			line = GameRanch.sell(dynasty, id)
+		"slaughter":
+			line = GameFarm.slaughter(dynasty, id)
+		_:
+			line = GameRanch.release(dynasty, id)
 	if line != "" and on_change.is_valid():
 		on_change.call()
 	_fill_creatures()

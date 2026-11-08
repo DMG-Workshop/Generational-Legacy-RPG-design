@@ -552,9 +552,9 @@ func battle_round() -> GameRound:
 func start_hunt(kind: String) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")[kind]
 	var era := era_gen()
-	var in_era := GameData.creatures.filter(func(c): return not c.get("boss", false) and c["min_gen"] <= era and era <= c["max_gen"])
+	var in_era := GameData.creatures.filter(func(c): return not c.get("boss", false) and not c.get("farm", false) and c["min_gen"] <= era and era <= c["max_gen"])
 	if in_era.is_empty():
-		in_era = GameData.creatures.filter(func(c): return not c.get("boss", false))
+		in_era = GameData.creatures.filter(func(c): return not c.get("boss", false) and not c.get("farm", false))
 	# Each place breeds its own monsters; if none of them roam in this era, anything in the era will do.
 	var biomes: Array = world.here().get("biomes", [])
 	var pool := in_era.filter(func(c): return (c.get("biomes", []) as Array).any(func(b): return b in biomes))

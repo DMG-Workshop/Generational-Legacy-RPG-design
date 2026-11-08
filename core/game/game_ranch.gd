@@ -120,7 +120,7 @@ static func yearly_work(d: GameDynasty) -> Dictionary:
 		var share := work_share(e)
 		if w.is_empty() or share <= 0.0 or str(w["kind"]) == "guard":
 			continue
-		var g := float(w["gold"]) * share * GameBreeding.trait_mult(e, "work_mult")
+		var g := float(w["gold"]) * share * GameBreeding.trait_mult(e, "work_mult") * GameFarm.yield_mult(d, e)
 		by_kind[str(w["kind"])] = float(by_kind.get(str(w["kind"]), 0.0)) + g
 		total += g
 	return {"gold": total, "kinds": by_kind}
@@ -149,7 +149,7 @@ static func work_text(e: Dictionary) -> String:
 	if w.is_empty() or work_share(e) <= 0.0:
 		return ""
 	var kind: Dictionary = data()["work"]["kinds"][str(w["kind"])]
-	var gold := float(w.get("gold", 0)) * work_share(e) * GameBreeding.trait_mult(e, "work_mult")
+	var gold := float(w.get("gold", 0)) * work_share(e) * GameBreeding.trait_mult(e, "work_mult") * GameFarm.yield_mult(null, e)
 	var cut := int(round(float(data()["work"]["guard_cut_each"]) * work_share(e) * GameBreeding.trait_mult(e, "guard_mult") * 100.0))
 	return str(kind["about"]).format({"gold": GameText.num(int(ceil(gold))), "cut": str(cut)})
 
