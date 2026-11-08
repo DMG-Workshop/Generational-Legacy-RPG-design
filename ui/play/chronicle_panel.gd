@@ -6,6 +6,8 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 
 var dynasty: GameDynasty
+var on_change: Callable   # called after a title is put on or taken off (the screen behind redraws)
+var _titles_box: VBoxContainer
 
 
 func _ready() -> void:
@@ -32,6 +34,7 @@ func _ready() -> void:
 	tabs.add_child(tree)
 
 
+	tabs.add_child(_titles_tab())
 	var stats := Kit.rich()
 	stats.name = "Statistics"
 	stats.text = _stats_text()
@@ -79,6 +82,9 @@ func _record(r: Dictionary) -> String:
 		line += "\n      traits: %s" % ", ".join(r["traits"])
 	if r["archetype"] != "":
 		line += "\n      shaped by fate as a %s" % GameFate.ARCHETYPES[r["archetype"]]["name"]
+	var won := GameTitles.clean_ids(r.get("titles", []))
+	if not won.is_empty():
+		line += "\n      titles: %s" % ", ".join(won.map(func(id): return str(GameTitles.def(id)["name"])))
 	return line
 
 
@@ -194,3 +200,78 @@ func _echo_text() -> String:
 	for h in dynasty.heirlooms:
 		lines.append(" - %s (taken from %s, generation %s)" % [h["name"], h["boss"], _n(h["gen"])])
 	return "\n".join(lines)
+
+
+## The Titles tab: the heir's and the house's earned titles, each with a button to wear it, and below them the titles
+## not yet earned, with how each is earned.
+func _titles_tab() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Titles"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_titles_box = VBoxContainer.new()
+	_titles_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_titles_box.add_theme_constant_override("separation", 8)
+	scroll.add_child(_titles_box)
+	_fill_titles()
+	return scroll
+
+
+func _fill_titles() -> void:
+	Kit.clear(_titles_box)
+	var alive := dynasty.state == "life"
+	var worn := GameTitles.worn(dynasty) if dynasty.heir != null else ""
+	var head := Kit.label("Wearing: %s" % (GameTitles.display_name(dynasty) if worn != "" else "no title") if dynasty.heir != null else "", 16, Kit.ACCENT)
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_titles_box.add_child(head)
+	var note := Kit.label("A title is earned, never bought. The heir wears one at a time after their name. A personal title ends with its heir (it stays in the lineage); a house title stays with the house.", 14, Kit.dim())
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_titles_box.add_child(note)
+	if worn != "" and alive:
+		_titles_box.add_child(Kit.button("Take off the title", func(): _wear(""), Vector2(0, 0)))
+	var mine: Array = GameTitles.earned(dynasty) if dynasty.heir != null else []
+	_titles_box.add_child(Kit.label("Earned (%d)" % mine.size(), 18, Kit.ACCENT))
+	if mine.is_empty():
+		_titles_box.add_child(Kit.label("None yet.", 14, Kit.dim()))
+	for id in mine:
+		_title_row(GameTitles.def(id), true, id == worn, alive)
+	var later: Array = GameTitles.defs().filter(func(t): return str(t["id"]) not in mine)
+	_titles_box.add_child(Kit.label("Not yet earned (%d)" % later.size(), 18, Kit.dim()))
+	for t in later:
+		_title_row(t, false, false, false)
+
+
+func _title_row(t: Dictionary, got: bool, on: bool, can_wear: bool) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_titles_box.add_child(row)
+	var text := VBoxContainer.new()
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(text)
+	var kind := "house" if str(t.get("kind", "personal")) == "house" else "personal"
+	var title := Kit.label("%s  (%s)" % [str(t["name"]), kind], 16, Kit.ACCENT if got else Kit.dim())
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_child(title)
+	var about := str(t["about"])
+	var perk := GameTitles.perk_text(t)
+	if perk != "":
+		about += "  Worn: %s." % perk
+	var line := Kit.label(about, 14, Kit.TEXT if got else Kit.dim())
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_child(line)
+	if got:
+		var b := Kit.button("Worn" if on else "Wear", func(): _wear(str(t["id"])), Vector2(96, 0))
+		b.disabled = on or not can_wear
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(b)
+
+
+## Puts a title on (or, with "", takes it off), tells the screen behind, and draws the tab again.
+func _wear(id: String) -> void:
+	if id == "":
+		GameTitles.unwear(dynasty)
+	elif not GameTitles.wear(dynasty, id):
+		return
+	if on_change.is_valid():
+		on_change.call()
+	_fill_titles()

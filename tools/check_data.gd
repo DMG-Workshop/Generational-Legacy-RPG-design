@@ -25,7 +25,7 @@ static func problems() -> Array:
 	_parse(out)
 	for pair in [["rounds", GameRound.validate()], ["ages", GameAges.validate()], ["feats", GameFeats.validate()],
 			["events", GameEvents.validate()], ["skills", GameSkills.validate()], ["diseases", GameDisease.validate()],
-			["combat", GameCombat.validate()], ["skill trees", GameSkillTree.validate()], ["sprites", SpriteArt.validate()],
+			["combat", GameCombat.validate()], ["skill trees", GameSkillTree.validate()], ["sprites", SpriteArt.validate()], ["titles", GameTitles.validate()],
 			["scenery", SceneryArt.validate()], ["battle events", _event_list()], ["text", _text()]]:
 		for p in pair[1]:
 			out.append("%s: %s" % [pair[0], p])

@@ -118,6 +118,8 @@ func continue_game() -> void:
 
 ## Show the screen that matches the dynasty's current state.
 func show_state() -> void:
+	if dynasty.battle == null and dynasty.state == "life":
+		GameTitles.announce(dynasty)   # titles earned since the last screen are told in the journal
 	if dynasty.battle != null:
 		var b := BattleView.new()
 		b.app = self
