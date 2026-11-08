@@ -27,6 +27,7 @@ static var names: Dictionary = {}
 static var combat: Dictionary = {}   # spells, statuses, elements, formations (see GameCombat), rounds (see GameRound)
 static var diseases: Dictionary = {}   # {settings, diseases}: read through GameDisease
 static var plague: Dictionary = {}     # looting, toxins, vials: read through GamePlague
+static var breeding: Dictionary = {}   # {settings, recipes}: how creatures are born and bred, read through GameBirth
 static var ages: Dictionary = {}       # {settings, text}: read through GameAges
 static var feats: Dictionary = {}      # {settings, kinds, weapon_kinds, statuses, feats}: read through GameFeats
 static var skill_trees: Dictionary = {}   # {settings, trees}: read through GameSkillTree
@@ -82,6 +83,7 @@ static func load_all() -> void:
 		"rounds": load_json("res://data/combat/rounds.json")}
 	diseases = load_json("res://data/diseases/diseases.json")
 	plague = load_json("res://data/diseases/plague.json")
+	breeding = load_json("res://data/creatures/breeding.json")
 	ages = load_json("res://data/ages/ages.json")
 	feats = load_json("res://data/feats/feats.json")
 	skill_trees = load_json("res://data/skill_trees/settings.json")

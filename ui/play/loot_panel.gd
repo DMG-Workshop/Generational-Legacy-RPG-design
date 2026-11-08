@@ -35,7 +35,7 @@ func _ready() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	body.add_child(row)
-	var search := Kit.button("Search the bodies", func(): _done(GamePlague.search(dynasty)), Vector2(0, 44))
+	var search := Kit.button("Search the bodies", func(): _search(), Vector2(0, 44))
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(search)
 	var leave := Kit.button("Leave them", func(): _done(GamePlague.leave(dynasty)), Vector2(0, 44))
@@ -48,6 +48,10 @@ func _wrapped(text: String, size: int, color: Color = Kit.TEXT) -> Label:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size = Vector2(column, 0)
 	return l
+
+
+func _search() -> void:
+	_done(GameFinding.search_dead(dynasty))
 
 
 func _done(lines: Array) -> void:
