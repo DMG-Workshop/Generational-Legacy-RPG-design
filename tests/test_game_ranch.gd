@@ -450,12 +450,13 @@ func _grown(d: GameDynasty, species: String, stage: String = "adult", mood: int 
 func test_work() -> void:
 	ok(GameRanch.validate().is_empty(), "the data with work is sound: %s" % str(GameRanch.validate()))
 	var d := dyn()
-	_grown(d, "frost_wolf")   # wool 8
-	_grown(d, "drake")        # eggs 20
-	_grown(d, "ash_wyrm")     # venom 60
+	var sheep := _grown(d, "sheep")   # wool 12, by the season and how it is kept
+	_grown(d, "drake")                # eggs 20
+	_grown(d, "ash_wyrm")             # venom 60
+	var wool := 12.0 * GameFarm.yield_mult(d, sheep)
 	var y := GameRanch.yearly_work(d)
-	ok(is_equal_approx(float(y["gold"]), 88.0) and y["kinds"].size() == 3, "the grown earn by wool, eggs and venom: %s" % str(y))
-	ok(GameRanch.kinds_text(y["kinds"]) == "eggs 20, venom 60, wool 8", "told by kind: %s" % GameRanch.kinds_text(y["kinds"]))
+	ok(is_equal_approx(float(y["gold"]), 80.0 + wool) and y["kinds"].size() == 3, "the grown earn by wool, eggs and venom: %s" % str(y))
+	ok(GameRanch.kinds_text(y["kinds"]) == "eggs 20, venom 60, wool %d" % int(ceil(wool)), "told by kind: %s" % GameRanch.kinds_text(y["kinds"]))
 	var young := dyn()
 	_grown(young, "drake", "young")
 	var egg := dyn()

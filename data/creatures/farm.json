@@ -1,0 +1,69 @@
+{
+  "note": "Farm animals and what they are worth (roadmap item 62, first part; core/game/game_farm.gd). They are creatures flagged `farm` in creatures.json: never fought and never found beside the dead, but bought young at a town's market, raised and bred like any creature (ranch.json, breeding_rules.json). Their yearly work (wool, milk, eggs: work_of in ranch.json) follows the season and how well they are kept; meat and hide come once, when one is slaughtered.",
+  "settings": {
+    "mood_floor": 0.5,
+    "season_mult": {
+      "wool": {
+        "spring": 1.3,
+        "summer": 1.1,
+        "autumn": 0.9,
+        "winter": 0.7
+      },
+      "milk": {
+        "spring": 1.2,
+        "summer": 1.0,
+        "autumn": 1.0,
+        "winter": 0.8
+      },
+      "eggs": {
+        "spring": 1.3,
+        "summer": 1.1,
+        "autumn": 0.9,
+        "winter": 0.6
+      }
+    },
+    "slaughter_stage": {
+      "young": 0.4,
+      "adult": 1.0,
+      "elder": 0.7
+    },
+    "market_place_type": "town"
+  },
+  "market": {
+    "sheep": 40,
+    "cattle": 100,
+    "pig": 35,
+    "chicken": 6
+  },
+  "slaughter": {
+    "sheep": {
+      "meat": 32,
+      "hide": 14
+    },
+    "cattle": {
+      "meat": 90,
+      "hide": 40
+    },
+    "pig": {
+      "meat": 55,
+      "hide": 10
+    },
+    "chicken": {
+      "meat": 7,
+      "hide": 1
+    }
+  },
+  "text": {
+    "buy": "Buy a {young} ({gold} gold)",
+    "bought": "{h} buys a {young} {species} at the market for {gold} gold: {name}.",
+    "slaughter": "Slaughter ({gold} gold)",
+    "sure_slaughter": "Slaughter for {gold}? Tap again",
+    "slaughtered": "{h} slaughters {name} the {species}: the meat and the hide fetch {gold} gold.",
+    "market_head": "Market",
+    "market_note": "Young stock can be bought in a town. Wool, milk and eggs follow the season, and an animal kept poorly gives less.",
+    "not_in_town": "The market is in a town.",
+    "no_room": "There is nowhere to keep another animal.",
+    "not_enough": "Not enough gold ({gold} needed).",
+    "outside_life": "Only a living heir can buy or slaughter."
+  }
+}

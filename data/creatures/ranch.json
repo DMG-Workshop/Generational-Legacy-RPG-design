@@ -1,5 +1,5 @@
 {
-  "note": "Growth and keep for the creatures the family holds (roadmap item 56, first part). Years are the world clock's (pass_time). A creature is an egg (egg-layers only), then young, adult, elder, and dies of old age; how long each lasts is set by its size class. Keeping costs gold each year, paid from the heir's gold; unpaid years sink its mood, and at no mood an egg spoils and a creature wanders off. No dice are drawn: the length of an elder's life varies with a value taken from the dynasty seed and the creature's id. The Ranch is the family house's third track (GameHouse): each level adds pens, a hatchery for eggs and a nursery for the young (the `ranch` table). Creatures can be sold or set free. Grown creatures can work (`work_of`): wool, eggs and venom earn gold each year, and guards turn away a share of the gold an event would take. A creature works only while its mood holds.",
+  "note": "Growth and keep for the creatures the family holds (roadmap item 56, first part). Years are the world clock's (pass_time). A creature is an egg (egg-layers only), then young, adult, elder, and dies of old age; how long each lasts is set by its size class. Keeping costs gold each year, paid from the heir's gold; unpaid years sink its mood, and at no mood an egg spoils and a creature wanders off. No dice are drawn: the length of an elder's life varies with a value taken from the dynasty seed and the creature's id. The Ranch is the family house's third track (GameHouse): each level adds pens, a hatchery for eggs and a nursery for the young (the `ranch` table). Creatures can be sold or set free. Grown creatures can work (`work_of`): wool, eggs and venom earn gold each year, and guards turn away a share of the gold an event would take. A creature works only while its mood holds. Farm animals (sheep, cattle, pigs, chickens: `farm` in creatures.json) are bought young at a town's market, give wool, milk or eggs through the year (by season, and less when kept poorly) and can be slaughtered for meat and hide: see data/creatures/farm.json and GameFarm.",
   "settings": {
     "start_mood": 70,
     "mood_max": 100,
@@ -47,6 +47,38 @@
       "elder": 40,
       "keep": 20,
       "value": 1200
+    },
+    "flock": {
+      "egg": 1,
+      "young": 1,
+      "adult": 7,
+      "elder": 3,
+      "keep": 2,
+      "value": 40
+    },
+    "swine": {
+      "egg": 1,
+      "young": 1,
+      "adult": 6,
+      "elder": 2,
+      "keep": 3,
+      "value": 50
+    },
+    "herd": {
+      "egg": 1,
+      "young": 2,
+      "adult": 12,
+      "elder": 4,
+      "keep": 5,
+      "value": 120
+    },
+    "fowl": {
+      "egg": 0.5,
+      "young": 0.5,
+      "adult": 4,
+      "elder": 2,
+      "keep": 1,
+      "value": 8
     }
   },
   "size_of": {
@@ -64,7 +96,11 @@
     "ash_wyrm": "huge",
     "star_eater": "huge",
     "elder_dragon": "huge",
-    "vaerthax": "huge"
+    "vaerthax": "huge",
+    "sheep": "flock",
+    "pig": "swine",
+    "cattle": "herd",
+    "chicken": "fowl"
   },
   "text": {
     "hatches": "{name} hatches: a {young} of the {species}.",
@@ -157,14 +193,15 @@
         "name": "guarding",
         "about": "Guards the house: turns away {cut}% of a theft or fine.",
         "said": "guarding"
+      },
+      "milk": {
+        "name": "milk",
+        "about": "Is milked: {gold} gold a year.",
+        "said": "milk"
       }
     }
   },
   "work_of": {
-    "frost_wolf": {
-      "kind": "wool",
-      "gold": 8
-    },
     "harpy": {
       "kind": "eggs",
       "gold": 4
@@ -195,6 +232,18 @@
     },
     "elder_dragon": {
       "kind": "guard"
+    },
+    "sheep": {
+      "kind": "wool",
+      "gold": 12
+    },
+    "cattle": {
+      "kind": "milk",
+      "gold": 18
+    },
+    "chicken": {
+      "kind": "eggs",
+      "gold": 4
     }
   }
 }
