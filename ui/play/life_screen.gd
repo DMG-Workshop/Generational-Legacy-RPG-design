@@ -167,6 +167,9 @@ func _colorize(line: String) -> String:
 func _build_left() -> void:
 	var h := d.heir
 	left.add_child(Kit.label(h.full_name(), 22, Kit.ACCENT))
+	var worn_title := GameTitles.worn(d)
+	if worn_title != "":   # the title the player chose to wear (the Titles tab of the Chronicle)
+		left.add_child(Kit.label(str(GameTitles.def(worn_title)["name"]), 16, Kit.dim()))
 	var arch := ""
 	if h.archetype != "":
 		arch = "  -  %s" % GameFate.ARCHETYPES[h.archetype]["name"]
@@ -368,6 +371,7 @@ func _do(fn: Callable) -> void:
 
 ## After anything changes the dynasty: save, then show whatever needs the player next.
 func _changed() -> void:
+	GameTitles.announce(d)   # a title earned by what was just done is told in the journal and saved
 	app.autosave()
 	if d.state != "life" or d.battle != null:
 		app.show_state()
@@ -469,4 +473,5 @@ func _map() -> void:
 func _chronicle() -> void:
 	var c := Chronicle.new()
 	c.dynasty = d
+	c.on_change = _changed   # wearing a title changes the name shown here
 	add_child(c)

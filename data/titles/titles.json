@@ -1,0 +1,328 @@
+{
+ "note": "Titles a heir or the house can earn (core/game/game_titles.gd). `kind` personal: the heir's own, ending with them; house: kept by the dynasty. `about` is how it is earned, in plain words, shown even before it is. `when` is one condition: {\"stat\": key, \"gte\"/\"lte\": n}, {\"boss\": id} (the house has slain it), {\"boss_by_heir\": id} (this heir did), {\"flag\": id}, {\"trait\": id}, {\"class\": id}, {\"race\": id}, {\"family\": true}, or {\"all\": [...]}, {\"any\": [...]}, {\"not\": c}; a list means all. `perk` (only while worn): persuasion is a lower price in shops. A title's name reads after a comma: \"Tess Holloway, the Untouched\".",
+ "settings": {
+  "perk_keys": [
+   "persuasion"
+  ]
+ },
+ "titles": [
+  {
+   "id": "blooded",
+   "name": "the Blooded",
+   "kind": "personal",
+   "about": "Win a battle.",
+   "when": {
+    "stat": "battles_won",
+    "gte": 1
+   }
+  },
+  {
+   "id": "veteran",
+   "name": "the Veteran",
+   "kind": "personal",
+   "about": "Win 25 battles.",
+   "when": {
+    "stat": "battles_won",
+    "gte": 25
+   }
+  },
+  {
+   "id": "hundred_fights",
+   "name": "Winner of a Hundred Fights",
+   "kind": "personal",
+   "about": "Win 100 battles.",
+   "when": {
+    "stat": "battles_won",
+    "gte": 100
+   },
+   "perk": {
+    "persuasion": 0.01
+   }
+  },
+  {
+   "id": "untouched",
+   "name": "the Untouched",
+   "kind": "personal",
+   "about": "Win ten battles in a row, each with little health lost.",
+   "when": {
+    "stat": "clean_streak",
+    "gte": 10
+   }
+  },
+  {
+   "id": "seasoned",
+   "name": "the Seasoned",
+   "kind": "personal",
+   "about": "Reach level 20.",
+   "when": {
+    "stat": "level",
+    "gte": 20
+   }
+  },
+  {
+   "id": "mighty",
+   "name": "the Mighty",
+   "kind": "personal",
+   "about": "Reach level 50.",
+   "when": {
+    "stat": "level",
+    "gte": 50
+   },
+   "perk": {
+    "persuasion": 0.01
+   }
+  },
+  {
+   "id": "ascended",
+   "name": "the Ascended",
+   "kind": "personal",
+   "about": "Reach level 100.",
+   "when": {
+    "stat": "level",
+    "gte": 100
+   },
+   "perk": {
+    "persuasion": 0.02
+   }
+  },
+  {
+   "id": "slayer_grimfang",
+   "name": "Slayer of Grimfang",
+   "kind": "personal",
+   "about": "Be the heir who slays Grimfang, Alpha of the Wolves.",
+   "when": {
+    "boss_by_heir": "grimfang"
+   },
+   "perk": {
+    "persuasion": 0.01
+   }
+  },
+  {
+   "id": "slayer_hollow_king",
+   "name": "Slayer of the Hollow King",
+   "kind": "personal",
+   "about": "Be the heir who slays the Hollow King.",
+   "when": {
+    "boss_by_heir": "hollow_king"
+   },
+   "perk": {
+    "persuasion": 0.01
+   }
+  },
+  {
+   "id": "slayer_vaerthax",
+   "name": "Slayer of Vaerthax",
+   "kind": "personal",
+   "about": "Be the heir who slays Vaerthax the Ember Drake.",
+   "when": {
+    "boss_by_heir": "vaerthax"
+   },
+   "perk": {
+    "persuasion": 0.01
+   }
+  },
+  {
+   "id": "slayer_stonefather",
+   "name": "Slayer of the Stonefather",
+   "kind": "personal",
+   "about": "Be the heir who slays the Stonefather.",
+   "when": {
+    "boss_by_heir": "stonefather"
+   },
+   "perk": {
+    "persuasion": 0.01
+   }
+  },
+  {
+   "id": "slayer_unmade",
+   "name": "Slayer of the Unmade",
+   "kind": "personal",
+   "about": "Be the heir who slays the Unmade.",
+   "when": {
+    "boss_by_heir": "the_unmade"
+   },
+   "perk": {
+    "persuasion": 0.02
+   }
+  },
+  {
+   "id": "parent_of_five",
+   "name": "Parent of Five",
+   "kind": "personal",
+   "about": "Have five children.",
+   "when": {
+    "stat": "children",
+    "gte": 5
+   }
+  },
+  {
+   "id": "wealthy",
+   "name": "the Wealthy",
+   "kind": "personal",
+   "about": "Hold 10,000 gold.",
+   "when": {
+    "stat": "gold",
+    "gte": 10000
+   },
+   "perk": {
+    "persuasion": 0.02
+   }
+  },
+  {
+   "id": "magnate",
+   "name": "the Magnate",
+   "kind": "personal",
+   "about": "Hold 100,000 gold.",
+   "when": {
+    "stat": "gold",
+    "gte": 100000
+   },
+   "perk": {
+    "persuasion": 0.03
+   }
+  },
+  {
+   "id": "long_lived",
+   "name": "the Long-Lived",
+   "kind": "personal",
+   "about": "Live to the last of your years (85% of a lifespan).",
+   "when": {
+    "stat": "age_share",
+    "gte": 0.85
+   }
+  },
+  {
+   "id": "captain",
+   "name": "the Captain",
+   "kind": "personal",
+   "about": "Lead a party of three companions.",
+   "when": {
+    "stat": "party",
+    "gte": 3
+   }
+  },
+  {
+   "id": "learned",
+   "name": "the Learned",
+   "kind": "personal",
+   "about": "Know eight spells.",
+   "when": {
+    "stat": "spells",
+    "gte": 8
+   }
+  },
+  {
+   "id": "house_ten",
+   "name": "Heir of Ten Generations",
+   "kind": "house",
+   "about": "Carry the house to its tenth generation.",
+   "when": {
+    "stat": "gen",
+    "gte": 10
+   }
+  },
+  {
+   "id": "house_fifty",
+   "name": "Heir of Fifty Generations",
+   "kind": "house",
+   "about": "Carry the house to its fiftieth generation.",
+   "when": {
+    "stat": "gen",
+    "gte": 50
+   },
+   "perk": {
+    "persuasion": 0.01
+   }
+  },
+  {
+   "id": "house_hundred",
+   "name": "Heir of a Hundred Generations",
+   "kind": "house",
+   "about": "Carry the house to its hundredth generation.",
+   "when": {
+    "stat": "gen",
+    "gte": 100
+   },
+   "perk": {
+    "persuasion": 0.02
+   }
+  },
+  {
+   "id": "house_second_age",
+   "name": "Heir of the Second Age",
+   "kind": "house",
+   "about": "See the house into the second Age.",
+   "when": {
+    "stat": "age_number",
+    "gte": 2
+   }
+  },
+  {
+   "id": "house_legend_slayers",
+   "name": "Heir of Legend-Slayers",
+   "kind": "house",
+   "about": "Let the house slay three legends.",
+   "when": {
+    "stat": "bosses_slain",
+    "gte": 3
+   },
+   "perk": {
+    "persuasion": 0.01
+   }
+  },
+  {
+   "id": "house_five_legends",
+   "name": "Heir of the Five Legends",
+   "kind": "house",
+   "about": "Let the house slay all five legends.",
+   "when": {
+    "stat": "bosses_slain",
+    "gte": 5
+   },
+   "perk": {
+    "persuasion": 0.03
+   }
+  },
+  {
+   "id": "house_fine",
+   "name": "Heir of a Fine House",
+   "kind": "house",
+   "about": "Build the Hall and the Training Yard to their highest.",
+   "when": {
+    "all": [
+     {
+      "stat": "house_hall",
+      "gte": 3
+     },
+     {
+      "stat": "house_yard",
+      "gte": 3
+     }
+    ]
+   },
+   "perk": {
+    "persuasion": 0.02
+   }
+  },
+  {
+   "id": "house_centuries",
+   "name": "Heir of Centuries",
+   "kind": "house",
+   "about": "Keep the house for a hundred years.",
+   "when": {
+    "stat": "world_year",
+    "gte": 100
+   }
+  },
+  {
+   "id": "house_heirlooms",
+   "name": "Keeper of Heirlooms",
+   "kind": "house",
+   "about": "Hold three heirlooms taken from slain legends.",
+   "when": {
+    "stat": "heirlooms",
+    "gte": 3
+   }
+  }
+ ]
+}

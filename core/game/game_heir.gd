@@ -35,6 +35,8 @@ var kills: Dictionary = {}
 var parent_names: Array = []
 var companion_id: String = ""   # the party member this heir was adopted from (see GameDynasty._adoptees); "" otherwise
 var shirt: String = ""          # the shirt colour chosen for this figure (data/art/shirts.json); "" for the one picked for them
+var titles: Array = []          # ids of the personal titles this heir has earned (see GameTitles); saved only once there is one
+var title_worn: String = ""     # the title worn after the name, from these or the house's; "" for none
 var children: Array = []     # Array[GameHeir], born to this heir
 var spouse: GameHeir = null
 var heirloom_bonus: float = 0.0
@@ -281,6 +283,10 @@ func to_dict() -> Dictionary:
 	}
 	if shirt != "":   # only once chosen, so a save (and its golden digest) is unchanged until then
 		out["shirt"] = shirt
+	if not titles.is_empty():   # likewise only once earned
+		out["titles"] = titles
+	if title_worn != "":
+		out["title_worn"] = title_worn
 	return out
 
 
@@ -304,6 +310,8 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.parent_names = Array(d["parent_names"])
 	h.companion_id = str(d.get("companion_id", "")) if typeof(d.get("companion_id", "")) == TYPE_STRING else ""
 	h.shirt = str(d.get("shirt", "")) if typeof(d.get("shirt", "")) == TYPE_STRING else ""
+	h.titles = GameTitles.clean_ids(d.get("titles", []))
+	h.title_worn = str(d.get("title_worn", "")) if GameTitles.known(d.get("title_worn", "")) else ""
 	h.heirloom_bonus = float(d["heirloom_bonus"])
 	h.equipment = d.get("equipment", {"weapon": "", "armor": "", "trinket": ""})
 	h.inventory = Array(d.get("inventory", []))
