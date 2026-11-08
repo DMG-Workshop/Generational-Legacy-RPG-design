@@ -16,6 +16,7 @@ var history: Array = []         # the founder and the latest dead heirs in full;
 var echoes: Array = []          # [{kind,key,text,strength,gen}]
 var heirlooms: Array = []       # [{name, boss, gen}]
 var clock_carry: float = 0.0    # years the world clock has been fed but not yet lived through (see GameClock); saved only when above 0
+var house_titles: Array = []    # ids of the house titles the dynasty has earned (see GameTitles); saved only once there is one
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
@@ -778,6 +779,8 @@ func _die(cause: String) -> Array:
 		"children": heir.children.map(func(c): return c.name),
 		"spouse": heir.spouse.name if heir.spouse != null else "",
 	}
+	if not heir.titles.is_empty():   # the heir's titles go into their record; a personal title ends with them
+		rec["titles"] = heir.titles.duplicate()
 	history.append(rec)
 	ages.on_death(self, rec)
 	msgs.append("%s dies of %s at age %d." % [heir.name, cause, int(heir.age)] if cause == "old age" else "%s dies: %s, at age %d." % [heir.name, cause, int(heir.age)])
@@ -948,6 +951,8 @@ func to_dict() -> Dictionary:
 		out["house"] = house
 	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
 		out["clock_carry"] = clock_carry
+	if not house_titles.is_empty():   # only once earned
+		out["house_titles"] = house_titles
 	if not auto_party.is_empty():   # only once the player has set a switch: older saves and fresh ones stay alike
 		out["auto_party"] = auto_party
 	return out
@@ -987,6 +992,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
 	g.party = GameParty.from_dict(d.get("party", {}), g)
 	g.house = GameHouse.from_dict(d.get("house", {}))
+	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0
 	g.pending_event = _ints(d.get("pending_event", {}))

@@ -525,7 +525,7 @@ The words "hybrid" and "cross-breed" are used here as defined above (a recipe th
 
 ## Titles
 
-Titles are earned, not bought: the Slayer of Grimfang, the Unbroken, a Master Breeder, a Warden of a Hundred Years, and the noble titles and land claims the Noble Blood bloodline speaks of. A **personal** title belongs to one heir, and goes into the chronicle and the Hollow Below when they die; a **house** title stays with the dynasty. The player chooses which earned title to wear after the name. Some carry a small perk (such as better odds of finding young). Achievements (roadmap item 16) can award them, and faction reputation (item 17) confers the noble ones. Roadmap item 59.
+Titles are earned, not bought: the Slayer of Grimfang, the Unbroken, a Master Breeder, a Warden of a Hundred Years, and the noble titles and land claims the Noble Blood bloodline speaks of. A **personal** title belongs to one heir, and goes into the chronicle and the Hollow Below when they die; a **house** title stays with the dynasty. The player chooses which earned title to wear after the name. Some carry a small perk (such as better odds of finding young). Achievements (roadmap item 16) can award them, and faction reputation (item 17) confers the noble ones. Roadmap item 59. The first 27 titles, in `data/titles/titles.json`, are built; the ranch's titles and the noble ones come with their systems.
 
 ## Multiple Worlds and Teleportation
 
