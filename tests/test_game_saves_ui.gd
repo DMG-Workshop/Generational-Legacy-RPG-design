@@ -60,16 +60,22 @@ func _frames(n: int = 3) -> void:
 		await process_frame
 
 
-## The first visible button whose text starts with `start`.
+## A visible button whose text is `start`, or failing that begins with it (a text may be a slot's "> Slot 1: ..."). An exact
+## match wins, so "No" is the No button and not a drop-down that happens to read "None".
 func _btn(start: String, n: Node = null) -> Button:
 	if n == null:
 		n = app.current
+	var exact := _btn_in(start, n, true)
+	return exact if exact != null else _btn_in(start, n, false)
+
+
+func _btn_in(start: String, n: Node, exact: bool) -> Button:
 	if n is Button and (n as Button).is_visible_in_tree():
 		var t := (n as Button).text
-		if t.begins_with(start) or t.begins_with("> " + start):
+		if (t == start or t == "> " + start) if exact else (t.begins_with(start) or t.begins_with("> " + start)):
 			return n
 	for c in n.get_children():
-		var b := _btn(start, c)
+		var b := _btn_in(start, c, exact)
 		if b != null:
 			return b
 	return null
