@@ -1,0 +1,639 @@
+{
+  "note": "Gathering and crafting (roadmap item 44; core/game/game_craft.gd, checked by tools/check_data.gd). There is no recipe grid. An item is composed: the heir picks a form, a material they have gathered and up to three essences, and the result is the same kind of made item the loot generator builds (an id GameLoot.build reads), so what the player makes and what the world drops are one system. Materials come from hunts (the `drops` below, rolled on dice keyed on the seed, asked for by the screens only) and from salvaging gear (half the material back, and a gear's affixes become essences: a pelt keeps the wolf). An essence is an affix kept in a bottle. Stores belong to the family and pass down. Crafting needs a forge; salvaging can be done anywhere. A quality from 0 to 9 comes from the heir's level and Craft quality traits and a small keyed roll, and the item takes the world's grade, like a drop. Mythic items cannot be crafted.",
+  "settings": {
+    "needs_service": "forge",
+    "units_per_weight": 0.6,
+    "fee_share": 0.15,
+    "salvage_share": 0.5,
+    "max_essences": 3,
+    "rarity_by_essences": {
+      "0": "common",
+      "1": "fine",
+      "2": "rare",
+      "3": "legendary"
+    },
+    "quality_per_level": 0.06,
+    "quality_per_craft_quality": 10,
+    "quality_roll_max": 2,
+    "quality_floor": 0,
+    "counter": "crafted"
+  },
+  "drops": {
+    "slime": {
+      "materials": [
+        {
+          "material": "venom",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "glass",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "wolf": {
+      "materials": [
+        {
+          "material": "leather",
+          "chance": 0.6,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "bone",
+          "chance": 0.5,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "essence": {
+        "affix": "of_the_wolf",
+        "chance": 0.06
+      }
+    },
+    "goblin": {
+      "materials": [
+        {
+          "material": "iron",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "leather",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "copper",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "oak",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "bandit": {
+      "materials": [
+        {
+          "material": "leather",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "iron",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "silver",
+          "chance": 0.1,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "yew",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "skeleton": {
+      "materials": [
+        {
+          "material": "bone",
+          "chance": 0.7,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "iron",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "yew",
+          "chance": 0.1,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "harpy": {
+      "materials": [
+        {
+          "material": "bone",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "linen",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "essence": {
+        "affix": "nimble",
+        "chance": 0.06
+      }
+    },
+    "bog_troll": {
+      "materials": [
+        {
+          "material": "herb",
+          "chance": 0.5,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "bone",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "oak",
+          "chance": 0.4,
+          "min": 1,
+          "max": 2
+        }
+      ]
+    },
+    "fire_imp": {
+      "materials": [
+        {
+          "material": "crystal",
+          "chance": 0.25,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "copper",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "essence": {
+        "affix": "emberforged",
+        "chance": 0.08
+      }
+    },
+    "ogre": {
+      "materials": [
+        {
+          "material": "leather",
+          "chance": 0.5,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "bone",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "steel",
+          "chance": 0.15,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "oak",
+          "chance": 0.3,
+          "min": 1,
+          "max": 2
+        }
+      ],
+      "essence": {
+        "affix": "of_the_bear",
+        "chance": 0.06
+      }
+    },
+    "wraith": {
+      "materials": [
+        {
+          "material": "shadowsilk",
+          "chance": 0.25,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "relic",
+          "chance": 0.1,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "essence": {
+        "affix": "of_the_void",
+        "chance": 0.05
+      }
+    },
+    "drake": {
+      "materials": [
+        {
+          "material": "leather",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "dragonscale",
+          "chance": 0.08,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "frost_wolf": {
+      "materials": [
+        {
+          "material": "leather",
+          "chance": 0.6,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "silver",
+          "chance": 0.15,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "essence": {
+        "affix": "of_the_fox",
+        "chance": 0.06
+      }
+    },
+    "stone_golem": {
+      "materials": [
+        {
+          "material": "iron",
+          "chance": 0.5,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "steel",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "crystal",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "mithril",
+          "chance": 0.05,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "ash_wyrm": {
+      "materials": [
+        {
+          "material": "dragonscale",
+          "chance": 0.15,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "bone",
+          "chance": 0.4,
+          "min": 1,
+          "max": 2
+        }
+      ]
+    },
+    "rift_shade": {
+      "materials": [
+        {
+          "material": "shadowsilk",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "crystal",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "shard_crawler": {
+      "materials": [
+        {
+          "material": "crystal",
+          "chance": 0.5,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "silver",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "void_stalker": {
+      "materials": [
+        {
+          "material": "shadowsilk",
+          "chance": 0.35,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "starmetal",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "lich_acolyte": {
+      "materials": [
+        {
+          "material": "relic",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "silk",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "bone",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "essence": {
+        "affix": "of_the_sage",
+        "chance": 0.06
+      }
+    },
+    "abyssal_knight": {
+      "materials": [
+        {
+          "material": "steel",
+          "chance": 0.5,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "mithril",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "starmetal",
+          "chance": 0.05,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "star_eater": {
+      "materials": [
+        {
+          "material": "starmetal",
+          "chance": 0.1,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "crystal",
+          "chance": 0.4,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "gold",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "time_wraith": {
+      "materials": [
+        {
+          "material": "shadowsilk",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "gold",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "relic",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "elder_dragon": {
+      "materials": [
+        {
+          "material": "dragonscale",
+          "chance": 0.5,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "gold",
+          "chance": 0.4,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "starmetal",
+          "chance": 0.15,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "essence": {
+        "affix": "of_vigor",
+        "chance": 0.1
+      }
+    },
+    "plague_rat": {
+      "materials": [
+        {
+          "material": "venom",
+          "chance": 0.5,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "bone",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "material": "herb",
+          "chance": 0.2,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "ghoul": {
+      "materials": [
+        {
+          "material": "bone",
+          "chance": 0.6,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "venom",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    },
+    "grimfang": {
+      "materials": [
+        {
+          "material": "leather",
+          "chance": 1.0,
+          "min": 2,
+          "max": 3
+        },
+        {
+          "material": "bone",
+          "chance": 1.0,
+          "min": 1,
+          "max": 2
+        }
+      ],
+      "essence": {
+        "affix": "mighty",
+        "chance": 1.0
+      }
+    },
+    "hollow_king": {
+      "materials": [
+        {
+          "material": "relic",
+          "chance": 1.0,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "gold",
+          "chance": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "essence": {
+        "affix": "of_the_dawn",
+        "chance": 0.5
+      }
+    },
+    "vaerthax": {
+      "materials": [
+        {
+          "material": "dragonscale",
+          "chance": 1.0,
+          "min": 2,
+          "max": 3
+        },
+        {
+          "material": "gold",
+          "chance": 1.0,
+          "min": 1,
+          "max": 2
+        }
+      ]
+    },
+    "stonefather": {
+      "materials": [
+        {
+          "material": "mithril",
+          "chance": 1.0,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "steel",
+          "chance": 1.0,
+          "min": 2,
+          "max": 3
+        }
+      ]
+    },
+    "the_unmade": {
+      "materials": [
+        {
+          "material": "starmetal",
+          "chance": 1.0,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "material": "phoenix_feather",
+          "chance": 0.5,
+          "min": 1,
+          "max": 1
+        }
+      ]
+    }
+  },
+  "text": {
+    "gathered": "{h} gathers {list}.",
+    "no_forge": "There is no forge here to work at.",
+    "unknown_form": "No one can make that.",
+    "bad_material": "The {material} will not do for a {form}.",
+    "short_material": "Not enough {material}: {need} needed, {have} in the stores.",
+    "short_essence": "There is no essence of {affix} in the stores.",
+    "bad_essence": "The essence of {affix} will not take in a {form} of {material}.",
+    "too_many": "A piece holds no more than {n} essences.",
+    "short_gold": "Not enough gold for the forge's fee ({fee} needed).",
+    "no_room": "{h} could not carry the {name} ({weight} weight) when it is done.",
+    "made": "{h} makes {a} {name} from {units} {material} (quality {quality}).",
+    "salvaged": "{h} breaks up the {name}: {list}.",
+    "cannot_salvage": "There is no {name} in the pack to break up.",
+    "nothing": "nothing"
+  }
+}
