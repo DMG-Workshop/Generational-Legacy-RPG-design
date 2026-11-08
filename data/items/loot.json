@@ -1,0 +1,83 @@
+{
+  "note": "The loot generator's data (core/game/game_loot.gd, checked by tools/check_data.gd). There is no list of generated items: an item is built from its own id, `gen:<rarity>:<slot>:<form>:<material>:<affixes joined by +, or ->:<mythic or ->:<grade>:<quality 0-9>`, out of the forms, materials (items/materials.json), affixes and rarities here. What can be built grows with the world (the generation): tier_gens says from which generation each material tier can drop, and after the top tier each grade_gens more generations add a grade (+1, +2, ...) that makes every effect stronger, so there is always something better to find. Rarity is a weighted roll out of a million: the top rarity is ten in a million, and legends and bosses raise the odds of the rare ones. A drop rolls on dice keyed on the seed, never the dynasty's.",
+  "settings": {
+    "drop_chance": 0.05,
+    "tier_gens": [1, 6, 14, 30],
+    "grade_gens": 12,
+    "max_grade": 20,
+    "grade_power": 0.12,
+    "affix_power": 0.6,
+    "quality_min": 0.9,
+    "quality_step": 0.035,
+    "tier_power": {"1": 1.0, "2": 2.0, "3": 3.2, "4": 4.5},
+    "price_per_tier": {"1": 50, "2": 160, "3": 420, "4": 900},
+    "slot_weights": {"weapon": 40, "armor": 30, "trinket": 30},
+    "source_boost": {"search": 1.0, "legend": 25.0},
+    "weight_total": 1000000
+  },
+  "rarities": [
+    {"id": "common", "name": "Common", "weight": 700000, "affixes": 0, "power_mult": 1.0, "price_mult": 1.0, "tier_bias": 0.5, "overreach": 0, "quality_floor": 0},
+    {"id": "fine", "name": "Fine", "weight": 230000, "affixes": 1, "power_mult": 1.0, "price_mult": 1.8, "tier_bias": 0.8, "overreach": 0, "quality_floor": 0},
+    {"id": "rare", "name": "Rare", "weight": 60000, "affixes": 2, "power_mult": 1.05, "price_mult": 4.0, "tier_bias": 1.2, "overreach": 0, "quality_floor": 3},
+    {"id": "epic", "name": "Epic", "weight": 9000, "affixes": 2, "power_mult": 1.2, "price_mult": 12.0, "tier_bias": 2.0, "overreach": 1, "quality_floor": 7},
+    {"id": "legendary", "name": "Legendary", "weight": 990, "affixes": 3, "power_mult": 1.4, "price_mult": 50.0, "tier_bias": 4.0, "overreach": 1, "quality_floor": 8},
+    {"id": "mythic", "name": "Mythic", "weight": 10, "affixes": 3, "power_mult": 1.6, "price_mult": 400.0, "tier_bias": 100.0, "overreach": 2, "quality_floor": 9, "mythic": true}
+  ],
+  "forms": [
+    {"id": "sword", "slot": "weapon", "name": "Sword", "needs": ["metal"], "weapon_kind": "blade", "weight": 3.5, "effects": [{"stat": "melee_damage", "value": 0.10}]},
+    {"id": "dagger", "slot": "weapon", "name": "Dagger", "needs": ["metal", "bone"], "weapon_kind": "blade", "weight": 1.0, "effects": [{"stat": "melee_damage", "value": 0.07}, {"stat": "reflexes", "value": 0.02}]},
+    {"id": "mace", "slot": "weapon", "name": "Mace", "needs": ["metal"], "weapon_kind": "blunt", "weight": 5.0, "effects": [{"stat": "melee_damage", "value": 0.10}]},
+    {"id": "warhammer", "slot": "weapon", "name": "Warhammer", "needs": ["metal"], "weapon_kind": "blunt", "weight": 6.0, "effects": [{"stat": "melee_damage", "value": 0.11}, {"stat": "strength", "value": 0.01}]},
+    {"id": "bow", "slot": "weapon", "name": "Bow", "needs": ["wood"], "weapon_kind": "bow", "weight": 1.5, "effects": [{"stat": "melee_damage", "value": 0.06}, {"stat": "luck", "value": 0.03}]},
+    {"id": "staff", "slot": "weapon", "name": "Staff", "needs": ["wood", "gem"], "weapon_kind": "staff", "weight": 3.0, "effects": [{"stat": "element_power", "value": 0.10}]},
+    {"id": "wand", "slot": "weapon", "name": "Wand", "needs": ["bone", "gem"], "weapon_kind": "staff", "weight": 0.5, "effects": [{"stat": "element_power", "value": 0.08}, {"stat": "max_mp", "value": 0.03}]},
+    {"id": "mail", "slot": "armor", "name": "Mail", "needs": ["metal"], "weight": 12.0, "effects": [{"stat": "defense", "value": 0.08}, {"stat": "max_hp", "value": 0.03}]},
+    {"id": "plate", "slot": "armor", "name": "Plate", "needs": ["metal"], "weight": 18.0, "effects": [{"stat": "defense", "value": 0.11}, {"stat": "max_hp", "value": 0.04}, {"stat": "reflexes", "value": -0.015}]},
+    {"id": "leathers", "slot": "armor", "name": "Jerkin", "needs": ["leather"], "weight": 6.0, "effects": [{"stat": "defense", "value": 0.08}, {"stat": "reflexes", "value": 0.02}]},
+    {"id": "robe", "slot": "armor", "name": "Robe", "needs": ["cloth"], "weight": 2.0, "effects": [{"stat": "max_mp", "value": 0.10}, {"stat": "element_power", "value": 0.03}]},
+    {"id": "scale", "slot": "armor", "name": "Scale Coat", "needs": ["scale"], "weight": 14.0, "effects": [{"stat": "defense", "value": 0.09}, {"stat": "max_hp", "value": 0.05}, {"stat": "fire_resistance", "value": 0.08}]},
+    {"id": "ring", "slot": "trinket", "name": "Ring", "needs": ["metal", "gem"], "weight": 0.2, "effects": [{"stat": "max_hp", "value": 0.04}]},
+    {"id": "amulet", "slot": "trinket", "name": "Amulet", "needs": ["metal", "gem", "holy"], "weight": 0.3, "effects": [{"stat": "max_mp", "value": 0.05}]},
+    {"id": "charm", "slot": "trinket", "name": "Charm", "needs": ["bone", "gem", "herb"], "weight": 0.2, "effects": [{"stat": "luck", "value": 0.02}]},
+    {"id": "brooch", "slot": "trinket", "name": "Brooch", "needs": ["metal", "cloth"], "weight": 0.2, "effects": [{"stat": "persuasion", "value": 0.03}]}
+  ],
+  "affixes": [
+    {"id": "keen", "name": "Keen", "position": "prefix", "slots": ["weapon"], "min_tier": 1, "weight": 10, "effects": [{"stat": "luck", "value": 0.02}, {"stat": "melee_damage", "value": 0.02}]},
+    {"id": "mighty", "name": "Mighty", "position": "prefix", "slots": ["weapon"], "min_tier": 1, "weight": 10, "effects": [{"stat": "melee_damage", "value": 0.04}]},
+    {"id": "arcane", "name": "Arcane", "position": "prefix", "slots": ["weapon", "trinket", "armor"], "min_tier": 1, "weight": 10, "effects": [{"stat": "element_power", "value": 0.05}]},
+    {"id": "sturdy", "name": "Sturdy", "position": "prefix", "slots": ["armor", "trinket"], "min_tier": 1, "weight": 10, "effects": [{"stat": "max_hp", "value": 0.04}]},
+    {"id": "warded", "name": "Warded", "position": "prefix", "slots": ["armor"], "min_tier": 1, "weight": 10, "effects": [{"stat": "defense", "value": 0.04}]},
+    {"id": "nimble", "name": "Nimble", "position": "prefix", "slots": ["armor", "trinket", "weapon"], "min_tier": 1, "weight": 8, "effects": [{"stat": "reflexes", "value": 0.03}]},
+    {"id": "blessed", "name": "Blessed", "position": "prefix", "slots": ["weapon", "armor", "trinket"], "min_tier": 1, "weight": 8, "effects": [{"stat": "healing_power", "value": 0.06}]},
+    {"id": "lucky", "name": "Lucky", "position": "prefix", "slots": ["weapon", "armor", "trinket"], "min_tier": 1, "weight": 8, "effects": [{"stat": "luck", "value": 0.03}]},
+    {"id": "wise", "name": "Wise", "position": "prefix", "slots": ["weapon", "armor", "trinket"], "min_tier": 2, "weight": 5, "effects": [{"stat": "xp_gain", "value": 0.04}]},
+    {"id": "shadowed", "name": "Shadowed", "position": "prefix", "slots": ["armor", "trinket"], "min_tier": 2, "weight": 5, "effects": [{"stat": "stealth", "value": 0.04}]},
+    {"id": "emberforged", "name": "Emberforged", "position": "prefix", "slots": ["armor", "trinket", "weapon"], "min_tier": 2, "weight": 5, "effects": [{"stat": "fire_resistance", "value": 0.06}]},
+    {"id": "eloquent", "name": "Eloquent", "position": "prefix", "slots": ["trinket"], "min_tier": 2, "weight": 4, "effects": [{"stat": "persuasion", "value": 0.05}]},
+    {"id": "of_the_wolf", "name": "of the Wolf", "position": "suffix", "slots": ["weapon", "armor"], "min_tier": 1, "weight": 10, "effects": [{"stat": "melee_damage", "value": 0.03}, {"stat": "reflexes", "value": 0.02}]},
+    {"id": "of_the_bear", "name": "of the Bear", "position": "suffix", "slots": ["armor", "weapon", "trinket"], "min_tier": 1, "weight": 10, "effects": [{"stat": "max_hp", "value": 0.05}, {"stat": "strength", "value": 0.02}]},
+    {"id": "of_the_fox", "name": "of the Fox", "position": "suffix", "slots": ["weapon", "armor", "trinket"], "min_tier": 1, "weight": 8, "effects": [{"stat": "luck", "value": 0.03}, {"stat": "stealth", "value": 0.03}]},
+    {"id": "of_vigor", "name": "of Vigor", "position": "suffix", "slots": ["armor", "trinket"], "min_tier": 1, "weight": 10, "effects": [{"stat": "max_hp", "value": 0.06}]},
+    {"id": "of_mercy", "name": "of Mercy", "position": "suffix", "slots": ["weapon", "armor", "trinket"], "min_tier": 1, "weight": 8, "effects": [{"stat": "healing_power", "value": 0.08}]},
+    {"id": "of_the_sage", "name": "of the Sage", "position": "suffix", "slots": ["weapon", "armor", "trinket"], "min_tier": 1, "weight": 8, "effects": [{"stat": "element_power", "value": 0.05}, {"stat": "max_mp", "value": 0.04}]},
+    {"id": "of_the_owl", "name": "of the Owl", "position": "suffix", "slots": ["weapon", "armor", "trinket"], "min_tier": 2, "weight": 5, "effects": [{"stat": "max_mp", "value": 0.05}, {"stat": "xp_gain", "value": 0.03}]},
+    {"id": "of_the_hearth", "name": "of the Hearth", "position": "suffix", "slots": ["trinket"], "min_tier": 2, "weight": 5, "effects": [{"stat": "work_gold", "value": 0.06}]},
+    {"id": "of_the_silver_tongue", "name": "of the Silver Tongue", "position": "suffix", "slots": ["trinket"], "min_tier": 2, "weight": 4, "effects": [{"stat": "persuasion", "value": 0.06}]},
+    {"id": "of_the_dawn", "name": "of the Dawn", "position": "suffix", "slots": ["weapon", "armor", "trinket"], "min_tier": 3, "weight": 3, "effects": [{"stat": "divine_magic_power", "value": 0.06}]},
+    {"id": "of_the_void", "name": "of the Void", "position": "suffix", "slots": ["weapon", "armor", "trinket"], "min_tier": 3, "weight": 3, "effects": [{"stat": "dark_magic_power", "value": 0.06}]}
+  ],
+  "mythics": [
+    {"id": "dawnbringer", "name": "Dawnbringer", "slots": ["weapon"], "power_mult": 1.5, "effects": [{"stat": "melee_damage", "value": 0.12}, {"stat": "divine_magic_power", "value": 0.10}]},
+    {"id": "worldsplitter", "name": "Worldsplitter", "slots": ["weapon"], "power_mult": 1.5, "effects": [{"stat": "melee_damage", "value": 0.15}, {"stat": "strength", "value": 0.05}]},
+    {"id": "the_unwritten", "name": "The Unwritten", "slots": ["weapon"], "power_mult": 1.5, "effects": [{"stat": "element_power", "value": 0.15}, {"stat": "xp_gain", "value": 0.10}]},
+    {"id": "aegis_of_ages", "name": "Aegis of Ages", "slots": ["armor"], "power_mult": 1.5, "effects": [{"stat": "defense", "value": 0.12}, {"stat": "max_hp", "value": 0.12}]},
+    {"id": "the_last_shroud", "name": "The Last Shroud", "slots": ["armor"], "power_mult": 1.5, "effects": [{"stat": "reflexes", "value": 0.10}, {"stat": "stealth", "value": 0.10}]},
+    {"id": "heart_of_the_world", "name": "Heart of the World", "slots": ["trinket"], "power_mult": 1.5, "effects": [{"stat": "max_hp", "value": 0.15}, {"stat": "healing_power", "value": 0.15}]},
+    {"id": "the_first_crown", "name": "The First Crown", "slots": ["trinket"], "power_mult": 1.5, "effects": [{"stat": "xp_gain", "value": 0.20}, {"stat": "persuasion", "value": 0.15}]}
+  ],
+  "text": {
+    "find": "{h} finds {a} {name}.",
+    "find_rare": "{h} finds {a} {rarity} {name}!",
+    "find_mythic": "{h} finds {name}. Nothing like it has been seen before."
+  }
+}

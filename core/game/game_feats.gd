@@ -110,10 +110,18 @@ static func cost(id: String) -> int:
 
 # ---------------------------------------------------------------- weapons and power
 
-## The kind of weapon an item is ("blade", "bow"...), or "" for bare hands and anything unlisted.
+## The kind of weapon an item is ("blade", "bow"...), or "" for bare hands and anything unlisted. A made item
+## (GameLoot) is of its form's kind.
 static func weapon_kind(item_id: String) -> String:
 	_index()
+	if GameLoot.is_generated(item_id):
+		return GameLoot.weapon_kind(item_id)
 	return str(_item_kind.get(item_id, ""))
+
+
+static func has_weapon_kind(kind: String) -> bool:
+	_index()
+	return _src.get("weapon_kinds", {}).has(kind)
 
 
 static func held_weapon(u: GameHeir) -> String:

@@ -1,0 +1,27 @@
+{
+  "note": "The one material list (roadmap item 42; core/game/game_materials.gd, checked by tools/check_data.gd). Every item in items.json names a material and a weight, and gets its tags from the material plus its own slot or kind, so harvesting, mining, crafting and the loot generator all extend this list. Tier runs from 1 (common) up; weight_mult is how heavy a thing of this material is against the plain one, price_mult how dear.",
+  "tags": ["wood", "metal", "cloth", "leather", "scale", "bone", "gem", "herb", "venom", "glass", "holy", "magic", "precious", "light", "heavy", "conductive"],
+  "materials": [
+    {"id": "oak", "name": "Oak", "tier": 1, "tags": ["wood"], "weight_mult": 1.0, "price_mult": 1.0},
+    {"id": "yew", "name": "Yew", "tier": 2, "tags": ["wood", "light"], "weight_mult": 0.9, "price_mult": 1.3},
+    {"id": "bone", "name": "Bone", "tier": 1, "tags": ["bone", "light"], "weight_mult": 0.8, "price_mult": 0.9},
+    {"id": "copper", "name": "Copper", "tier": 1, "tags": ["metal", "conductive"], "weight_mult": 1.0, "price_mult": 1.0},
+    {"id": "iron", "name": "Iron", "tier": 1, "tags": ["metal", "heavy"], "weight_mult": 1.2, "price_mult": 1.0},
+    {"id": "steel", "name": "Steel", "tier": 2, "tags": ["metal", "heavy"], "weight_mult": 1.2, "price_mult": 1.6},
+    {"id": "silver", "name": "Silver", "tier": 2, "tags": ["metal", "precious", "conductive"], "weight_mult": 1.0, "price_mult": 2.0},
+    {"id": "gold", "name": "Gold", "tier": 3, "tags": ["metal", "precious", "conductive"], "weight_mult": 1.6, "price_mult": 3.0},
+    {"id": "mithril", "name": "Mithril", "tier": 3, "tags": ["metal", "precious", "light", "magic"], "weight_mult": 0.5, "price_mult": 4.0},
+    {"id": "starmetal", "name": "Starmetal", "tier": 4, "tags": ["metal", "precious", "magic"], "weight_mult": 0.9, "price_mult": 8.0},
+    {"id": "leather", "name": "Leather", "tier": 1, "tags": ["leather", "light"], "weight_mult": 0.8, "price_mult": 1.0},
+    {"id": "linen", "name": "Linen", "tier": 1, "tags": ["cloth", "light"], "weight_mult": 0.4, "price_mult": 0.8},
+    {"id": "silk", "name": "Silk", "tier": 2, "tags": ["cloth", "precious", "light"], "weight_mult": 0.3, "price_mult": 2.5},
+    {"id": "shadowsilk", "name": "Shadowsilk", "tier": 3, "tags": ["cloth", "magic", "light"], "weight_mult": 0.3, "price_mult": 4.0},
+    {"id": "dragonscale", "name": "Dragonscale", "tier": 4, "tags": ["scale", "magic", "heavy"], "weight_mult": 1.1, "price_mult": 9.0},
+    {"id": "crystal", "name": "Crystal", "tier": 2, "tags": ["gem", "magic"], "weight_mult": 0.6, "price_mult": 2.0},
+    {"id": "relic", "name": "Relic", "tier": 3, "tags": ["holy", "bone", "magic"], "weight_mult": 0.6, "price_mult": 4.0},
+    {"id": "phoenix_feather", "name": "Phoenix Feather", "tier": 4, "tags": ["holy", "magic", "light"], "weight_mult": 0.1, "price_mult": 9.0},
+    {"id": "herb", "name": "Herb", "tier": 1, "tags": ["herb"], "weight_mult": 0.5, "price_mult": 1.0},
+    {"id": "venom", "name": "Venom", "tier": 1, "tags": ["venom"], "weight_mult": 0.5, "price_mult": 1.0},
+    {"id": "glass", "name": "Glass", "tier": 1, "tags": ["glass"], "weight_mult": 0.5, "price_mult": 1.0}
+  ]
+}
