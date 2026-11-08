@@ -1857,6 +1857,36 @@
           }
         }
       ]
+    },
+    {
+      "id": "raid_burglars",
+      "title": "Burglars in the House",
+      "text": "A shutter that was latched is open, and something is moving through the rooms where the family's good things are kept. Whoever it is knows the house has been built up.",
+      "raid": true,
+      "choices": [
+        {
+          "text": "Trust the guards",
+          "outcomes": {"always": {"text": "You stay behind the door and trust the guards to find them.", "defend": "burglars"}}
+        },
+        {
+          "text": "Chase them through the house",
+          "outcomes": {"always": {"text": "You go after the sound with your weapon in your hand.", "xp": 10, "fight": {"foes": ["bandit"]}}}
+        },
+        {
+          "text": "Buy them off",
+          "outcomes": {"always": {"text": "A coin purse on the table, a voice in the dark. The shutter closes behind them.", "gold": -40}}
+        },
+        {
+          "text": "Lie in wait in the dark",
+          "check": {"attr": "stealth", "dc": 13, "bonus_if": [{"class": "rogue", "value": 3}, {"class": "ranger", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "You let the first one pass and close the door on the second. They leave their tools, and their purse.", "xp": 25, "gold": 25},
+            "success": {"text": "A board answers you and they flee through the window. Nothing is taken.", "xp": 15},
+            "failure": {"text": "You are in the wrong room. The guards, if any, must do the rest.", "xp": 5, "defend": "burglars"},
+            "crit_failure": {"text": "A lantern shutter opens in your face. You wake with a sore head.", "xp": 3, "hp_pct": -0.1, "defend": "burglars"}
+          }
+        }
+      ]
     }
   ]
 }

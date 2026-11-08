@@ -1,5 +1,5 @@
 {
-  "note": "Raids and theft on the house (roadmap item 61, first part; core/game/game_raids.gd). A house that keeps animals can be raided as the years pass: each whole year the world clock crosses rolls on dice keyed on the dynasty seed and the year (never the dynasty's own). The chance rises with what there is to take (the stock's value) and falls with the guards (GameRanch.guard_cut). A raid is an event the heir settles (events.json, the ones marked raid): trust the guards, ride out and fight, pay, or try a trick. A house that keeps no animals is never raided.",
+  "note": "Raids and theft on the house (roadmap item 61; core/game/game_raids.gd). A house with something worth taking can be raided as the years pass: animals in the pens, a house that has been built (the Hall, the Yard, the Ranch), or both. Each whole year the world clock crosses rolls on dice keyed on the dynasty seed and the year (never the dynasty's own). The chance rises with the value of what there is (the stock, and part of what the house cost to build) and falls with the guards (GameRanch.guard_cut). A raid is an event the heir settles (events.json, the ones marked raid): trust the guards, ride out and fight, pay, or try a trick. A plain house with nothing kept and nothing built is not raided: that would change what the autopilot plays, so it is a balance decision.",
   "settings": {
     "base_chance": 0.04,
     "per_stock_gold": 0.0002,
@@ -8,12 +8,34 @@
     "beat_off_max": 0.8,
     "steal_gold_share": 0.15,
     "steal_gold_min": 10,
-    "counter_flag": "raid_count"
+    "counter_flag": "raid_count",
+    "house_value_share": 0.5
   },
   "kinds": {
-    "thieves": {"event": "raid_thieves", "weight": 4, "takes": "gold", "who": "thieves"},
-    "rustlers": {"event": "raid_rustlers", "weight": 3, "takes": "animal", "who": "rustlers"},
-    "beasts": {"event": "raid_beasts", "weight": 2, "takes": "kill", "who": "beasts"}
+    "thieves": {
+      "event": "raid_thieves",
+      "weight": 4,
+      "takes": "gold",
+      "who": "thieves"
+    },
+    "rustlers": {
+      "event": "raid_rustlers",
+      "weight": 3,
+      "takes": "animal",
+      "who": "rustlers"
+    },
+    "beasts": {
+      "event": "raid_beasts",
+      "weight": 2,
+      "takes": "kill",
+      "who": "beasts"
+    },
+    "burglars": {
+      "event": "raid_burglars",
+      "weight": 3,
+      "takes": "item",
+      "who": "burglars"
+    }
   },
   "text": {
     "comes": "Trouble at the ranch: {title}.",
@@ -23,6 +45,8 @@
     "nothing_to_take": "There is nothing left worth taking.",
     "stole_animal": "The rustlers drive off {name} the {species}.",
     "killed_animal": "The beasts kill {name} the {species}.",
-    "no_stock": "There is nothing in the pens to take."
+    "no_stock": "There is nothing in the pens to take.",
+    "stole_item": "The burglars make off with {item}.",
+    "nothing_carried": "There is nothing carried worth taking."
   }
 }

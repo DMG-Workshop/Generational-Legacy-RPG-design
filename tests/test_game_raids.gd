@@ -40,6 +40,7 @@ func _run() -> void:
 	test_kinds()
 	test_defend()
 	test_events()
+	test_house()
 	test_untouched()
 	await test_screen()
 	print("%d checks, %d failures" % [checks, fails])
@@ -50,7 +51,6 @@ func dyn(seed_value: int = 5) -> GameDynasty:
 	var d := GameDynasty.new_game(seed_value, "Tess", "warrior", "faetouched", "human")
 	d.pending_event = {}
 	d.heir.gold = 1000
-	d.house[GameHouse.RANCH] = 3
 	return d
 
 
@@ -83,7 +83,7 @@ func _guards(d: GameDynasty, n: int) -> void:
 
 func test_data() -> void:
 	ok(GameRaids.validate().is_empty(), "raids.json is sound: %s" % str(GameRaids.validate()))
-	ok(GameRaids.kinds() == ["beasts", "rustlers", "thieves"], "three kinds of raid")
+	ok(GameRaids.kinds() == ["beasts", "burglars", "rustlers", "thieves"], "four kinds of raid")
 	_with(func(x): x["settings"]["max_chance"] = 0.01, func(): ok(not GameRaids.validate().is_empty(), "a ceiling below the base is found"))
 	_with(func(x): x["settings"]["beat_off_max"] = 2.0, func(): ok(not GameRaids.validate().is_empty(), "a chance above 1 is found"))
 	_with(func(x): x["kinds"]["thieves"]["event"] = "tavern_brawl", func(): ok(not GameRaids.validate().is_empty(), "a raid kind whose event is not marked raid is found"))
@@ -93,8 +93,9 @@ func test_data() -> void:
 	_with(func(x): x["kinds"].erase("beasts"), func(): ok(not GameRaids.validate().is_empty(), "a raid event used by no kind is found"))
 	_with(func(x): x["text"].erase("stole_gold"), func(): ok(not GameRaids.validate().is_empty(), "missing text is found"))
 	ok(GameRaids.validate().is_empty(), "the data is put back")
-	for id in ["raid_thieves", "raid_rustlers", "raid_beasts"]:
+	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars"]:
 		ok(GameEvents.event_def(id).get("raid", false) == true, "%s is a raid event" % id)
+	_with(func(x): x["settings"]["house_value_share"] = 2.0, func(): ok(not GameRaids.validate().is_empty(), "a house value share above 1 is found"))
 
 
 func test_chance() -> void:
@@ -300,14 +301,14 @@ func test_defend() -> void:
 func test_events() -> void:
 	var d := dyn()
 	_animal(d, "slime")
-	for id in ["raid_thieves", "raid_rustlers", "raid_beasts"]:
+	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars"]:
 		ok(not GameEvents.is_eligible(d, GameEvents.event_def(id)), "%s is never found while exploring" % id)
 	ok(not GameEvents.eligible(d).any(func(e): return str(e["id"]).begins_with("raid_")), "no raid in any explore pool")
 	for place in ["hearthmere", "greenvale", "whisperwood", "emberpeak"]:
 		d.world.location = place
 		ok(not GameEvents.eligible(d).any(func(e): return e.get("raid", false)), "none at %s" % place)
 	# each choice of each event resolves
-	for id in ["raid_thieves", "raid_rustlers", "raid_beasts"]:
+	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars"]:
 		var ev := GameEvents.event_def(id)
 		for i in ev["choices"].size():
 			var e := dyn(i + 3)
@@ -347,6 +348,87 @@ func test_events() -> void:
 	GameEvents.resolve_as(f, 1, "always")
 	ok(f.battle != null and f.pending_event["result"]["fight"].size() == 2, "riding out starts a fight with two raiders: %s" % str(f.pending_event["result"]["fight"]))
 	ok(f.roster.size() == 1, "and nothing is taken while the heir fights")
+
+
+## Raids are not only for animals: a house that has been built is worth taking too.
+func test_house() -> void:
+	var plain := dyn()
+	ok(GameRaids.house_value(plain) == 0 and not GameRaids.has_target(plain) and GameRaids.chance(plain) == 0.0, "a plain house, nothing kept and nothing built, is not raided")
+	var hall := dyn()
+	hall.house[GameHouse.HALL] = 1
+	ok(GameRaids.house_value(hall) == 100 and GameRaids.has_target(hall) and GameRaids.chance(hall) > 0.0, "a built Hall is worth taking, with no animals at all (half of its 200 gold): %d" % GameRaids.house_value(hall))
+	var full := dyn()
+	for track in GameHouse.TRACKS:
+		full.house[track] = 3
+	ok(GameRaids.house_value(full) == 3 * (200 + 400 + 800) / 2, "a house built to the top is worth half of 3 x 1,400: %d" % GameRaids.house_value(full))
+	ok(GameRaids.chance(full) > GameRaids.chance(hall), "the more built, the likelier a raid")
+	var both := dyn()
+	both.house[GameHouse.HALL] = 1
+	_animal(both, "slime")
+	ok(GameRaids.valuables(both) == GameRaids.stock_value(both) + GameRaids.house_value(both), "stock and house add up for a raider")
+	# only the kinds that have something to take come to a house with no animals
+	var seen := {}
+	_with(_sure, func():
+		for s in range(1, 120):
+			var h := dyn(s)
+			h.house[GameHouse.YARD] = 1
+			h.heir.inventory = ["iron_sword"]
+			GameRaids.on_years(h, 1.0, [], 1.0)
+			seen[str(h.pending_event.get("id", ""))] = true)
+	ok(seen.has("raid_thieves") and seen.has("raid_burglars") and not seen.has("raid_rustlers") and not seen.has("raid_beasts"), "a built house with no animals is robbed by thieves and burglars, not rustlers or beasts: %s" % str(seen.keys()))
+	var bare := {}
+	_with(_sure, func():
+		for s in range(1, 60):
+			var h := dyn(s)
+			h.house[GameHouse.YARD] = 1
+			GameRaids.on_years(h, 1.0, [], 1.0)
+			bare[str(h.pending_event.get("id", ""))] = true)
+	ok(not bare.has("raid_burglars"), "burglars do not come when nothing is carried")
+	# the clock reaches it with no animals
+	_with(_sure, func():
+		var w := dyn(3)
+		w.house[GameHouse.HALL] = 2
+		w.pass_time(2.0)
+		ok(w.has_pending_event() and str(w.pending_event["source"]) == "raid", "pass_time brings a raid to a built house that keeps no animals"))
+	# burglars take a carried item
+	var b := dyn()
+	b.house[GameHouse.HALL] = 1
+	b.heir.inventory = ["iron_sword", "oak_staff"]
+	var out := GameRaids.defend(b, "burglars")
+	ok(out[0]["k"] == "bad" and "make off with" in out[0]["t"] and b.heir.inventory.size() == 1, "burglars make off with a carried item: %s" % out[0]["t"])
+	var empty := dyn()
+	ok(GameRaids.defend(empty, "burglars")[0]["k"] == "info", "and find nothing in empty hands")
+	var same_a := dyn(8)
+	var same_b := dyn(8)
+	for dd in [same_a, same_b]:
+		dd.heir.inventory = ["iron_sword", "oak_staff", "hunting_bow"]
+		GameRaids.defend(dd, "burglars")
+	ok(same_a.heir.inventory == same_b.heir.inventory, "the same raid takes the same item")
+	var rb := same_a.rng.state
+	GameRaids.defend(same_a, "burglars")
+	ok(same_a.rng.state == rb, "and draws nothing from the dynasty's dice")
+	# the burglars event: every choice resolves, and the fight starts
+	var ev := GameEvents.event_def("raid_burglars")
+	for i in ev["choices"].size():
+		var e := dyn(i + 3)
+		e.house[GameHouse.HALL] = 1
+		e.heir.inventory = ["iron_sword"]
+		GameEvents.begin(e, "raid_burglars", "raid")
+		ok(not GameEvents.resolve_as(e, i, "failure" if ev["choices"][i].has("check") else "always").is_empty(), "raid_burglars: choice %d resolves" % i)
+	var f := dyn()
+	f.house[GameHouse.HALL] = 1
+	GameEvents.begin(f, "raid_burglars", "raid")
+	GameEvents.resolve_as(f, 1, "always")
+	ok(f.battle != null and f.pending_event["result"]["fight"].size() == 1, "chasing them starts a fight with one burglar")
+	# guards need animals: a house with none has none
+	ok(GameRaids.deterrence(hall) == 0.0 and GameRaids.beat_off_chance(hall) == 0.0, "a house with no animals has no guards (hired guards are not built yet)")
+	# the plain autopilot house is still untouched
+	var a1 := dyn(9)
+	var a2 := dyn(9)
+	for i in 20:
+		a1.pass_time(1.0)
+		a2.pass_time(1.0)
+	ok(a1.to_dict() == a2.to_dict() and not a1.flags.has("raid_count"), "a plain house is never raided")
 
 
 func test_untouched() -> void:

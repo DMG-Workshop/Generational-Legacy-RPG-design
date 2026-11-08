@@ -216,7 +216,6 @@ static func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 			kept.append(e)
 	d.roster = kept
 	GameBreeding.on_years(d, years, msgs)
-	GameRaids.on_years(d, years, msgs)
 
 
 ## One creature's years. Returns the lines to tell. A creature that is gone is marked "gone".

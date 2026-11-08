@@ -1,9 +1,10 @@
-## Raids and theft on the house (roadmap item 61, first part). A house that keeps animals can be raided as the years
-## pass: GameRanch.on_years asks here, and for each whole year the world clock crosses a raid may come, rolled on dice
-## keyed on the dynasty seed and the year, never the dynasty's. It arrives as an event (the ones marked `raid` in
+## Raids and theft on the house (roadmap item 61). A house with something worth taking can be raided as the years
+## pass: GameDynasty._pass_years asks here, and for each whole year the world clock crosses a raid may come, rolled on
+## dice keyed on the dynasty seed and the year, never the dynasty's. What is worth taking is animals in the pens and a
+## house that has been built (the Hall, the Yard, the Ranch). It arrives as an event (the ones marked `raid` in
 ## events.json), so the heir settles it on the event screen: trust the guards, ride out and fight, pay, or try a
-## trick. Guards deter a raid and help beat it off (GameRanch.guard_cut). A house that keeps nothing is never raided,
-## so the autopilot, which keeps nothing, is untouched. Data: data/creatures/raids.json.
+## trick. Guards deter a raid and help beat it off (GameRanch.guard_cut). A house that keeps nothing and has built
+## nothing is never raided, so the autopilot, which does neither, is untouched. Data: data/creatures/raids.json.
 class_name GameRaids
 extends RefCounted
 
@@ -38,16 +39,38 @@ static func stock_value(d: GameDynasty) -> int:
 	return total
 
 
+## What the house itself is worth to a raider: part of what was paid to build it (each track's levels at the
+## house's own prices), by `house_value_share`.
+static func house_value(d: GameDynasty) -> int:
+	var base := float(GameData.bal("house_base_cost"))
+	var growth := float(GameData.bal("house_cost_growth"))
+	var spent := 0.0
+	for track in GameHouse.TRACKS:
+		for i in GameHouse.level(d, track):
+			spent += base * pow(growth, i)
+	return int(round(spent * float(setting("house_value_share"))))
+
+
+## Whether there is anything to raid: animals in the pens, or a house that has been built.
+static func has_target(d: GameDynasty) -> bool:
+	return not d.roster.is_empty() or house_value(d) > 0
+
+
+## What a raider sees to take: the stock and the house.
+static func valuables(d: GameDynasty) -> int:
+	return stock_value(d) + house_value(d)
+
+
 ## How far the guards put raiders off, 0 to deter_share: none with no guards, the most with the most.
 static func deterrence(d: GameDynasty) -> float:
 	return GameRanch.guard_cut(d) / float(GameRanch.data()["work"]["guard_cut_max"]) * float(setting("deter_share"))
 
 
-## The chance that a raid comes in a year: 0 with nothing kept, else more with more stock, less with guards.
+## The chance that a raid comes in a year: 0 with nothing kept or built, else more with more to take, less with guards.
 static func chance(d: GameDynasty) -> float:
-	if d.roster.is_empty():
+	if not has_target(d):
 		return 0.0
-	var c := float(setting("base_chance")) + float(setting("per_stock_gold")) * float(stock_value(d))
+	var c := float(setting("base_chance")) + float(setting("per_stock_gold")) * float(valuables(d))
 	return clampf(c, 0.0, float(setting("max_chance"))) * (1.0 - deterrence(d))
 
 
@@ -61,13 +84,15 @@ static func applicable(d: GameDynasty, kind: String) -> bool:
 	var takes := str(data()["kinds"][kind]["takes"])
 	if takes == "gold":
 		return d.heir != null and d.heir.gold > 0
+	if takes == "item":
+		return d.heir != null and not d.heir.inventory.is_empty()
 	return not d.roster.is_empty()
 
 
 ## Time passes: for each whole year the world clock crossed, a raid may come. At most one is started, and none while
 ## an event is waiting. `year_end` is the world's year now (a parameter so a test can set it).
 static func on_years(d: GameDynasty, years: float, msgs: Array, year_end: float = -1.0) -> void:
-	if d.roster.is_empty() or years <= 0.0 or d.state != "life":
+	if not has_target(d) or years <= 0.0 or d.state != "life":
 		return
 	var end := d.world.year if year_end < 0.0 else year_end
 	for y in range(int(floor(end - years)) + 1, int(floor(end)) + 1):
@@ -126,6 +151,12 @@ static func defend(d: GameDynasty, kind: String) -> Array:
 			d.heir.gold -= lost
 			var saved := maxi(0, mini(want, d.heir.gold + lost) - lost)
 			return _said(text("stole_gold_saved" if saved > 0 else "stole_gold", {"gold": GameText.num(lost), "saved": GameText.num(saved)}), "bad")
+		"item":
+			if d.heir.inventory.is_empty():
+				return _said(text("nothing_carried"), "info")
+			var taken: String = str(d.heir.inventory[r.randi() % d.heir.inventory.size()])
+			d.heir.inventory.erase(taken)
+			return _said(text("stole_item", {"item": GameItems.item_name(taken)}), "bad")
 		_:
 			if d.roster.is_empty():
 				return _said(text("no_stock"), "info")
@@ -149,12 +180,12 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["base_chance", "per_stock_gold", "max_chance", "deter_share", "beat_off_max", "steal_gold_share", "steal_gold_min", "counter_flag"]:
+	for k in ["base_chance", "per_stock_gold", "max_chance", "deter_share", "beat_off_max", "steal_gold_share", "steal_gold_min", "counter_flag", "house_value_share"]:
 		if not s.has(k):
 			bad.append("raids.json: settings.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
-	for k in ["base_chance", "max_chance", "deter_share", "beat_off_max", "steal_gold_share"]:
+	for k in ["base_chance", "max_chance", "deter_share", "beat_off_max", "steal_gold_share", "house_value_share"]:
 		if float(s[k]) < 0.0 or float(s[k]) > 1.0:
 			bad.append("raids.json: %s must be between 0 and 1" % k)
 	if float(s["max_chance"]) < float(s["base_chance"]):
@@ -168,8 +199,8 @@ static func validate() -> Array:
 		for key in ["event", "weight", "takes", "who"]:
 			if not k.has(key):
 				bad.append("raids.json: kind '%s' has no %s" % [kind, key])
-		if k.has("takes") and str(k["takes"]) not in ["gold", "animal", "kill"]:
-			bad.append("raids.json: kind '%s' takes '%s', which is not gold, animal or kill" % [kind, k["takes"]])
+		if k.has("takes") and str(k["takes"]) not in ["gold", "animal", "kill", "item"]:
+			bad.append("raids.json: kind '%s' takes '%s', which is not gold, animal, kill or item" % [kind, k["takes"]])
 		if k.has("weight") and float(k["weight"]) <= 0.0:
 			bad.append("raids.json: kind '%s' needs a positive weight" % kind)
 		if k.has("event"):
@@ -186,7 +217,7 @@ static func validate() -> Array:
 					used = true
 			if not used:
 				bad.append("raids.json: the raid event '%s' is used by no kind" % ev["id"])
-	for key in ["comes", "beaten_off", "stole_gold", "stole_gold_saved", "nothing_to_take", "stole_animal", "killed_animal", "no_stock"]:
+	for key in ["comes", "beaten_off", "stole_gold", "stole_gold_saved", "nothing_to_take", "stole_animal", "killed_animal", "no_stock", "stole_item", "nothing_carried"]:
 		if not dat["text"].has(key):
 			bad.append("raids.json: text.%s is missing" % key)
 	return bad

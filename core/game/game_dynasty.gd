@@ -745,6 +745,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 	world.advance(years, rng)
 	party.on_years(self, years, msgs)
 	GameRanch.on_years(self, years, msgs)
+	GameRaids.on_years(self, years, msgs)   # a house with animals or a built house may be raided
 	heir.mp = mini(heir.max_mp(), heir.mp + int(ceil(float(heir.max_mp()) * 0.1)))
 	if heir.age >= heir.midlife_age():
 		_check_milestone("midlife")
