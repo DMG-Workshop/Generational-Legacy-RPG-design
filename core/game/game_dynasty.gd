@@ -41,7 +41,7 @@ var auto_party: Dictionary = {}      # the player's Auto switches for party comm
 var command_round: GameRound = null  # the battle's command round, made on first use (see battle_round)
 
 
-static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human", p_sex: String = GameSex.MALE) -> GameDynasty:
+static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "") -> GameDynasty:
 	GameData.load_all()
 	var d := GameDynasty.new()
 	d.seed_value = p_seed
@@ -55,6 +55,7 @@ static func new_game(p_seed: int, founder_name: String, class_id: String, bloodl
 	h.race_id = race_id
 	h.sex = p_sex if GameSex.valid(p_sex) else GameSex.MALE
 	h.traits = [bloodline_id]
+	GameSubclass.found(h, p_subclass)   # none unless one was chosen at the founding
 	var others := GameData.traits_in(["bloodline"]).filter(func(t): return t != bloodline_id)
 	h.dormant = [others[d.rng.randi() % others.size()]]
 	d.world = GameWorld.create(d.rng)
@@ -907,6 +908,9 @@ func choose_heir(index: int) -> Array:
 			msgs.append("%s leaves the company to take up the family name." % c.name)
 		c.companion_id = ""
 	_setup_new_heir(c)
+	var born_to := GameSubclass.on_succession(self, parent, c)   # a child may be born to the parent's calling (own dice)
+	if born_to != "":
+		msgs.append(born_to)
 	GameSkillTree.inherit(self, parent, c, msgs)
 	# The heir inherits what the family has left: its gold and the items bought.
 	c.gold = int(float(parent.gold) * float(GameData.bal("gold_inherit_fraction")))

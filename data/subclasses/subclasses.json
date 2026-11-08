@@ -1,0 +1,42 @@
+{
+  "note": "Subclasses (roadmap item 60, first part; core/game/game_subclass.gd). A subclass is a calling layered on an heir's class: none or one, taken by anyone, whatever their class, and it adds small bonuses to what the class already does and never replaces its skills. A subclass is picked when the dynasty is founded, taken later by the living heir for gold, or passed to a child (born to it). One chosen at the founding or inherited is 'founded': its perks are stronger by `founder_scale`; one taken later gives them at their plain strength. A perk is a multiplier on a number the rules already have (1.4 is 40% more, 0.85 is 15% less); the founded strength is 1 + (m - 1) x founder_scale.",
+  "settings": {
+    "take_cost": 300,
+    "change_cost_mult": 2.0,
+    "founder_scale": 1.5,
+    "inherit_chance": 0.5,
+    "perk_floor": 0.1
+  },
+  "perks": {
+    "find_mult": "the chance of finding eggs and young",
+    "keep_mult": "the yearly cost of keeping creatures",
+    "fertility_mult": "how often a breeding pair has young",
+    "mutation_mult": "how often young are born with a new trait",
+    "value_mult": "what creatures sell for"
+  },
+  "subclasses": [
+    {
+      "id": "breeder",
+      "name": "Breeder",
+      "about": "Raises creatures for a living: finds young more often, keeps them cheaper, breeds them better and sells them dearer.",
+      "perks": {"find_mult": 1.4, "keep_mult": 0.85, "fertility_mult": 1.25, "mutation_mult": 1.5, "value_mult": 1.15}
+    }
+  ],
+  "text": {
+    "none": "No subclass.",
+    "current": "Subclass: {name} ({how}).",
+    "how_founded": "born to it",
+    "how_taken": "taken up",
+    "perk_up": "{what}: {pct}% more",
+    "perk_down": "{what}: {pct}% less",
+    "take": "Take up the {name} ({gold} gold)",
+    "change": "Become a {name} instead ({gold} gold)",
+    "have": "Your calling",
+    "taken": "{h} takes up the calling of a {name} for {gold} gold.",
+    "changed": "{h} gives up the calling of a {old} to become a {name}, for {gold} gold.",
+    "inherited": "{h} is born to the calling of a {name}, as {parent} was.",
+    "not_enough": "Not enough gold ({gold} needed).",
+    "already": "Already a {name}.",
+    "outside_life": "Only a living heir can take a subclass."
+  }
+}

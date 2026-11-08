@@ -9,6 +9,7 @@ var dynasty: GameDynasty
 var on_change: Callable   # called after a title is put on or taken off, or a creature sold or freed (the screen behind redraws)
 var _titles_box: VBoxContainer
 var _creatures_box: VBoxContainer
+var _subclass_box: VBoxContainer
 var _sure := {}   # creature id -> "sell" or "free", asked once and waiting for the second tap
 
 
@@ -38,6 +39,7 @@ func _ready() -> void:
 
 	tabs.add_child(_titles_tab())
 	tabs.add_child(_creatures_tab())
+	tabs.add_child(_subclass_tab())
 	var stats := Kit.rich()
 	stats.name = "Statistics"
 	stats.text = _stats_text()
@@ -327,7 +329,7 @@ func _fill_creatures() -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		text.add_child(l)
 		var id := int(e["id"])
-		var price := GameText.num(GameRanch.sell_price(e))
+		var price := GameText.num(GameRanch.sell_price(e, dynasty))
 		var btns := VBoxContainer.new()
 		btns.add_theme_constant_override("separation", 6)
 		btns.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -343,6 +345,59 @@ func _fill_creatures() -> void:
 			var b := Kit.button(label, func(): _creature_action(id, act), Vector2(190, 0))
 			b.disabled = not alive
 			btns.add_child(b)
+
+
+## The Subclass tab: the heir's calling, what its perks do, and the others they could take (for gold).
+func _subclass_tab() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Subclass"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_subclass_box = VBoxContainer.new()
+	_subclass_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_subclass_box.add_theme_constant_override("separation", 8)
+	scroll.add_child(_subclass_box)
+	_fill_subclass()
+	return scroll
+
+
+func _fill_subclass() -> void:
+	var box := _subclass_box
+	Kit.clear(box)
+	var h := dynasty.heir
+	if h == null:
+		return
+	var current := h.subclass
+	var head := GameSubclass.text("none") if current == "" else GameSubclass.text("current", {
+		"name": GameSubclass.name_of(current), "how": GameSubclass.text("how_founded" if h.subclass_founded else "how_taken")})
+	box.add_child(Kit.label(head, 18, Kit.ACCENT))
+	if current != "":
+		for l in GameSubclass.perk_lines(h, current, h.subclass_founded):
+			box.add_child(Kit.label(l, 14, Kit.good()))
+	for s in GameSubclass.defs():
+		var id := str(s["id"])
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 4)
+		box.add_child(col)
+		col.add_child(Kit.label(str(s["name"]), 16, Kit.ACCENT if id == current else Kit.TEXT))
+		var about := Kit.label(str(s["about"]), 14, Kit.dim())
+		about.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		col.add_child(about)
+		if id != current:
+			var price := GameText.num(GameSubclass.cost(dynasty, id))
+			var why := GameSubclass.why_not(dynasty, id)
+			var b := Kit.button(GameSubclass.text("change" if current != "" else "take", {"name": str(s["name"]), "gold": price}), func(): _take_subclass(id), Vector2(0, 0))
+			b.disabled = why != ""
+			col.add_child(b)
+			if why != "":
+				var reason := Kit.label(why, 14, Kit.dim())
+				reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				col.add_child(reason)
+
+
+func _take_subclass(id: String) -> void:
+	if GameSubclass.take(dynasty, id) != "" and on_change.is_valid():
+		on_change.call()
+	_fill_subclass()
 
 
 ## Sets a creature to breed or to rest, and redraws the tab.

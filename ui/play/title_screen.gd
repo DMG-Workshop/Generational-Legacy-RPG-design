@@ -18,6 +18,9 @@ var class_desc: Label
 var bloodline_desc: Label
 var class_ids: Array = []
 var bloodline_ids: Array = []
+var subclass_pick: OptionButton
+var subclass_desc: Label
+var subclass_ids: Array = [""]   # "" is none
 var cont: Button
 var slot_box: VBoxContainer
 var slot_note: Label
@@ -109,6 +112,19 @@ func _ready() -> void:
 	bloodline_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	form2.add_child(bloodline_desc)
 
+	form2.add_child(Kit.label("Subclass (optional)"))
+	subclass_pick = OptionButton.new()
+	subclass_pick.custom_minimum_size.y = UiSettings.tap_h(0)
+	subclass_pick.add_item("None")
+	for s in GameSubclass.defs():
+		subclass_ids.append(str(s["id"]))
+		subclass_pick.add_item(str(s["name"]))
+	subclass_pick.item_selected.connect(func(_i): _refresh())
+	form2.add_child(subclass_pick)
+	subclass_desc = Kit.label("", 14, Kit.dim())
+	subclass_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	form2.add_child(subclass_desc)
+
 	var seed_label := Kit.label("Seed (blank = random; same seed + same choices = same dynasty)")
 	seed_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	form2.add_child(seed_label)
@@ -162,6 +178,8 @@ func _refresh() -> void:
 	var r: Dictionary = GameData.races[race_ids[race_pick.selected]]
 	race_desc.text = "%s  Lives ~%d years, adult at %d.  %s" % [r["description"], int(r["lifespan"]), int(r["start_age"]), "  ".join(r.get("traits", []).map(func(t): return "%s: %s" % [GameData.trait_name(t), GameData.trait_def(t).get("description", "")]))]
 	bloodline_desc.text = GameData.trait_def(bloodline_ids[bloodline_pick.selected]).get("description", "")
+	var sid: String = subclass_ids[subclass_pick.selected]
+	subclass_desc.text = "Anyone can take one later. One chosen now is stronger." if sid == "" else "%s  %s" % [str(GameSubclass.def(sid)["about"]), "  ".join(GameSubclass.perk_lines(null, sid, true))]
 
 
 ## The save slots: one row per slot to pick from, then Copy backup, Restore backup and Delete for the
@@ -316,4 +334,4 @@ func _start() -> void:
 func _begin() -> void:
 	var s := seed_edit.text.strip_edges()
 	var seed_value: int = int(s) if s.is_valid_int() else int(Time.get_unix_time_from_system()) % 1000000
-	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected], GameSex.SEXES[sex_pick.selected])
+	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected], GameSex.SEXES[sex_pick.selected], subclass_ids[subclass_pick.selected])
