@@ -26,7 +26,7 @@ const ATTR_LABELS := {
 	"divine_magic_power": "Faith", "dark_magic_power": "Dark arts", "element_power": "Elements",
 	"craft_quality": "Craft",
 }
-const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight"]
+const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight", "find"]
 const SEEN := "event_seen_"   # once-only events: generation they were last seen
 const LAST := "event_last_"   # repeatable events: generation they last happened
 
@@ -556,6 +556,10 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		h.gold += g
 		if g != 0:
 			fx.append({"t": "%s gold" % GameText.signed(g), "k": "good" if g > 0 else "bad"})
+	if o.has("find"):   # young taken in: the choice's own check was the roll (see GameFinding.take)
+		for line in GameFinding.take(d, o["find"].get("species", []), "event_" + str(ev.get("id", ""))):
+			msgs.append(line)
+			fx.append({"t": line, "k": "good"})
 	if o.has("xp"):
 		var xp := int(round(float(o["xp"]) * GameData.xp_level_scale(h.level)))
 		fx.append({"t": "%s XP" % GameText.signed(xp), "k": "good"})
@@ -835,6 +839,14 @@ static func validate() -> Array:
 					for f in o["fight"].get("foes", []):
 						if not creature_ids.has(f):
 							errs.append("%s/%s: unknown or boss creature %s" % [where, k, f])
+				if o.has("find"):
+					var sp: Variant = o["find"].get("species") if typeof(o["find"]) == TYPE_DICTIONARY else null
+					if typeof(sp) != TYPE_ARRAY or (sp as Array).is_empty():
+						errs.append("%s/%s: find needs a list of species" % [where, k])
+					else:
+						for f in sp:
+							if GameBirth.born(str(f)) == "none" or GameCombat.creature_def(str(f)).get("boss", false):
+								errs.append("%s/%s: find names '%s', which is not a born creature that is not a legend" % [where, k, f])
 	return errs
 
 
@@ -851,6 +863,7 @@ static func content_flags() -> Dictionary:
 				if o.has("flag"):
 					out[o["flag"]] = true
 	_collect_flags(GameData.quests, out)
+	out[str(GameFinding.setting("found_flag"))] = true   # set by the first creature the house takes in
 	return out
 
 

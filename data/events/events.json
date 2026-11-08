@@ -1712,6 +1712,65 @@
           "outcomes": {"always": {"text": "The headwoman says the words herself. She does them well."}}
         }
       ]
+    },
+    {
+      "id": "nest_on_the_ledge",
+      "title": "A Nest on the Ledge",
+      "text": "Something has nested in the rock above the path: a shallow scrape, shell fragments, and one egg the wind has not taken. The mother is wheeling far out over the valley.",
+      "where": {"types": ["wilds"], "biomes": ["mountains", "hills", "swamp"]},
+      "requires": {"flags": ["found_young"]},
+      "weight": 6,
+      "choices": [
+        {
+          "text": "Climb up and take the egg",
+          "check": {"attr": "agi", "dc": 13, "bonus_if": [{"class": "ranger", "value": 3}, {"class": "rogue", "value": 2}, {"class": "druid", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "The ledge holds, the egg is warm, and the mother never turns her head.", "xp": 20, "find": {"species": ["harpy", "shard_crawler", "drake"]}},
+            "success": {"text": "You ease the egg into your coat and climb down with every finger sore.", "xp": 15, "find": {"species": ["harpy", "shard_crawler"]}},
+            "failure": {"text": "Your foot slips on loose scree. You slide to the path with scraped hands and no egg.", "xp": 5, "hp_pct": -0.08},
+            "crit_failure": {"text": "The mother sees you. She does not forgive it, and the fall does the rest.", "xp": 3, "hp_pct": -0.2}
+          }
+        },
+        {
+          "text": "Watch the nest from below, and leave it be",
+          "outcomes": {"always": {"text": "The mother comes home at dusk and settles. Some things are better left in the rock.", "xp": 8}}
+        }
+      ]
+    },
+    {
+      "id": "litter_in_the_den",
+      "title": "A Litter in the Den",
+      "text": "The den under the roots is empty of its mother, and in the straw a litter lies sleeping, too young to have opened their eyes. Fresh tracks lead away: she has gone to hunt, and will be back.",
+      "where": {"types": ["wilds"], "biomes": ["forest", "tundra", "plains", "hills"]},
+      "requires": {"flags": ["found_young"]},
+      "weight": 6,
+      "choices": [
+        {
+          "text": "Slip in and take one before she returns",
+          "check": {"attr": "stealth", "dc": 12, "bonus_if": [{"class": "ranger", "value": 3}, {"class": "rogue", "value": 3}, {"class": "druid", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "The litter hardly stirs. You are a hundred paces off when the mother comes home.", "xp": 20, "find": {"species": ["wolf", "frost_wolf"]}},
+            "success": {"text": "One pup nuzzles into your sleeve and stays there.", "xp": 15, "find": {"species": ["wolf"]}},
+            "failure": {"text": "A twig cracks. You leave the den at a run, and she hears you go.", "xp": 5},
+            "crit_failure": {"text": "She is closer than you thought. Her teeth find your leg before you find the door.", "xp": 3, "hp_pct": -0.2}
+          }
+        },
+        {
+          "text": "Wait for the mother, and show her you mean no harm",
+          "requires": {"class": ["druid", "ranger"], "traits": ["wild_instincts", "faetouched"], "any": true},
+          "check": {"attr": "persuasion", "dc": 14, "bonus_if": [{"class": "druid", "value": 3}]},
+          "outcomes": {
+            "crit_success": {"text": "She sniffs your hand, looks at her litter, and lets you choose.", "xp": 30, "find": {"species": ["wolf", "frost_wolf"]}},
+            "success": {"text": "She lets you stay. At dusk she pushes one pup toward you with her nose.", "xp": 20, "find": {"species": ["wolf"]}},
+            "failure": {"text": "She will not have you near. You back away slowly, and she watches you go.", "xp": 8},
+            "crit_failure": {"text": "She lunges. You are lucky it is a warning.", "xp": 3, "hp_pct": -0.1}
+          }
+        },
+        {
+          "text": "Leave the litter alone",
+          "outcomes": {"always": {"text": "You close the den as you found it. Somewhere behind you, she is already coming home.", "xp": 8}}
+        }
+      ]
     }
   ]
 }

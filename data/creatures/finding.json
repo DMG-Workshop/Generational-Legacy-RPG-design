@@ -1,13 +1,31 @@
 {
-  "note": "Finding eggs and young beside the dead (roadmap item 55). One roll per foe lying dead, from the finder's own seeded dice, never the dynasty's. Chance = base x place x species rarity x the finder's skill. Only creatures that are born (data/creatures) can leave young; bosses are never searched, so a legend's clutch comes with the Explore events later.",
+  "note": "Finding eggs and young beside the dead (roadmap item 55). One roll per foe lying dead, from the finder's own seeded dice, never the dynasty's. Chance = base x place x species rarity x the finder's skill. Only creatures that are born (data/creatures) can leave young; bosses are never searched, so a legend's clutch comes with the Explore events later. Explore events can give young outright (the `find` effect of an event outcome, only for a house that has found young before: the flag in settings.found_flag), and a slain legend that is born may leave its young (places.legend x base, once per legend).",
   "settings": {
     "base_chance": 0.06,
     "max_chance": 0.5,
     "roster_cap": 6,
-    "places": {"search": 1.0},
-    "rarity": {"ogre": 0.5, "drake": 0.4, "ash_wyrm": 0.3, "star_eater": 0.15, "elder_dragon": 0.1, "void_stalker": 0.3},
-    "class_bonus": {"ranger": 1.5, "druid": 1.75, "beastmaster": 2.5},
-    "trait_bonus": {}
+    "places": {
+      "search": 1.0,
+      "legend": 7.0
+    },
+    "rarity": {
+      "ogre": 0.5,
+      "drake": 0.4,
+      "ash_wyrm": 0.3,
+      "star_eater": 0.15,
+      "elder_dragon": 0.1,
+      "void_stalker": 0.3
+    },
+    "class_bonus": {
+      "ranger": 1.5,
+      "druid": 1.75,
+      "beastmaster": 2.5
+    },
+    "trait_bonus": {
+      "wild_instincts": 1.4,
+      "faetouched": 1.25
+    },
+    "found_flag": "found_young"
   },
   "text": {
     "egg": "Beside the dead {parent} lies a clutch. {h} takes one {young} egg: {name}.",
@@ -19,6 +37,11 @@
     "stage_egg": "{young} egg",
     "stage_young": "{young}",
     "entry": "{stage} of a {species}, {sex}. Found by {by} in generation {gen}.",
-    "entry_grown": "{stage}, {sex}. Found by {by} in generation {gen}."
+    "entry_grown": "{stage}, {sex}. Found by {by} in generation {gen}.",
+    "found_egg": "{h} takes one {young} egg of the {species}: {name}.",
+    "found_live": "{h} takes in a {young} of the {species}: {name}.",
+    "legend_egg": "Beside the dead {parent}, one great clutch survives. {h} takes one {young} egg: {name}.",
+    "legend_live": "Beside the dead {parent}, a {young} still lives. {h} takes it in: {name}.",
+    "found_full": "There is young here, but nowhere to keep it."
   }
 }
