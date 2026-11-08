@@ -2290,7 +2290,7 @@ func _loot_choice(v: VBoxContainer, foot: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	box.add_child(row)
-	var search := Kit.button("Search the bodies", func(): _loot_done(v, foot, box, GamePlague.search(d), ""), Vector2(0, 44))
+	var search := Kit.button("Search the bodies", func(): _loot_done(v, foot, box, GameFinding.search_dead(d), ""), Vector2(0, 44))
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search.tooltip_text = "Extra gold and maybe something useful. Whatever sickness the dead carry, %s risks catching." % d.heir.name
 	row.add_child(search)

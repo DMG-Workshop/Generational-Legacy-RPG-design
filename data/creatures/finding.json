@@ -1,0 +1,17 @@
+{
+  "note": "Finding eggs and young beside the dead (roadmap item 55). One roll per foe lying dead, from the finder's own seeded dice, never the dynasty's. Chance = base x place x species rarity x the finder's skill. Only creatures that are born (data/creatures) can leave young; bosses are never searched, so a legend's clutch comes with the Explore events later.",
+  "settings": {
+    "base_chance": 0.06,
+    "max_chance": 0.5,
+    "roster_cap": 6,
+    "places": {"search": 1.0},
+    "rarity": {"ogre": 0.5, "drake": 0.4, "ash_wyrm": 0.3, "star_eater": 0.15, "elder_dragon": 0.1, "void_stalker": 0.3},
+    "class_bonus": {"ranger": 1.5, "druid": 1.75, "beastmaster": 2.5},
+    "trait_bonus": {}
+  },
+  "text": {
+    "egg": "Beside the dead {parent} lies a clutch. {h} takes one {young} egg: {name}.",
+    "live": "Beside the dead {parent}, a {young} still lives. {h} takes it in: {name}.",
+    "full": "There are young beside the dead {parent}, but there is nowhere to keep them."
+  }
+}

@@ -26,6 +26,7 @@ var battle: GameBattle = null
 var next_id: int = 1
 var killer_id: String = ""
 var total_hunts: int = 0
+var roster: Array = []          # eggs and young the family keeps (see GameRoster); saved only when not empty
 var world: GameWorld
 var flags: Dictionary = {}      # story flags set by quests and events (flag -> generation set); never cleared
 var quests := GameQuests.new()
@@ -944,6 +945,8 @@ func to_dict() -> Dictionary:
 		"quests": quests.to_dict(), "party": party.to_dict(), "pending_event": pending_event,
 		"shop_state": shop_state, "ages": ages.to_dict(), "auto_battle": auto_battle, "loot": loot,
 	}
+	if not roster.is_empty():   # only once something is found: older saves and fresh ones stay alike
+		out["roster"] = roster
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
 		out["house"] = house
 	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
@@ -987,6 +990,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
 	g.party = GameParty.from_dict(d.get("party", {}), g)
 	g.house = GameHouse.from_dict(d.get("house", {}))
+	g.roster = GameRoster.load_list(d.get("roster", []))
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0
 	g.pending_event = _ints(d.get("pending_event", {}))
