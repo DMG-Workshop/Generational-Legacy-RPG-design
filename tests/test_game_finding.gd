@@ -35,6 +35,7 @@ func _run() -> void:
 	test_saving()
 	test_search()
 	test_describe()
+	test_more()
 	await test_screens()
 	print("%d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -70,8 +71,10 @@ func test_data() -> void:
 
 func test_chance() -> void:
 	var d := dyn(5, "warrior")
-	var base := float(GameFinding.setting("base_chance"))
-	ok(is_equal_approx(GameFinding.chance(d.heir, "wolf"), base), "a wolf's litter is the base chance for a warrior")
+	d.heir.traits = []
+	d.heir.dormant = []
+	var base := float(GameFinding.setting("base_chance")) * (1.25 if "faetouched" in d.heir.all_traits() else 1.0)   # the test bloodline is faetouched
+	ok(is_equal_approx(GameFinding.chance(d.heir, "wolf"), base), "a wolf's litter is the base chance for a warrior (%s)" % GameFinding.chance(d.heir, "wolf"))
 	ok(GameFinding.chance(d.heir, "skeleton") == 0.0, "a creature that is not born leaves nothing")
 	ok(GameFinding.chance(d.heir, "nonesuch") == 0.0, "an unknown creature leaves nothing")
 	ok(GameFinding.chance(d.heir, "elder_dragon") < GameFinding.chance(d.heir, "wolf"), "a dragon's clutch is rarer than a wolf's litter")
@@ -405,3 +408,121 @@ func test_screens() -> void:
 	app.queue_free()
 	await _frames(2)
 	DirAccess.remove_absolute(DIR + "save.json")
+
+
+## The two things after_battle reads of a fight: its result and its foes.
+func _fight(boss: String, result: String = "victory") -> Array:
+	return [result, [{"id": boss, "name": GameCombat.creature_def(boss).get("name", boss), "boss": true}]]
+
+
+func test_more() -> void:
+	ok(GameFinding.validate().is_empty(), "the data with the new keys is sound: %s" % str(GameFinding.validate()))
+	_with(func(x): x["trait_bonus"]["nonesuch"] = 2.0, func(): ok(not GameFinding.validate().is_empty(), "a bonus for an unknown trait is found"))
+	_with(func(x): x["places"].erase("legend"), func(): ok(not GameFinding.validate().is_empty(), "a missing legend place is found"))
+	_with(func(x): x.erase("found_flag"), func(): ok(not GameFinding.validate().is_empty(), "a missing found flag is found"))
+	# traits that help
+	var h := dyn(5, "warrior").heir
+	h.traits = []
+	h.dormant = []
+	var base := GameFinding.chance(h, "wolf")
+	h.traits = ["wild_instincts"]
+	ok(GameFinding.chance(h, "wolf") > base, "Wild Instincts raise the chance")
+	# take: an event outcome
+	var d := dyn()
+	ok(not d.flags.has("found_young"), "a new house has not found young")
+	var lines := GameFinding.take(d, ["wolf", "frost_wolf"], "test_event")
+	ok(lines.size() == 1 and d.roster.size() == 1 and d.roster[0]["species"] in ["wolf", "frost_wolf"], "taking in young adds a creature of one of the species: %s" % str(lines))
+	ok("takes in a pup" in lines[0], "and tells it: %s" % lines[0])
+	ok(d.flags.has("found_young"), "and the house has found young")
+	var d2 := dyn()
+	var egg := GameFinding.take(d2, ["drake"], "test_event")
+	ok("egg of the cinder drake" in egg[0] and d2.roster[0]["stage"] == "egg", "an egg is told as one: %s" % egg[0])
+	var a := dyn(7)
+	var b := dyn(7)
+	GameFinding.take(a, ["wolf", "frost_wolf", "harpy"], "k")
+	GameFinding.take(b, ["wolf", "frost_wolf", "harpy"], "k")
+	ok(a.roster == b.roster, "the same seed and event give the same young")
+	var rng_before := a.rng.state
+	GameFinding.take(a, ["wolf"], "k2")
+	ok(a.rng.state == rng_before, "taking draws nothing from the dynasty's dice")
+	var full := dyn()
+	for i in GameRoster.cap(full):
+		GameRoster.add(full, "slime", "S%d" % i)
+	var fl := GameFinding.take(full, ["wolf"], "k")
+	ok(fl.size() == 1 and "nowhere to keep" in fl[0] and full.roster.size() == GameRoster.cap(full) and not full.flags.has("found_young"), "a full ranch is told and takes none")
+	ok(GameFinding.take(dyn(), [], "k").is_empty(), "no species, no find")
+	var dead := dyn()
+	dead.state = "succession"
+	ok(GameFinding.take(dead, ["wolf"], "k").is_empty() and dead.roster.is_empty(), "nothing is taken outside a life")
+	# a search that finds sets the flag too
+	_with(func(x): x["base_chance"] = 1.0; x["max_chance"] = 1.0, func():
+		var s := dyn()
+		GameFinding.after_search(s, foes(["wolf"]))
+		ok(s.flags.has("found_young"), "a find beside the dead counts"))
+	# legends
+	var any_found := false
+	var any_missed := false
+	for seed_value in range(1, 80):
+		var l := dyn(seed_value)
+		l.slain_bosses["vaerthax"] = l.gen
+		var out := GameFinding.after_battle(l, _fight("vaerthax")[0], _fight("vaerthax")[1])
+		any_found = any_found or not out.is_empty()
+		any_missed = any_missed or out.is_empty()
+	ok(any_found and any_missed, "a legend's clutch is found by some and missed by others")
+	_with(func(x): x["base_chance"] = 0.5; x["max_chance"] = 1.0; x["places"]["legend"] = 10.0, func():   # certain
+		var l := dyn()
+		l.slain_bosses["vaerthax"] = l.gen
+		var out := GameFinding.after_battle(l, _fight("vaerthax")[0], _fight("vaerthax")[1])
+		ok(out.size() == 1 and "Beside the dead vaerthax" in out[0] and "one great clutch survives" in out[0] and l.roster[0]["species"] == "vaerthax" and l.roster[0]["stage"] == "egg", "a legend's clutch is its own egg: %s" % str(out))
+		ok(l.flags.has("legend_clutch_vaerthax") and l.flags.has("found_young"), "once only, and the house has found young")
+		ok(GameFinding.after_battle(l, _fight("vaerthax")[0], _fight("vaerthax")[1]).is_empty() and l.roster.size() == 1, "and not again")
+		var g := dyn()
+		g.slain_bosses["grimfang"] = g.gen
+		var gl := GameFinding.after_battle(g, _fight("grimfang")[0], _fight("grimfang")[1])
+		ok(gl.size() == 1 and "a pup still lives" in gl[0], "a legend of live young leaves a pup: %s" % str(gl))
+		var u := dyn()
+		u.slain_bosses["hollow_king"] = u.gen
+		ok(GameFinding.after_battle(u, _fight("hollow_king")[0], _fight("hollow_king")[1]).is_empty() and u.roster.is_empty(), "a legend that is not born leaves nothing")
+		var n := dyn()
+		ok(GameFinding.after_battle(n, _fight("vaerthax")[0], _fight("vaerthax")[1]).is_empty(), "a legend not slain by this fight leaves nothing")
+		var lost := dyn()
+		lost.slain_bosses["vaerthax"] = lost.gen
+		ok(GameFinding.after_battle(lost, _fight("vaerthax", "defeat")[0], _fight("vaerthax")[1]).is_empty(), "nor does a lost fight")
+		var f := dyn()
+		for i in GameRoster.cap(f):
+			GameRoster.add(f, "slime", "S%d" % i)
+		f.slain_bosses["vaerthax"] = f.gen
+		var fo := GameFinding.after_battle(f, _fight("vaerthax")[0], _fight("vaerthax")[1])
+		ok(fo.size() == 1 and "nowhere to keep" in fo[0] and f.roster.size() == GameRoster.cap(f), "a full ranch is told: %s" % str(fo)))
+	var rl := dyn()
+	rl.slain_bosses["vaerthax"] = rl.gen
+	var before := rl.rng.state
+	GameFinding.after_battle(rl, _fight("vaerthax")[0], _fight("vaerthax")[1])
+	ok(rl.rng.state == before, "a legend's roll draws nothing from the dynasty's dice")
+	# events
+	var ev := GameEvents.event_def("nest_on_the_ledge")
+	ok(not ev.is_empty() and ev["requires"]["flags"] == ["found_young"], "the nest event exists and needs a house that has found young")
+	var fresh := dyn()
+	ok(not GameEvents.eligible(fresh).any(func(e): return str(e["id"]) in ["nest_on_the_ledge", "litter_in_the_den"]), "a house that has found no young is never offered them")
+	var keeper := dyn()
+	GameFinding.take(keeper, ["wolf"], "x")
+	var offered := false
+	for place_id in ["whisperwood", "emberpeak"]:
+		keeper.world.location = place_id
+		offered = offered or GameEvents.eligible(keeper).any(func(e): return str(e["id"]) in ["nest_on_the_ledge", "litter_in_the_den"])
+	ok(offered, "but a house that has is, in the right places")
+	# an outcome with find adds the creature and tells it
+	var o := dyn()
+	var fx := GameEvents._apply(o, ev, {"text": "t", "find": {"species": ["harpy"]}}, [])
+	ok(o.roster.size() == 1 and o.roster[0]["species"] == "harpy" and fx.any(func(f): return "harpy" in str(f["t"]) or "chick" in str(f["t"])), "an event outcome's find adds the creature: %s" % str(fx))
+	# the validator
+	ok(GameEvents.validate().is_empty(), "the events are sound with the new ones: %s" % str(GameEvents.validate()))
+	var saved: Array = GameData.events.duplicate(true)
+	for bad in [{"species": ["skeleton"]}, {"species": ["grimfang"]}, {"species": []}, {"species": ["nonesuch"]}]:
+		var copy: Array = saved.duplicate(true)
+		var idx := copy.map(func(e): return e["id"]).find("nest_on_the_ledge")
+		copy[idx]["choices"][1]["outcomes"]["always"]["find"] = bad
+		GameData.events = copy
+		ok(not GameEvents.validate().is_empty(), "a find with %s is found by the validator" % str(bad))
+	GameData.events = saved
+	ok(GameEvents.validate().is_empty(), "and the events are put back")

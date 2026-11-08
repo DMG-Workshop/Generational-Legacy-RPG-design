@@ -2231,6 +2231,7 @@ func _show_result() -> void:
 	Kit.clear(command_box)
 	hint.text = ""
 	var msgs: Array = d.finish_battle()
+	msgs.append_array(GameFinding.after_battle(d, b.result, b.enemies))   # a slain legend may have left its young (the screen asks, the rules do not)
 	hero_label.text = "%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)]
 	app.autosave()
 	var overlay := ColorRect.new()
