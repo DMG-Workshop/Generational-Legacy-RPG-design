@@ -205,6 +205,8 @@ func _screen(what: String) -> void:
 			GameRoster.add(d, "wolf", "Ash")
 			GameRoster.add(d, "drake", "Ember")
 			GameRoster.add(d, "bog_troll", "Moss")
+			d.heir.gold = 1000
+			GameRanch.on_years(d, 4.0, [])   # the wolf is grown, the egg has hatched, the whelp is still young
 			var cp := ChroniclePanel.new()
 			cp.dynasty = d
 			cp.on_change = func(): pass

@@ -232,6 +232,12 @@ func test_describe() -> void:
 	ok(dw["name"] == "Ash" and dw["stage"] == "pup", "a litter is called by its young's name: %s" % dw["stage"])
 	ok(de["name"] == "Ember" and de["stage"] == "hatchling egg", "a clutch is called an egg of its young: %s" % de["stage"])
 	ok("Pup of a dire wolf" in dw["line"] and w["sex"] in dw["line"] and "Tess" in dw["line"] and "generation 1" in dw["line"], "the line says what it is, its sex and who found it: %s" % dw["line"])
+	var grown := w.duplicate()
+	grown["stage"] = "adult"
+	var dg := GameRoster.describe(grown)
+	ok(dg["stage"] == "dire wolf" and dg["line"].begins_with("Dire wolf, "), "a grown creature is not 'of a' itself: %s" % dg["line"])
+	grown["stage"] = "elder"
+	ok(GameRoster.describe(grown)["line"].begins_with("Old dire wolf, "), "an old one is called old: %s" % GameRoster.describe(grown)["line"])
 	ok(GameRoster.describe({}).has("line"), "an empty entry still describes without crashing")
 
 
@@ -294,6 +300,11 @@ func test_screens() -> void:
 	var tab2 := await _panel(d)
 	ok(_find_label(tab2, "Kept: 2 of %d" % GameRoster.cap()) != null, "the count follows the roster")
 	ok(_find_label(tab2, "Ash  (pup)") != null and _find_label(tab2, "Ember  (hatchling egg)") != null, "each creature is listed with its stage")
+	ok(_find_label(tab2, GameRanch.text("keep", {"gold": str(GameRanch.keep_total(d))})) != null, "and what they cost to keep a year")
+	d.heir.gold = 1000
+	GameRanch.on_years(d, 4.0, [])
+	var tab3 := await _panel(d)
+	ok(_find_label(tab3, "Ash  (dire wolf)") != null and _find_label(tab3, "Ember  (hatchling)") != null, "the stage follows the years: grown, hatched")
 	ok(_find_label(tab2, GameFinding.text("empty", {})) == null, "and the empty note is gone")
 	var before := d.roster.duplicate(true)
 	await _frames(2)

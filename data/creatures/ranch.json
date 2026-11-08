@@ -1,0 +1,41 @@
+{
+  "note": "Growth and keep for the creatures the family holds (roadmap item 56, first part). Years are the world clock's (pass_time). A creature is an egg (egg-layers only), then young, adult, elder, and dies of old age; how long each lasts is set by its size class. Keeping costs gold each year, paid from the heir's gold; unpaid years sink its mood, and at no mood an egg spoils and a creature wanders off. No dice are drawn: the length of an elder's life varies with a value taken from the dynasty seed and the creature's id.",
+  "settings": {
+    "start_mood": 70,
+    "mood_max": 100,
+    "fed_mood_gain": 5,
+    "unfed_mood_loss": 25,
+    "egg_keep_share": 0.5,
+    "elder_spread": 0.25,
+    "default_size": "medium"
+  },
+  "sizes": {
+    "small":  {"egg": 1, "young": 2,  "adult": 8,  "elder": 3,  "keep": 2},
+    "medium": {"egg": 1, "young": 3,  "adult": 14, "elder": 5,  "keep": 4},
+    "large":  {"egg": 2, "young": 6,  "adult": 35, "elder": 12, "keep": 8},
+    "huge":   {"egg": 3, "young": 10, "adult": 90, "elder": 40, "keep": 20}
+  },
+  "size_of": {
+    "slime": "small", "plague_rat": "small", "harpy": "small", "shard_crawler": "small",
+    "wolf": "medium", "frost_wolf": "medium", "grimfang": "medium",
+    "bog_troll": "large", "ogre": "large", "drake": "large", "void_stalker": "large",
+    "ash_wyrm": "huge", "star_eater": "huge", "elder_dragon": "huge", "vaerthax": "huge"
+  },
+  "text": {
+    "hatches": "{name} hatches: a {young} of the {species}.",
+    "grows_up": "{name}, the {young}, is grown: a {species}.",
+    "grows_old": "{name} the {species} is old now.",
+    "dies": "{name} the {species} dies of old age.",
+    "spoils": "The egg {name} has gone cold and spoiled.",
+    "leaves": "Neglected, {name} the {species} wanders off and does not come back.",
+    "stage_egg": "{young} egg",
+    "stage_young": "{young}",
+    "stage_adult": "{species}",
+    "stage_elder": "old {species}",
+    "mood_high": "content",
+    "mood_mid": "uneasy",
+    "mood_low": "neglected",
+    "age": "{years} years old, {mood}.",
+    "keep": "Keep: {gold} gold a year, paid by the heir as the years pass."
+  }
+}
