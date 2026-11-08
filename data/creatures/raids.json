@@ -1,5 +1,5 @@
 {
-  "note": "Raids and theft on the house (roadmap item 61; core/game/game_raids.gd). A house with something worth taking can be raided as the years pass: animals in the pens, a house that has been built (the Hall, the Yard, the Ranch), or both. Each whole year the world clock crosses rolls on dice keyed on the dynasty seed and the year (never the dynasty's own). The chance rises with the value of what there is (the stock, and part of what the house cost to build) and falls with the guards (GameRanch.guard_cut). A raid is an event the heir settles (events.json, the ones marked raid): trust the guards, ride out and fight, pay, or try a trick. A plain house with nothing kept and nothing built is not raided: that would change what the autopilot plays, so it is a balance decision.",
+  "note": "Raids and theft on the house (roadmap item 61; core/game/game_raids.gd). A house with something worth taking can be raided as the years pass: animals in the pens, a house that has been built (the Hall, the Yard, the Ranch), or both. Each whole year the world clock crosses rolls on dice keyed on the dynasty seed and the year (never the dynasty's own). The chance rises with the value of what there is (the stock, and part of what the house cost to build) and falls with the guards (GameRanch.guard_cut). A raid is an event the heir settles (events.json, the ones marked raid): trust the guards, ride out and fight, pay, or try a trick. A plain house is raided too once the heir holds plain_min_gold or more at the flat plain_chance a year, so a rich house is not raided every year; with less, and nothing kept or built, nothing is rolled. This was a balance change: the autopilot holds gold, so it meets raids.",
   "settings": {
     "base_chance": 0.04,
     "per_stock_gold": 0.0002,
@@ -9,7 +9,9 @@
     "steal_gold_share": 0.15,
     "steal_gold_min": 10,
     "counter_flag": "raid_count",
-    "house_value_share": 0.5
+    "house_value_share": 0.5,
+    "plain_min_gold": 100,
+    "plain_chance": 0.005
   },
   "kinds": {
     "thieves": {
