@@ -51,7 +51,7 @@ func _wrapped(text: String, size: int, color: Color = Kit.TEXT) -> Label:
 
 
 func _search() -> void:
-	_done(GameFinding.search_dead(dynasty))
+	_done(GameLoot.search_dead(dynasty))
 
 
 func _done(lines: Array) -> void:
