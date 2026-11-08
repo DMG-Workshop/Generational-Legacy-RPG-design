@@ -203,6 +203,8 @@ static func _find(d: GameDynasty) -> String:
 		var g := GameItems.sell_price(d, id)
 		h.gold += g
 		return text("search_full", {"h": h.name, "find": iname, "gold": GameText.num(g)})
+	if not GameCarry.can_carry(h, id):
+		return GameCarry.sell_find(d, id, iname)
 	h.inventory.append(id)
 	return text("search_find", {"h": h.name, "find": iname})
 

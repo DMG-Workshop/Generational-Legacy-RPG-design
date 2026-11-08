@@ -271,6 +271,9 @@ func test_use() -> void:
 # ---------------------------------------------------------------- drops
 
 func test_drops() -> void:
+	# a pack with room for everything: the carry limit has its own test (test_game_carry)
+	var carry_saved: Dictionary = GameCarry.data().duplicate(true)
+	GameCarry.data()["settings"]["base_capacity"] = 1000000
 	var d := dyn()
 	var foes: Array = []
 	for i in 4000:
@@ -306,6 +309,8 @@ func test_drops() -> void:
 	s.loot = {"foes": real, "gold": 10, "item_chance": 0.0}
 	var sl := GameLoot.search_dead(s)
 	ok(not sl.is_empty() and s.heir.gold > dyn().heir.gold and s.heir.inventory.size() > 0 and s.loot.is_empty(), "search_dead searches the dead and then the made things")
+
+	GameCarry._cache = carry_saved
 
 
 func test_legend() -> void:

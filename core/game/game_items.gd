@@ -199,6 +199,8 @@ static func buy(d: GameDynasty, id: String) -> String:
 	var cost := price(d, id)
 	if h.gold < cost:
 		return "Not enough gold for the %s (%s needed)." % [iname, GameText.num(cost)]
+	if not GameCarry.can_carry(h, id):
+		return GameCarry.why_not(h, id)
 	h.gold -= cost
 	h.inventory.append(id)
 	GameDisease.on_buy(d, id)

@@ -358,6 +358,10 @@ static func after_legend(d: GameDynasty, result: String, enemies: Array) -> Arra
 
 static func _give(d: GameDynasty, id: String) -> String:
 	var def := build(id)
+	if not GameCarry.can_carry(d.heir, id):
+		var heavy := GameCarry.sell_find(d, id, "a " + str(def["name"]))
+		d._say(heavy)
+		return heavy
 	d.heir.inventory.append(id)
 	var vals := {"h": d.heir.name, "name": str(def["name"]), "rarity": str(data()["_rarity"][def["rarity"]]["name"]).to_lower(), "a": "a"}
 	var key := "find"
