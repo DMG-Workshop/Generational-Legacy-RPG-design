@@ -1,0 +1,44 @@
+{
+  "note": "Breeding at the ranch (roadmap item 57, first part; core/game/game_breeding.gd). A creature set to breed pairs each year with a grown, rested, fertile creature of the opposite sex that it is compatible with: the same species (breeds true: pure), a species of its own family (a cross-breed: it carries both lines, is likelier to be sterile and less fertile), or a pair the game has a recipe for (a hybrid, in breeding.json; none yet). Each year a pair rolls for young on its own seeded dice (dynasty seed, year, the two creatures), never the dynasty's. Young keep the mother's species and line; they inherit traits from either parent and can mutate a new one.",
+  "settings": {
+    "min_stage": "adult",
+    "min_mood": 50,
+    "fertility": {"pure": 0.45, "hybrid": 0.3, "cross": 0.2},
+    "sterile_chance": {"pure": 0.0, "hybrid": 0.15, "cross": 0.35},
+    "cooldown": {"egg": 2.0, "live": 3.0},
+    "trait_pass_chance": 0.5,
+    "mutation_chance": 0.12,
+    "max_traits": 3
+  },
+  "families": {
+    "canine": ["wolf", "frost_wolf", "grimfang"],
+    "draconic": ["drake", "ash_wyrm", "elder_dragon", "vaerthax"],
+    "giant": ["bog_troll", "ogre"],
+    "vermin": ["plague_rat", "shard_crawler", "slime"],
+    "winged": ["harpy"],
+    "void": ["void_stalker", "star_eater"]
+  },
+  "traits": {
+    "hardy": {"name": "hardy", "about": "takes neglect better", "mood_loss_mult": 0.6},
+    "sickly": {"name": "sickly", "about": "sours quickly and sells for less", "mood_loss_mult": 1.4, "value_mult": 0.7},
+    "fierce": {"name": "fierce", "about": "a better guard", "guard_mult": 1.5},
+    "prized": {"name": "prized", "about": "sells for more", "value_mult": 1.5},
+    "industrious": {"name": "industrious", "about": "works harder", "work_mult": 1.3},
+    "fruitful": {"name": "fruitful", "about": "has young more often", "fertility_mult": 1.4}
+  },
+  "text": {
+    "born_egg": "{mother} lays a clutch: {name}, a {young} egg of the {species}.",
+    "born_live": "{mother} bears a {young}: {name}, of the {species}.",
+    "sterile": "{name} will never have young of its own.",
+    "mutates": "{name} is born {trait}, which neither parent was.",
+    "breed_on": "Breeding: on",
+    "breed_off": "Breeding: off",
+    "pairs": "Pairs breeding this year: {n}.",
+    "line": "Of the {line} line.",
+    "cross": "A cross of the {a} and the {b}.",
+    "sterile_note": "Sterile.",
+    "traits": "Traits: {list}.",
+    "bred": "{stage} of a {species}, {sex}. Born at the ranch in generation {gen}, to {mother} and {father}.",
+    "bred_grown": "{stage}, {sex}. Born at the ranch in generation {gen}, to {mother} and {father}."
+  }
+}

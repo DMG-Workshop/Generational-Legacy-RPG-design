@@ -318,6 +318,27 @@ func test_screens() -> void:
 	ok(_find_label(tab3, GameRanch.text("guard_head", {"cut": "20"})) != null, "a grown guard shows what the guards turn away")
 	ok(_find_label(tab3, "Dire wolf, male. Found by Tess in generation 1. 4 years old, content. Guards the house: turns away 20% of a theft or fine.") != null, "and its own entry says it guards")
 	ok(_find_label(tab2, GameFinding.text("empty", {})) == null, "and the empty note is gone")
+	# breeding from the tab: a grown wolf can be set to breed, and a mate makes a pair
+	var wolf: Dictionary = d.roster[0]
+	var breed_btn := _find_button(tab3, GameBreeding.text("breed_off", {}))
+	ok(breed_btn != null and wolf["breeding"] == false, "a grown creature has a Breeding button, off")
+	ok(_find_button(tab3, GameBreeding.text("breed_on", {})) == null and d.roster.size() == 2, "and a young one or an egg has none")
+	if breed_btn != null:
+		breed_btn.pressed.emit()
+		await _frames(2)
+		ok(wolf["breeding"] == true and _find_button(tab3, GameBreeding.text("breed_on", {})) != null, "pressing it sets the creature to breed and the button says so")
+		ok(_find_label(tab3, GameBreeding.text("pairs", {"n": "1"})) == null, "with no mate there is no pair")
+		var mate := GameRoster.add(d, "wolf", "Fen")
+		mate["stage"] = "adult"
+		mate["age"] = 5.0
+		mate["breeding"] = true
+		mate["sex"] = GameSex.opposite(str(wolf["sex"]))
+		var tab4 := await _panel(d)
+		ok(_find_label(tab4, GameBreeding.text("pairs", {"n": "1"})) != null, "a mate makes a pair, and the tab says so")
+		d.roster.erase(mate)
+		_find_button(tab4, GameBreeding.text("breed_on", {})).pressed.emit()
+		await _frames(2)
+		ok(wolf["breeding"] == false, "pressing it again sets the creature to rest")
 	var before := d.roster.duplicate(true)
 	await _frames(2)
 	ok(d.roster == before, "looking at the tab changes nothing")
