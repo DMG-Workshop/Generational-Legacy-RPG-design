@@ -315,6 +315,8 @@ func test_screens() -> void:
 	GameRanch.on_years(d, 4.0, [])
 	var tab3 := await _panel(d)
 	ok(_find_label(tab3, "Ash  (dire wolf)") != null and _find_label(tab3, "Ember  (hatchling)") != null, "the stage follows the years: grown, hatched")
+	ok(_find_label(tab3, GameRanch.text("guard_head", {"cut": "20"})) != null, "a grown guard shows what the guards turn away")
+	ok(_find_label(tab3, "Dire wolf, male. Found by Tess in generation 1. 4 years old, content. Guards the house: turns away 20% of a theft or fine.") != null, "and its own entry says it guards")
 	ok(_find_label(tab2, GameFinding.text("empty", {})) == null, "and the empty note is gone")
 	var before := d.roster.duplicate(true)
 	await _frames(2)

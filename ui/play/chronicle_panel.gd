@@ -293,6 +293,17 @@ func _fill_creatures() -> void:
 	box.add_child(note)
 	if not dynasty.roster.is_empty():
 		box.add_child(Kit.label(GameRanch.text("keep", {"gold": GameText.num(GameRanch.keep_total(dynasty))}), 14, Kit.TEXT))
+		var work := GameRanch.yearly_work(dynasty)
+		var cut := GameRanch.guard_cut(dynasty)
+		var parts: Array = []
+		if float(work["gold"]) > 0.0:
+			parts.append(GameRanch.text("work_income_head", {"gold": GameText.num(int(round(float(work["gold"]))))}))
+		if cut > 0.0:
+			parts.append(GameRanch.text("guard_head", {"cut": str(int(round(cut * 100.0)))}))
+		if not parts.is_empty():
+			var wl := Kit.label(" ".join(parts), 14, Kit.good())
+			wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(wl)
 	if dynasty.roster.is_empty():
 		var none := Kit.label(GameFinding.text("empty", {}), 15, Kit.TEXT)
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

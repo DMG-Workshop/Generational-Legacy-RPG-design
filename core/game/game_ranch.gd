@@ -94,6 +94,72 @@ static func yearly_keep(e: Dictionary, d: GameDynasty = null) -> float:
 	return k * (ranch_factor(d, e, "keep") if d != null else 1.0)
 
 
+## What work a species does: {kind, gold} or {} (grown creatures only; see work_share).
+static func work_of(species: String) -> Dictionary:
+	return data()["work_of"].get(species, {})
+
+
+## How much of its work a creature does now: 0 while it is an egg or young or too unhappy, the elder's share when old.
+static func work_share(e: Dictionary) -> float:
+	if int(e.get("mood", 0)) < int(data()["work"]["min_mood"]):
+		return 0.0
+	match str(e.get("stage")):
+		"adult":
+			return 1.0
+		"elder":
+			return float(data()["work"]["elder_share"])
+	return 0.0
+
+
+## The gold a year the roster earns by wool, eggs and venom: {gold, kinds: {kind: gold}}.
+static func yearly_work(d: GameDynasty) -> Dictionary:
+	var by_kind := {}
+	var total := 0.0
+	for e in d.roster:
+		var w := work_of(str(e["species"]))
+		var share := work_share(e)
+		if w.is_empty() or share <= 0.0 or str(w["kind"]) == "guard":
+			continue
+		var g := float(w["gold"]) * share
+		by_kind[str(w["kind"])] = float(by_kind.get(str(w["kind"]), 0.0)) + g
+		total += g
+	return {"gold": total, "kinds": by_kind}
+
+
+## The share of an event's gold loss that guards turn away, 0 to guard_cut_max.
+static func guard_cut(d: GameDynasty) -> float:
+	var n := 0.0
+	for e in d.roster:
+		var w := work_of(str(e["species"]))
+		if not w.is_empty() and str(w["kind"]) == "guard":
+			n += work_share(e)
+	return minf(float(data()["work"]["guard_cut_max"]), n * float(data()["work"]["guard_cut_each"]))
+
+
+## A loss of gold after the guards: the same loss when there are none. Whole gold, rounded in the house's favour.
+static func guarded_loss(d: GameDynasty, loss: int) -> int:
+	if loss <= 0 or d.roster.is_empty():
+		return loss
+	return int(ceil(float(loss) * (1.0 - guard_cut(d))))
+
+
+## What this creature does now, for its entry: "" while it is an egg, young, unhappy or has no work.
+static func work_text(e: Dictionary) -> String:
+	var w := work_of(str(e.get("species", "")))
+	if w.is_empty() or work_share(e) <= 0.0:
+		return ""
+	var kind: Dictionary = data()["work"]["kinds"][str(w["kind"])]
+	var cut := int(round(float(data()["work"]["guard_cut_each"]) * work_share(e) * 100.0))
+	return str(kind["about"]).format({"gold": GameText.num(int(ceil(float(w.get("gold", 0)) * work_share(e)))), "cut": str(cut)})
+
+
+## The line for a screen: what each kind earns, e.g. "wool 8, eggs 20".
+static func kinds_text(by_kind: Dictionary) -> String:
+	var keys: Array = by_kind.keys()
+	keys.sort()
+	return ", ".join(keys.map(func(k): return "%s %s" % [str(data()["work"]["kinds"][k]["said"]), GameText.num(int(ceil(float(by_kind[k]))))]))
+
+
 ## What the whole roster costs to keep each year, in gold (a part of a gold is rounded up).
 static func keep_total(d: GameDynasty) -> int:
 	var due := 0.0
@@ -122,6 +188,13 @@ static func years_text(v: float) -> String:
 static func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 	if d.roster.is_empty() or years <= 0.0 or d.heir == null:
 		return
+	var earned := yearly_work(d)   # what the grown earn comes first, so a working ranch pays for itself
+	var income := int(round(float(earned["gold"]) * years))
+	if income > 0:
+		d.heir.gold += income
+		var said := text("work_income", {"gold": GameText.num(income), "kinds": kinds_text(earned["kinds"])})
+		d._say(said)
+		msgs.append(said)
 	var due := 0.0
 	for e in d.roster:
 		due += yearly_keep(e, d) * years
@@ -264,6 +337,26 @@ static func validate() -> Array:
 			for k in ["egg_keep", "egg_mood_loss", "young_keep", "young_mood_loss"]:
 				if float(row[k]) < 0.0 or float(row[k]) > 1.0:
 					bad.append("ranch.json: ranch level %d %s must be between 0 and 1" % [i, k])
+	var work: Variant = dat.get("work")
+	if typeof(work) != TYPE_DICTIONARY or not (work.has("kinds") and work.has("min_mood") and work.has("elder_share") and work.has("guard_cut_each") and work.has("guard_cut_max")):
+		bad.append("ranch.json: work needs kinds, min_mood, elder_share, guard_cut_each and guard_cut_max")
+	else:
+		if float(work["elder_share"]) < 0.0 or float(work["elder_share"]) > 1.0:
+			bad.append("ranch.json: work.elder_share must be between 0 and 1")
+		if float(work["guard_cut_max"]) < 0.0 or float(work["guard_cut_max"]) >= 1.0 or float(work["guard_cut_each"]) < 0.0:
+			bad.append("ranch.json: guard cuts must be 0 or more, and the most under 1 (guards cannot stop every loss)")
+		for kind in work["kinds"]:
+			for k in ["name", "about", "said"]:
+				if not work["kinds"][kind].has(k):
+					bad.append("ranch.json: work kind '%s' has no %s" % [kind, k])
+		for sp in dat.get("work_of", {}):
+			var w: Dictionary = dat["work_of"][sp]
+			if GameBirth.born(str(sp)) == "none":
+				bad.append("ranch.json: work_of names '%s', which is not born" % sp)
+			if not w.has("kind") or not work["kinds"].has(str(w.get("kind"))):
+				bad.append("ranch.json: '%s' has an unknown work kind" % sp)
+			elif str(w["kind"]) != "guard" and float(w.get("gold", 0)) <= 0.0:
+				bad.append("ranch.json: '%s' works at '%s' but earns nothing" % [sp, w["kind"]])
 	for sp in dat["size_of"]:
 		if GameBirth.born(str(sp)) == "none":
 			bad.append("ranch.json: size_of names '%s', which is not born" % sp)
@@ -272,7 +365,7 @@ static func validate() -> Array:
 	for c in GameData.creatures:
 		if GameBirth.born(str(c["id"])) != "none" and not dat["size_of"].has(str(c["id"])):
 			bad.append("ranch.json: '%s' is born but has no size (it would use the default)" % c["id"])
-	for k in ["hatches", "grows_up", "grows_old", "dies", "spoils", "leaves", "stage_egg", "stage_young", "stage_adult", "stage_elder", "mood_high", "mood_mid", "mood_low", "age", "keep", "sold", "freed", "sell", "free", "sure_sell", "sure_free", "house_row"]:
+	for k in ["hatches", "grows_up", "grows_old", "dies", "spoils", "leaves", "stage_egg", "stage_young", "stage_adult", "stage_elder", "mood_high", "mood_mid", "mood_low", "age", "keep", "sold", "freed", "sell", "free", "sure_sell", "sure_free", "house_row", "work_income", "work_line", "work_none", "work_income_head", "guard_head", "guard_saved"]:
 		if not dat["text"].has(k):
 			bad.append("ranch.json: text.%s is missing" % k)
 	return bad
