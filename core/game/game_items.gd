@@ -15,6 +15,8 @@ static var _labels_loaded := false
 
 static func item_def(id: String) -> Dictionary:
 	GameData.load_all()
+	if GameLoot.is_generated(id):
+		return GameLoot.build(id)
 	return GameData.items.get(id, {})
 
 

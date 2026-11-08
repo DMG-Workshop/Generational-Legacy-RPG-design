@@ -2231,6 +2231,7 @@ func _show_result() -> void:
 	Kit.clear(command_box)
 	hint.text = ""
 	var msgs: Array = d.finish_battle()
+	msgs.append_array(GameLoot.after_legend(d, b.result, b.enemies))   # a slain legend leaves something made (the screens ask, the rules of a life do not)
 	msgs.append_array(GameFinding.after_battle(d, b.result, b.enemies))   # a slain legend may have left its young (the screen asks, the rules do not)
 	hero_label.text = "%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)]
 	app.autosave()
@@ -2291,7 +2292,7 @@ func _loot_choice(v: VBoxContainer, foot: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	box.add_child(row)
-	var search := Kit.button("Search the bodies", func(): _loot_done(v, foot, box, GameFinding.search_dead(d), ""), Vector2(0, 44))
+	var search := Kit.button("Search the bodies", func(): _loot_done(v, foot, box, GameLoot.search_dead(d), ""), Vector2(0, 44))
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search.tooltip_text = "Extra gold and maybe something useful. Whatever sickness the dead carry, %s risks catching." % d.heir.name
 	row.add_child(search)
