@@ -86,7 +86,8 @@ func test_data() -> void:
 	for c in GameData.creatures:
 		if GameBirth.born(str(c["id"])) != "none" and GameBreeding.family_of(str(c["id"])) != "":
 			in_family += 1
-	ok(in_family == 15, "every born creature is in a family (%d of 15)" % in_family)
+	var born := GameData.creatures.filter(func(c): return GameBirth.born(str(c["id"])) != "none").size()
+	ok(in_family == born and born == 19, "every born creature is in a family (%d of %d)" % [in_family, born])
 
 
 func test_compatible() -> void:
@@ -459,7 +460,7 @@ func test_effects() -> void:
 	e["traits"] = ["sickly"]
 	ok(GameRanch.sell_price(e) < plain, "sickly for less")
 	var w := dyn()
-	var wolf := _adult(w, "frost_wolf", "female")   # wool 8
+	var wolf := _adult(w, "harpy", "female")   # eggs 4
 	var base := float(GameRanch.yearly_work(w)["gold"])
 	wolf["traits"] = ["industrious"]
 	ok(float(GameRanch.yearly_work(w)["gold"]) > base and "gold a year" in GameRanch.work_text(wolf), "industrious works harder")

@@ -36,6 +36,7 @@ const SHOTS := [
 	["chronicle", DESKTOP, false, "chronicle"],
 	["chronicle_titles", DESKTOP, false, "titles"],
 	["chronicle_creatures", DESKTOP, false, "creatures"],
+	["chronicle_farm", DESKTOP, false, "farm"],
 	["menu", DESKTOP, false, "menu"],
 	["event", DESKTOP, false, "event"],
 	["battle_town", DESKTOP, false, "battle:kingshold"],
@@ -226,6 +227,26 @@ func _screen(what: String) -> void:
 			await _frames(3)
 			for tc in cp.get_children():
 				_select_tab(tc, "Creatures")
+		"farm":
+			d.heir.gold = 1000
+			for pair in [["sheep", "Dolly"], ["cattle", "Bluebell"], ["chicken", "Hen"]]:
+				GameFarm.buy(d, str(pair[0]))
+				d.roster.back()["name"] = str(pair[1])
+			d.roster[0]["stage"] = "adult"   # the sheep is grown and gives wool
+			d.roster[0]["age"] = 4.0
+			d.roster[0]["mood"] = 90
+			var fp := ChroniclePanel.new()
+			fp.dynasty = d
+			fp.on_change = func(): pass
+			app.current.add_child(fp)
+			await _frames(3)
+			for tc in fp.get_children():
+				_select_tab(tc, "Creatures")
+			await _frames(2)
+			var tab_node := fp.find_child("Creatures", true, false)
+			if tab_node is ScrollContainer:
+				(tab_node as ScrollContainer).scroll_vertical = 100000   # down to the Market
+			await _frames(2)
 		"shop", "map", "house", "looks", "skills", "chronicle":
 			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel}[what]
 			var p: Control = cls.new()
