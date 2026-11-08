@@ -94,7 +94,7 @@ static func validate() -> Array:
 	for c in s["class_bonus"]:
 		if not GameData.classes.has(str(c)):
 			bad.append("finding.json: class_bonus names unknown class '%s'" % c)
-	for k in ["egg", "live", "full"]:
+	for k in ["egg", "live", "full", "kept", "empty", "note", "stage_egg", "stage_young", "entry"]:
 		if not data().get("text", {}).has(k):
 			bad.append("finding.json: text.%s is missing" % k)
 	return bad

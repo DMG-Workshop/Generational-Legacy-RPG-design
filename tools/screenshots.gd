@@ -35,6 +35,7 @@ const SHOTS := [
 	["skill_tree", DESKTOP, false, "skills"],
 	["chronicle", DESKTOP, false, "chronicle"],
 	["chronicle_titles", DESKTOP, false, "titles"],
+	["chronicle_creatures", DESKTOP, false, "creatures"],
 	["menu", DESKTOP, false, "menu"],
 	["event", DESKTOP, false, "event"],
 	["battle_town", DESKTOP, false, "battle:kingshold"],
@@ -200,6 +201,17 @@ func _screen(what: String) -> void:
 			await _frames(3)
 			for tc in c.get_children():
 				_select_tab(tc, "Titles")
+		"creatures":
+			GameRoster.add(d, "wolf", "Ash")
+			GameRoster.add(d, "drake", "Ember")
+			GameRoster.add(d, "bog_troll", "Moss")
+			var cp := ChroniclePanel.new()
+			cp.dynasty = d
+			cp.on_change = func(): pass
+			app.current.add_child(cp)
+			await _frames(3)
+			for tc in cp.get_children():
+				_select_tab(tc, "Creatures")
 		"shop", "map", "house", "looks", "skills", "chronicle":
 			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel}[what]
 			var p: Control = cls.new()

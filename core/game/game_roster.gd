@@ -65,3 +65,17 @@ static func load_list(v: Variant) -> Array:
 		})
 		seen[id] = true
 	return out
+
+
+## What a kept creature is called on a screen: {name, stage, line}. The name and the stage are the title, the
+## line says what it is and who found it. Text is in data/creatures/finding.json.
+static func describe(e: Dictionary) -> Dictionary:
+	var sp := str(e.get("species", ""))
+	var def := GameCombat.creature_def(sp)
+	var stage := GameFinding.text("stage_egg" if str(e.get("stage")) == "egg" else "stage_young", {"young": str(e.get("young", ""))})
+	return {
+		"name": str(e.get("name", "")), "stage": stage,
+		"line": GameFinding.text("entry", {
+			"stage": stage.substr(0, 1).to_upper() + stage.substr(1), "species": str(def.get("name", sp)).to_lower(),
+			"sex": str(e.get("sex", "")), "by": str(e.get("found_by", "")), "gen": str(e.get("found_gen", 1))}),
+	}
