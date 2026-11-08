@@ -293,6 +293,9 @@ func _fill_creatures() -> void:
 	box.add_child(note)
 	if not dynasty.roster.is_empty():
 		box.add_child(Kit.label(GameRanch.text("keep", {"gold": GameText.num(GameRanch.keep_total(dynasty))}), 14, Kit.TEXT))
+		var pairs := GameBreeding.pairs(dynasty).size()
+		if pairs > 0:
+			box.add_child(Kit.label(GameBreeding.text("pairs", {"n": str(pairs)}), 14, Kit.TEXT))
 		var work := GameRanch.yearly_work(dynasty)
 		var cut := GameRanch.guard_cut(dynasty)
 		var parts: Array = []
@@ -329,12 +332,24 @@ func _fill_creatures() -> void:
 		btns.add_theme_constant_override("separation", 6)
 		btns.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(btns)
+		if GameBreeding.can_set(e) or e.get("breeding", false):
+			var on: bool = e.get("breeding", false)
+			var bb := Kit.button(GameBreeding.text("breed_on" if on else "breed_off", {}), func(): _breed(id, not on), Vector2(190, 0))
+			bb.disabled = not alive
+			btns.add_child(bb)
 		for act in ["sell", "free"]:
 			var sure: bool = _sure.get(id, "") == act
 			var label := GameRanch.text(("sure_" if sure else "") + act, {"gold": price})
 			var b := Kit.button(label, func(): _creature_action(id, act), Vector2(190, 0))
 			b.disabled = not alive
 			btns.add_child(b)
+
+
+## Sets a creature to breed or to rest, and redraws the tab.
+func _breed(id: int, on: bool) -> void:
+	if GameBreeding.set_breeding(dynasty, id, on) and on_change.is_valid():
+		on_change.call()
+	_fill_creatures()
 
 
 ## First tap asks again; the second does it. A tap on the other button changes what is being asked.

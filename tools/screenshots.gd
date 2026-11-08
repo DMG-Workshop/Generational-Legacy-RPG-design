@@ -204,9 +204,21 @@ func _screen(what: String) -> void:
 		"creatures":
 			GameRoster.add(d, "wolf", "Ash")
 			GameRoster.add(d, "drake", "Ember")
-			GameRoster.add(d, "bog_troll", "Moss")
 			d.heir.gold = 1000
 			GameRanch.on_years(d, 4.0, [])   # the wolf is grown, the egg has hatched, the whelp is still young
+			var ash: Dictionary = d.roster[0]
+			var fen := GameRoster.add(d, "frost_wolf", "Fen")   # a grown frost wolf; the pair's young is a cross-breed
+			fen["stage"] = "adult"
+			fen["age"] = 5.0
+			fen["sex"] = GameSex.opposite(str(ash["sex"]))
+			ash["breeding"] = true
+			fen["breeding"] = true
+			var pair_rng := RandomNumberGenerator.new()
+			pair_rng.seed = 7
+			if str(ash["sex"]) == GameSex.FEMALE:
+				GameBreeding._birth(d, ash, fen, pair_rng)
+			else:
+				GameBreeding._birth(d, fen, ash, pair_rng)
 			var cp := ChroniclePanel.new()
 			cp.dynasty = d
 			cp.on_change = func(): pass

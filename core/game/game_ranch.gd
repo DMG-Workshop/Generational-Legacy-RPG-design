@@ -120,7 +120,7 @@ static func yearly_work(d: GameDynasty) -> Dictionary:
 		var share := work_share(e)
 		if w.is_empty() or share <= 0.0 or str(w["kind"]) == "guard":
 			continue
-		var g := float(w["gold"]) * share
+		var g := float(w["gold"]) * share * GameBreeding.trait_mult(e, "work_mult")
 		by_kind[str(w["kind"])] = float(by_kind.get(str(w["kind"]), 0.0)) + g
 		total += g
 	return {"gold": total, "kinds": by_kind}
@@ -132,7 +132,7 @@ static func guard_cut(d: GameDynasty) -> float:
 	for e in d.roster:
 		var w := work_of(str(e["species"]))
 		if not w.is_empty() and str(w["kind"]) == "guard":
-			n += work_share(e)
+			n += work_share(e) * GameBreeding.trait_mult(e, "guard_mult")
 	return minf(float(data()["work"]["guard_cut_max"]), n * float(data()["work"]["guard_cut_each"]))
 
 
@@ -149,8 +149,9 @@ static func work_text(e: Dictionary) -> String:
 	if w.is_empty() or work_share(e) <= 0.0:
 		return ""
 	var kind: Dictionary = data()["work"]["kinds"][str(w["kind"])]
-	var cut := int(round(float(data()["work"]["guard_cut_each"]) * work_share(e) * 100.0))
-	return str(kind["about"]).format({"gold": GameText.num(int(ceil(float(w.get("gold", 0)) * work_share(e)))), "cut": str(cut)})
+	var gold := float(w.get("gold", 0)) * work_share(e) * GameBreeding.trait_mult(e, "work_mult")
+	var cut := int(round(float(data()["work"]["guard_cut_each"]) * work_share(e) * GameBreeding.trait_mult(e, "guard_mult") * 100.0))
+	return str(kind["about"]).format({"gold": GameText.num(int(ceil(gold))), "cut": str(cut)})
 
 
 ## The line for a screen: what each kind earns, e.g. "wool 8, eggs 20".
@@ -207,13 +208,14 @@ static func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 	var top := int(setting("mood_max"))
 	var kept: Array = []
 	for e in d.roster:
-		var felt := gain - loss * ranch_factor(d, e, "mood_loss")   # the hatchery and nursery soften neglect
+		var felt := gain - loss * ranch_factor(d, e, "mood_loss") * GameBreeding.trait_mult(e, "mood_loss_mult")   # the hatchery and nursery soften neglect
 		for line in _live_years(d, e, years, felt, top):
 			d._say(line)
 			msgs.append(line)
 		if not e.get("gone", false):
 			kept.append(e)
 	d.roster = kept
+	GameBreeding.on_years(d, years, msgs)
 
 
 ## One creature's years. Returns the lines to tell. A creature that is gone is marked "gone".
@@ -250,7 +252,7 @@ static func sell_price(e: Dictionary) -> int:
 	var v := float(size_of(str(e["species"])).get("value", 0))
 	var stage_mult := float(setting("stage_value").get(str(e.get("stage")), 1.0))
 	var mood := float(clampi(int(e.get("mood", setting("start_mood"))), 0, int(setting("mood_max")))) / float(setting("mood_max"))
-	return maxi(1, int(round(v * stage_mult * mood)))
+	return maxi(1, int(round(v * stage_mult * mood * GameBreeding.trait_mult(e, "value_mult"))))
 
 
 ## Sells a kept creature for gold. Returns the line told, or "" if it could not be sold (not in a life, no such creature).
