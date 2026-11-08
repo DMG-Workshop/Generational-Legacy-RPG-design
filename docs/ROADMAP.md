@@ -47,7 +47,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 15. **Sound and music:** battle cues, a death sting, ambient tracks per Age.
 
 **Game systems**
-16. **Achievements and dynasty milestones.**
+16. **Achievements and dynasty milestones.** (Titles that are earned, item 59, can be awarded by these.)
 17. **Faction reputation in the text game**, so NPCs judge the heir by their ancestors.
 18. **Heirloom upgrades across generations.**
 19. **Random world events per Age:** wars, famines and golden ages that change hunts, shops and diseases.
@@ -100,6 +100,16 @@ The text game is the cheap place to get these rules right: they are core rules a
 53. **Sandbox tips.** The first-heir tips extended to moving, digging and building, from data like today's.
 54. **Desktop builds and crash reports.** Windows, Linux and macOS exports with gamepad menus, store images from the screenshot tool, and opt-in error reports that carry a save, so problems on phones can be reproduced.
 
+**Creatures and titles (added to the queue)**
+
+Taming, ranching and breeding, and titles that can be gained. Design notes, and what each word means here, are in `docs/GDD.md` ("Taming, ranching and breeding" and "Titles"). None of these is built. Each draws its dice from its own seeded stream (as `GameSex` does), never the dynasty's main dice, and the autopilot never tames, breeds or picks a title, so the golden digests and the balance figures do not move until a later step makes creatures fight for the autopilot, which would be a balance change with its own numbers.
+
+55. **Taming and a creature roster.** After a victory the heir may try to tame a foe instead of searching it: the chance comes from the creature (its temperament and how hard it is to tame, in `data/creatures`), the heir (the Beast Tamer job and traits, the class), what the heir offers (bait and food items) and how hurt the creature is. A tamed creature joins a roster saved on the dynasty (only once something is tamed, so old saves load as before) with a name, sex, age, traits and a temperament, and can go out with the party as a beast beside the companions. Builds on the party rules and the Hall (item 21). Rules and data first, with a text screen and headless tests.
+56. **The ranch.** A third track for the family house (after the Hall and the Yard): pens that hold creatures, feeding and care paid in gold and food each year through the world clock (`pass_time`, item 27), a mood that rises and falls with care, and a life of its own (young, adult, elder, death of old age). The ranch passes down to the next heir like the rest of the house. Creatures there can be sent out as party beasts, put to work (wool, eggs, venom, guarding), sold or set free.
+57. **Breeding: hybrids and cross-breeds.** Two creatures in a pen can have young, rolled from the ranch's own seeded dice. The same species breed true, passing on traits, with a chance of a mutation; a **hybrid** is a pairing the game defines (a recipe in data, with a species, stats and art of its own, such as a wolf and a drake making an ember hound); a **cross-breed** is any other pairing of kin species that can breed at all, an individual carrying both lines, with traits from each, lower fertility, and sometimes sterile. Which species can breed is data (a family and tags per creature), so new creatures need no new code. Named lines are kept across generations, as the dynasty keeps its own. Art for cross-breeds is an open question (the dominant parent's sprite with the other's colours is the cheap answer).
+58. **Cross-world creatures.** Taming and breeding across the realms: each realm has creatures of its own (fae beasts in the Verdant Court, hounds of the Hollow Below, drakes of the Dragon Isles, elementals, dream and void creatures, constructs of the Clockwork Expanse), a creature can be taken to another realm and may need to adapt to it, and creatures from different realms can be crossed, the young carrying traits of both worlds (some stable, some unstable, as the Void's are). Creatures get a `realm` now, so the text game can already sell and reward them; crossing realms needs the gates and teleport circles of the world spaces (item 41 and the sandbox's "Worlds and spaces"), so the rules are written in text first and switched on when the worlds are linked.
+59. **Titles that can be gained.** Earned names and honours for the heir and the house, in `data/titles`: deeds ("Slayer of Grimfang" from `slain_bosses`), life ("the Unbroken" for surviving a Hard hunt at one hit point), work (a Grandmaster's rank), the ranch ("Master Breeder" for a first hybrid, "Warden of a Hundred Years" for a pure line kept for ten generations), the Ages, and noble titles and land claims through faction reputation (item 17). A title's condition is read from the dynasty's own state (as the tutorial's tips are), so old saves earn the titles they already deserve; only the ids earned are saved. The player picks which earned title to wear, shown after the name ("Tess the Unbroken"); a **personal** title ends with the heir and goes into the chronicle and the Hollow Below, a **house** title stays with the dynasty. Some give a small perk (persuasion, prices, the tame chance). A validator checks that every title's condition names things that exist and can be met. Pairs with item 16 (achievements), which can award them.
+
 ## After the text game: the 2D/3D sandbox
 
 Starts only once the text game is complete. The text game's systems (lineage, Fate, battles, diseases, companions, Ages) carry over: logic stays apart from rendering, so the new world is a new view on the same core.
@@ -122,6 +132,7 @@ Starts only once the text game is complete. The text game's systems (lineage, Fa
 ### Worlds and spaces
 - **Gateways to other worlds** (the realms).
 - **World-space IDs.** Every space has its own ID. Entering a building loads its interior as its own space, like a small dimension of its own. The same mechanism carries the underworld and the other worlds.
+- **Creatures across the worlds.** Tamed and bred creatures travel by the same gateways, and can be crossed with creatures of other realms (roadmap item 58): the ranch is a place in a world, and a pen's creatures live by that world's flow of time.
 
 ### Mods
 - **Mod support.** Players can load their own mods or other people's, each in their own game. Content is already data-driven (JSON), which is the base for this.
