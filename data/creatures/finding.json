@@ -18,6 +18,7 @@
     "note": "Eggs and young found beside the dead. They grow with the years and cost gold to keep; left unkept, an egg spoils and a creature wanders off.",
     "stage_egg": "{young} egg",
     "stage_young": "{young}",
-    "entry": "{stage} of a {species}, {sex}. Found by {by} in generation {gen}."
+    "entry": "{stage} of a {species}, {sex}. Found by {by} in generation {gen}.",
+    "entry_grown": "{stage}, {sex}. Found by {by} in generation {gen}."
   }
 }

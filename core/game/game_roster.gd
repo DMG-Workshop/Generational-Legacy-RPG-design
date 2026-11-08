@@ -81,7 +81,7 @@ static func describe(e: Dictionary) -> Dictionary:
 	var mood := int(e.get("mood", GameRanch.setting("start_mood")))
 	return {
 		"name": str(e.get("name", "")), "stage": stage,
-		"line": GameFinding.text("entry", {
+		"line": GameFinding.text("entry_grown" if str(e.get("stage")) in ["adult", "elder"] else "entry", {
 			"stage": stage.substr(0, 1).to_upper() + stage.substr(1), "species": species,
 			"sex": str(e.get("sex", "")), "by": str(e.get("found_by", "")), "gen": str(e.get("found_gen", 1))})
 			+ " " + GameRanch.text("age", {"years": GameRanch.years_text(float(e.get("age", 0.0))), "mood": GameRanch.mood_word(mood)}),

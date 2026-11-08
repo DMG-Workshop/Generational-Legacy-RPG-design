@@ -232,6 +232,12 @@ func test_describe() -> void:
 	ok(dw["name"] == "Ash" and dw["stage"] == "pup", "a litter is called by its young's name: %s" % dw["stage"])
 	ok(de["name"] == "Ember" and de["stage"] == "hatchling egg", "a clutch is called an egg of its young: %s" % de["stage"])
 	ok("Pup of a dire wolf" in dw["line"] and w["sex"] in dw["line"] and "Tess" in dw["line"] and "generation 1" in dw["line"], "the line says what it is, its sex and who found it: %s" % dw["line"])
+	var grown := w.duplicate()
+	grown["stage"] = "adult"
+	var dg := GameRoster.describe(grown)
+	ok(dg["stage"] == "dire wolf" and dg["line"].begins_with("Dire wolf, "), "a grown creature is not 'of a' itself: %s" % dg["line"])
+	grown["stage"] = "elder"
+	ok(GameRoster.describe(grown)["line"].begins_with("Old dire wolf, "), "an old one is called old: %s" % GameRoster.describe(grown)["line"])
 	ok(GameRoster.describe({}).has("line"), "an empty entry still describes without crashing")
 
 
