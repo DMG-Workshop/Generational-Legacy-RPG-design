@@ -153,13 +153,13 @@ func test_roster() -> void:
 	ok(a["id"] == 1 and b["id"] == 2, "ids count up from one")
 	ok(GameSex.valid(a["sex"]) and GameSex.valid(b["sex"]), "each has a sex")
 	ok(a["found_by"] == "Tess" and a["found_gen"] == 1, "who found it and when is kept")
-	for i in range(GameRoster.cap() - 2):
+	for i in range(GameRoster.cap(d) - 2):
 		GameRoster.add(d, "slime", "S%d" % i)
 	ok(GameRoster.full(d) and GameRoster.add(d, "wolf", "Over").is_empty(), "a full roster takes no more")
 	_with(func(x): x["base_chance"] = 1.0; x["max_chance"] = 1.0, func():
 		var lines := GameFinding.after_search(d, foes(["wolf"]))
 		ok(lines.size() == 1 and "nowhere to keep" in lines[0], "a full roster is told, and nothing is added")
-		ok(d.roster.size() == GameRoster.cap(), "the roster stays at its cap"))
+		ok(d.roster.size() == GameRoster.cap(d), "the roster stays at its cap"))
 	var s1: String = GameRoster.add(dyn(5), "wolf", "A")["sex"]
 	ok(s1 == GameRoster.add(dyn(5), "wolf", "A")["sex"], "a creature's sex is a function of the seed and its id")
 
@@ -261,6 +261,16 @@ func _tab(p: Node, name: String) -> Control:
 	return null
 
 
+func _find_button(n: Node, text: String) -> Button:
+	if n is Button and (n as Button).is_visible_in_tree() and (n as Button).text == text:
+		return n
+	for c in n.get_children():
+		var b := _find_button(c, text)
+		if b != null:
+			return b
+	return null
+
+
 func _panel(d: GameDynasty) -> Control:
 	var c := ChroniclePanel.new()
 	c.dynasty = d
@@ -293,12 +303,12 @@ func test_screens() -> void:
 	ok(tab != null, "the Chronicle has a Creatures tab")
 	if tab == null:
 		return
-	ok(_find_label(tab, "Kept: 0 of %d" % GameRoster.cap()) != null, "it shows how many places are used")
+	ok(_find_label(tab, "Kept: 0 of %d" % GameRoster.cap(d)) != null, "it shows how many places are used")
 	ok(_find_label(tab, GameFinding.text("empty", {})) != null, "and says how to find young when there are none")
 	GameRoster.add(d, "wolf", "Ash")
 	GameRoster.add(d, "drake", "Ember")
 	var tab2 := await _panel(d)
-	ok(_find_label(tab2, "Kept: 2 of %d" % GameRoster.cap()) != null, "the count follows the roster")
+	ok(_find_label(tab2, "Kept: 2 of %d" % GameRoster.cap(d)) != null, "the count follows the roster")
 	ok(_find_label(tab2, "Ash  (pup)") != null and _find_label(tab2, "Ember  (hatchling egg)") != null, "each creature is listed with its stage")
 	ok(_find_label(tab2, GameRanch.text("keep", {"gold": str(GameRanch.keep_total(d))})) != null, "and what they cost to keep a year")
 	d.heir.gold = 1000
@@ -309,6 +319,66 @@ func test_screens() -> void:
 	var before := d.roster.duplicate(true)
 	await _frames(2)
 	ok(d.roster == before, "looking at the tab changes nothing")
+	# selling and setting free, each on a second tap
+	var changes := [0]
+	var cp := ChroniclePanel.new()
+	cp.dynasty = d
+	cp.on_change = func(): changes[0] += 1
+	app.current.add_child(cp)
+	await _frames(3)
+	var ctab := _tab(cp, "Creatures")
+	(ctab.get_parent() as TabContainer).current_tab = ctab.get_index()
+	await _frames(2)
+	var sell_label := GameRanch.text("sell", {"gold": GameText.num(GameRanch.sell_price(d.roster[0]))})
+	var sell_btn := _find_button(ctab, sell_label)
+	ok(sell_btn != null and _find_button(ctab, GameRanch.text("free", {})) != null, "each creature has Sell and Set free")
+	if sell_btn == null:
+		return
+	var gold := d.heir.gold
+	sell_btn.pressed.emit()
+	await _frames(2)
+	ok(d.roster.size() == 2 and d.heir.gold == gold, "the first tap sells nothing")
+	var sure := _find_button(ctab, GameRanch.text("sure_sell", {"gold": GameText.num(GameRanch.sell_price(d.roster[0]))}))
+	ok(sure != null, "it asks again")
+	if sure == null:
+		return
+	var price := GameRanch.sell_price(d.roster[0])
+	sure.pressed.emit()
+	await _frames(2)
+	ok(d.roster.size() == 1 and d.heir.gold == gold + price, "the second tap sells it and pays")
+	ok(changes[0] == 1, "and tells the screen behind")
+	ok(_find_label(ctab, "Kept: 1 of %d" % GameRoster.cap(d)) != null and _find_label(ctab, "Ash  (pup)") == null, "and the tab shows what is left")
+	var free1 := _find_button(ctab, GameRanch.text("free", {}))
+	free1.pressed.emit()
+	await _frames(2)
+	var other := _find_button(ctab, GameRanch.text("sure_free", {}))
+	ok(other != null and d.roster.size() == 1, "Set free asks again too")
+	var sell2 := _find_button(ctab, GameRanch.text("sell", {"gold": GameText.num(GameRanch.sell_price(d.roster[0]))}))
+	sell2.pressed.emit()
+	await _frames(2)
+	ok(d.roster.size() == 1 and _find_button(ctab, GameRanch.text("free", {})) != null, "tapping the other button starts that question instead")
+	_find_button(ctab, GameRanch.text("free", {})).pressed.emit()
+	await _frames(2)
+	_find_button(ctab, GameRanch.text("sure_free", {})).pressed.emit()
+	await _frames(2)
+	ok(d.roster.is_empty() and changes[0] == 2 and _find_label(ctab, GameFinding.text("empty", {})) != null, "setting free empties the roster and says how to find young")
+	# the Ranch in the house panel
+	var HousePanel := preload("res://ui/play/house_panel.gd")
+	var hp := HousePanel.new()
+	hp.dynasty = d
+	hp.on_change = func(): pass
+	app.current.add_child(hp)
+	await _frames(3)
+	ok(_find_label(hp, "Ranch: level 0 of %d" % GameHouse.max_level()) != null, "the house panel has a Ranch row")
+	ok(_find_label(hp, str(GameRanch.data()["ranch"]["levels"][1]["about"])) != null or hp.find_children("*", "Label", true, false).any(func(l): return str(GameRanch.data()["ranch"]["levels"][1]["about"]) in (l as Label).text), "that says what the next level builds")
+	d.heir.gold = 100000
+	var builds := hp.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text == "Build (%s gold)" % GameText.num(GameHouse.cost(d, GameHouse.RANCH)))
+	var build: Button = builds.back() if not builds.is_empty() else null   # the three tracks cost the same: the Ranch's is the last
+	ok(build != null and builds.size() == 3, "and a button to build it, after the Hall's and the Yard's")
+	if build != null:
+		build.pressed.emit()
+		await _frames(2)
+		ok(GameHouse.level(d, GameHouse.RANCH) == 1, "which builds the Ranch")
 	app.queue_free()
 	await _frames(2)
 	DirAccess.remove_absolute(DIR + "save.json")

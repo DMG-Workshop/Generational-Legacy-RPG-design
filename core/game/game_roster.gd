@@ -7,12 +7,13 @@ extends RefCounted
 
 
 
-static func cap() -> int:
-	return int(GameFinding.setting("roster_cap"))
+## The places for creatures: the family's own (finding.json) and the Ranch's pens.
+static func cap(d: GameDynasty) -> int:
+	return int(GameFinding.setting("roster_cap")) + GameRanch.extra_pens(d)
 
 
 static func full(d: GameDynasty) -> bool:
-	return d.roster.size() >= cap()
+	return d.roster.size() >= cap(d)
 
 
 static func next_id(d: GameDynasty) -> int:

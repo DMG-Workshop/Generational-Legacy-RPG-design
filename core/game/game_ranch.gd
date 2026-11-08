@@ -65,16 +65,40 @@ static func stage_at(e: Dictionary, age: float) -> String:
 	return "elder"
 
 
-static func yearly_keep(e: Dictionary) -> float:
+## The Ranch's row for the dynasty's level (level 0 when nothing is built).
+static func ranch(d: GameDynasty) -> Dictionary:
+	var levels: Array = data()["ranch"]["levels"]
+	return levels[clampi(GameHouse.level(d, GameHouse.RANCH), 0, levels.size() - 1)]
+
+
+## Places beyond the family's own that the Ranch's pens give.
+static func extra_pens(d: GameDynasty) -> int:
+	return int(ranch(d)["pens"])
+
+
+## A Ranch factor that depends on a creature's stage: eggs have the hatchery's, the young the nursery's, the
+## grown nothing. `what` is "keep" or "mood_loss".
+static func ranch_factor(d: GameDynasty, e: Dictionary, what: String) -> float:
+	var stage := str(e.get("stage"))
+	if stage == "egg":
+		return float(ranch(d)["egg_" + what])
+	if stage == "young":
+		return float(ranch(d)["young_" + what])
+	return 1.0
+
+
+static func yearly_keep(e: Dictionary, d: GameDynasty = null) -> float:
 	var k := float(size_of(str(e["species"]))["keep"])
-	return k * float(setting("egg_keep_share")) if str(e.get("stage")) == "egg" else k
+	if str(e.get("stage")) == "egg":
+		k *= float(setting("egg_keep_share"))
+	return k * (ranch_factor(d, e, "keep") if d != null else 1.0)
 
 
 ## What the whole roster costs to keep each year, in gold (a part of a gold is rounded up).
 static func keep_total(d: GameDynasty) -> int:
 	var due := 0.0
 	for e in d.roster:
-		due += yearly_keep(e)
+		due += yearly_keep(e, d)
 	return int(ceil(due))
 
 
@@ -100,7 +124,7 @@ static func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 		return
 	var due := 0.0
 	for e in d.roster:
-		due += yearly_keep(e) * years
+		due += yearly_keep(e, d) * years
 	var cost := int(ceil(due))
 	var paid := mini(cost, maxi(0, d.heir.gold))
 	d.heir.gold -= paid
@@ -110,7 +134,8 @@ static func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 	var top := int(setting("mood_max"))
 	var kept: Array = []
 	for e in d.roster:
-		for line in _live_years(d, e, years, gain - loss, top):
+		var felt := gain - loss * ranch_factor(d, e, "mood_loss")   # the hatchery and nursery soften neglect
+		for line in _live_years(d, e, years, felt, top):
 			d._say(line)
 			msgs.append(line)
 		if not e.get("gone", false):
@@ -147,6 +172,49 @@ static func _live_years(d: GameDynasty, e: Dictionary, years: float, mood_change
 	return out
 
 
+## What a creature would sell for: its size's value, by stage, by how well it has been kept.
+static func sell_price(e: Dictionary) -> int:
+	var v := float(size_of(str(e["species"])).get("value", 0))
+	var stage_mult := float(setting("stage_value").get(str(e.get("stage")), 1.0))
+	var mood := float(clampi(int(e.get("mood", setting("start_mood"))), 0, int(setting("mood_max")))) / float(setting("mood_max"))
+	return maxi(1, int(round(v * stage_mult * mood)))
+
+
+## Sells a kept creature for gold. Returns the line told, or "" if it could not be sold (not in a life, no such creature).
+static func sell(d: GameDynasty, id: int) -> String:
+	var e := find(d, id)
+	if e.is_empty() or d.state != "life":
+		return ""
+	var gold := sell_price(e)
+	d.heir.gold += gold
+	return _part(d, e, "sold", {"gold": GameText.num(gold)})
+
+
+## Sets a kept creature free. Returns the line told, or "".
+static func release(d: GameDynasty, id: int) -> String:
+	var e := find(d, id)
+	if e.is_empty() or d.state != "life":
+		return ""
+	return _part(d, e, "freed", {})
+
+
+static func find(d: GameDynasty, id: int) -> Dictionary:
+	for e in d.roster:
+		if int(e["id"]) == id:
+			return e
+	return {}
+
+
+static func _part(d: GameDynasty, e: Dictionary, key: String, extra: Dictionary) -> String:
+	var def := GameCombat.creature_def(str(e["species"]))
+	var vals := {"h": d.heir.name, "name": str(e["name"]), "species": str(def.get("name", e["species"])).to_lower()}
+	vals.merge(extra)
+	d.roster.erase(e)
+	var line := text(key, vals)
+	d._say(line)
+	return line
+
+
 static func validate() -> Array:
 	var bad: Array = []
 	var dat := data()
@@ -170,9 +238,32 @@ static func validate() -> Array:
 	if not dat["sizes"].has(str(s["default_size"])):
 		bad.append("ranch.json: default_size '%s' is not a size" % s["default_size"])
 	for name in dat["sizes"]:
+		if not dat["sizes"][name].has("value") or float(dat["sizes"][name]["value"]) <= 0.0:
+			bad.append("ranch.json: size '%s' needs a positive value" % name)
 		for k in SIZE_KEYS:
 			if not dat["sizes"][name].has(k) or float(dat["sizes"][name][k]) <= 0.0:
 				bad.append("ranch.json: size '%s' needs a positive %s" % [name, k])
+	for st in STAGES:
+		if not dat["settings"].get("stage_value", {}).has(st):
+			bad.append("ranch.json: settings.stage_value.%s is missing" % st)
+	var levels: Variant = dat.get("ranch", {}).get("levels")
+	if typeof(levels) != TYPE_ARRAY or (levels as Array).size() != GameHouse.max_level() + 1:
+		bad.append("ranch.json: ranch.levels needs one row for level 0 and each house level (%d rows)" % (GameHouse.max_level() + 1))
+	else:
+		var prev_pens := -1
+		for i in (levels as Array).size():
+			var row: Dictionary = levels[i]
+			for k in ["pens", "egg_keep", "egg_mood_loss", "young_keep", "young_mood_loss", "about"]:
+				if not row.has(k):
+					bad.append("ranch.json: ranch level %d has no %s" % [i, k])
+			if not bad.is_empty():
+				continue
+			if int(row["pens"]) < prev_pens or (i == 0 and int(row["pens"]) != 0):
+				bad.append("ranch.json: pens must start at 0 and never fall (level %d)" % i)
+			prev_pens = int(row["pens"])
+			for k in ["egg_keep", "egg_mood_loss", "young_keep", "young_mood_loss"]:
+				if float(row[k]) < 0.0 or float(row[k]) > 1.0:
+					bad.append("ranch.json: ranch level %d %s must be between 0 and 1" % [i, k])
 	for sp in dat["size_of"]:
 		if GameBirth.born(str(sp)) == "none":
 			bad.append("ranch.json: size_of names '%s', which is not born" % sp)
@@ -181,7 +272,7 @@ static func validate() -> Array:
 	for c in GameData.creatures:
 		if GameBirth.born(str(c["id"])) != "none" and not dat["size_of"].has(str(c["id"])):
 			bad.append("ranch.json: '%s' is born but has no size (it would use the default)" % c["id"])
-	for k in ["hatches", "grows_up", "grows_old", "dies", "spoils", "leaves", "stage_egg", "stage_young", "stage_adult", "stage_elder", "mood_high", "mood_mid", "mood_low", "age", "keep"]:
+	for k in ["hatches", "grows_up", "grows_old", "dies", "spoils", "leaves", "stage_egg", "stage_young", "stage_adult", "stage_elder", "mood_high", "mood_mid", "mood_low", "age", "keep", "sold", "freed", "sell", "free", "sure_sell", "sure_free", "house_row"]:
 		if not dat["text"].has(k):
 			bad.append("ranch.json: text.%s is missing" % k)
 	return bad
