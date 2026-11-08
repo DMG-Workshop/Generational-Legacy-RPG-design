@@ -1771,6 +1771,122 @@
           "outcomes": {"always": {"text": "You close the den as you found it. Somewhere behind you, she is already coming home.", "xp": 8}}
         }
       ]
+    },
+    {
+      "id": "raid_thieves",
+      "title": "Thieves in the Night",
+      "text": "The dogs are barking at the dark, and a lantern is moving along the back wall of the house. Someone has heard that the ranch does well.",
+      "raid": true,
+      "choices": [
+        {
+          "text": "Trust the guards",
+          "outcomes": {"always": {"text": "You bar the door and leave it to the guards and the dogs. The night is long.", "defend": "thieves"}}
+        },
+        {
+          "text": "Ride out and fight them",
+          "outcomes": {"always": {"text": "You take up your weapon and go after the lanterns, and the lanterns turn on you.", "xp": 10, "fight": {"foes": ["bandit", "bandit"]}}}
+        },
+        {
+          "text": "Pay them to go away",
+          "outcomes": {"always": {"text": "A purse changes hands in the dark. They take it, and they go, and they say they will not be back."}}
+        },
+        {
+          "text": "Slip round behind them",
+          "check": {"attr": "stealth", "dc": 13, "bonus_if": [{"class": "rogue", "value": 3}, {"class": "ranger", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "You take the last of them by the collar. He gives up every name he knows, and a fence of theirs.", "xp": 25, "gold": 20},
+            "success": {"text": "They hear you coming and run. Nothing is taken.", "xp": 15},
+            "failure": {"text": "A board creaks under your boot. The guards have to do the rest.", "xp": 5, "defend": "thieves"},
+            "crit_failure": {"text": "A cosh finds the back of your head. The guards find the thieves too late.", "xp": 3, "hp_pct": -0.1, "defend": "thieves"}
+          }
+        }
+      ]
+    },
+    {
+      "id": "raid_rustlers",
+      "title": "Rustlers at the Fence",
+      "text": "The pen gate stands open and a drover's whistle carries from the lane: someone is leading your stock out in the dark.",
+      "raid": true,
+      "choices": [
+        {
+          "text": "Trust the guards",
+          "outcomes": {"always": {"text": "You wake the yard and trust the guards to hold the gate.", "defend": "rustlers"}}
+        },
+        {
+          "text": "Ride out and fight them",
+          "outcomes": {"always": {"text": "You ride after the whistle with your weapon drawn.", "xp": 10, "fight": {"foes": ["goblin", "goblin"]}}}
+        },
+        {
+          "text": "Pay a ransom for the stock",
+          "outcomes": {"always": {"text": "A man in the lane names his price. You pay it, and the gate is shut behind him."}}
+        },
+        {
+          "text": "Rouse the neighbours with a horn",
+          "check": {"attr": "persuasion", "dc": 12, "bonus_if": [{"class": "cleric", "value": 2}, {"race": "human", "value": 1}]},
+          "outcomes": {
+            "crit_success": {"text": "Every farm along the lane answers. The rustlers run through a hedge, and your name is the better for it.", "xp": 25},
+            "success": {"text": "The lanterns come on up the road and the rustlers leave the stock.", "xp": 15},
+            "failure": {"text": "Nobody comes in time. The guards do what they can.", "xp": 5, "defend": "rustlers"},
+            "crit_failure": {"text": "The horn cracks and the neighbours stay in their beds. The guards are on their own.", "xp": 3, "defend": "rustlers"}
+          }
+        }
+      ]
+    },
+    {
+      "id": "raid_beasts",
+      "title": "Something in the Pens",
+      "text": "A sound goes through the pens that is not a cow's: low, patient, a creature that has smelled the stock and means to have some.",
+      "raid": true,
+      "choices": [
+        {
+          "text": "Trust the guards",
+          "outcomes": {"always": {"text": "You shut the shutters and let the guards meet it.", "defend": "beasts"}}
+        },
+        {
+          "text": "Ride out and fight it",
+          "outcomes": {"always": {"text": "You take up a torch and a weapon and walk out to meet the eyes in the dark.", "xp": 10, "fight": {"foes": ["wolf", "wolf"]}}}
+        },
+        {
+          "text": "Light fires along the fence",
+          "check": {"attr": "agi", "dc": 12, "bonus_if": [{"class": "ranger", "value": 3}, {"class": "druid", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "The fires run the length of the fence in a breath and the creature goes off howling.", "xp": 20},
+            "success": {"text": "The fires hold it off until dawn. Nothing is lost.", "xp": 12},
+            "failure": {"text": "The wind takes the fires and the guards have to hold the gap.", "xp": 5, "defend": "beasts"},
+            "crit_failure": {"text": "A torch gets away from you and the pens are alight and in an uproar.", "xp": 3, "hp_pct": -0.08, "defend": "beasts"}
+          }
+        }
+      ]
+    },
+    {
+      "id": "raid_burglars",
+      "title": "Burglars in the House",
+      "text": "A shutter that was latched is open, and something is moving through the rooms where the family's good things are kept. Whoever it is knows the house has been built up.",
+      "raid": true,
+      "choices": [
+        {
+          "text": "Trust the guards",
+          "outcomes": {"always": {"text": "You stay behind the door and trust the guards to find them.", "defend": "burglars"}}
+        },
+        {
+          "text": "Chase them through the house",
+          "outcomes": {"always": {"text": "You go after the sound with your weapon in your hand.", "xp": 10, "fight": {"foes": ["bandit"]}}}
+        },
+        {
+          "text": "Buy them off",
+          "outcomes": {"always": {"text": "A coin purse on the table, a voice in the dark. The shutter closes behind them.", "gold": -40}}
+        },
+        {
+          "text": "Lie in wait in the dark",
+          "check": {"attr": "stealth", "dc": 13, "bonus_if": [{"class": "rogue", "value": 3}, {"class": "ranger", "value": 2}]},
+          "outcomes": {
+            "crit_success": {"text": "You let the first one pass and close the door on the second. They leave their tools, and their purse.", "xp": 25, "gold": 25},
+            "success": {"text": "A board answers you and they flee through the window. Nothing is taken.", "xp": 15},
+            "failure": {"text": "You are in the wrong room. The guards, if any, must do the rest.", "xp": 5, "defend": "burglars"},
+            "crit_failure": {"text": "A lantern shutter opens in your face. You wake with a sore head.", "xp": 3, "hp_pct": -0.1, "defend": "burglars"}
+          }
+        }
+      ]
     }
   ]
 }
