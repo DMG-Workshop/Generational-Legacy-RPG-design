@@ -15,7 +15,7 @@
     "full": "There are young beside the dead {parent}, but there is nowhere to keep them.",
     "kept": "Kept: {n} of {cap}",
     "empty": "None yet. After a hunt, search the bodies: a creature that is born may have left an egg or young beside it. Rangers, druids and beastmasters have the best eye for it.",
-    "note": "Eggs and young found beside the dead. Growth, care and the ranch come later; for now they are only kept.",
+    "note": "Eggs and young found beside the dead. They grow with the years and cost gold to keep; left unkept, an egg spoils and a creature wanders off.",
     "stage_egg": "{young} egg",
     "stage_young": "{young}",
     "entry": "{stage} of a {species}, {sex}. Found by {by} in generation {gen}."

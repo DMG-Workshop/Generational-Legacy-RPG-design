@@ -294,6 +294,11 @@ func test_screens() -> void:
 	var tab2 := await _panel(d)
 	ok(_find_label(tab2, "Kept: 2 of %d" % GameRoster.cap()) != null, "the count follows the roster")
 	ok(_find_label(tab2, "Ash  (pup)") != null and _find_label(tab2, "Ember  (hatchling egg)") != null, "each creature is listed with its stage")
+	ok(_find_label(tab2, GameRanch.text("keep", {"gold": str(GameRanch.keep_total(d))})) != null, "and what they cost to keep a year")
+	d.heir.gold = 1000
+	GameRanch.on_years(d, 4.0, [])
+	var tab3 := await _panel(d)
+	ok(_find_label(tab3, "Ash  (dire wolf)") != null and _find_label(tab3, "Ember  (hatchling)") != null, "the stage follows the years: grown, hatched")
 	ok(_find_label(tab2, GameFinding.text("empty", {})) == null, "and the empty note is gone")
 	var before := d.roster.duplicate(true)
 	await _frames(2)

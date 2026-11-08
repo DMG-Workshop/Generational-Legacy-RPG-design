@@ -280,6 +280,8 @@ func _creatures_tab() -> Control:
 	var note := Kit.label(GameFinding.text("note", {}), 14, Kit.dim())
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
+	if not dynasty.roster.is_empty():
+		box.add_child(Kit.label(GameRanch.text("keep", {"gold": GameText.num(GameRanch.keep_total(dynasty))}), 14, Kit.TEXT))
 	if dynasty.roster.is_empty():
 		var none := Kit.label(GameFinding.text("empty", {}), 15, Kit.TEXT)
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
