@@ -1,0 +1,318 @@
+{
+  "note": "Creature behaviour as data (roadmap item 48; core/game/game_behaviour.gd, checked by tools/check_data.gd). A creature in the open world needs no code of its own: it has TAGS, each tag sets some of the parameters below (the global `order` decides which tag wins when two set the same one, so the order a creature lists its tags in does not matter), and `GameBehaviour.step` is one small state machine that reads the parameters. Modes: idle and wander (a random walk on keyed dice, held to `wander_radius` of home), chase (hostile and it sees a target; `leash` or a guard's `guard_radius` ends it and it returns home), flee (hurt below `flee_hp`, or skittish and something is close, until it is `flee_dist` away), herd (kept within `herd_radius` of its kind's centre), ambush (still until a target is within `ambush_range`, then a burst), and the pack: `swarm` creatures in creatures.json are a pack, one that sees a target alerts its kind within `alert_radius`, and the pack spreads round the target instead of queueing: each member takes its own bearing to either side of the pack's approach (`flank_spread`, in radians) and circles in at it, closing on the target itself within `flank` tiles; `flank_close` is how fast the circle shrinks. Ground creatures are held off ground the caller says they cannot walk on; fliers are not. Night is a flag the caller gives (the world has no clock of the day yet, item 51). Every die is keyed on the seed, the creature and the tick, never the dynasty's.",
+  "defaults": {
+    "sight": 7.0,
+    "speed": 1.0,
+    "hostile": false,
+    "lose_sight_mult": 1.5,
+    "leash": 0.0,
+    "wander_radius": 8.0,
+    "idle_chance": 0.35,
+    "turn": 0.8,
+    "flee_hp": 0.0,
+    "skittish": false,
+    "flee_dist": 12.0,
+    "guard_radius": 0.0,
+    "sight_day": 1.0,
+    "sight_night": 1.0,
+    "ambush_range": 0.0,
+    "ambush_speed_mult": 1.0,
+    "ambush_ticks": 3,
+    "rage_hp": 0.5,
+    "rage_speed": 1.0,
+    "alert_radius": 10.0,
+    "flank": 2.0,
+    "herd_radius": 0.0,
+    "flier": false,
+    "flank_spread": 3.6,
+    "flank_close": 0.9
+  },
+  "tags": {
+    "aggressive": {
+      "about": "Attacks what it sees.",
+      "set": {
+        "hostile": true,
+        "sight": 9.0
+      }
+    },
+    "predator": {
+      "about": "Hunts: sees far, follows far, and runs faster than it walks.",
+      "set": {
+        "hostile": true,
+        "sight": 12.0,
+        "lose_sight_mult": 2.0,
+        "leash": 40.0,
+        "speed": 1.3
+      }
+    },
+    "ambusher": {
+      "about": "Lies still until something comes within a few tiles, then bursts out.",
+      "set": {
+        "hostile": true,
+        "sight": 4.0,
+        "ambush_range": 4.0,
+        "ambush_speed_mult": 2.2,
+        "ambush_ticks": 3,
+        "idle_chance": 0.8,
+        "wander_radius": 3.0
+      }
+    },
+    "nocturnal": {
+      "about": "Sees far at night and is half asleep by day.",
+      "set": {
+        "sight_night": 1.5,
+        "sight_day": 0.5
+      }
+    },
+    "territorial": {
+      "about": "Keeps to its own ground: gives up the chase when drawn far from home.",
+      "set": {
+        "hostile": true,
+        "leash": 18.0,
+        "wander_radius": 10.0
+      }
+    },
+    "guardian": {
+      "about": "Holds a post: stands near it and only fights what comes within its reach.",
+      "set": {
+        "hostile": true,
+        "guard_radius": 7.0,
+        "wander_radius": 3.0,
+        "idle_chance": 0.7,
+        "leash": 12.0
+      }
+    },
+    "coward": {
+      "about": "Runs when hurt.",
+      "set": {
+        "flee_hp": 0.4,
+        "flee_dist": 14.0
+      }
+    },
+    "berserk": {
+      "about": "Never flees, and fights harder when hurt.",
+      "set": {
+        "flee_hp": 0.0,
+        "rage_hp": 0.5,
+        "rage_speed": 1.35
+      }
+    },
+    "slow": {
+      "about": "Walks at half pace.",
+      "set": {
+        "speed": 0.5
+      }
+    },
+    "lumbering": {
+      "about": "Walks at four-fifths pace.",
+      "set": {
+        "speed": 0.8
+      }
+    },
+    "flier": {
+      "about": "Goes where it likes, over water and rock.",
+      "set": {
+        "flier": true,
+        "speed": 1.2
+      }
+    },
+    "docile": {
+      "about": "Does not attack, and keeps to a small patch.",
+      "set": {
+        "hostile": false,
+        "sight": 6.0,
+        "wander_radius": 6.0
+      }
+    },
+    "skittish": {
+      "about": "Runs from anything that comes close.",
+      "set": {
+        "skittish": true,
+        "flee_dist": 10.0
+      }
+    },
+    "herd": {
+      "about": "Keeps together with its own kind.",
+      "set": {
+        "herd_radius": 5.0
+      }
+    }
+  },
+  "order": [
+    "docile",
+    "aggressive",
+    "predator",
+    "ambusher",
+    "territorial",
+    "guardian",
+    "nocturnal",
+    "coward",
+    "skittish",
+    "herd",
+    "slow",
+    "lumbering",
+    "flier",
+    "berserk"
+  ],
+  "creatures": {
+    "slime": [
+      "slow",
+      "ambusher"
+    ],
+    "wolf": [
+      "predator",
+      "nocturnal"
+    ],
+    "goblin": [
+      "aggressive",
+      "territorial"
+    ],
+    "bandit": [
+      "aggressive",
+      "coward"
+    ],
+    "skeleton": [
+      "aggressive",
+      "nocturnal"
+    ],
+    "harpy": [
+      "flier",
+      "aggressive",
+      "coward"
+    ],
+    "bog_troll": [
+      "guardian",
+      "berserk"
+    ],
+    "fire_imp": [
+      "flier",
+      "aggressive"
+    ],
+    "ogre": [
+      "aggressive",
+      "lumbering",
+      "berserk"
+    ],
+    "wraith": [
+      "flier",
+      "predator",
+      "nocturnal"
+    ],
+    "drake": [
+      "flier",
+      "predator",
+      "territorial"
+    ],
+    "frost_wolf": [
+      "predator",
+      "nocturnal"
+    ],
+    "stone_golem": [
+      "guardian",
+      "slow"
+    ],
+    "ash_wyrm": [
+      "predator",
+      "territorial",
+      "berserk"
+    ],
+    "rift_shade": [
+      "predator",
+      "nocturnal"
+    ],
+    "shard_crawler": [
+      "ambusher"
+    ],
+    "void_stalker": [
+      "predator",
+      "ambusher"
+    ],
+    "lich_acolyte": [
+      "guardian",
+      "coward"
+    ],
+    "abyssal_knight": [
+      "guardian",
+      "berserk"
+    ],
+    "star_eater": [
+      "flier",
+      "predator",
+      "berserk"
+    ],
+    "time_wraith": [
+      "flier",
+      "predator"
+    ],
+    "elder_dragon": [
+      "flier",
+      "predator",
+      "territorial",
+      "berserk"
+    ],
+    "plague_rat": [
+      "aggressive",
+      "coward"
+    ],
+    "ghoul": [
+      "aggressive",
+      "nocturnal"
+    ],
+    "grimfang": [
+      "predator",
+      "territorial",
+      "berserk"
+    ],
+    "hollow_king": [
+      "guardian",
+      "berserk"
+    ],
+    "vaerthax": [
+      "flier",
+      "predator",
+      "territorial",
+      "berserk"
+    ],
+    "stonefather": [
+      "guardian",
+      "berserk",
+      "lumbering"
+    ],
+    "the_unmade": [
+      "flier",
+      "predator",
+      "berserk"
+    ],
+    "sheep": [
+      "docile",
+      "skittish",
+      "herd"
+    ],
+    "cattle": [
+      "docile",
+      "herd",
+      "slow"
+    ],
+    "pig": [
+      "docile"
+    ],
+    "chicken": [
+      "docile",
+      "skittish"
+    ],
+    "goat": [
+      "docile",
+      "skittish"
+    ],
+    "goose": [
+      "aggressive",
+      "territorial",
+      "lumbering"
+    ],
+    "horse": [
+      "docile",
+      "skittish",
+      "herd"
+    ]
+  }
+}
