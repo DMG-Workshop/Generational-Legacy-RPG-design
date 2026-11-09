@@ -1,0 +1,30 @@
+{
+  "note": "Day, night and weather (roadmap item 51; core/game/game_day.gd, checked by tools/check_data.gd). The world clock (item 27) already turns real seconds into years, seasons and a weather that is rolled each span; this adds the day. `GameDynasty.world_seconds` counts the seconds the clock has run (it holds still when the clock does), and a day is `day_seconds` of them, an abstract rhythm for the open world that is not tied to the length of a year. The sun's height over the day is -cos(2*pi*phase) (phase 0 is midnight, 0.5 noon); the light is how far it is above the horizon, ramping from dark to full across `twilight` either side of it, so a day has a night, a dawn, a day and a dusk. A day starts at `start_phase`. Night is when the sun's light is under `night_below` (it is the flag item 47's spawn tables and item 48's behaviour already take). The weather is the one the world already has (`world.weather_id`, rolled with the year); `weather_look` says what each does to the look of the world (how much of the light gets through, fog, rain or snow) and to how far a creature can see (`sight`), and fog and storms hide things in the open world. Colours are 0 to 1 red, green, blue. Nothing here is random or saved but the seconds, and the autopilot never feeds the clock.",
+  "settings": {
+    "day_seconds": 150.0,
+    "start_phase": 0.3,
+    "twilight": 0.18,
+    "night_below": 0.35
+  },
+  "tints": {
+    "night": [0.12, 0.15, 0.32],
+    "day": [1.0, 1.0, 1.0],
+    "warm": [0.96, 0.55, 0.4]
+  },
+  "weather_look": {
+    "clear": {"light": 1.0, "fog": 0.0, "precip": "none", "sight": 1.0},
+    "overcast": {"light": 0.8, "fog": 0.1, "precip": "none", "sight": 1.0},
+    "rain": {"light": 0.7, "fog": 0.2, "precip": "rain", "sight": 0.8},
+    "storm": {"light": 0.5, "fog": 0.3, "precip": "rain", "sight": 0.6},
+    "fog": {"light": 0.75, "fog": 0.8, "precip": "none", "sight": 0.5},
+    "heat": {"light": 1.0, "fog": 0.05, "precip": "none", "sight": 0.9},
+    "snow": {"light": 0.8, "fog": 0.4, "precip": "snow", "sight": 0.7}
+  },
+  "text": {
+    "night": "Night",
+    "dawn": "Dawn",
+    "day": "Day",
+    "dusk": "Dusk",
+    "time": "Day {day}, {hh}:{mm} ({phase})"
+  }
+}

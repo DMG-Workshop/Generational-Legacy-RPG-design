@@ -100,10 +100,11 @@ static func sight_now(id: String, night: bool) -> float:
 
 
 ## One tick for every creature in `agents`, returning the new agents (the old ones are not changed).
-## `view`: {targets: [{x, z}] (what they hunt or fear), night: bool, walkable: Callable(x, z) -> bool (optional)}.
+## `view`: {targets: [{x, z}] (what they hunt or fear), night: bool, walkable: Callable(x, z) -> bool (optional), sight_mult: float (optional, 1), router: Callable (optional)}.
 static func step_all(agents: Array, view: Dictionary, seed_value: int, tick: int) -> Array:
 	var targets: Array = view.get("targets", [])
 	var night := bool(view.get("night", false))
+	var sight_scale := float(view.get("sight_mult", 1.0))   # the weather's, from GameDay.view: fog and storms shorten every creature's sight
 	var n := agents.size()
 	var ps: Array = []
 	var seen: Array = []
@@ -114,7 +115,7 @@ static func step_all(agents: Array, view: Dictionary, seed_value: int, tick: int
 		var a: Dictionary = agents[i]
 		var p: Dictionary = ps[i]
 		var prev := str(a["mode"])
-		var reach := sight_now(str(a["id"]), night) * (float(p["lose_sight_mult"]) if prev in ["chase", "flee"] else 1.0)
+		var reach := sight_now(str(a["id"]), night) * sight_scale * (float(p["lose_sight_mult"]) if prev in ["chase", "flee"] else 1.0)
 		if prev == "flee":
 			reach = maxf(reach, float(p["flee_dist"]))
 		if float(p["ambush_range"]) > 0.0 and prev != "chase" and prev != "flee":
