@@ -36,8 +36,8 @@ static func key(c: Vector3i) -> String:
 	return "%d,%d,%d" % [c.x, c.y, c.z]
 
 
-## The ground of a dynasty's world: the generated surface (cached), the cells dug at the mining `site`, and a built overlay.
-static func world_ground(d: GameDynasty, built: Dictionary = {}, site: String = GameWorldGen.MINE_SITE) -> Dictionary:
+## The ground of a dynasty's world: the generated surface (cached), the cells dug at the mining `site`, and a built overlay (the dynasty's own `built` unless one is given).
+static func world_ground(d: GameDynasty, built: Variant = null, site: String = GameWorldGen.MINE_SITE) -> Dictionary:
 	var memo := {}
 	var surface := func(x: int, z: int) -> Dictionary:
 		var k := Vector2i(x, z)
@@ -52,7 +52,7 @@ static func world_ground(d: GameDynasty, built: Dictionary = {}, site: String = 
 			info = {"h": h, "water": water, "biome": str(land["biome"]), "block": not node.is_empty() and bool(data()["node_blocks"].get(str(node["kind"]), false))}
 		memo[k] = info
 		return info
-	return {"surface": surface, "dug": func(x: int, y: int, z: int) -> bool: return GameMine.is_dug(d, site, x, y, z), "built": built, "max_depth": int(GameMine.setting("max_depth"))}
+	return {"surface": surface, "dug": func(x: int, y: int, z: int) -> bool: return GameMine.is_dug(d, site, x, y, z), "built": d.built if built == null else built, "max_depth": int(GameMine.setting("max_depth"))}
 
 
 static func _built_kind(ground: Dictionary, c: Vector3i) -> Dictionary:
