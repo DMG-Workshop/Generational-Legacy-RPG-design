@@ -1,0 +1,45 @@
+{
+  "note": "World generation from the dynasty's seed (roadmap item 46; core/game/game_worldgen.gd, checked by tools/check_data.gd). The sandbox world is a grid of tiles laid over the authored map in world.json: each of its places is an ANCHOR, a fixed point (the map's x and y times `scale`) that the generator never moves or contradicts, so the text game's map and the sandbox agree. Between the anchors the land is the same for the same dynasty seed: the biome at a tile comes from its nearest anchors (the border wobbles with a noise warp that fades to nothing at an anchor), the height blends the heights of the nearest biomes with fractal noise on top, and the sea takes what falls below `sea_level` and the edge of the world. Towns and dungeons are flat and clear of nodes around the anchor, as the GDD's anchor zones are. NODES (trees, plants, bones, ore outcrops) are placed tile by tile: how thick they lie comes from the biome's `nodes` table and a clumping noise, and an outcrop is shown only where the mining ground (GameMine) has ore close under the surface, so what lies on top hints at what lies below. Nothing here draws a die of the dynasty's: every value is a pure function of the seed and the tile.",
+  "settings": {
+    "scale": 64,
+    "map_size": 10,
+    "chunk": 16,
+    "sea_level": 30,
+    "max_height": 160,
+    "height_octaves": 4,
+    "height_scale": 40.0,
+    "warp_scale": 48.0,
+    "warp_amp": 36.0,
+    "anchor_lock": 14.0,
+    "blend_nearest": 4,
+    "blend_power": 3.0,
+    "shore": 28,
+    "clump_scale": 8.0,
+    "clump_min": 0.0,
+    "clump_max": 2.2,
+    "outcrop_depths": [12, 14, 16, 18, 20, 22],
+    "anchor_radius": {"town": 9, "dungeon": 4, "wilds": 0}
+  },
+  "surface_of": {
+    "plains": "plains", "road": "plains", "crypt": "plains", "ruins": "plains", "forest": "forest", "fae": "forest",
+    "hills": "hills", "cave": "hills", "mountains": "mountains", "swamp": "swamp", "tundra": "tundra", "coast": "coast",
+    "volcanic": "volcanic", "rift": "volcanic"
+  },
+  "biomes": {
+    "plains": {"name": "Plains", "base": 36, "amp": 5, "nodes": {"oak_tree": 0.012, "herb_patch": 0.035}},
+    "forest": {"name": "Forest", "base": 40, "amp": 8, "nodes": {"oak_tree": 0.11, "yew_tree": 0.05, "herb_patch": 0.03}},
+    "hills": {"name": "Hills", "base": 55, "amp": 16, "nodes": {"oak_tree": 0.02, "yew_tree": 0.02, "outcrop": 0.12}},
+    "mountains": {"name": "Mountains", "base": 90, "amp": 34, "nodes": {"yew_tree": 0.01, "outcrop": 0.2}},
+    "swamp": {"name": "Swamp", "base": 31, "amp": 3, "nodes": {"herb_patch": 0.08, "oak_tree": 0.02, "bone_pile": 0.01}},
+    "tundra": {"name": "Tundra", "base": 45, "amp": 9, "nodes": {"bone_pile": 0.02, "yew_tree": 0.01, "outcrop": 0.05}},
+    "coast": {"name": "Coast", "base": 33, "amp": 5, "nodes": {"herb_patch": 0.012, "bone_pile": 0.006}},
+    "volcanic": {"name": "Volcanic", "base": 75, "amp": 28, "nodes": {"outcrop": 0.18}}
+  },
+  "nodes": {
+    "oak_tree": {"name": "Oak tree", "material": "oak", "min": 2, "max": 4},
+    "yew_tree": {"name": "Yew tree", "material": "yew", "min": 1, "max": 3},
+    "herb_patch": {"name": "Herb patch", "material": "herb", "min": 1, "max": 3},
+    "bone_pile": {"name": "Bone pile", "material": "bone", "min": 1, "max": 2},
+    "outcrop": {"name": "Rock outcrop", "material": "", "min": 1, "max": 2}
+  }
+}
