@@ -553,15 +553,8 @@ func battle_round() -> GameRound:
 ## Starts a hunt battle. kind: "hunt" or "hunt_hard".
 func start_hunt(kind: String) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")[kind]
-	var era := era_gen()
-	var in_era := GameData.creatures.filter(func(c): return not c.get("boss", false) and not c.get("farm", false) and c["min_gen"] <= era and era <= c["max_gen"])
-	if in_era.is_empty():
-		in_era = GameData.creatures.filter(func(c): return not c.get("boss", false) and not c.get("farm", false))
-	# Each place breeds its own monsters; if none of them roam in this era, anything in the era will do.
-	var biomes: Array = world.here().get("biomes", [])
-	var pool := in_era.filter(func(c): return (c.get("biomes", []) as Array).any(func(b): return b in biomes))
-	if pool.is_empty():
-		pool = in_era
+	# Each place breeds its own monsters; if none of them roam in this era, anything in the era will do (GameSpawn.hunt_pool).
+	var pool := GameSpawn.hunt_pool(era_gen(), world.here().get("biomes", []))
 	var danger := float(world.here().get("danger", 1.0))
 	var n := rng.randi_range(int(cfg["min"]), int(cfg["max"]))
 	var pack := GameCombat.roll_pack(self, kind, pool)   # sometimes a pack of weaker foes instead
