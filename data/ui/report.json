@@ -1,0 +1,29 @@
+{
+  "note": "Error reports that carry a save (roadmap item 54; core/game/game_report.gd and core/game/game_error_log.gd, checked by tools/check_data.gd). A report is made only when the player asks for one, and is never sent anywhere by the game: it is a block of text (GLER1: and base64 of the gzipped report) the player copies or saves and passes on themselves. It holds the game's version, the few facts about the device listed in `env_keys` (nothing else the screen offers is kept), the player's own note, the last errors the game logged, the last lines of the journal, and the save itself, so the same house can be opened elsewhere and the problem met again. `text.holds` is what the player is told it holds, before they make one.",
+  "settings": {
+    "max_errors": 20,
+    "max_error_chars": 600,
+    "max_note_chars": 500,
+    "journal_lines": 30,
+    "max_env_chars": 80
+  },
+  "env_keys": ["os", "os_version", "model", "screen", "text_size", "layout", "renderer", "time"],
+  "text": {
+    "holds": [
+      "The game's version and the save's format.",
+      "The kind of device, its screen size and your text size and layout settings.",
+      "What you write about the problem.",
+      "The last errors the game logged.",
+      "The last lines of your house's journal.",
+      "Your save: the whole house, so the problem can be met again. It has the names you gave your heirs and nothing else about you."
+    ],
+    "never_sent": "The game does not send this anywhere. You copy it or save it as a file, and pass it on yourself if you choose to.",
+    "not_a_report": "That is not an error report.",
+    "damaged": "The report is damaged: it could not be read.",
+    "incomplete": "The report is damaged or incomplete (some of it is missing).",
+    "too_new": "This report was made by a newer version of the game.",
+    "no_save": "The report holds no save.",
+    "bad_save": "The report's save cannot be played: {why}",
+    "summary": "Game {game} (save format {save_version}). {house}, generation {gen}. {errors} errors logged."
+  }
+}
