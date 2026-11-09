@@ -1,0 +1,57 @@
+{
+  "note": "Mining as data (roadmap item 45; core/game/game_mine.gd, checked by tools/check_data.gd). Nothing here draws a picture: it says what the ground is. A SITE (a place, by id) has its own ground, the same for the same dynasty seed. Depth y counts down from 0, the first cell under the surface. The ground is rock LAYERS (hardness, and whether ore forms there) grouped into the GDD's three ZONES (Surface, Underground, The Deep), and digging down goes back in time: `age_at` says which Age a depth belongs to. ORE grows in veins: each 8 by 8 by 8 block of ground may hold one vein, a sphere of ore whose kind comes from the depth bands below (the deeper, the rarer and the better; starmetal only in the Deep). Digging a cell takes effort (the layer's hardness against the digger's Strength), yields the ore if there is one (into the family's stores, GameCraft), and adds STRAIN to the shaft's region (a 16 by 16 patch). Strain changes the ground: through the stages below the rock gets easier to cut and the veins fatter, until the last stage opens a GATEWAY to the underworld at the cell that tipped it. A cell can be dug only if it touches open air (the surface at depth 0) or an already dug cell, so a shaft is a connected hole. All of it is a pure function of the seed, the site and the dug cells; no dice of the dynasty's are drawn.",
+  "settings": {
+    "max_depth": 400,
+    "block": 8,
+    "region": 16,
+    "base_strain": 0.2,
+    "strain_per_depth": 0.02,
+    "strain_from_depth": 20,
+    "effort_per_strength": 0.03,
+    "yield_min": 1,
+    "yield_max": 2,
+    "depth_per_age": 60,
+    "gateway_stage": "gateway"
+  },
+  "zones": [
+    {"id": "surface", "name": "The Surface", "from": 0},
+    {"id": "underground", "name": "Underground", "from": 12},
+    {"id": "deep", "name": "The Deep", "from": 160}
+  ],
+  "layers": [
+    {"id": "topsoil", "name": "Topsoil", "from": 0, "hardness": 1, "ore": false},
+    {"id": "clay", "name": "Clay and gravel", "from": 4, "hardness": 2, "ore": false},
+    {"id": "stone", "name": "Stone", "from": 12, "hardness": 4, "ore": true},
+    {"id": "deep_stone", "name": "Deep stone", "from": 60, "hardness": 7, "ore": true},
+    {"id": "darkrock", "name": "Darkrock", "from": 120, "hardness": 11, "ore": true},
+    {"id": "ember_rock", "name": "Ember rock", "from": 160, "hardness": 16, "ore": true},
+    {"id": "worldroot", "name": "Worldroot stone", "from": 280, "hardness": 24, "ore": true}
+  ],
+  "ores": [
+    {"material": "copper", "from": 12, "to": 90, "weight": 10, "chance": 0.5, "radius": 2.6},
+    {"material": "iron", "from": 12, "to": 140, "weight": 10, "chance": 0.5, "radius": 2.8},
+    {"material": "crystal", "from": 40, "to": 220, "weight": 4, "chance": 0.3, "radius": 2.2},
+    {"material": "silver", "from": 50, "to": 200, "weight": 4, "chance": 0.3, "radius": 2.2},
+    {"material": "gold", "from": 100, "to": 300, "weight": 2.5, "chance": 0.22, "radius": 2.0},
+    {"material": "mithril", "from": 160, "to": 400, "weight": 1.5, "chance": 0.15, "radius": 1.8},
+    {"material": "starmetal", "from": 260, "to": 400, "weight": 0.6, "chance": 0.08, "radius": 1.6}
+  ],
+  "stages": [
+    {"id": "quiet", "name": "Quiet", "at": 0, "hardness_mult": 1.0, "ore_bonus": 0.0, "about": "The rock is sound."},
+    {"id": "tremors", "name": "Tremors", "at": 40, "hardness_mult": 0.95, "ore_bonus": 0.05, "about": "Dust sifts from the roof when the picks fall silent."},
+    {"id": "cracked", "name": "Cracked", "at": 120, "hardness_mult": 0.85, "ore_bonus": 0.12, "about": "Hairline cracks run out from the shaft, and the veins swell along them."},
+    {"id": "weeping", "name": "Weeping", "at": 300, "hardness_mult": 0.7, "ore_bonus": 0.22, "about": "The walls sweat cold water and the rock cuts like cheese."},
+    {"id": "hollow", "name": "Hollow", "at": 600, "hardness_mult": 0.55, "ore_bonus": 0.35, "about": "The ground rings when it is struck. Something is below it."},
+    {"id": "gateway", "name": "Open", "at": 1000, "hardness_mult": 0.4, "ore_bonus": 0.5, "about": "The shaft opens onto a place that is not on any map."}
+  ],
+  "text": {
+    "dug": "{h} digs through the {layer}{ore}.",
+    "ore": ", and strikes {n} {material}",
+    "stage": "The ground around the shaft is now {stage}: {about}",
+    "gateway": "The shaft breaks through into the underworld.",
+    "too_deep": "No one has dug below {max} and come back.",
+    "above": "That is above the ground.",
+    "already": "That cell is already dug.",
+    "closed": "There is no way in: a cell can be dug only beside open air or an earlier cell."
+  }
+}
