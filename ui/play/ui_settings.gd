@@ -105,6 +105,16 @@ static func set_tutorial(on: bool) -> void:
 	store("tutorial", "on" if on else "off")
 
 
+## Whether the game keeps a log of its errors in memory for an error report (GameErrorLog). Off until the player
+## switches it on in the menu: nothing about a session is remembered unless they ask.
+static func error_log_on() -> bool:
+	return str(stored("error_log", "off")) == "on"
+
+
+static func set_error_log(on: bool) -> void:
+	store("error_log", "on" if on else "off")
+
+
 static func save_settings() -> bool:
 	var cf := ConfigFile.new()
 	cf.load(path)

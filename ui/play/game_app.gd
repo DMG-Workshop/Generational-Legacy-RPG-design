@@ -7,6 +7,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const MenuPanel := preload("res://ui/play/menu_panel.gd")
+const ReportPanel := preload("res://ui/play/report_panel.gd")
 const TitleScreen := preload("res://ui/play/title_screen.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
@@ -30,6 +31,8 @@ func _ready() -> void:
 	GameSaves.base = GameDynasty.save_path   # slot 1 is the file the game already saved to
 	use_slot(maxi(1, GameSaves.newest()))   # start on the slot played last
 	UiSettings.apply(get_window())
+	if UiSettings.error_log_on():   # only for a player who asked for it (the menu's Error log)
+		GameErrorLog.install()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg = ColorRect.new()
 	bg.color = Kit.BG
@@ -176,6 +179,24 @@ func set_touch_layout(t: String) -> void:
 func set_access(key: String, on: bool) -> void:
 	UiSettings.set_access(key, on)
 	_relayout()
+
+
+## The menu's Error log: whether the game remembers its errors for a report. Off forgets what it had.
+func set_error_log(on: bool) -> void:
+	UiSettings.set_error_log(on)
+	if on:
+		GameErrorLog.install()
+	else:
+		GameErrorLog.remove()
+	_relayout()
+
+
+## The menu's Report a problem: what a report holds, a note, and the report to copy or save. Nothing is sent.
+func open_report() -> Control:
+	var r: Control = ReportPanel.new()
+	r.app = self
+	current.add_child(r)
+	return r
 
 
 ## The menu's Tutorial tips: whether the first-heir tips show.

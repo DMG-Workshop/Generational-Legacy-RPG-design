@@ -28,11 +28,11 @@ static func native() -> bool:
 
 
 ## Asks where to write `file_name`. `done` is called with the chosen path, or "" when cancelled.
-static func save(title: String, file_name: String, done: Callable) -> void:
+static func save(title: String, file_name: String, done: Callable, filter: String = FILTER) -> void:
 	if fake:
 		done.call(fake_path)
 	elif native():
-		DisplayServer.file_dialog_show(title, fallback_dir(), file_name, false, DisplayServer.FILE_DIALOG_MODE_SAVE_FILE, PackedStringArray([FILTER]),
+		DisplayServer.file_dialog_show(title, fallback_dir(), file_name, false, DisplayServer.FILE_DIALOG_MODE_SAVE_FILE, PackedStringArray([filter]),
 			func(status: bool, paths: PackedStringArray, _filter: int): done.call(paths[0] if status and paths.size() > 0 else ""))
 	else:
 		done.call(fallback_dir().path_join(file_name))

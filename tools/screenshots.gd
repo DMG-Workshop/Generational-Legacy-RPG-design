@@ -38,6 +38,7 @@ const SHOTS := [
 	["chronicle_creatures", DESKTOP, false, "creatures"],
 	["chronicle_farm", DESKTOP, false, "farm"],
 	["menu", DESKTOP, false, "menu"],
+	["report", DESKTOP, false, "report"],
 	["event", DESKTOP, false, "event"],
 	["battle_town", DESKTOP, false, "battle:kingshold"],
 	["battle_swamp", DESKTOP, false, "battle:mirefen"],
@@ -187,6 +188,9 @@ func _screen(what: String) -> void:
 			pass
 		"menu":
 			app.open_menu()
+		"report":
+			app.open_menu()
+			app.open_report()
 		"event":
 			GameEvents.begin(d, "elven_wardens")
 			app.show_state()
