@@ -218,7 +218,7 @@ static func _act(a: Dictionary, p: Dictionary, threat: Dictionary, herd_centre: 
 				aim = tp + Vector2.from_angle(angle) * maxf(float(p["flank"]), dist_t * float(p["flank_close"]))
 			if float(p["ambush_range"]) > 0.0 and prev != "chase":
 				burst = int(p["ambush_ticks"])
-			dir = aim - pos
+			dir = _route(view, pos, aim) - pos
 			step_len = speed
 			if float(a["hp"]) < float(p["rage_hp"]):
 				step_len *= float(p["rage_speed"])
@@ -233,10 +233,10 @@ static func _act(a: Dictionary, p: Dictionary, threat: Dictionary, herd_centre: 
 			dir = away
 			step_len = speed * 1.1
 		"return":
-			dir = home - pos
+			dir = _route(view, pos, home) - pos
 			step_len = minf(speed, home_d)
 		"herd":
-			dir = Vector2(herd_centre) - pos
+			dir = _route(view, pos, Vector2(herd_centre)) - pos
 			step_len = minf(speed * 0.7, pos.distance_to(Vector2(herd_centre)))
 		_:
 			if _u(seed_value, uid, tick, "idle") < float(p["idle_chance"]):
@@ -260,6 +260,15 @@ static func _act(a: Dictionary, p: Dictionary, threat: Dictionary, herd_centre: 
 	next["heading"] = heading
 	next["burst"] = burst
 	return next
+
+
+## Where to head to get to `aim`: itself, or, when the caller gives a `router` (see GamePath.router), the next waypoint on a
+## route that goes round what is in the way. A flier never needs one.
+static func _route(view: Dictionary, pos: Vector2, aim: Vector2) -> Vector2:
+	var router: Variant = view.get("router", null)
+	if router is Callable and (router as Callable).is_valid():
+		return (router as Callable).call(pos, aim)
+	return aim
 
 
 ## One step of `dist` along `dir`, held off ground that cannot be walked: if it is blocked, try each axis alone.

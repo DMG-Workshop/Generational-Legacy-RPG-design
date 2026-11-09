@@ -1,0 +1,28 @@
+{
+  "note": "Pathfinding over dug and built ground (roadmap item 49; core/game/game_path.gd, checked by tools/check_data.gd). A* over the cells of the world: the surface (layer y = -1, one cell for each tile of the generated world, with its height) and the ground under it (y = 0 and down, the cells GameMine says are dug). A mover steps between cells that its kind can stand on (`movers`): a walker climbs a few heights and drops a few more, keeps off open water, and is stopped by trees and rock outcrops; a climber takes cliffs; a swimmer crosses water; a flier crosses anything on the surface. Terrain costs time (`terrain`: forest and swamp are slow), a slope costs more, a diagonal costs more and may not cut a corner, and climbing up a shaft costs more than going down it. Digging changes the ground (a dug cell can be walked, so a tunnel is a way round a wall), and building changes it too: a `built` overlay says which cells hold a wall (solid), a floor, a road (quick) or a door (slow), so item 50's buildings only have to fill it in. The search is bounded by `max_nodes`; if it cannot reach the goal it gives the way to the nearest cell it did reach, so a creature can still move toward what it cannot get to. Nothing here is saved or random.",
+  "settings": {
+    "max_nodes": 20000,
+    "diagonal_mult": 1.4142,
+    "slope_penalty": 0.25,
+    "up_mult": 1.5,
+    "min_cost": 0.5
+  },
+  "movers": {
+    "walker": {"max_climb": 2, "max_drop": 5, "water": false, "ignore_blocks": false, "fly": false},
+    "climber": {"max_climb": 40, "max_drop": 40, "water": false, "ignore_blocks": false, "fly": false},
+    "swimmer": {"max_climb": 2, "max_drop": 5, "water": true, "ignore_blocks": false, "fly": false},
+    "flier": {"max_climb": 999, "max_drop": 999, "water": true, "ignore_blocks": true, "fly": true}
+  },
+  "terrain": {
+    "plains": 1.0, "forest": 1.4, "hills": 1.3, "mountains": 1.8, "swamp": 1.8, "tundra": 1.3, "coast": 1.0, "volcanic": 1.5, "ocean": 1.0
+  },
+  "node_blocks": {
+    "oak_tree": true, "yew_tree": true, "herb_patch": false, "bone_pile": false, "outcrop": true
+  },
+  "built": {
+    "wall": {"solid": true, "cost": 1.0},
+    "floor": {"solid": false, "cost": 1.0},
+    "road": {"solid": false, "cost": 0.6},
+    "door": {"solid": false, "cost": 1.5}
+  }
+}
