@@ -1,0 +1,318 @@
+{
+  "note": "Spawn tables (roadmap item 47; core/game/game_spawn.gd, checked by tools/check_data.gd). Which creatures appear where and when, as data. WHERE is a surface biome (the world generator's eight), a depth underground (the mining ground's zones), or an authored place (a dungeon mouth, which uses the same pool a hunt there always has); WHEN is the era within the Age (each creature's min_gen and max_gen), the season, the weather and the night (a flag the caller gives: the world has no clock of the day yet, that is item 51). A hunt in the text game picks from `hunt_pool`, which is exactly the pool it always used (creatures of the era whose biomes meet the place's), now computed here, so nothing a seeded fight draws has changed. The weighted table below is for the world: a creature's `surface` lists the surface biomes it roams (each must be a surface of one of its own place biomes in creatures.json, so the sandbox never contradicts the text game's map), its `depth` band is where it lives underground (only for creatures that have an underground biome), and its weight is multiplied by the season, weather and night it likes. Rolls are keyed on the seed and the place, never the dynasty's dice.",
+  "settings": {
+    "underground_biomes": [
+      "cave",
+      "crypt",
+      "ruins",
+      "rift",
+      "volcanic",
+      "mountains"
+    ],
+    "dungeon_density": 0.3,
+    "night_density_mult": 1.5,
+    "surface_density": {
+      "plains": 0.08,
+      "forest": 0.14,
+      "hills": 0.1,
+      "mountains": 0.08,
+      "swamp": 0.14,
+      "tundra": 0.06,
+      "coast": 0.08,
+      "volcanic": 0.1
+    },
+    "underground_density": {
+      "underground": 0.12,
+      "deep": 0.16
+    }
+  },
+  "creatures": {
+    "slime": {
+      "surface": [
+        "swamp",
+        "plains"
+      ],
+      "weight": 1.0,
+      "depth": [
+        12,
+        70
+      ],
+      "seasons": {
+        "summer": 0.8
+      },
+      "weather": {
+        "rain": 2.5,
+        "storm": 1.5
+      }
+    },
+    "wolf": {
+      "surface": [
+        "forest",
+        "plains",
+        "tundra"
+      ],
+      "weight": 1.0,
+      "seasons": {
+        "winter": 2.0,
+        "autumn": 1.3
+      },
+      "weather": {
+        "snow": 1.4
+      },
+      "night": 1.8
+    },
+    "goblin": {
+      "surface": [
+        "hills",
+        "forest"
+      ],
+      "weight": 1.0,
+      "depth": [
+        12,
+        90
+      ],
+      "night": 1.5
+    },
+    "bandit": {
+      "surface": [
+        "plains",
+        "hills",
+        "coast"
+      ],
+      "weight": 1.0,
+      "weather": {
+        "storm": 0.4,
+        "fog": 1.5
+      },
+      "night": 1.6
+    },
+    "skeleton": {
+      "surface": [],
+      "weight": 1.0,
+      "depth": [
+        20,
+        140
+      ],
+      "night": 2.5
+    },
+    "harpy": {
+      "surface": [
+        "mountains",
+        "coast"
+      ],
+      "weight": 1.0,
+      "weather": {
+        "storm": 1.8,
+        "clear": 0.9
+      }
+    },
+    "bog_troll": {
+      "surface": [
+        "swamp"
+      ],
+      "weight": 1.0,
+      "weather": {
+        "rain": 1.6,
+        "fog": 1.4
+      },
+      "night": 1.5
+    },
+    "fire_imp": {
+      "surface": [
+        "volcanic"
+      ],
+      "weight": 1.0,
+      "depth": [
+        120,
+        300
+      ],
+      "seasons": {
+        "summer": 1.3
+      },
+      "weather": {
+        "heat": 2.0,
+        "snow": 0.3
+      }
+    },
+    "ogre": {
+      "surface": [
+        "hills",
+        "mountains"
+      ],
+      "weight": 1.0,
+      "depth": [
+        40,
+        160
+      ]
+    },
+    "wraith": {
+      "surface": [],
+      "weight": 1.0,
+      "depth": [
+        60,
+        200
+      ],
+      "weather": {
+        "fog": 1.8
+      },
+      "night": 3.0
+    },
+    "drake": {
+      "surface": [
+        "mountains",
+        "volcanic"
+      ],
+      "weight": 0.6,
+      "depth": [
+        160,
+        400
+      ],
+      "weather": {
+        "storm": 1.4
+      }
+    },
+    "frost_wolf": {
+      "surface": [
+        "tundra"
+      ],
+      "weight": 1.0,
+      "seasons": {
+        "winter": 2.5,
+        "summer": 0.3
+      },
+      "weather": {
+        "snow": 3.0
+      },
+      "night": 1.4
+    },
+    "stone_golem": {
+      "surface": [
+        "mountains"
+      ],
+      "weight": 1.0,
+      "depth": [
+        60,
+        220
+      ]
+    },
+    "ash_wyrm": {
+      "surface": [
+        "volcanic"
+      ],
+      "weight": 0.7,
+      "depth": [
+        160,
+        400
+      ],
+      "weather": {
+        "heat": 1.5
+      }
+    },
+    "rift_shade": {
+      "surface": [],
+      "weight": 1.0,
+      "depth": [
+        110,
+        400
+      ],
+      "night": 1.5
+    },
+    "shard_crawler": {
+      "surface": [],
+      "weight": 1.0,
+      "depth": [
+        110,
+        400
+      ]
+    },
+    "void_stalker": {
+      "surface": [],
+      "weight": 0.8,
+      "depth": [
+        160,
+        400
+      ],
+      "night": 2.0
+    },
+    "lich_acolyte": {
+      "surface": [],
+      "weight": 0.8,
+      "depth": [
+        60,
+        220
+      ],
+      "night": 1.5
+    },
+    "abyssal_knight": {
+      "surface": [],
+      "weight": 0.7,
+      "depth": [
+        200,
+        400
+      ]
+    },
+    "star_eater": {
+      "surface": [],
+      "weight": 0.4,
+      "depth": [
+        260,
+        400
+      ],
+      "night": 3.0
+    },
+    "time_wraith": {
+      "surface": [],
+      "weight": 0.6,
+      "depth": [
+        120,
+        400
+      ],
+      "night": 1.5
+    },
+    "elder_dragon": {
+      "surface": [
+        "mountains",
+        "volcanic"
+      ],
+      "weight": 0.3,
+      "depth": [
+        220,
+        400
+      ],
+      "weather": {
+        "storm": 1.5
+      }
+    },
+    "plague_rat": {
+      "surface": [
+        "coast",
+        "swamp"
+      ],
+      "weight": 1.0,
+      "depth": [
+        12,
+        70
+      ],
+      "seasons": {
+        "summer": 1.4
+      },
+      "weather": {
+        "rain": 1.8
+      }
+    },
+    "ghoul": {
+      "surface": [
+        "swamp"
+      ],
+      "weight": 1.0,
+      "depth": [
+        30,
+        160
+      ],
+      "weather": {
+        "fog": 1.5
+      },
+      "night": 2.0
+    }
+  }
+}
