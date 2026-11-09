@@ -28,6 +28,7 @@ var next_id: int = 1
 var killer_id: String = ""
 var total_hunts: int = 0
 var roster: Array = []          # eggs and young the family keeps (see GameRoster); saved only when not empty
+var mine: Dictionary = {}       # the ground dug at each site, its strain and its gateways (see GameMine); saved only when not empty
 var stores: Dictionary = {}     # materials and essences the family has gathered, and how many pieces it has made (see GameCraft); saved only when not empty
 var world: GameWorld
 var flags: Dictionary = {}      # story flags set by quests and events (flag -> generation set); never cleared
@@ -959,6 +960,8 @@ func to_dict() -> Dictionary:
 		out["roster"] = roster
 	if not stores.is_empty():   # likewise: only once something is gathered
 		out["stores"] = stores
+	if not mine.is_empty():   # and only once something is dug
+		out["mine"] = mine
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
 		out["house"] = house
 	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
@@ -1006,6 +1009,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.house = GameHouse.from_dict(d.get("house", {}))
 	g.roster = GameRoster.load_list(d.get("roster", []))
 	g.stores = GameCraft.load_stores(d.get("stores", {}))
+	g.mine = GameMine.load_state(d.get("mine", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0
