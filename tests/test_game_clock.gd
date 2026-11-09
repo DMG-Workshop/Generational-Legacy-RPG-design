@@ -55,6 +55,7 @@ func _house(seed_val: int) -> GameDynasty:
 func _digest(d: GameDynasty) -> String:
 	var v: Dictionary = Scen.drop_sex(d.to_dict())
 	v.erase("clock_carry")
+	v.erase("world_seconds")   # the seconds the clock ran (GameDay) are the clock's own too
 	return JSON.stringify(v) + str(d.rng.state)
 
 

@@ -29,6 +29,7 @@ static func span_years() -> float:
 static func feed(d: GameDynasty, seconds: float, msgs: Array = []) -> Array:
 	if seconds <= 0.0 or not running(d):
 		return msgs
+	d.world_seconds += seconds   # the day follows these (GameDay); they stop with the clock
 	d.clock_carry += seconds / seconds_per_year()
 	var span := span_years()
 	while d.clock_carry >= span and running(d):
