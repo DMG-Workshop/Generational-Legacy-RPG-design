@@ -98,6 +98,19 @@ func _ready() -> void:
 		var khy := Kit.label(opt[2], 14, Kit.dim())
 		khy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(khy)
+	v.add_child(Kit.label("Problems", 17, Kit.ACCENT))
+	var erow := HBoxContainer.new()
+	erow.add_theme_constant_override("separation", 8)
+	v.add_child(erow)
+	var elabel := Kit.label("Error log", 15, Kit.TEXT)
+	elabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	erow.add_child(elabel)
+	_choice(erow, "On", UiSettings.error_log_on(), func(): app.set_error_log(true))
+	_choice(erow, "Off", not UiSettings.error_log_on(), func(): app.set_error_log(false))
+	var ewhy := Kit.label("Remembers the game's last errors, for a report. Kept in memory only; nothing is sent.", 14, Kit.dim())
+	ewhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(ewhy)
+	v.add_child(Kit.button("Report a problem", func(): app.open_report(), Vector2(0, 40)))
 	v.add_child(HSeparator.new())
 	note = Kit.label("", 14, Kit.good())
 	match mode:
