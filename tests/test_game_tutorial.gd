@@ -21,6 +21,7 @@ func _init() -> void:
 	test_questions()
 	test_order()
 	test_succession()
+	test_sandbox()
 	test_nothing_saved()
 	print("tutorial tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -42,7 +43,7 @@ func test_data() -> void:
 		seen[id] = true
 		# It is a first-heir tutorial: a later generation, or a house played long, is taught nothing.
 		ok((s.get("when", []) as Array).has("first_generation"), "%s only applies in the first generation" % id)
-		ok(str(s.get("screen", "life")) in ["life", "succession"], "%s is for a known screen" % id)
+		ok(str(s.get("screen", "life")) in GameTutorial.SCREENS, "%s is for a known screen" % id)
 		ok(str(s["text"]).length() > 20 and str(s["text"]).length() <= 125, "%s has a short tip, about two lines on a phone (%d characters)" % [id, str(s["text"]).length()])
 		for key in ["when", "done"]:
 			for p in s.get(key, []):
@@ -142,3 +143,55 @@ func test_nothing_saved() -> void:
 	old.gen = 7
 	old.total_hunts = 400
 	ok(GameTutorial.current(old).is_empty(), "a long-played house is taught nothing")
+
+
+## The open world's tips: moving, digging, wood, building, a room, orders, night. In the order the file teaches them.
+func test_sandbox() -> void:
+	var d := _dyn()
+	var life_tip := GameTutorial.current(d)
+	var moved := {"moved": true}
+	var tip := GameTutorial.current(d, "sandbox")
+	ok(tip.get("id") == "sandbox_move" and "Tess" in str(tip["text"]), "in the open world, first: move (%s)" % str(tip.get("id")))
+	ok(GameTutorial.current(d, "sandbox", {"moved": false}).get("id") == "sandbox_move" and GameTutorial.current(d, "sandbox", {"moved": "yes"}).get("id") == "sandbox_move", "a fact not given, false or mistyped is false")
+	ok(not GameTutorial.holds(d, "moved") and GameTutorial.holds(d, "moved", moved), "moved is the screen's to say")
+	var dig := GameTutorial.current(d, "sandbox", moved)
+	ok(dig.get("id") == "sandbox_dig" and dig["highlight"] == ["Dig"], "once moved: dig")
+	var home := GameBuild.base()
+	var hx := int(home["x"])
+	var hz := int(home["z"])
+	ok(not GameTutorial.holds(d, "dug"), "nothing dug at first")
+	GameMine.dig(d, GameWorldGen.MINE_SITE, hx, 0, hz, 50.0)
+	ok(GameTutorial.holds(d, "dug"), "a dug cell counts")
+	ok(GameTutorial.current(d, "sandbox", moved).get("id") == "sandbox_wood", "after digging, with no oak: gather wood")
+	ok(not GameTutorial.holds(d, "can_build"), "an empty store cannot build")
+	GameCraft.add_material(d, "oak", 60)
+	ok(GameTutorial.holds(d, "can_build"), "oak for a wall can")
+	var build := GameTutorial.current(d, "sandbox", moved)
+	ok(build.get("id") == "sandbox_build" and "12 tiles of Hearthmere" in str(build["text"]), "with the oak: build, told how far the family's ground reaches (%s)" % str(build.get("text")))
+	d.house["hall"] = 1
+	ok("15 tiles" in str(GameTutorial.current(d, "sandbox", moved)["text"]), "and that grows with the house")
+	ok(not GameTutorial.holds(d, "built") and not GameTutorial.holds(d, "has_room"), "nothing built, no room")
+	GameBuild.place(d, "wall", hx - 2, GameBuild.SURFACE, hz - 2)
+	ok(GameTutorial.holds(d, "built") and GameTutorial.current(d, "sandbox", moved).get("id") == "sandbox_room", "one wall up: now close a room")
+	for i in range(0, 5):
+		for cell in [[hx - 2 + i, hz - 2], [hx - 2 + i, hz + 2], [hx - 2, hz - 2 + i], [hx + 2, hz - 2 + i]]:
+			GameBuild.place(d, "wall", cell[0], GameBuild.SURFACE, cell[1])
+	ok(GameTutorial.holds(d, "has_room"), "a ring of walls is a room")
+	ok(GameTutorial.current(d, "sandbox", moved).is_empty(), "with a room built and no companions, by day, there is nothing more to teach")
+	ok(not GameTutorial.holds(d, "has_companion"), "no companions yet")
+	d.party.members.append({"id": "bren_cask", "name": "Bren Cask", "hp": 1, "mp": 0, "level": 1, "gen": 1, "due": 0.0, "battles": 0, "hired_gen": 1, "diseases": []})
+	var orders := GameTutorial.current(d, "sandbox", moved)
+	ok(GameTutorial.holds(d, "has_companion") and orders.get("id") == "sandbox_orders" and "Tess" in str(orders["text"]), "with a companion: give an order")
+	ok(not GameTutorial.holds(d, "gave_order"), "following is not an order given")
+	GameCompanions.set_order(d, "bren_cask", "gather")
+	ok(GameTutorial.holds(d, "gave_order") and GameTutorial.current(d, "sandbox", moved).is_empty(), "an order given is the end of that")
+	ok(not GameTutorial.holds(d, "night"), "a new world is in its morning")
+	d.world_seconds = (1.0 - float(GameDay.setting("start_phase"))) * float(GameDay.setting("day_seconds"))   # midnight
+	ok(GameTutorial.holds(d, "night") and GameTutorial.current(d, "sandbox", moved).get("id") == "sandbox_night", "at night, the night tip")
+	ok(GameTutorial.current(d, "sandbox").get("id") == "sandbox_move", "(but still move first, if the heir has not)")
+	d.gen = 2
+	ok(GameTutorial.current(d, "sandbox", moved).is_empty(), "a later heir is not taught the open world again")
+	ok(GameTutorial.current(_dyn()) == life_tip and life_tip.get("id") == "hunt", "the life screen's tips are as they were, whatever the open world holds")
+	for s in GameData.tutorial["steps"]:
+		if str(s.get("screen", "life")) == "sandbox":
+			ok(not ("{" in GameTutorial.fill(str(s["text"]), _dyn())), "%s fills every placeholder" % s["id"])
