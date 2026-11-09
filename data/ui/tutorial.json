@@ -56,6 +56,62 @@
       "done": [],
       "highlight": [],
       "text": "Pick the child who carries the house on. Some traits pass down, some lie dormant. A lower Fate Value means fewer failures."
+    },
+    {
+      "id": "sandbox_move",
+      "screen": "sandbox",
+      "when": ["first_generation"],
+      "done": ["moved"],
+      "highlight": [],
+      "text": "{name} stands in the open world. Walk about: the land, its trees and its creatures are the same in every life."
+    },
+    {
+      "id": "sandbox_dig",
+      "screen": "sandbox",
+      "when": ["first_generation", "moved"],
+      "done": ["dug"],
+      "highlight": ["Dig"],
+      "text": "Dig down for ore: the deeper, the older and richer the ground. What you dig goes to the house's stores."
+    },
+    {
+      "id": "sandbox_wood",
+      "screen": "sandbox",
+      "when": ["first_generation", "moved", "dug"],
+      "done": ["can_build", "built"],
+      "highlight": ["Gather"],
+      "text": "Building takes oak. Trees give it: tell a companion to Gather near a wood and the stores fill."
+    },
+    {
+      "id": "sandbox_build",
+      "screen": "sandbox",
+      "when": ["first_generation", "moved", "can_build"],
+      "done": ["built"],
+      "highlight": ["Build"],
+      "text": "You have the oak for a wall. Build on the family's ground, within {claim} tiles of {home}."
+    },
+    {
+      "id": "sandbox_room",
+      "screen": "sandbox",
+      "when": ["first_generation", "built"],
+      "done": ["has_room"],
+      "highlight": ["Build"],
+      "text": "Walls that close a space make a room. Leave one out for a door: it needs a wall on each side."
+    },
+    {
+      "id": "sandbox_orders",
+      "screen": "sandbox",
+      "when": ["first_generation", "moved", "has_companion"],
+      "done": ["gave_order"],
+      "highlight": ["Orders"],
+      "text": "Companions follow {name}. Tell one to Stay, Gather or Guard and they work while you roam."
+    },
+    {
+      "id": "sandbox_night",
+      "screen": "sandbox",
+      "when": ["first_generation", "moved", "night"],
+      "done": [],
+      "highlight": [],
+      "text": "Night. Wolves and worse see further in the dark and come in greater numbers. Fog hides you both."
     }
   ]
 }
