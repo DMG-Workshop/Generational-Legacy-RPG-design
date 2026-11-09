@@ -31,6 +31,7 @@ var total_hunts: int = 0
 var roster: Array = []          # eggs and young the family keeps (see GameRoster); saved only when not empty
 var mine: Dictionary = {}       # the ground dug at each site, its strain and its gateways (see GameMine); saved only when not empty
 var built: Dictionary = {}      # the pieces the family has built, {"x,y,z": kind} (see GameBuild); saved only when not empty
+var gathered: Dictionary = {}   # nodes companions have gathered, {"x,z": world year} (see GameCompanions); saved only when not empty
 var stores: Dictionary = {}     # materials and essences the family has gathered, and how many pieces it has made (see GameCraft); saved only when not empty
 var world: GameWorld
 var flags: Dictionary = {}      # story flags set by quests and events (flag -> generation set); never cleared
@@ -959,6 +960,8 @@ func to_dict() -> Dictionary:
 		out["mine"] = mine
 	if not built.is_empty():   # and only once something is built
 		out["built"] = built
+	if not gathered.is_empty():   # and only once a companion has gathered
+		out["gathered"] = gathered
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
 		out["house"] = house
 	if world_seconds > 0.0:   # likewise: only once the clock has run
@@ -1010,6 +1013,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.stores = GameCraft.load_stores(d.get("stores", {}))
 	g.mine = GameMine.load_state(d.get("mine", {}))
 	g.built = GameBuild.load_state(d.get("built", {}))
+	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
 	g.world_seconds = GameDay.load_seconds(d.get("world_seconds", 0.0))
 	var carry = d.get("clock_carry", 0.0)

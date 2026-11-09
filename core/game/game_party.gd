@@ -675,6 +675,8 @@ static func from_dict(v: Dictionary, d: GameDynasty = null) -> GameParty:
 		}
 		if typeof(raw.get("auto")) == TYPE_BOOL:   # the player's Auto switch for this companion (see GameRound); absent or mistyped = never set
 			m["auto"] = raw["auto"]
+		if GameCompanions.load_order(raw.get("order")) != "":   # the standing order (see GameCompanions); absent, unknown or follow = follow
+			m["order"] = GameCompanions.load_order(raw.get("order"))
 		if typeof(raw.get("shirt")) == TYPE_STRING and str(raw["shirt"]) != "":   # the shirt chosen in Looks; absent = the one picked for them
 			m["shirt"] = raw["shirt"]
 		p.members.append(m)
