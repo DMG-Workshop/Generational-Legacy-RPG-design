@@ -1,12 +1,12 @@
 name: Set up Godot
 description: >
   Installs the pinned Godot editor for headless use (its SHA-512 is checked), optionally the official
-  export templates for the Android and Windows builds, and imports the project. Run it after checkout.
+  export templates for the Android, Windows, Linux and macOS builds, and imports the project. Run it after checkout.
   The version and the hashes are the only places to change to move to a newer Godot.
 
 inputs:
   templates:
-    description: "'true' to also install the export templates the Android and Windows builds need."
+    description: "'true' to also install the export templates the Android, Windows, Linux and macOS builds need."
     default: "false"
 
 runs:
@@ -53,8 +53,8 @@ runs:
       if: inputs.templates == 'true'
       shell: bash
       run: |
-        # Only what the builds use: the Windows exe wants its debug and release templates, the Android
-        # debug-signed APK wants the debug one.
+        # Only what the builds use: the Windows exe and the Linux binary want their debug and release templates,
+        # the Android debug-signed APK wants the debug one, and macOS has one zip for both.
         set -euo pipefail
         curl -fsSL -o "$HOME/templates.tpz" "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
         echo "${TEMPLATES_SHA512}  $HOME/templates.tpz" | sha512sum -c -
@@ -65,6 +65,9 @@ runs:
           templates/windows_debug_x86_64.exe \
           templates/windows_release_x86_64.exe \
           templates/android_debug.apk \
+          templates/linux_debug.x86_64 \
+          templates/linux_release.x86_64 \
+          templates/macos.zip \
           -d "$dir"
         rm "$HOME/templates.tpz"
         ls -la "$dir"

@@ -1,6 +1,6 @@
 # Releasing
 
-GitHub builds the Android APK and the Windows exe for you. Nothing has to be installed on your own machine.
+GitHub builds the Android APK and the Windows, Linux and macOS programs for you. Nothing has to be installed on your own machine.
 
 ## Make a release
 
@@ -8,13 +8,15 @@ GitHub builds the Android APK and the Windows exe for you. Nothing has to be ins
 2. Under **Choose a tag**, type a new tag such as `v0.2.0` and pick **Create new tag on publish**. The tag must look like `v1.2.3` (a suffix such as `-rc.1` is fine). Anything else stops the build before it starts.
 3. Write the notes and press **Publish release**.
 
-The **Build and release** workflow (Actions tab) then runs, and when it finishes it adds three files to the release:
+The **Build and release** workflow (Actions tab) then runs, and when it finishes it adds five files to the release:
 
 | File | What it is |
 |---|---|
 | `GenerationalLegacy-android-debug.apk` | The phone build, debug-signed like the APKs sideloaded so far |
 | `GenerationalLegacy-windows-x86_64.exe` | One self-contained Windows program, no installer |
-| `SHA256SUMS.txt` | Checksums of the two files above |
+| `GenerationalLegacy-linux-x86_64.tar.gz` | The Linux program (64-bit Intel or AMD), in a tar so it stays executable |
+| `GenerationalLegacy-macos-universal.zip` | The Mac app, for both Apple Silicon and Intel Macs |
+| `SHA256SUMS.txt` | Checksums of the four files above |
 
 The Android version name is the tag without the `v`. The Android version code is the workflow's run number, so it only goes up.
 
@@ -47,6 +49,14 @@ Keep the `game.keystore` file somewhere safe. If it is lost, every phone has to 
 
 The exe is not code-signed, so Windows SmartScreen may say "Windows protected your PC" the first time: choose **More info > Run anyway**.
 
+## Linux
+
+Unpack the tar and run the program inside: `tar -xzf GenerationalLegacy-linux-x86_64.tar.gz && ./GenerationalLegacy.x86_64`. It is one file with the game's data inside it. The build starts it once with no window to check that it runs.
+
+## macOS
+
+Unzip and open **Generational Legacy RPG.app**. The app is signed only "ad hoc" (no Apple developer account), not notarised, so macOS will refuse it the first time: right-click the app and choose **Open**, then **Open** again, or allow it under **System Settings > Privacy & Security**. If it says the app is damaged, the download was quarantined: run `xattr -dr com.apple.quarantine "Generational Legacy RPG.app"` in Terminal once. The Mac app is built and its contents checked on GitHub, but **nobody has run it on a Mac yet**; a signed, notarised build needs an Apple developer account.
+
 ## Changing the Godot version
 
-The version and its checksums are set in one place, `.github/actions/setup-godot/action.yml`, which both the test and release workflows use. The checksums are in the `SHA512-SUMS.txt` file on the release at https://github.com/godotengine/godot-builds/releases (one for the editor zip, one for the export templates).
+The version and its checksums are set in one place, `.github/actions/setup-godot/action.yml`, which both the test and release workflows use. That file also lists which export templates are unpacked; a new platform needs its template added there. The checksums are in the `SHA512-SUMS.txt` file on the release at https://github.com/godotengine/godot-builds/releases (one for the editor zip, one for the export templates).
