@@ -7,6 +7,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Clipboard := preload("res://ui/play/clipboard.gd")
 const FilePicker := preload("res://ui/play/file_picker.gd")
+const GraphicsSettings := preload("res://ui/play/graphics_settings.gd")
 
 var app: Node
 var note: Label
@@ -98,6 +99,27 @@ func _ready() -> void:
 		var khy := Kit.label(opt[2], 14, Kit.dim())
 		khy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(khy)
+	v.add_child(Kit.label("Graphics", 17, Kit.ACCENT))
+	var grow := HBoxContainer.new()
+	grow.add_theme_constant_override("separation", 8)
+	v.add_child(grow)
+	for gid in GraphicsSettings.ids():
+		var preset_id: String = gid
+		_choice(grow, str(GraphicsSettings.preset_def(preset_id)["name"]), preset_id == GraphicsSettings.preset(), func(): app.set_graphics(preset_id))
+	var gwhy := Kit.label(str(GraphicsSettings.preset_def(GraphicsSettings.preset())["about"]), 14, Kit.dim())
+	gwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(gwhy)
+	var brow := HBoxContainer.new()
+	brow.add_theme_constant_override("separation", 8)
+	v.add_child(brow)
+	var blabel := Kit.label("Battery saver", 15, Kit.TEXT)
+	blabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	brow.add_child(blabel)
+	_choice(brow, "On", GraphicsSettings.battery_saver(), func(): app.set_battery_saver(true))
+	_choice(brow, "Off", not GraphicsSettings.battery_saver(), func(): app.set_battery_saver(false))
+	var bwhy := Kit.label(str(GraphicsSettings.data()["battery_saver"]["about"]), 14, Kit.dim())
+	bwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(bwhy)
 	v.add_child(Kit.label("Problems", 17, Kit.ACCENT))
 	var erow := HBoxContainer.new()
 	erow.add_theme_constant_override("separation", 8)
