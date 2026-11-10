@@ -1028,6 +1028,13 @@ func _layout_pass(wsize: Vector2i, s: float) -> void:
 	app.show_title()
 	await _frames(3)
 	_check_inside(app.frame, room, "title " + tag)
+	app.closed_badly = true   # the notice after a bad close has to fit too
+	app.show_title()
+	await _frames(3)
+	_check_inside(app.frame, room, "title after a bad close " + tag)
+	app.closed_badly = false
+	app.show_title()
+	await _frames(3)
 	app.open_menu()
 	await _frames(2)
 	_check_inside(app.frame, room, "title settings " + tag)

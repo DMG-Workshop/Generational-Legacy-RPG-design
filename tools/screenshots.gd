@@ -7,6 +7,9 @@
 ##   mode=check   draw them into `out`, compare each with `dir`/<name>.png and exit 1 on any that differ, any
 ##                with no stored image and any stored image no screen draws (differences go to out/diff)
 ##   mode=update  draw them into `dir`: the new stored images (commit them with the change that moved them)
+##   mode=store   draw the store's pictures (STORE_SHOTS: a few screens at 1920x1080, and the phone layout at
+##                2532x1170) into `out` (default build/store). The virtual display must be at least that big:
+##                xvfb-run -a -s "-screen 0 2600x1200x24" ... -- mode=store
 ## The screens are drawn with reduced motion, fixed seeds and the game's own fonts, so a run is repeatable.
 extends SceneTree
 
@@ -46,6 +49,20 @@ const SHOTS := [
 	["phone_battle", PHONE, true, "battle:kingshold"],
 ]
 
+## The pictures for a store page: the same screens, bigger. Nothing compares them; they are made on demand.
+const STORE_DESKTOP := Vector2i(1920, 1080)
+const STORE_PHONE := Vector2i(2532, 1170)
+const STORE_SHOTS := [
+	["store_life", STORE_DESKTOP, false, "life"],
+	["store_battle", STORE_DESKTOP, false, "battle:kingshold"],
+	["store_battle_swamp", STORE_DESKTOP, false, "battle:mirefen"],
+	["store_map", STORE_DESKTOP, false, "map"],
+	["store_skill_tree", STORE_DESKTOP, false, "skills"],
+	["store_chronicle", STORE_DESKTOP, false, "chronicle"],
+	["store_phone_life", STORE_PHONE, true, "life"],
+	["store_phone_battle", STORE_PHONE, true, "battle:kingshold"],
+]
+
 var app: Node
 var d: GameDynasty
 
@@ -70,7 +87,7 @@ func _run() -> void:
 	GameData.load_all()
 	var mode := _arg("mode", "render")
 	var dir := _arg("dir", "tests/screenshots")
-	var out := _arg("out", "/tmp/shots")
+	var out := _arg("out", "build/store" if mode == "store" else "/tmp/shots")
 	var only := _arg("only", "")
 	var names: Array = Array(only.split(",", false))
 	if DisplayServer.get_name() == "headless":
@@ -86,7 +103,12 @@ func _run() -> void:
 	TouchHint.finger = false
 	UiSettings.set_access("reduced_motion", true)
 	var made: Array = []
-	for shot in SHOTS:
+	var screen := DisplayServer.screen_get_size()
+	for shot in (STORE_SHOTS if mode == "store" else SHOTS):
+		if shot[1].x > screen.x or shot[1].y > screen.y:
+			print("The display is %dx%d, too small for %s (%dx%d): see the top of tools/screenshots.gd." % [screen.x, screen.y, shot[0], shot[1].x, shot[1].y])
+			quit(2)
+			return
 		if not names.is_empty() and shot[0] not in names:
 			continue
 		var img := await _shoot(shot)
@@ -146,6 +168,7 @@ func _shoot(shot: Array) -> Image:
 	app = GameApp.new()
 	root.add_child(app)
 	await _frames(3)
+	app.closed_badly = false   # a run of this tool that was killed is not something to draw on the title
 	var what: String = shot[3]
 	if what == "title":
 		app.show_title()
