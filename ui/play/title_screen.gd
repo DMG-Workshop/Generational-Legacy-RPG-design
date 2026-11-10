@@ -51,6 +51,18 @@ func _ready() -> void:
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(sub)
+	if app.closed_badly:   # the last session ended without warning: offer a report, once
+		var crow := HBoxContainer.new()
+		crow.add_theme_constant_override("separation", 8)
+		box.add_child(crow)
+		var cl := Kit.label("The game did not close properly last time. Your save is as it was.", 14, Kit.bad())
+		cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		crow.add_child(cl)
+		crow.add_child(Kit.button("Report a problem", func(): app.open_report(), Vector2(170, 36)))
+		crow.add_child(Kit.button("Dismiss", func():
+			app.closed_badly = false
+			crow.queue_free(), Vector2(100, 36)))
 	box.add_child(Control.new())
 
 	var p := Kit.panel()

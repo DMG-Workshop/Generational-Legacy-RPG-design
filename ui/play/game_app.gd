@@ -16,6 +16,7 @@ const EndingScreen := preload("res://ui/play/ending_screen.gd")
 
 var dynasty: GameDynasty
 var slot := 1   # the save slot in use (GameSaves); GameDynasty.save_path is its file
+var closed_badly := false   # the last session ended without warning (GameSessionMark): the title offers a report
 var hunt_stopped := false   # the player pressed Stop: auto-battle's run of hunts ends after this fight
 var current: Control
 var bg: ColorRect
@@ -33,6 +34,7 @@ func _ready() -> void:
 	UiSettings.apply(get_window())
 	if UiSettings.error_log_on():   # only for a player who asked for it (the menu's Error log)
 		GameErrorLog.install()
+	closed_badly = GameSessionMark.begin(session_mark_path())
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg = ColorRect.new()
 	bg.color = Kit.BG
@@ -223,10 +225,22 @@ func _relayout() -> void:
 
 # ---------------------------------------------------------------- lifecycle
 
+## Where the session mark is kept: beside the settings file.
+func session_mark_path() -> String:
+	return UiSettings.path.get_base_dir().path_join("session.mark")
+
+
+func _exit_tree() -> void:
+	GameSessionMark.end(session_mark_path())
+
+
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_CLOSE_REQUEST:
 			autosave()
+			GameSessionMark.end(session_mark_path())   # from here the system may kill the app without a word: that is not a crash
+		NOTIFICATION_APPLICATION_RESUMED:
+			GameSessionMark.begin(session_mark_path())
 		NOTIFICATION_APPLICATION_FOCUS_OUT:
 			if UiSettings.is_mobile():
 				autosave()

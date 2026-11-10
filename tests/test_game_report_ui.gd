@@ -1,7 +1,8 @@
 ## Report a problem on the real screens: the menu's Problems section (the error log is off until switched on, the
 ## choice is kept, switching it off forgets), the report panel (says what a report holds and that nothing is sent,
 ## takes a note, copies a report that reads back with the house being played, saves one to a file), a report from the
-## title with no house, one made mid-fight, and the facts about the device.
+## title with no house, one made mid-fight, the facts about the device, and the notice after a session that did not
+## close properly.
 ## Run: godot --headless --path . -s res://tests/test_game_report_ui.gd
 extends SceneTree
 
@@ -51,6 +52,7 @@ func _run() -> void:
 	await test_report_to_a_file()
 	await test_report_from_the_title()
 	await test_report_in_a_fight()
+	await test_closed_badly()
 	test_env()
 	GameErrorLog.remove()
 	_wipe()
@@ -279,3 +281,46 @@ func test_env() -> void:
 		ok(kept.has(k), "the device facts include %s" % k)
 	var all := JSON.stringify(facts)
 	ok(not all.contains(OS.get_user_data_dir()) and not all.contains(OS.get_environment("HOME") if OS.get_environment("HOME") != "" else "//none//"), "and no folder of the player's")
+
+
+## The session mark: a session that ends properly leaves none; one that does not is noticed at the next start, and the
+## title then offers a report, once.
+func test_closed_badly() -> void:
+	var path := DIR + "mark_test.mark"
+	ok(not GameSessionMark.begin(path) and GameSessionMark.running(path), "a first start is not a bad close, and marks the session")
+	GameSessionMark.end(path)
+	ok(not GameSessionMark.running(path) and not GameSessionMark.begin(path), "a session that ended properly leaves no mark for the next")
+	ok(GameSessionMark.begin(path), "one that never ended is noticed at the next start")
+	GameSessionMark.end(path)
+	GameSessionMark.end(path)
+	ok(not GameSessionMark.running(path), "ending twice is harmless")
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string("something else")
+	f.close()
+	ok(not GameSessionMark.begin(path), "a mark file holding something else is not taken for a crash")
+	GameSessionMark.end(path)
+	ok(app.session_mark_path() == DIR + "session.mark" and GameSessionMark.running(app.session_mark_path()), "the app marks its session beside the settings file")
+	ok(not app.closed_badly, "(this run did not follow a bad close)")
+	app.show_title()
+	await _frames(3)
+	ok(not _texts(app.current).has("Dismiss"), "so the title says nothing about one")
+	app.closed_badly = true
+	app.show_title()
+	await _frames(3)
+	var texts := _texts(app.current)
+	ok(str(texts).contains("did not close properly") and texts.has("Dismiss") and texts.has("Report a problem"), "after a bad close the title says so and offers a report")
+	_btn("Report a problem", app.current).pressed.emit()
+	await _frames(3)
+	ok(_panel() != null, "which opens the report panel")
+	_panel().queue_free()
+	await _frames(2)
+	_btn("Dismiss", app.current).pressed.emit()
+	await _frames(3)
+	ok(not app.closed_badly and not _texts(app.current).has("Dismiss"), "Dismiss takes the notice away")
+	app.show_title()
+	await _frames(3)
+	ok(not _texts(app.current).has("Dismiss"), "and it does not come back")
+	app.notification(Node.NOTIFICATION_APPLICATION_PAUSED)
+	ok(not GameSessionMark.running(app.session_mark_path()), "going to the background ends the session properly (a phone may kill the app there)")
+	app.notification(Node.NOTIFICATION_APPLICATION_RESUMED)
+	ok(GameSessionMark.running(app.session_mark_path()), "and coming back marks it again")
