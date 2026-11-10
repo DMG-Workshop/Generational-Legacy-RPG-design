@@ -52,6 +52,17 @@ static func panel(color: Color = PANEL) -> PanelContainer:
 	return p
 
 
+## The ring round the control a gamepad or the keyboard is on (never seen with a mouse or a finger: PadFocus).
+static func focus_ring() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.draw_center = false
+	s.set_corner_radius_all(6)
+	s.set_border_width_all(3)
+	s.border_color = Color("#ffffff")
+	s.set_expand_margin_all(2)
+	return s
+
+
 static func label(text: String, size: int = 16, color: Color = TEXT) -> Label:
 	var l := Label.new()
 	l.text = text
@@ -71,6 +82,7 @@ static func button(text: String, callback: Callable, min_size: Vector2 = Vector2
 	b.add_theme_stylebox_override("pressed", style(Color("#4d4680"), 6, ACCENT))
 	b.add_theme_stylebox_override("disabled", style(Color("#1b1927"), 6, Color("#2a2740")))
 	b.add_theme_color_override("font_disabled_color", Color("#5a566a"))
+	b.add_theme_stylebox_override("focus", focus_ring())
 	b.pressed.connect(callback)
 	return b
 
