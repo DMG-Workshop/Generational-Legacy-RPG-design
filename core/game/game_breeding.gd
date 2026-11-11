@@ -51,7 +51,7 @@ static func trait_mult(e: Dictionary, key: String) -> float:
 	var m := 1.0
 	for t in e.get("traits", []):
 		m *= float(data()["traits"].get(str(t), {}).get(key, 1.0))
-	return m
+	return m * GameRealms.mult(e, key)   # and what its worlds do (item 58): 1.0 for a creature of home with no marks
 
 
 ## Whether this creature could have young now (the flag only says it is meant to).
@@ -188,6 +188,7 @@ static func _birth(d: GameDynasty, mother: Dictionary, father: Dictionary, r: Ra
 		e["sterile"] = true
 		out.append(text("sterile", {"name": e["name"]}))
 	mother["cooldown"] = float(setting("cooldown")[mode])
+	out.append_array(GameRealms.on_birth(e, mother, father))   # young of two worlds (nothing until the worlds are linked)
 	var def := GameCombat.creature_def(ms)
 	var vals := {"mother": str(mother["name"]), "name": e["name"], "young": e["young"], "species": str(def.get("name", ms)).to_lower()}
 	out.push_front(text("born_egg" if mode == "egg" else "born_live", vals))

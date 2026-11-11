@@ -91,7 +91,7 @@ static func yearly_keep(e: Dictionary, d: GameDynasty = null) -> float:
 	var k := float(size_of(str(e["species"]))["keep"])
 	if str(e.get("stage")) == "egg":
 		k *= float(setting("egg_keep_share"))
-	return k * (ranch_factor(d, e, "keep") * GameSubclass.perk(d.heir, "keep_mult") if d != null else 1.0)
+	return k * GameRealms.mult(e, "keep_mult") * (ranch_factor(d, e, "keep") * GameSubclass.perk(d.heir, "keep_mult") if d != null else 1.0)
 
 
 ## What work a species does: {kind, gold} or {} (grown creatures only; see work_share).
@@ -216,6 +216,7 @@ static func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 			kept.append(e)
 	d.roster = kept
 	GameBreeding.on_years(d, years, msgs)
+	GameRealms.on_years(d, years, msgs)
 
 
 ## One creature's years. Returns the lines to tell. A creature that is gone is marked "gone".

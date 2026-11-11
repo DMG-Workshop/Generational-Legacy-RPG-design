@@ -402,9 +402,9 @@ func _built(level: int) -> GameDynasty:
 func test_selling() -> void:
 	var d := dyn()
 	var wolf := GameRoster.add(d, "wolf", "Ash")   # medium, value 80, young x0.7, mood 70
-	var egg := GameRoster.add(d, "drake", "Ember")   # large, value 250, egg x0.5
+	var egg := GameRoster.add(d, "drake", "Ember")   # large, value 250, egg x0.5, and x1.2 as a creature of the Dragon Isles (item 58)
 	ok(GameRanch.sell_price(wolf) == int(round(80.0 * 0.7 * 0.7)), "a young creature sells for its value by stage and mood: %d" % GameRanch.sell_price(wolf))
-	ok(GameRanch.sell_price(egg) == int(round(250.0 * 0.5 * 0.7)), "an egg sells for less")
+	ok(GameRanch.sell_price(egg) == int(round(250.0 * 0.5 * 0.7 * 1.2)), "an egg sells for less")
 	wolf["mood"] = 100
 	var well := GameRanch.sell_price(wolf)
 	wolf["mood"] = 10
