@@ -30,7 +30,7 @@ static func current(d: GameDynasty, screen: String = "life", ctx: Dictionary = {
 			continue
 		if (step.get("done", []) as Array).any(func(p): return holds(d, str(p), ctx)):
 			continue
-		return {"id": step["id"], "text": fill(str(step["text"]), d), "highlight": (step.get("highlight", []) as Array).duplicate()}
+		return {"id": step["id"], "text": fill(GameLocale.text("tutorial", str(step["id"]), str(step["text"])), d), "highlight": (step.get("highlight", []) as Array).duplicate()}
 	return {}
 
 

@@ -1,7 +1,8 @@
 ## Player-facing text kept in data (data/text/*.json), found by key, so a line can be reworded, translated or
 ## given a sound cue without touching rules. `line(key, vars)` fills each {placeholder} from `vars` in one pass.
 ## A missing key or placeholder is a bug: it is recorded in `problems` (the tests read it) and shown in the
-## text as [key] or {name}, never silently blank. Logic only.
+## text as [key] or {name}, never silently blank. The line is shown in the chosen language (GameLocale): the game's
+## own unless another is set. Logic only.
 class_name GameMessages
 extends RefCounted
 
@@ -16,7 +17,7 @@ static func line(key: String, vars: Dictionary = {}) -> String:
 	if not lines.has(key):
 		problems.append("no message '%s'" % key)
 		return "[%s]" % key
-	return fill(str(lines[key]), vars, key)
+	return fill(GameLocale.text("battle", key, str(lines[key])), vars, key)
 
 
 ## Fills {placeholder}s of `template` from `vars`; `where` names the message for the problem list.
