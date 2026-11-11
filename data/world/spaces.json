@@ -1,0 +1,15 @@
+{
+  "note": "World spaces and coordinates (roadmap item 41; core/game/game_spaces.gd, checked by tools/check_data.gd). Every place the game has is a space with an id of its own and a position, so the text game's map and the sandbox name places the same way. Ids are paths: `world` is the open world (the generated surface and the ground under it); a town or a stretch of wilds is an AREA of it, `world/hearthmere`, a region round the place's anchor tile that is walked into; a dungeon is an INTERIOR, `world/goblin_warrens`, a space of its own entered through a door on the open world; a town's services are interiors of the town, `world/hearthmere/forge`, each with its door a few tiles from the town's centre (`service_doors`, as [east, south] of it, inside the town's cleared ground); and the family house is an interior of the home town (`house`). `kind_of_type` says which kind each place type in world.json is. Nothing here is saved or random: a space is worked out from world.json, this file and GameWorldGen's anchors.",
+  "root": {"id": "world", "name": "The open world"},
+  "kind_of_type": {"town": "area", "wilds": "area", "dungeon": "interior"},
+  "service_names": {"forge": "Forge", "temple": "Temple", "store": "Store", "tavern": "Tavern", "board": "Notice board", "black_market": "Black market"},
+  "service_doors": {
+    "forge": [-4, -2],
+    "temple": [4, -3],
+    "store": [-3, 3],
+    "tavern": [2, 4],
+    "board": [0, -5],
+    "black_market": [5, 5]
+  },
+  "house": {"id": "house", "name": "The family house", "door": [3, 0]}
+}
