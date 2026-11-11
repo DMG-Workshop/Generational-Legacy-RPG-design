@@ -1,0 +1,33 @@
+{
+  "note": "Input for a world (roadmap item 39; ui/play/world_input.gd, checked by tools/check_data.gd). The open world's actions and what is bound to each: keys (Godot's key names), mouse buttons (left, right, middle, wheel_up, wheel_down), gamepad buttons and gamepad axes (an axis and the direction that counts, -1 or 1). `install` puts them in the engine's input map under these names, so a sandbox screen asks for `world_move_up` and never for a key. Every action must be reachable from the keyboard or mouse and from a gamepad (`pointer_only` marks the few a gamepad does without), and no key or button may do two things. Touch has no bindings: a finger moves with a stick drawn where it lands (`touch_stick_*`), taps the ground to act there (`tap_*`) and pinches to zoom (`pinch_*`); the numbers are here and the arithmetic in world_input.gd. A gamepad or the keyboard acts on the tile in front of the heir. `camera_follow_seconds` is how long the camera takes to catch the heir up, and is nothing with reduced motion on.",
+  "settings": {
+    "stick_deadzone": 0.25,
+    "touch_stick_radius_px": 80,
+    "touch_stick_deadzone": 0.15,
+    "tap_max_px": 14,
+    "tap_max_seconds": 0.3,
+    "pinch_zoom_per_px": 0.005,
+    "zoom_min": 0.5,
+    "zoom_max": 3.0,
+    "zoom_step": 0.25,
+    "camera_follow_seconds": 0.2
+  },
+  "actions": {
+    "world_move_up": {"name": "Move up", "keys": ["W", "Up"], "pad_buttons": ["dpad_up"], "pad_axes": [["left_y", -1]]},
+    "world_move_down": {"name": "Move down", "keys": ["S", "Down"], "pad_buttons": ["dpad_down"], "pad_axes": [["left_y", 1]]},
+    "world_move_left": {"name": "Move left", "keys": ["A", "Left"], "pad_buttons": ["dpad_left"], "pad_axes": [["left_x", -1]]},
+    "world_move_right": {"name": "Move right", "keys": ["D", "Right"], "pad_buttons": ["dpad_right"], "pad_axes": [["left_x", 1]]},
+    "world_cam_up": {"name": "Look up", "keys": ["I"], "pad_axes": [["right_y", -1]]},
+    "world_cam_down": {"name": "Look down", "keys": ["K"], "pad_axes": [["right_y", 1]]},
+    "world_cam_left": {"name": "Look left", "keys": ["J"], "pad_axes": [["right_x", -1]]},
+    "world_cam_right": {"name": "Look right", "keys": ["L"], "pad_axes": [["right_x", 1]]},
+    "world_zoom_in": {"name": "Zoom in", "keys": ["Equal"], "mouse": ["wheel_up"], "pad_buttons": ["right_shoulder"]},
+    "world_zoom_out": {"name": "Zoom out", "keys": ["Minus"], "mouse": ["wheel_down"], "pad_buttons": ["left_shoulder"]},
+    "world_dig": {"name": "Dig", "keys": ["E"], "mouse": ["left"], "pad_buttons": ["x"]},
+    "world_build": {"name": "Build", "keys": ["R"], "mouse": ["right"], "pad_buttons": ["y"]},
+    "world_interact": {"name": "Use", "keys": ["F"], "pad_buttons": ["a"]},
+    "world_cancel": {"name": "Back", "keys": ["Escape"], "pad_buttons": ["b"]},
+    "world_menu": {"name": "Menu", "keys": ["Tab"], "pad_buttons": ["start"]},
+    "world_pan": {"name": "Drag the view", "mouse": ["middle"], "pointer_only": true}
+  }
+}
