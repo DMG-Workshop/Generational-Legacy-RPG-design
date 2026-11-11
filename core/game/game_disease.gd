@@ -224,6 +224,7 @@ static func _expose(d: GameDynasty, unit: GameHeir, id: String, chance: float) -
 	if def(id).is_empty() or has(unit, id) or chance <= 0.0:
 		return ""
 	var roll := d.rng.randf()
+	chance = minf(1.0, chance * GameWorldEvents.mult(d, "disease_mult"))   # a famine or a pestilence makes every exposure likelier
 	if roll < chance * (1.0 - resistance(unit, id)):
 		return "caught"
 	return "resisted" if roll < chance else ""
