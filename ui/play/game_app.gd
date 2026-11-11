@@ -8,6 +8,7 @@ const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const MenuPanel := preload("res://ui/play/menu_panel.gd")
 const ReportPanel := preload("res://ui/play/report_panel.gd")
+const PadFocus := preload("res://ui/play/pad_focus.gd")
 const TitleScreen := preload("res://ui/play/title_screen.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
@@ -22,6 +23,7 @@ var current: Control
 var bg: ColorRect
 var frame: Control
 var hints: Node
+var pad: Node   # menus by gamepad and keyboard (PadFocus)
 var safe_override := Rect2i()   # tests and screenshots: a pretend safe area, in window pixels
 var _safe_seen := Rect2i()
 var _safe_check := 0.0
@@ -40,6 +42,9 @@ func _ready() -> void:
 	bg.color = Kit.BG
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	pad = PadFocus.new()   # before the screens, so a screen's own Escape handling comes first
+	pad.app = self
+	add_child(pad)
 	frame = Control.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
