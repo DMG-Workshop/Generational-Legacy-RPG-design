@@ -10,6 +10,7 @@ const MenuPanel := preload("res://ui/play/menu_panel.gd")
 const ReportPanel := preload("res://ui/play/report_panel.gd")
 const PadFocus := preload("res://ui/play/pad_focus.gd")
 const GraphicsSettings := preload("res://ui/play/graphics_settings.gd")
+const WorldInput := preload("res://ui/play/world_input.gd")
 const TitleScreen := preload("res://ui/play/title_screen.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
@@ -36,6 +37,7 @@ func _ready() -> void:
 	use_slot(maxi(1, GameSaves.newest()))   # start on the slot played last
 	UiSettings.apply(get_window())
 	GraphicsSettings.apply()
+	WorldInput.install()   # the open world's actions: nothing reads them until there is a sandbox screen
 	if UiSettings.error_log_on():   # only for a player who asked for it (the menu's Error log)
 		GameErrorLog.install()
 	closed_badly = GameSessionMark.begin(session_mark_path())
