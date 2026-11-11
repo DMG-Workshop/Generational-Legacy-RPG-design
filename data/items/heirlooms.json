@@ -1,0 +1,21 @@
+{
+  "note": "Heirloom upgrades across generations (roadmap item 18; core/game/game_heirlooms.gd, checked by tools/check_data.gd). An heirloom is taken from a slain legend and gives every heir `heirloom_bonus` power (balance.json). Each heir may have each heirloom reworked once in their life, at a place with the `needs_service` service, for gold: its level rises by one (to `max_level` at most), and each level adds `level_bonus` power for every heir after. So an heirloom grows over generations, never in one life, and the heirs who worked it are remembered on it. The price is `cost_base` times the square of the level being bought, scaled by the generation as shop prices are. Level names are for the screens. No dice. The autopilot reworks nothing, so its results do not move; an heirloom with no level saves exactly what it did.",
+  "settings": {
+    "max_level": 5,
+    "level_bonus": 0.01,
+    "cost_base": 400,
+    "needs_service": "forge"
+  },
+  "levels": ["as it was taken", "reforged", "inlaid", "rune-cut", "storied", "legendary"],
+  "text": {
+    "none": "There is no such heirloom.",
+    "not_alive": "Only a living heir can have an heirloom reworked.",
+    "max": "{name} can be made no finer.",
+    "this_heir": "{name} has already been reworked in {heir}'s life. Their heir may take it further.",
+    "service": "An heirloom is reworked at a forge.",
+    "gold": "Not enough gold ({need} needed).",
+    "done": "{heir} has {name} reworked: it is now {level}, and gives every heir {bonus}% power.",
+    "line": "{name}, {level}: +{bonus}% power. Taken from {boss} in generation {gen}.",
+    "worked": "Reworked by {smiths}."
+  }
+}

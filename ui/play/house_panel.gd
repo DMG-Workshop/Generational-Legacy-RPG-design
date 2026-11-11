@@ -5,6 +5,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const CraftPanel := preload("res://ui/play/craft_panel.gd")
+const HeirloomPanel := preload("res://ui/play/heirloom_panel.gd")
 const WIDE := 760.0
 
 var dynasty: GameDynasty
@@ -39,7 +40,19 @@ func _build(column: float) -> void:
 	var shop := Kit.button("Workshop: make things, break up gear", func(): _workshop(), Vector2(column, 48))
 	shop.name = "Workshop"
 	_body.add_child(shop)
+	if not dynasty.heirlooms.is_empty():   # only a house that holds one: a new house's panel is as it was
+		var looms := Kit.button("Heirlooms: have them reworked", func(): _heirlooms(), Vector2(column, 48))
+		looms.name = "Heirlooms"
+		_body.add_child(looms)
 	_body.add_child(Kit.button("Close", func(): queue_free(), Vector2(column, 48)))
+
+
+## The heirlooms open over the house, as the workshop does.
+func _heirlooms() -> void:
+	var panel: Control = HeirloomPanel.new()
+	panel.dynasty = dynasty
+	panel.on_change = on_change
+	get_parent().add_child(panel)
 
 
 ## The workshop opens over the house, so closing it comes back here.

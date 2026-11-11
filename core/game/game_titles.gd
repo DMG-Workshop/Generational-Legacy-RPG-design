@@ -17,7 +17,7 @@ const STATS := ["level", "battles_won", "kills", "gold", "children", "clean_stre
 	"age_number", "bosses_slain", "house_hall", "house_yard", "world_year", "feats", "spells", "heirlooms"]
 const KINDS := ["personal", "house"]
 ## The condition keys that name one test, besides the combinators all, any and not.
-const TESTS := ["stat", "boss", "boss_by_heir", "flag", "trait", "class", "race", "family"]
+const TESTS := ["stat", "boss", "boss_by_heir", "flag", "trait", "class", "race", "family", "achievement", "faction"]
 
 
 static func defs() -> Array:
@@ -137,6 +137,10 @@ static func met(d: GameDynasty, cond: Variant) -> bool:
 		return d.heir.race_id == str(c["race"])
 	if c.has("family"):
 		return d.heir.family_founded == bool(c["family"])
+	if c.has("achievement"):   # a milestone the house has reached (GameAchievements)
+		return d.achievements.has(str(c["achievement"]))
+	if c.has("faction"):   # a faction holds the heir at its highest rank (GameFactions)
+		return GameFactions.at_least(d, str(c["faction"]), str(GameFactions.setting("top_rank")))
 	return false
 
 
@@ -174,6 +178,7 @@ static func update(d: GameDynasty) -> Array:
 
 ## Awards what is due and tells each new title in the journal. Returns the ids newly earned.
 static func announce(d: GameDynasty) -> Array:
+	GameAchievements.announce(d)   # milestones first: one may be what a title waits for
 	var fresh := update(d)
 	for id in fresh:
 		d._say("%s earns a title: %s." % [d.heir.name, str(def(id)["name"])])
@@ -320,4 +325,10 @@ static func _cond_problems(where: String, cond: Variant) -> Array:
 		"family":
 			if typeof(c[k]) != TYPE_BOOL:
 				out.append("%s: 'family' is true or false" % where)
+		"achievement":
+			if not GameAchievements.known(c[k]):
+				out.append("%s: no milestone called '%s'" % [where, c[k]])
+		"faction":
+			if not GameFactions.has(c[k]):
+				out.append("%s: no faction called '%s'" % [where, c[k]])
 	return out
