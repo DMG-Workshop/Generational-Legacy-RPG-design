@@ -38,6 +38,7 @@ var shirt: String = ""          # the shirt colour chosen for this figure (data/
 var subclass: String = ""          # the id of this heir's subclass (see GameSubclass); "" for none, saved only when there is one
 var subclass_founded: bool = false  # chosen at the founding or born to it: its perks are stronger
 var titles: Array = []          # ids of the personal titles this heir has earned (see GameTitles); saved only once there is one
+var boons: Array = []           # ids of the factions that have honoured this heir with their gift (see GameFactions); saved only once there is one
 var title_worn: String = ""     # the title worn after the name, from these or the house's; "" for none
 var children: Array = []     # Array[GameHeir], born to this heir
 var spouse: GameHeir = null
@@ -290,6 +291,8 @@ func to_dict() -> Dictionary:
 		out["subclass_founded"] = subclass_founded
 	if not titles.is_empty():   # likewise only once earned
 		out["titles"] = titles
+	if not boons.is_empty():   # likewise only once taken
+		out["boons"] = boons
 	if title_worn != "":
 		out["title_worn"] = title_worn
 	return out
@@ -316,6 +319,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.companion_id = str(d.get("companion_id", "")) if typeof(d.get("companion_id", "")) == TYPE_STRING else ""
 	h.shirt = str(d.get("shirt", "")) if typeof(d.get("shirt", "")) == TYPE_STRING else ""
 	h.titles = GameTitles.clean_ids(d.get("titles", []))
+	h.boons = GameFactions.load_boons(d.get("boons", []))
 	if typeof(d.get("subclass")) == TYPE_STRING and GameSubclass.has(str(d["subclass"])):   # an id this game does not know is no subclass
 		h.subclass = str(d["subclass"])
 		h.subclass_founded = typeof(d.get("subclass_founded")) == TYPE_BOOL and d["subclass_founded"]

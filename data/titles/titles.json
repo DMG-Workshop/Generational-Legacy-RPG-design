@@ -353,6 +353,54 @@
    "when": {
     "achievement": "bred_3"
    }
+  },
+  {
+   "id": "magister",
+   "name": "Magister of the Circle",
+   "kind": "personal",
+   "about": "Be held as Honoured by the Mage's Circle.",
+   "when": {
+    "faction": "mages_circle"
+   }
+  },
+  {
+   "id": "guild_shadow",
+   "name": "Shadow of the Guild",
+   "kind": "personal",
+   "about": "Be held as Honoured by the Thieves' Guild.",
+   "when": {
+    "faction": "thieves_guild"
+   }
+  },
+  {
+   "id": "order_knight",
+   "name": "Knight of the Order",
+   "kind": "personal",
+   "about": "Be held as Honoured by the Warrior's Order.",
+   "when": {
+    "faction": "warriors_order"
+   }
+  },
+  {
+   "id": "church_blessed",
+   "name": "the Blessed",
+   "kind": "personal",
+   "about": "Be held as Honoured by the Church.",
+   "when": {
+    "faction": "church"
+   }
+  },
+  {
+   "id": "peer",
+   "name": "Peer of the Realm",
+   "kind": "personal",
+   "about": "Be held as Honoured by the Noble Houses.",
+   "when": {
+    "faction": "noble_houses"
+   },
+   "perk": {
+    "persuasion": 0.02
+   }
   }
  ]
 }

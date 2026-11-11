@@ -10,6 +10,7 @@ var on_change: Callable   # called after a title is put on or taken off, or a cr
 var _titles_box: VBoxContainer
 var _creatures_box: VBoxContainer
 var _subclass_box: VBoxContainer
+var _factions_box: VBoxContainer
 var _sure := {}   # creature id -> "sell" or "free", asked once and waiting for the second tap
 
 
@@ -39,6 +40,7 @@ func _ready() -> void:
 
 	tabs.add_child(_titles_tab())
 	tabs.add_child(_milestones_tab())
+	tabs.add_child(_factions_tab())
 	tabs.add_child(_creatures_tab())
 	tabs.add_child(_subclass_tab())
 	var stats := Kit.rich()
@@ -311,6 +313,63 @@ func _milestone_row(box: VBoxContainer, id: String) -> void:
 	var line := Kit.label("%s  %s" % [str(m["about"]), str(m["line"])], 14, Kit.TEXT if m["done"] else Kit.dim())
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(line)
+
+
+## The Factions tab: how each faction holds the heir, what it remembers of the house, and the gift it offers once
+## in an heir's life. Standings and text are GameFactions'; this draws them and calls take.
+func _factions_tab() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Factions"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_factions_box = VBoxContainer.new()
+	_factions_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_factions_box.add_theme_constant_override("separation", 8)
+	scroll.add_child(_factions_box)
+	_fill_factions()
+	return scroll
+
+
+func _fill_factions() -> void:
+	Kit.clear(_factions_box)
+	var note := Kit.label("The factions judge an heir by their ancestors: what the line was, did and died of, fading with the generations, and by the heir's own deeds. A faction that holds an heir well honours them once, in a town.", 14, Kit.dim())
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_factions_box.add_child(note)
+	for id in GameFactions.ids():
+		var f := GameFactions.describe(dynasty, id)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_factions_box.add_child(row)
+		var text := VBoxContainer.new()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(text)
+		var colour: Color = Kit.good() if int(f["standing"]) > 0 else (Kit.bad() if int(f["standing"]) < 0 else Kit.dim())
+		var head := Kit.label("%s: %s" % [str(f["name"]), str(f["line"])], 16, colour)
+		head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.add_child(head)
+		var about := str(f["remembers"])
+		var why := str(f["why_not"])
+		if str(f["gift"]) != "":
+			about += "  Gift: %s." % str(f["gift"])
+		if why != "" and (str(f["gift"]) != "" or id in dynasty.heir.boons if dynasty.heir != null else false):
+			about += "  " + why
+		var line := Kit.label(about, 14, Kit.TEXT)
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.add_child(line)
+		if str(f["gift"]) != "" or (dynasty.heir != null and id in dynasty.heir.boons):
+			var b := Kit.button("Honoured" if dynasty.heir != null and id in dynasty.heir.boons else "Accept", func(): _take_gift(id), Vector2(110, 0))
+			b.disabled = why != ""
+			b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_child(b)
+
+
+func _take_gift(id: String) -> void:
+	if not GameFactions.take(dynasty, id)["ok"]:
+		return
+	GameTitles.announce(dynasty)
+	if on_change.is_valid():
+		on_change.call()
+	_fill_factions()
 
 
 ## The Creatures tab: the eggs and young the family keeps (see GameRoster), each with Sell and Set free. Each of

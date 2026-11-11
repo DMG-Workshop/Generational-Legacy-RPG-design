@@ -76,6 +76,9 @@ func _maxed() -> GameDynasty:
 	d.house = {"hall": 3, "yard": 3}
 	d.world.year = 500.0
 	d.heirlooms = [{"name": "a"}, {"name": "b"}, {"name": "c"}]
+	for cls in ["mage", "rogue", "warrior", "cleric"]:   # and ancestors every faction honours, for the titles they confer (item 17)
+		for i in 12:
+			d.history.append({"gen": d.gen - 1, "class_id": cls, "level": 100, "battles_won": 500, "kills": {"skeleton": 500}, "gold": 500000, "cause": "old age", "titles": ["blooded", "veteran", "seasoned"]})
 	for a in GameAchievements.defs():   # and every milestone reached, for the titles they award (item 16)
 		d.achievements[str(a["id"])] = {"gen": 1, "year": 0, "heir": "x"}
 	return d
