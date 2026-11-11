@@ -113,7 +113,7 @@ func _setup_new_heir(h: GameHeir) -> void:
 # ---------------------------------------------------------------- echoes / heirlooms
 
 func heirloom_bonus() -> float:
-	return float(mini(heirlooms.size(), int(GameData.bal("heirloom_max")))) * float(GameData.bal("heirloom_bonus"))
+	return GameHeirlooms.total_bonus(self)   # each heirloom's base and its levels (item 18); with no levels, exactly count times heirloom_bonus
 
 
 func echo_total(kind: String, key: String = "") -> float:
@@ -995,7 +995,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	for e in g.echoes:
 		e["gen"] = int(e["gen"])
 		e["strength"] = snappedf(float(e["strength"]), GameFate.STEP)
-	g.heirlooms = _ints(Array(d["heirlooms"]))
+	g.heirlooms = GameHeirlooms.load_list(_ints(Array(d["heirlooms"])))
 	g.slain_bosses = _ints(d["slain_bosses"])
 	GameAges.wake_legends(g)
 	g.heir.heirloom_bonus = g.heirloom_bonus()
