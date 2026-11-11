@@ -9,6 +9,7 @@ const TouchHint := preload("res://ui/play/touch_hint.gd")
 const MenuPanel := preload("res://ui/play/menu_panel.gd")
 const ReportPanel := preload("res://ui/play/report_panel.gd")
 const PadFocus := preload("res://ui/play/pad_focus.gd")
+const GraphicsSettings := preload("res://ui/play/graphics_settings.gd")
 const TitleScreen := preload("res://ui/play/title_screen.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
@@ -34,6 +35,7 @@ func _ready() -> void:
 	GameSaves.base = GameDynasty.save_path   # slot 1 is the file the game already saved to
 	use_slot(maxi(1, GameSaves.newest()))   # start on the slot played last
 	UiSettings.apply(get_window())
+	GraphicsSettings.apply()
 	if UiSettings.error_log_on():   # only for a player who asked for it (the menu's Error log)
 		GameErrorLog.install()
 	closed_badly = GameSessionMark.begin(session_mark_path())
@@ -185,6 +187,19 @@ func set_touch_layout(t: String) -> void:
 ## stored, then the screen is laid out again so the colours and motion follow it.
 func set_access(key: String, on: bool) -> void:
 	UiSettings.set_access(key, on)
+	_relayout()
+
+
+## The menu's Graphics: a quality preset, and the battery saver over it.
+func set_graphics(id: String) -> void:
+	GraphicsSettings.set_preset(id)
+	GraphicsSettings.apply()
+	_relayout()
+
+
+func set_battery_saver(on: bool) -> void:
+	GraphicsSettings.set_battery_saver(on)
+	GraphicsSettings.apply()
 	_relayout()
 
 

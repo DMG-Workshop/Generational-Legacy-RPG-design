@@ -1,0 +1,16 @@
+{
+  "note": "Graphics settings (roadmap item 37; ui/play/graphics_settings.gd, checked by tools/check_data.gd). A quality preset sets three things: `pixel_scale` (how many screen pixels one pixel of world art covers in the 3D renderer to come: a bigger number draws fewer pixels), `effects` (off, some or all: which decorative effects are drawn) and `fps_cap` (frames a second, 0 for as fast as the screen refreshes). The battery saver lies over whichever preset is chosen: its frame cap unless the preset's is lower, effects off, and the engine's low-processor mode, which redraws only when something changes. The choice is kept in settings.cfg, never in the save. An effect names the level it needs (`effect_levels`): `weather_particles` (rain, snow and embers in a fight's painted scene) is drawn at some and all. `pixel_scale` has nothing to read it until the 3D renderer exists.",
+  "order": ["low", "medium", "high"],
+  "default_desktop": "high",
+  "default_mobile": "medium",
+  "levels": ["off", "some", "all"],
+  "presets": {
+    "low": {"name": "Low", "pixel_scale": 4, "effects": "off", "fps_cap": 30, "about": "Fewest pixels, no weather effects, 30 frames a second."},
+    "medium": {"name": "Medium", "pixel_scale": 3, "effects": "some", "fps_cap": 60, "about": "Weather effects, 60 frames a second."},
+    "high": {"name": "High", "pixel_scale": 2, "effects": "all", "fps_cap": 0, "about": "Sharpest picture, every effect, as fast as the screen refreshes."}
+  },
+  "battery_saver": {"fps_cap": 30, "effects": "off", "low_processor": true, "about": "At most 30 frames a second, no effects, and the screen is redrawn only when something changes."},
+  "effect_levels": {
+    "weather_particles": "some"
+  }
+}

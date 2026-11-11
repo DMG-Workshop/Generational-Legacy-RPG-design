@@ -17,6 +17,7 @@ const SEASONS := ["spring", "summer", "autumn", "winter"]
 static var _data: Dictionary = {}
 static var _loaded := false
 static var _cache: Dictionary = {}   # key -> Texture2D
+static var particles_on := true      # the graphics settings' weather particles (GraphicsSettings.apply)
 static var _order: Array = []        # the cache's keys, oldest first
 
 
@@ -27,11 +28,12 @@ class Canvas:
 	var h := 0
 	var hz := 0   # the horizon: the first row of the ground
 	var rng: RandomNumberGenerator = CosmeticRng.keyed("")
+	var mute := false   # draw nothing (the dice are still rolled, so the rest of the scene is the same)
 	var season := ""
 	var props: Dictionary = {}
 
 	func put(x: int, y: int, c: Color) -> void:
-		if x < 0 or y < 0 or x >= w or y >= h or c.a <= 0.0:
+		if mute or x < 0 or y < 0 or x >= w or y >= h or c.a <= 0.0:
 			return
 		if c.a >= 1.0:
 			img.set_pixel(x, y, c)
@@ -84,6 +86,12 @@ static func _load() -> void:
 		var v = JSON.parse_string(FileAccess.get_file_as_string(PATH))
 		if typeof(v) == TYPE_DICTIONARY:
 			_data = v
+
+
+## Forget the scenes already painted (a graphics setting changed what a scene shows); the data stays loaded.
+static func forget_painted() -> void:
+	_cache = {}
+	_order = []
 
 
 ## Forget everything loaded and made (tests change the data in between).
@@ -253,7 +261,9 @@ static func _op(cv: Canvas, raw: Variant) -> void:
 		"tint":
 			_tint(cv, op)
 		"particles":
+			cv.mute = not particles_on   # switched off by the graphics settings: rolled, not drawn
 			_particles(cv, op)
+			cv.mute = false
 
 
 # ---------------------------------------------------------------- the sky and the back wall
