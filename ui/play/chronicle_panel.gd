@@ -38,6 +38,7 @@ func _ready() -> void:
 
 
 	tabs.add_child(_titles_tab())
+	tabs.add_child(_milestones_tab())
 	tabs.add_child(_creatures_tab())
 	tabs.add_child(_subclass_tab())
 	var stats := Kit.rich()
@@ -269,6 +270,47 @@ func _title_row(t: Dictionary, got: bool, on: bool, can_wear: bool) -> void:
 		b.disabled = on or not can_wear
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(b)
+
+
+## The Milestones tab: what the house has reached (who reached it and when), then what it has not, with how far
+## along each is. Text and numbers are GameAchievements'; this only draws them.
+func _milestones_tab() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Milestones"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 8)
+	scroll.add_child(box)
+	var note := Kit.label("A milestone belongs to the whole house and is kept for good once reached. Some bring a house title.", 14, Kit.dim())
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(note)
+	var ids: Array = GameAchievements.defs().map(func(a): return str(a["id"]))
+	var done: Array = ids.filter(func(id): return GameAchievements.reached(dynasty, id))
+	box.add_child(Kit.label("Reached (%d of %d)" % [done.size(), ids.size()], 18, Kit.ACCENT))
+	if done.is_empty():
+		box.add_child(Kit.label("None yet.", 14, Kit.dim()))
+	for id in done:
+		_milestone_row(box, id)
+	box.add_child(Kit.label("Still ahead (%d)" % (ids.size() - done.size()), 18, Kit.dim()))
+	for id in ids:
+		if id not in done:
+			_milestone_row(box, id)
+	return scroll
+
+
+func _milestone_row(box: VBoxContainer, id: String) -> void:
+	var m := GameAchievements.describe(dynasty, id)
+	var title_id := str(GameAchievements.def(id).get("title", ""))
+	var head := str(m["name"])
+	if title_id != "":
+		head += "  (title: %s)" % str(GameTitles.def(title_id)["name"])
+	var title := Kit.label(head, 16, Kit.ACCENT if m["done"] else Kit.dim())
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(title)
+	var line := Kit.label("%s  %s" % [str(m["about"]), str(m["line"])], 14, Kit.TEXT if m["done"] else Kit.dim())
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(line)
 
 
 ## The Creatures tab: the eggs and young the family keeps (see GameRoster), each with Sell and Set free. Each of

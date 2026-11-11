@@ -18,6 +18,7 @@ var heirlooms: Array = []       # [{name, boss, gen}]
 var clock_carry: float = 0.0    # years the world clock has been fed but not yet lived through (see GameClock); saved only when above 0
 var world_seconds: float = 0.0  # seconds the world clock has run, the day follows from it (see GameDay); saved only when above 0
 var house_titles: Array = []    # ids of the house titles the dynasty has earned (see GameTitles); saved only once there is one
+var achievements: Dictionary = {}   # milestones the house has reached, id -> {gen, year, heir} (see GameAchievements); saved only once there is one
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
@@ -970,6 +971,8 @@ func to_dict() -> Dictionary:
 		out["clock_carry"] = clock_carry
 	if not house_titles.is_empty():   # only once earned
 		out["house_titles"] = house_titles
+	if not achievements.is_empty():   # only once reached
+		out["achievements"] = achievements
 	if not auto_party.is_empty():   # only once the player has set a switch: older saves and fresh ones stay alike
 		out["auto_party"] = auto_party
 	return out
@@ -1015,6 +1018,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.built = GameBuild.load_state(d.get("built", {}))
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
+	g.achievements = GameAchievements.load_state(d.get("achievements", {}))
 	g.world_seconds = GameDay.load_seconds(d.get("world_seconds", 0.0))
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0

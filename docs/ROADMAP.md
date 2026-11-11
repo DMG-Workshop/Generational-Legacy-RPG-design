@@ -47,7 +47,7 @@ A running backlog for the text game. Add new ideas at the end; mark an item done
 15. **Sound and music:** battle cues, a death sting, ambient tracks per Age.
 
 **Game systems**
-16. **Achievements and dynasty milestones.** (Titles that are earned, item 59, can be awarded by these.)
+16. **Achievements and dynasty milestones.** Built (`GameAchievements`, `data/achievements/achievements.json`, the Chronicle's Milestones tab). 26 milestones that belong to the whole house: generations (5 to 1,000), years the house has stood (50 to 1,000), Ages seen, legends slain, heirs who have lived, the family house built up, creatures kept and bred, pieces made at the forge, pieces built, heirlooms, titles held, a million gold, and a dozen other milestones. A milestone is kept for good once reached, with the heir, generation and year, and is told in the journal; the tab shows how far along the rest are. Three bring a house title (item 59): the Millennial House (a thousand years), Bane of Legends (legends slain ten times over) and the Stockmen (three creatures bred at the ranch). Reaching is asked for by the screens, as titles are, so the autopilot reaches nothing and nothing in a life changes. Not built: rewards other than titles.
 17. **Faction reputation in the text game**, so NPCs judge the heir by their ancestors.
 18. **Heirloom upgrades across generations.**
 19. **Random world events per Age:** wars, famines and golden ages that change hunts, shops and diseases.

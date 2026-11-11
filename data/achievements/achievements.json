@@ -1,0 +1,196 @@
+{
+  "note": "Achievements and dynasty milestones (roadmap item 16; core/game/game_achievements.gd, checked by tools/check_data.gd). A milestone is a count about the whole dynasty (`count`, one of GameAchievements.COUNTS) reaching a `goal` (`goal_from: house_max` takes the goal from the game: every level of every house track). Once reached it is kept for good on the dynasty (`achievements`: the generation, the year and the heir), even if the count later falls. A milestone may award a house title (`title`): the title's own condition is `{achievement: id}`. Reaching is asked for by the screens, with the titles, never by the rules of a life, so the autopilot reaches nothing and no die is drawn.",
+  "achievements": [
+    {
+      "id": "line_5",
+      "name": "A Line of Five",
+      "about": "Reach the 5th generation.",
+      "count": "generations",
+      "goal": 5
+    },
+    {
+      "id": "line_25",
+      "name": "A Line of Twenty-Five",
+      "about": "Reach the 25th generation.",
+      "count": "generations",
+      "goal": 25
+    },
+    {
+      "id": "line_75",
+      "name": "A Line of Seventy-Five",
+      "about": "Reach the 75th generation.",
+      "count": "generations",
+      "goal": 75
+    },
+    {
+      "id": "line_250",
+      "name": "A Line of Two Hundred and Fifty",
+      "about": "Reach the 250th generation.",
+      "count": "generations",
+      "goal": 250
+    },
+    {
+      "id": "line_1000",
+      "name": "A Line of a Thousand",
+      "about": "Reach the 1,000th generation.",
+      "count": "generations",
+      "goal": 1000
+    },
+    {
+      "id": "years_50",
+      "name": "Half a Century",
+      "about": "Keep the house for 50 years.",
+      "count": "years",
+      "goal": 50
+    },
+    {
+      "id": "years_250",
+      "name": "A Quarter Millennium",
+      "about": "Keep the house for 250 years.",
+      "count": "years",
+      "goal": 250
+    },
+    {
+      "id": "years_1000",
+      "name": "A Thousand Years",
+      "about": "Keep the house for 1,000 years.",
+      "count": "years",
+      "goal": 1000,
+      "title": "house_millennial"
+    },
+    {
+      "id": "ages_2",
+      "name": "Into the Second Age",
+      "about": "See the 2nd Age of the world.",
+      "count": "ages",
+      "goal": 2
+    },
+    {
+      "id": "ages_3",
+      "name": "Into the Third Age",
+      "about": "See the 3rd Age of the world.",
+      "count": "ages",
+      "goal": 3
+    },
+    {
+      "id": "legend_1",
+      "name": "A Legend Falls",
+      "about": "Slay one of the legends.",
+      "count": "legends",
+      "goal": 1
+    },
+    {
+      "id": "legend_all",
+      "name": "Every Legend",
+      "about": "Slay all five legends.",
+      "count": "legends",
+      "goal": 5
+    },
+    {
+      "id": "legend_again",
+      "name": "Slain and Slain Again",
+      "about": "Slay legends ten times over the generations.",
+      "count": "legend_kills",
+      "goal": 10,
+      "title": "house_bane"
+    },
+    {
+      "id": "heirs_10",
+      "name": "Ten Graves",
+      "about": "Ten heirs of the house have lived.",
+      "count": "heirs",
+      "goal": 10
+    },
+    {
+      "id": "heirs_50",
+      "name": "Fifty Graves",
+      "about": "Fifty heirs of the house have lived.",
+      "count": "heirs",
+      "goal": 50
+    },
+    {
+      "id": "house_6",
+      "name": "A House Worth the Name",
+      "about": "Buy six levels of the family house.",
+      "count": "house",
+      "goal": 6
+    },
+    {
+      "id": "house_full",
+      "name": "Nothing Left to Build",
+      "about": "Buy every level of the family house.",
+      "count": "house",
+      "goal": 0,
+      "goal_from": "house_max"
+    },
+    {
+      "id": "pens_5",
+      "name": "A Full Yard",
+      "about": "Keep five creatures at once.",
+      "count": "creatures",
+      "goal": 5
+    },
+    {
+      "id": "bred_3",
+      "name": "A Line of Their Own",
+      "about": "Keep three creatures bred at the ranch at once.",
+      "count": "bred",
+      "goal": 3,
+      "title": "house_stockmen"
+    },
+    {
+      "id": "made_1",
+      "name": "First Piece",
+      "about": "Make a piece at the forge.",
+      "count": "crafted",
+      "goal": 1
+    },
+    {
+      "id": "made_25",
+      "name": "A Working Forge",
+      "about": "Make 25 pieces at the forge.",
+      "count": "crafted",
+      "goal": 25
+    },
+    {
+      "id": "built_20",
+      "name": "Walls of Our Own",
+      "about": "Have 20 pieces built on the family's ground.",
+      "count": "built",
+      "goal": 20
+    },
+    {
+      "id": "looms_5",
+      "name": "A Wall of Relics",
+      "about": "Hold five heirlooms.",
+      "count": "heirlooms",
+      "goal": 5
+    },
+    {
+      "id": "titles_10",
+      "name": "Much Honoured",
+      "about": "Hold ten titles between the house and its heir.",
+      "count": "titles",
+      "goal": 10
+    },
+    {
+      "id": "gold_1m",
+      "name": "A Million in the Vault",
+      "about": "An heir holds 1,000,000 gold.",
+      "count": "gold",
+      "goal": 1000000
+    },
+    {
+      "id": "milestones_12",
+      "name": "A Dozen Milestones",
+      "about": "Reach twelve other milestones.",
+      "count": "milestones",
+      "goal": 12
+    }
+  ],
+  "text": {
+    "reached": "The house reaches a milestone: {name}.",
+    "when": "Reached by {heir}, generation {gen}, year {year}.",
+    "progress": "{have} of {goal}"
+  }
+}

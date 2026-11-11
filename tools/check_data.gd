@@ -27,7 +27,7 @@ static func problems() -> Array:
 	_parse(out)
 	for pair in [["rounds", GameRound.validate()], ["ages", GameAges.validate()], ["feats", GameFeats.validate()],
 			["events", GameEvents.validate()], ["skills", GameSkills.validate()], ["diseases", GameDisease.validate()],
-			["combat", GameCombat.validate()], ["skill trees", GameSkillTree.validate()], ["sprites", SpriteArt.validate()], ["titles", GameTitles.validate()],
+			["combat", GameCombat.validate()], ["skill trees", GameSkillTree.validate()], ["sprites", SpriteArt.validate()], ["titles", GameTitles.validate()], ["achievements", GameAchievements.validate()],
 			["scenery", SceneryArt.validate()], ["battle events", _event_list()], ["birth", GameBirth.validate()], ["finding", GameFinding.validate()], ["ranch", GameRanch.validate()], ["breeding rules", GameBreeding.validate()], ["realms", GameRealms.validate()], ["subclasses", GameSubclass.validate()], ["farm", GameFarm.validate()], ["raids", GameRaids.validate()], ["materials", GameMaterials.validate()], ["loot", GameLoot.validate()], ["carry", GameCarry.validate()], ["craft", GameCraft.validate()], ["mining", GameMine.validate()], ["worldgen", GameWorldGen.validate()], ["spawn", GameSpawn.validate()], ["behaviour", GameBehaviour.validate()], ["pathing", GamePath.validate()], ["graphics", GraphicsSettings.validate()], ["world input", WorldInput.validate()], ["locales", GameLocale.validate()], ["spaces", GameSpaces.validate()], ["error reports", GameReport.validate()], ["companions in the world", GameCompanions.validate()], ["building", GameBuild.validate()], ["day cycle", GameDay.validate()], ["text", _text()]]:
 		for p in pair[1]:
 			out.append("%s: %s" % [pair[0], p])
