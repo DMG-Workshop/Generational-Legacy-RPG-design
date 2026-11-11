@@ -1,0 +1,53 @@
+{
+  "note": "Creatures of the realms (roadmap item 58, first part; core/game/game_realms.gd, checked by tools/check_data.gd). Every creature belongs to a realm: `of` names the ones that are not of the home realm (`settings.home`), and a creature that is not listed is of home. A creature of another realm is rarer at home and sells for `foreign_value_mult` there. THE REST IS WRITTEN BUT SWITCHED OFF (`settings.linked` is false) until the worlds are joined by gates (item 41 and the sandbox): a kept creature can be taken to another realm (`in_realm`); until it has lived there `adapt_years` of that realm it is unsettled (`unsettled`: it costs more to keep and sours faster), unless that realm is one of its own; home, where every kept creature was found or born, never needs adapting to. Young of parents of two different realms carry both (`realms`) and take the mark of each world (`marks`, at most `max_marks`). A mark changes the same numbers a trait does. The mark of an unstable realm (the Void, the Dreaming) is unstable: each year it is awake with `awake_chance`, rolled on dice keyed on the dynasty seed, the year, the creature and the mark, never the dynasty's; while dormant it does nothing.",
+  "settings": {
+    "home": "material",
+    "linked": false,
+    "foreign_value_mult": 1.2,
+    "max_marks": 2,
+    "awake_chance": 0.6
+  },
+  "unsettled": {"keep_mult": 1.5, "mood_loss_mult": 1.5, "fertility_mult": 0.5, "work_mult": 0.5},
+  "realms": {
+    "material": {"name": "the Material Realm", "stable": true, "adapt_years": 0, "mark": ""},
+    "verdant": {"name": "the Verdant Court", "stable": true, "adapt_years": 2, "mark": "glamoured"},
+    "hollow": {"name": "the Hollow Below", "stable": true, "adapt_years": 4, "mark": "grave_cold"},
+    "dragon_isles": {"name": "the Dragon Isles", "stable": true, "adapt_years": 3, "mark": "sky_born"},
+    "elemental": {"name": "the Elemental Planes", "stable": true, "adapt_years": 4, "mark": "ember_hearted"},
+    "clockwork": {"name": "the Clockwork Expanse", "stable": true, "adapt_years": 2, "mark": "geared"},
+    "dream": {"name": "the Dreaming", "stable": false, "adapt_years": 3, "mark": "dream_touched"},
+    "void": {"name": "the Void", "stable": false, "adapt_years": 5, "mark": "void_marked"}
+  },
+  "of": {
+    "wraith": "hollow", "skeleton": "hollow", "lich_acolyte": "hollow", "ghoul": "hollow", "hollow_king": "hollow",
+    "drake": "dragon_isles", "ash_wyrm": "dragon_isles", "elder_dragon": "dragon_isles", "vaerthax": "dragon_isles",
+    "fire_imp": "elemental",
+    "stone_golem": "clockwork", "stonefather": "clockwork",
+    "time_wraith": "dream",
+    "rift_shade": "void", "shard_crawler": "void", "void_stalker": "void", "abyssal_knight": "void", "star_eater": "void", "the_unmade": "void"
+  },
+  "marks": {
+    "glamoured": {"name": "glamoured", "about": "catches every eye, and sells for more", "value_mult": 1.3},
+    "grave_cold": {"name": "grave-cold", "about": "minds neglect little", "mood_loss_mult": 0.7},
+    "sky_born": {"name": "sky-born", "about": "a keener guard", "guard_mult": 1.3},
+    "ember_hearted": {"name": "ember-hearted", "about": "works harder", "work_mult": 1.2},
+    "geared": {"name": "geared", "about": "cheaper to keep", "keep_mult": 0.8},
+    "dream_touched": {"name": "dream-touched", "about": "has young more often, when the dream is on it", "fertility_mult": 1.4},
+    "void_marked": {"name": "void-marked", "about": "worth far more and harder to keep content, when the Void stirs in it", "value_mult": 1.6, "mood_loss_mult": 1.3}
+  },
+  "text": {
+    "of_realm": "of {realm}",
+    "of_two": "of {a} and {b}",
+    "not_linked": "There is no way between the worlds yet.",
+    "no_creature": "There is no such creature in the pens.",
+    "no_realm": "There is no such realm.",
+    "there": "{name} is already in {realm}.",
+    "egg": "An egg cannot make the crossing.",
+    "moved": "{name} is taken to {realm}.",
+    "moved_unsettled": "{name} is taken to {realm}, and will need {years} years to settle there.",
+    "settles": "{name} has settled in {realm}.",
+    "wakes": "The mark on {name} stirs: {mark}.",
+    "sleeps": "The mark on {name} goes quiet: {mark}.",
+    "born_marked": "{name} carries two worlds: {marks}."
+  }
+}

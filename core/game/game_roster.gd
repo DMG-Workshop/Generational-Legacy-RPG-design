@@ -81,6 +81,7 @@ static func load_list(v: Variant) -> Array:
 			entry["lines"] = lines
 			if typeof(e.get("young")) == TYPE_STRING and str(e["young"]) != "":
 				entry["young"] = str(e["young"])
+		GameRealms.load_entry(e, entry)
 		entry["stage"] = GameRanch.stage_at(entry, entry["age"])   # the stage follows the age, whatever was saved
 		out.append(entry)
 		seen[id] = true
