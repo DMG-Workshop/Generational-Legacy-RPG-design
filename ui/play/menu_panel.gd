@@ -99,6 +99,14 @@ func _ready() -> void:
 		var khy := Kit.label(opt[2], 14, Kit.dim())
 		khy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(khy)
+	if GameLocale.offered().size() > 1:   # nothing to choose until there is a second language
+		v.add_child(Kit.label("Language", 17, Kit.ACCENT))
+		var lrow := HBoxContainer.new()
+		lrow.add_theme_constant_override("separation", 8)
+		v.add_child(lrow)
+		for lid in GameLocale.offered():
+			var locale_id: String = lid
+			_choice(lrow, GameLocale.name_of(locale_id), locale_id == GameLocale.locale(), func(): app.set_locale(locale_id))
 	v.add_child(Kit.label("Graphics", 17, Kit.ACCENT))
 	var grow := HBoxContainer.new()
 	grow.add_theme_constant_override("separation", 8)

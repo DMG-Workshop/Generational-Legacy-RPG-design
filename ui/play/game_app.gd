@@ -37,6 +37,7 @@ func _ready() -> void:
 	use_slot(maxi(1, GameSaves.newest()))   # start on the slot played last
 	UiSettings.apply(get_window())
 	GraphicsSettings.apply()
+	GameLocale.set_locale(UiSettings.locale())
 	WorldInput.install()   # the open world's actions: nothing reads them until there is a sandbox screen
 	if UiSettings.error_log_on():   # only for a player who asked for it (the menu's Error log)
 		GameErrorLog.install()
@@ -189,6 +190,13 @@ func set_touch_layout(t: String) -> void:
 ## stored, then the screen is laid out again so the colours and motion follow it.
 func set_access(key: String, on: bool) -> void:
 	UiSettings.set_access(key, on)
+	_relayout()
+
+
+## The menu's Language (shown once there is more than one to offer).
+func set_locale(id: String) -> void:
+	if UiSettings.set_locale(id):
+		GameLocale.set_locale(id)
 	_relayout()
 
 

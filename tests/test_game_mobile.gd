@@ -76,6 +76,7 @@ func _run() -> void:
 	await test_pause_saves()
 	await test_safe_area()
 	await test_scale_layouts()
+	await test_pseudo_layouts()
 	await test_command_text_fits()
 	test_cooldown_logic()
 	await test_cooldown_buttons()
@@ -1010,6 +1011,48 @@ func test_scale_layouts() -> void:
 	await _frames(2)
 	ok(is_equal_approx(root.content_scale_factor, 1.0), "back to 100%")
 	ok(app.frame.get_global_rect().is_equal_approx(Rect2(0, 0, 1280, 720)), "and to the plain window")
+
+
+## The same layouts in the pseudo-language (GameLocale: every catalogued line accented and a third longer), on the
+## two phone shapes at every text size: text that a translation would push off the screen is caught here.
+func test_pseudo_layouts() -> void:
+	UiSettings.force_touch = 1
+	var worst := 0.0
+	GameLocale.set_locale("pseudo")
+	for wsize in [Vector2i(2400, 1080), Vector2i(960, 540)]:
+		root.size = wsize
+		var notch: bool = float(wsize.x) / float(wsize.y) > 2.0
+		app.safe_override = Rect2i(int(wsize.x * 0.04), 0, wsize.x - int(wsize.x * 0.04) - int(wsize.x * 0.02), wsize.y - int(wsize.y * 0.03)) if notch else Rect2i()
+		for s in UiSettings.scales():
+			await _layout_pass(wsize, s)
+			# The tip strip wraps, so a long tip is never off the screen: it eats the screen instead. Hold it to a share.
+			_game()
+			app.show_state()
+			await _frames(3)
+			var strip := app.current.find_child("TutorialTip", true, false) as Control
+			var tip := _find_label(app.current, "[")
+			var room_h: float = UiSettings.room(app).y
+			var share := strip.size.y / room_h if strip != null else 1.0
+			worst = maxf(worst, share)
+			ok(strip != null and tip != null and share <= float(UiSettings.setting("tip_max_height_share")), "%dx%d %d%%: the tip, in the pseudo-language, takes %.0f%% of the screen's height (at most %.0f%%)" % [wsize.x, wsize.y, int(round(s * 100.0)), share * 100.0, float(UiSettings.setting("tip_max_height_share")) * 100.0])
+	print("  (the pseudo-language tip takes at most %.0f%% of a phone screen's height)" % (worst * 100.0))
+	GameLocale.set_locale("en")
+	root.size = Vector2i(1280, 720)
+	app.safe_override = Rect2i()
+	UiSettings.force_touch = 0
+	app.set_ui_scale(1.0)
+	await _frames(2)
+
+
+## The first visible label whose text starts with `start`.
+func _find_label(n: Node, start: String) -> Label:
+	if n is Label and (n as Label).is_visible_in_tree() and (n as Label).text.begins_with(start):
+		return n
+	for c in n.get_children():
+		var l := _find_label(c, start)
+		if l != null:
+			return l
+	return null
 
 
 func _layout_pass(wsize: Vector2i, s: float) -> void:

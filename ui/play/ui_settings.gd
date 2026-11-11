@@ -115,6 +115,17 @@ static func set_error_log(on: bool) -> void:
 	store("error_log", "on" if on else "off")
 
 
+## The language the text is shown in (GameLocale): the game's own until another is chosen. A stored one the game
+## does not know reads as the game's own.
+static func locale() -> String:
+	var v: Variant = stored("locale", "")
+	return str(v) if typeof(v) == TYPE_STRING and GameLocale.ids().has(str(v)) else GameLocale.source()
+
+
+static func set_locale(id: String) -> bool:
+	return GameLocale.ids().has(id) and store("locale", id)
+
+
 static func save_settings() -> bool:
 	var cf := ConfigFile.new()
 	cf.load(path)
