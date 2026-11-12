@@ -208,7 +208,7 @@ func _place_name(id: String) -> String:
 func fee(d: GameDynasty, id: String) -> int:
 	if is_free_rehire(id):
 		return 0
-	return maxi(1, int(round(float(def(id).get("fee", 0)) * GameData.enemy_scale(d.gen))))
+	return maxi(1, int(round(float(def(id).get("fee", 0)) * GameData.enemy_scale(d.gen) * GameFactions.town_mult(d, "fee"))))
 
 
 func upkeep(d: GameDynasty, id: String) -> int:

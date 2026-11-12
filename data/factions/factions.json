@@ -1,5 +1,5 @@
 {
-  "note": "Faction reputation (roadmap item 17, first part; core/game/game_factions.gd, checked by tools/check_data.gd). NPCs judge the heir by their ancestors. A faction's standing with the heir (-100 to 100) is worked out, never saved, from what the house remembers: every heir the chronicle still keeps in full (and the living heir, whose own deeds count in full) is weighed by the faction's `remembers` rules, and an ancestor's deeds fade by the faction's `memory` for each generation that has passed; `house` rules weigh what belongs to the whole house (its glory and infamy echoes, the legends it has slain, the milestones it has reached). A rule is {what, each, cap?} with `what` one of: class (the heir's class is in `classes`), level (each full `per` levels), battles (each full `per` won), kills (each full `per` kills of the `creatures` or of creatures with one of `tags`), gold (each full `per` gold held at the end), cause (died of one of `causes`), titles (each personal title). `cap` bounds what one heir can add by a rule, either way. A house rule is {what, each, cap?} with `what` one of: echo (`kind`; each is per 1.0 of strength), bosses (each of `ids` slain), milestones (each reached). Standing gives a rank (`ranks`, lowest first, each from its `min` up). At `boon_rank` or better a faction offers the living heir a gift once in their life, in a town (`boon`: gold scaled by the generation as prices are, potions and XP scaled by the heir's level; `honoured_mult` at the top rank), and at the top rank confers a title (the title's condition is {faction: id}). Nothing is random. The autopilot takes no gift, and no price or fight reads a standing yet.",
+  "note": "Faction reputation (roadmap item 17, first part; core/game/game_factions.gd, checked by tools/check_data.gd). NPCs judge the heir by their ancestors. A faction's standing with the heir (-100 to 100) is worked out, never saved, from what the house remembers: every heir the chronicle still keeps in full (and the living heir, whose own deeds count in full) is weighed by the faction's `remembers` rules, and an ancestor's deeds fade by the faction's `memory` for each generation that has passed; `house` rules weigh what belongs to the whole house (its glory and infamy echoes, the legends it has slain, the milestones it has reached). A rule is {what, each, cap?} with `what` one of: class (the heir's class is in `classes`), level (each full `per` levels), battles (each full `per` won), kills (each full `per` kills of the `creatures` or of creatures with one of `tags`), gold (each full `per` gold held at the end), cause (died of one of `causes`), titles (each personal title). `cap` bounds what one heir can add by a rule, either way. A house rule is {what, each, cap?} with `what` one of: echo (`kind`; each is per 1.0 of strength), bosses (each of `ids` slain), milestones (each reached). Standing gives a rank (`ranks`, lowest first, each from its `min` up). At `boon_rank` or better a faction offers the living heir a gift once in their life, in a town (`boon`: gold scaled by the generation as prices are, potions and XP scaled by the heir's level; `honoured_mult` at the top rank), and at the top rank confers a title (the title's condition is {faction: id}). Nothing is random. The autopilot takes no gift, and no price or fight reads a standing yet. A town with a faction (`towns`) feels that faction's standing with the heir in its prices, hire fees and training (`town_effects`, by rank): shop and temple prices (GameItems.price_mult), companions' hire fees (GameParty.fee) and the XP of training (GameDynasty.train). Outside those towns, and for a faction with no town, every number is as it was. Still no dice.",
   "settings": {
     "boon_rank": "trusted",
     "top_rank": "honoured",
@@ -7,79 +7,321 @@
     "reasons_shown": 3
   },
   "ranks": [
-    {"id": "hostile", "name": "Hostile", "min": -100},
-    {"id": "wary", "name": "Wary", "min": -40},
-    {"id": "neutral", "name": "Neutral", "min": -15},
-    {"id": "trusted", "name": "Trusted", "min": 20},
-    {"id": "honoured", "name": "Honoured", "min": 50}
+    {
+      "id": "hostile",
+      "name": "Hostile",
+      "min": -100
+    },
+    {
+      "id": "wary",
+      "name": "Wary",
+      "min": -40
+    },
+    {
+      "id": "neutral",
+      "name": "Neutral",
+      "min": -15
+    },
+    {
+      "id": "trusted",
+      "name": "Trusted",
+      "min": 20
+    },
+    {
+      "id": "honoured",
+      "name": "Honoured",
+      "min": 50
+    }
   ],
   "factions": {
     "mages_circle": {
-      "name": "the Mage's Circle", "memory": 0.9,
+      "name": "the Mage's Circle",
+      "memory": 0.9,
       "remembers": [
-        {"what": "class", "classes": ["mage", "warlock", "spellblade", "arcane_trickster", "necromancer"], "each": 8, "say": "{n} of the line studied the Art"},
-        {"what": "level", "per": 20, "each": 2, "cap": 10, "say": "the power its heirs reached"},
-        {"what": "kills", "tags": ["undead"], "per": 50, "each": -1, "cap": 6, "say": "it would rather have studied the dead its heirs destroyed"}
+        {
+          "what": "class",
+          "classes": [
+            "mage",
+            "warlock",
+            "spellblade",
+            "arcane_trickster",
+            "necromancer"
+          ],
+          "each": 8,
+          "say": "{n} of the line studied the Art"
+        },
+        {
+          "what": "level",
+          "per": 20,
+          "each": 2,
+          "cap": 10,
+          "say": "the power its heirs reached"
+        },
+        {
+          "what": "kills",
+          "tags": [
+            "undead"
+          ],
+          "per": 50,
+          "each": -1,
+          "cap": 6,
+          "say": "it would rather have studied the dead its heirs destroyed"
+        }
       ],
-      "house": [{"what": "milestones", "each": 1, "cap": 15, "say": "the milestones of the house"}],
-      "boon": {"gold": 0, "potions": 2, "xp": 60},
+      "house": [
+        {
+          "what": "milestones",
+          "each": 1,
+          "cap": 15,
+          "say": "the milestones of the house"
+        }
+      ],
+      "boon": {
+        "gold": 0,
+        "potions": 2,
+        "xp": 60
+      },
       "title": "magister"
     },
     "thieves_guild": {
-      "name": "the Thieves' Guild", "memory": 0.8,
+      "name": "the Thieves' Guild",
+      "memory": 0.8,
       "remembers": [
-        {"what": "class", "classes": ["rogue", "ninja", "arcane_trickster", "duelist"], "each": 8, "say": "{n} of the line worked in the shadows"},
-        {"what": "gold", "per": 20000, "each": 2, "cap": 10, "say": "the gold its heirs died holding"}
+        {
+          "what": "class",
+          "classes": [
+            "rogue",
+            "ninja",
+            "arcane_trickster",
+            "duelist"
+          ],
+          "each": 8,
+          "say": "{n} of the line worked in the shadows"
+        },
+        {
+          "what": "gold",
+          "per": 20000,
+          "each": 2,
+          "cap": 10,
+          "say": "the gold its heirs died holding"
+        }
       ],
-      "house": [{"what": "echo", "kind": "infamy", "each": 40, "cap": 30, "say": "the house's ill fame"}],
-      "boon": {"gold": 150, "potions": 0, "xp": 0},
+      "house": [
+        {
+          "what": "echo",
+          "kind": "infamy",
+          "each": 40,
+          "cap": 30,
+          "say": "the house's ill fame"
+        }
+      ],
+      "boon": {
+        "gold": 150,
+        "potions": 0,
+        "xp": 0
+      },
       "title": "guild_shadow"
     },
     "warriors_order": {
-      "name": "the Warrior's Order", "memory": 0.85,
+      "name": "the Warrior's Order",
+      "memory": 0.85,
       "remembers": [
-        {"what": "class", "classes": ["warrior", "paladin", "dread_knight", "duelist", "templar", "monk"], "each": 6, "say": "{n} of the line bore arms"},
-        {"what": "battles", "per": 25, "each": 2, "cap": 12, "say": "the battles its heirs won"},
-        {"what": "cause", "causes": ["slain in battle"], "each": 3, "say": "{n} of the line died sword in hand"}
+        {
+          "what": "class",
+          "classes": [
+            "warrior",
+            "paladin",
+            "dread_knight",
+            "duelist",
+            "templar",
+            "monk"
+          ],
+          "each": 6,
+          "say": "{n} of the line bore arms"
+        },
+        {
+          "what": "battles",
+          "per": 25,
+          "each": 2,
+          "cap": 12,
+          "say": "the battles its heirs won"
+        },
+        {
+          "what": "cause",
+          "causes": [
+            "slain in battle"
+          ],
+          "each": 3,
+          "say": "{n} of the line died sword in hand"
+        }
       ],
-      "house": [{"what": "echo", "kind": "glory", "each": 30, "cap": 25, "say": "the house's glory"}],
-      "boon": {"gold": 60, "potions": 1, "xp": 40},
+      "house": [
+        {
+          "what": "echo",
+          "kind": "glory",
+          "each": 30,
+          "cap": 25,
+          "say": "the house's glory"
+        }
+      ],
+      "boon": {
+        "gold": 60,
+        "potions": 1,
+        "xp": 40
+      },
       "title": "order_knight"
     },
     "church": {
-      "name": "the Church", "memory": 0.95,
+      "name": "the Church",
+      "memory": 0.95,
       "remembers": [
-        {"what": "class", "classes": ["cleric", "paladin", "templar", "monk", "druid", "shaman"], "each": 7, "say": "{n} of the line kept the faith"},
-        {"what": "kills", "tags": ["undead"], "per": 25, "each": 2, "cap": 12, "say": "the dead its heirs laid to rest"},
-        {"what": "class", "classes": ["necromancer", "warlock", "dread_knight"], "each": -10, "say": "{n} of the line dealt with dark powers"}
+        {
+          "what": "class",
+          "classes": [
+            "cleric",
+            "paladin",
+            "templar",
+            "monk",
+            "druid",
+            "shaman"
+          ],
+          "each": 7,
+          "say": "{n} of the line kept the faith"
+        },
+        {
+          "what": "kills",
+          "tags": [
+            "undead"
+          ],
+          "per": 25,
+          "each": 2,
+          "cap": 12,
+          "say": "the dead its heirs laid to rest"
+        },
+        {
+          "what": "class",
+          "classes": [
+            "necromancer",
+            "warlock",
+            "dread_knight"
+          ],
+          "each": -10,
+          "say": "{n} of the line dealt with dark powers"
+        }
       ],
-      "house": [{"what": "echo", "kind": "infamy", "each": -40, "cap": 30, "say": "the house's ill fame"}],
-      "boon": {"gold": 0, "potions": 3, "xp": 20},
+      "house": [
+        {
+          "what": "echo",
+          "kind": "infamy",
+          "each": -40,
+          "cap": 30,
+          "say": "the house's ill fame"
+        }
+      ],
+      "boon": {
+        "gold": 0,
+        "potions": 3,
+        "xp": 20
+      },
       "title": "church_blessed"
     },
     "draconic_council": {
-      "name": "the Draconic Council", "memory": 0.98,
+      "name": "the Draconic Council",
+      "memory": 0.98,
       "remembers": [
-        {"what": "kills", "creatures": ["drake", "ash_wyrm", "elder_dragon"], "per": 5, "each": -3, "cap": 30, "say": "the dragonkind its heirs killed"},
-        {"what": "class", "classes": ["druid", "beastmaster", "warden", "ranger"], "each": 4, "say": "{n} of the line kept the wild places"}
+        {
+          "what": "kills",
+          "creatures": [
+            "drake",
+            "ash_wyrm",
+            "elder_dragon"
+          ],
+          "per": 5,
+          "each": -3,
+          "cap": 30,
+          "say": "the dragonkind its heirs killed"
+        },
+        {
+          "what": "class",
+          "classes": [
+            "druid",
+            "beastmaster",
+            "warden",
+            "ranger"
+          ],
+          "each": 4,
+          "say": "{n} of the line kept the wild places"
+        }
       ],
-      "house": [{"what": "bosses", "ids": ["vaerthax"], "each": -50, "say": "Vaerthax, slain by the house"}],
-      "boon": {"gold": 200, "potions": 0, "xp": 80},
+      "house": [
+        {
+          "what": "bosses",
+          "ids": [
+            "vaerthax"
+          ],
+          "each": -50,
+          "say": "Vaerthax, slain by the house"
+        }
+      ],
+      "boon": {
+        "gold": 200,
+        "potions": 0,
+        "xp": 80
+      },
       "title": ""
     },
     "noble_houses": {
-      "name": "the Noble Houses", "memory": 0.9,
+      "name": "the Noble Houses",
+      "memory": 0.9,
       "remembers": [
-        {"what": "titles", "each": 2, "cap": 10, "say": "the titles its heirs held"},
-        {"what": "gold", "per": 50000, "each": 3, "cap": 12, "say": "the fortunes its heirs left"},
-        {"what": "level", "per": 25, "each": 2, "cap": 8, "say": "the standing its heirs reached"}
+        {
+          "what": "titles",
+          "each": 2,
+          "cap": 10,
+          "say": "the titles its heirs held"
+        },
+        {
+          "what": "gold",
+          "per": 50000,
+          "each": 3,
+          "cap": 12,
+          "say": "the fortunes its heirs left"
+        },
+        {
+          "what": "level",
+          "per": 25,
+          "each": 2,
+          "cap": 8,
+          "say": "the standing its heirs reached"
+        }
       ],
       "house": [
-        {"what": "echo", "kind": "glory", "each": 25, "cap": 20, "say": "the house's glory"},
-        {"what": "echo", "kind": "infamy", "each": -50, "cap": 40, "say": "the house's ill fame"},
-        {"what": "milestones", "each": 1, "cap": 15, "say": "the milestones of the house"}
+        {
+          "what": "echo",
+          "kind": "glory",
+          "each": 25,
+          "cap": 20,
+          "say": "the house's glory"
+        },
+        {
+          "what": "echo",
+          "kind": "infamy",
+          "each": -50,
+          "cap": 40,
+          "say": "the house's ill fame"
+        },
+        {
+          "what": "milestones",
+          "each": 1,
+          "cap": 15,
+          "say": "the milestones of the house"
+        }
       ],
-      "boon": {"gold": 250, "potions": 0, "xp": 0},
+      "boon": {
+        "gold": 250,
+        "potions": 0,
+        "xp": 0
+      },
       "title": "peer"
     }
   },
@@ -96,5 +338,38 @@
     "low": "{faction} offers nothing to an heir it only holds as {rank}.",
     "taken": "{faction} has already honoured {heir}.",
     "not_town": "{faction} receives an heir only in a town."
+  },
+  "towns": {
+    "kingshold": "noble_houses",
+    "brinehaven": "thieves_guild",
+    "ironford": "warriors_order",
+    "hearthmere": "church"
+  },
+  "town_effects": {
+    "hostile": {
+      "price": 1.15,
+      "fee": 1.3,
+      "train": 0.85
+    },
+    "wary": {
+      "price": 1.05,
+      "fee": 1.1,
+      "train": 0.95
+    },
+    "neutral": {
+      "price": 1.0,
+      "fee": 1.0,
+      "train": 1.0
+    },
+    "trusted": {
+      "price": 0.95,
+      "fee": 0.9,
+      "train": 1.08
+    },
+    "honoured": {
+      "price": 0.9,
+      "fee": 0.8,
+      "train": 1.15
+    }
   }
 }
