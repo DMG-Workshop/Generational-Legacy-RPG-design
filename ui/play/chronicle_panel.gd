@@ -138,6 +138,11 @@ func _stats_text() -> String:
 	var st := GameStats.summary(dynasty)
 	var lines: Array = []
 	lines.append("[b]Heirs[/b]  %s lived through %s generation%s, now in Age %s" % [_n(st["heirs"]), _n(st["generations"]), "" if int(st["generations"]) == 1 else "s", _n(st["age"])])
+	if GameHardMode.any(dynasty):   # only a house founded with an option says so
+		lines.append("")
+		lines.append("[b]%s[/b]" % GameHardMode.text("stats_head"))
+		for l in GameHardMode.lines(dynasty):
+			lines.append(" - %s" % l)
 	lines.append("")
 	lines.append("[b]Deaths by cause[/b]")
 	if (st["causes"] as Array).is_empty():

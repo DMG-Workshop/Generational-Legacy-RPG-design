@@ -101,12 +101,12 @@ static func shape_ok(d: Variant) -> bool:
 # ---------------------------------------------------------------- slots
 
 ## What a slot holds, for the list the player picks from: {slot, exists, valid, house, heir, class,
-## race, level, age, gen, saved (unix time), restorable}. `valid` is false for a file that cannot be
+## race, level, age, gen, saved (unix time), restorable, ironman}. `valid` is false for a file that cannot be
 ## read (it is left alone); `restorable` says the ".bak" beside it can be.
 static func peek(slot: int) -> Dictionary:
 	var path := path_for(slot)
 	var out := {"slot": slot, "exists": false, "valid": false, "house": "", "heir": "", "class": "", "race": "",
-		"level": 0, "age": 0, "gen": 0, "saved": 0, "restorable": false}
+		"level": 0, "age": 0, "gen": 0, "saved": 0, "restorable": false, "ironman": false}
 	var has_main := FileAccess.file_exists(path)
 	var has_bak := FileAccess.file_exists(path + ".bak")
 	if not has_main and not has_bak:
@@ -127,6 +127,7 @@ static func peek(slot: int) -> Dictionary:
 	out["level"] = int(h["level"])
 	out["age"] = int(h["age"])
 	out["gen"] = int(parsed["gen"])
+	out["ironman"] = GameHardMode.saved_ironman(parsed)
 	out["saved"] = FileAccess.get_modified_time(path if has_main else path + ".bak")
 	return out
 
@@ -159,10 +160,38 @@ static func delete(slot: int) -> void:
 			DirAccess.remove_absolute(p)
 
 
+# ---------------------------------------------------------------- iron-man houses (see GameHardMode)
+
+## True when a slot's file, or the ".bak" beside it, holds an iron-man house.
+static func ironman(slot: int) -> bool:
+	var path := path_for(slot)
+	return GameHardMode.saved_ironman(read_json(path)) or GameHardMode.saved_ironman(read_json(path + ".bak"))
+
+
+## Why a slot's house cannot be copied or exported as a backup, or "".
+static func why_no_export(slot: int) -> String:
+	return GameHardMode.text("no_export") if ironman(slot) else ""
+
+
+## Why nothing can be restored or imported over a slot's house, or "".
+static func why_no_restore(slot: int) -> String:
+	return GameHardMode.text("no_import_over") if ironman(slot) else ""
+
+
+## Writes a read backup (import_text's `json`) into a slot. Returns "" or why it was not written.
+static func restore_into(slot: int, json: String) -> String:
+	var why := why_no_restore(slot)
+	if why != "":
+		return why
+	return "" if write_atomic(path_for(slot), json) else "The backup could not be written to this slot."
+
+
 # ---------------------------------------------------------------- backups as text
 
 ## A slot's save as one block of text to keep elsewhere, or "" when the slot holds nothing readable.
 static func export_text(slot: int) -> String:
+	if ironman(slot):   # an iron-man house has no backups
+		return ""
 	var path := path_for(slot)
 	var text := FileAccess.get_file_as_string(path) if shape_ok(read_json(path)) else FileAccess.get_file_as_string(path + ".bak")
 	if not shape_ok(parse(text)):
@@ -184,7 +213,8 @@ static func file_name(slot: int) -> String:
 static func export_file(slot: int, path: String) -> Dictionary:
 	var text := export_text(slot)
 	if text.is_empty():
-		return {"ok": false, "error": "Nothing in this slot can be saved to a file."}
+		var why := why_no_export(slot)
+		return {"ok": false, "error": why if why != "" else "Nothing in this slot can be saved to a file."}
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return {"ok": false, "error": "The file could not be written to %s." % path}
@@ -233,6 +263,9 @@ static func import_text(text: String) -> Dictionary:
 	var parsed: Variant = parse(json)
 	if not shape_ok(parsed):
 		fail["error"] = "The backup does not hold a house."
+		return fail
+	if GameHardMode.saved_ironman(parsed):   # however the block was made, an iron-man house is not restored
+		fail["error"] = GameHardMode.text("no_import")
 		return fail
 	var too_new := GameSaveVersion.upgrade((parsed as Dictionary).duplicate())
 	if too_new != "":

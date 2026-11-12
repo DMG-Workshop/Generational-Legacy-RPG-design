@@ -29,7 +29,7 @@ func _ready() -> void:
 		var a: Dictionary = GameFate.ARCHETYPES[d.pending_archetype]
 		root.add_child(_wrapped(Kit.label("Fate has left its mark. The next heir will be a %s: %s" % [a["name"], a["desc"]], 16, Kit.bad())))
 	var into := "generation %s" % GameText.num(d.gen + 1)
-	if d.gen + 1 == GameAges.max_generations():
+	if d.gen + 1 == GameHardMode.last_gen(d):
 		into += ", the last of the saga"
 	elif GameAges.era_of(d.gen + 1) == 1:
 		into += ", the first of Age %s" % GameText.num(GameAges.age_of(d.gen + 1))
