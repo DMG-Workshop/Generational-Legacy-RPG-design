@@ -163,15 +163,18 @@ func _ready() -> void:
 			v.add_child(Kit.button("Save", func():
 				app.autosave()
 				note.text = "Saved.", Vector2(0, 40)))
-			v.add_child(Kit.button("Copy backup", func():
+			var no_export := GameHardMode.text("no_export") if GameHardMode.ironman(app.dynasty) else ""
+			var copy := Kit.button("Copy backup", func():
 				app.autosave()
 				var text := GameSaves.export_text(app.slot)
 				if text.is_empty():
 					note.text = "Nothing could be copied."
 				else:
 					Clipboard.set_text(text)
-					note.text = "Backup of slot %d copied. Paste it into a note to keep it." % app.slot, Vector2(0, 40)))
-			v.add_child(Kit.button("Export to file", func():
+					note.text = "Backup of slot %d copied. Paste it into a note to keep it." % app.slot, Vector2(0, 40))
+			copy.disabled = no_export != ""
+			v.add_child(copy)
+			var export := Kit.button("Export to file", func():
 				app.autosave()
 				var slot: int = app.slot
 				FilePicker.save("Save the house to a file", GameSaves.file_name(slot), func(path: String):
@@ -179,7 +182,13 @@ func _ready() -> void:
 						note.text = "Nothing was saved."
 						return
 					var r := GameSaves.export_file(slot, path)
-					note.text = "Saved to %s." % path if r["ok"] else r["error"] + " Copy backup works too."), Vector2(0, 40)))
+					note.text = "Saved to %s." % path if r["ok"] else r["error"] + " Copy backup works too."), Vector2(0, 40))
+			export.disabled = no_export != ""
+			v.add_child(export)
+			if no_export != "":   # an iron-man house: the reason the two buttons are shut
+				var locked := Kit.label(no_export, 14, Kit.dim())
+				locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				v.add_child(locked)
 			v.add_child(Kit.button("Title screen", func(): app.show_title(), Vector2(0, 40)))
 		"battle":
 			var l := Kit.label("The fight is saved as you go: closing the game now reopens it where you left off.", 14, Kit.dim())

@@ -1,0 +1,49 @@
+{
+  "note": "Hard-mode dynasty options (roadmap item 20; core/game/game_hard_mode.gd, checked by tools/check_data.gd). Three options a player may switch on when founding a dynasty, kept on the dynasty as `hard` (a key is saved only for an option that is on, so an ordinary save is what it always was). They are set once, at the founding: none can be switched on for a house that has already lived, and none can be switched off. `permadeath`: an heir who dies of one of `permadeath_causes` ends the saga instead of passing the name on. `ironman`: the house cannot be copied or exported as a backup, a backup of such a house is not read back in, nothing is restored over its slot, and the save before the last is not kept. `gen_cap`: the saga ends with the heir of that generation (one of `gen_caps`), instead of ages.json's `max_generations`. No dice. The autopilot plays under whatever the dynasty was founded with.",
+  "settings": {
+    "gen_caps": [10, 25, 50, 100],
+    "permadeath_causes": ["slain in battle"]
+  },
+  "options": {
+    "permadeath": {
+      "name": "Whole-line permadeath",
+      "about": "If an heir is slain in battle the dynasty ends with them: no child takes up the name. An heir who dies of old age or sickness still passes it on.",
+      "active": "Whole-line permadeath: the house ends with the first heir slain in battle."
+    },
+    "ironman": {
+      "name": "Iron-man save",
+      "about": "One save and no going back: the house cannot be copied or exported as a backup, no backup can be restored over it, and the save before the last is not kept. A save file damaged on the device cannot be recovered.",
+      "active": "Iron-man save: no backups, and no save to go back to."
+    },
+    "gen_cap": {
+      "name": "Generation cap",
+      "about": "The saga ends when the heir of the chosen generation dies, however they die.",
+      "active": "Generation cap: the saga ends with the heir of generation {cap}."
+    }
+  },
+  "text": {
+    "button": "Hard mode: {summary}",
+    "off": "off",
+    "panel_title": "Hard mode",
+    "panel_note": "These are chosen once, when the dynasty is founded. They cannot be switched on for a house that already lives, and they can never be switched off.",
+    "on": "On",
+    "is_off": "Off",
+    "no_cap": "No cap",
+    "cap_choice": "{cap} generations",
+    "short_permadeath": "permadeath",
+    "short_ironman": "iron-man",
+    "short_gen_cap": "{cap} generations",
+    "close": "Done",
+    "stats_head": "Hard mode",
+    "slot_mark": " (iron-man)",
+    "too_late": "Hard-mode options are chosen at the founding. They cannot be switched on for a house that already lives.",
+    "already_set": "This house's hard-mode options were set at its founding and cannot be changed.",
+    "unknown_option": "'{key}' is not a hard-mode option.",
+    "bad_value": "'{key}' must be switched on or off.",
+    "bad_cap": "A generation cap must be one of: {caps}.",
+    "line_ends": "House {house} was sworn to end with the first heir slain in battle: no child takes up the name of {heir}.",
+    "no_export": "This house is an iron-man save: it cannot be copied or exported as a backup.",
+    "no_import_over": "This slot holds an iron-man save: nothing can be restored over it. Delete the house first to use the slot.",
+    "no_import": "That backup holds an iron-man house, which cannot be restored."
+  }
+}
