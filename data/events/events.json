@@ -507,8 +507,8 @@
           "text": "Join the dance",
           "check": {"attr": "vit", "dc": 15, "bonus_if": [{"race": "elf", "value": 3}, {"class": "monk", "value": 2}]},
           "outcomes": {
-            "crit_success": {"text": "You dance them all down. The piper, laughing, gives you a charm from his own neck.", "xp": 40, "item": "lucky_charm"},
-            "success": {"text": "You dance one night. Outside the ring, a year has passed.", "xp": 30, "years": 1},
+            "crit_success": {"text": "You dance them all down. The piper, laughing, gives you a charm from his own neck.", "xp": 40, "item": "lucky_charm", "flag": "fae_danced"},
+            "success": {"text": "You dance one night. Outside the ring, a year has passed.", "xp": 30, "years": 1, "flag": "fae_danced"},
             "failure": {"text": "You dance until your feet bleed and wake in the heather, three years on.", "xp": 15, "years": 3},
             "crit_failure": {"text": "You wake with a promise on your lips that you do not remember making.", "xp": 10, "years": 2, "add_trait": "fae_contract"}
           }
@@ -1619,6 +1619,25 @@
             "failure": {"text": "The bolt finds your shoulder, but you get away.", "xp": 5, "hp_pct": -0.2},
             "crit_failure": {"text": "You slip on the weed and they are on you.", "fight": {"foes": ["bandit", "bandit"], "level": 1.0}}
           }
+        }
+      ]
+    },
+    {
+      "id": "verdant_stones",
+      "title": "The Standing Stones",
+      "text": "Between two of the stones the air has gone green, and a path of pale moss runs through the gap as if someone had swept it for guests. The fair folk you danced with would know the tune that opens it.",
+      "where": {"places": ["elderglade"]},
+      "requires": {"flags": ["fae_danced"]},
+      "weight": 20,
+      "once": true,
+      "choices": [
+        {
+          "text": "Walk through the gap",
+          "outcomes": {"always": {"text": "The light closes over your head and opens again on the far side, where the court is under a sky of leaves. You come back through the same gap, and it stays open behind you.", "xp": 20, "gate": "verdant"}}
+        },
+        {
+          "text": "Keep to the path",
+          "outcomes": {"always": {"text": "You go on the way you came. The moss fades behind you one stone at a time.", "xp": 5}}
         }
       ]
     },

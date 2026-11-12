@@ -1,11 +1,13 @@
-## Creatures of the realms (roadmap item 58, first part). Every creature belongs to a realm
-## (data/creatures/realms.json `of`; unlisted means the home realm), and a creature of another realm sells for more
-## at home. The rest is written and tested but switched off (`settings.linked`) until the worlds are joined: taking
-## a kept creature to another realm, where it is unsettled until it has adapted; and young of two realms, which
-## carry both and take a mark from each world. A mark changes the numbers a trait changes; an unstable realm's mark
-## is awake or dormant by the year, on dice keyed on the dynasty seed, the year, the creature and the mark (never
-## the dynasty's). Roster entries gain `realms`, `marks`, `dormant`, `in_realm`, `adapt` and `settled`, each only
-## when it says something, so a ranch that never crosses worlds saves exactly what it did.
+## Creatures of the realms (roadmap item 58). Every creature belongs to a realm (data/creatures/realms.json `of`;
+## unlisted means the home realm), and a creature of another realm sells for more at home. The worlds are joined by
+## GATES: each realm other than home has a gate, open once the dynasty's flag `gate_<realm>` is set (`open_gate`, by
+## the Standing Stones event for the Verdant Court; `gate_open` says whether it is). A creature is taken to a realm
+## (`move`) only through the open gates of the realms it leaves and enters, where it is unsettled until it has
+## adapted; young of two realms, which carry both and take a mark from each world, are written only when both gates
+## are open. A mark changes the numbers a trait changes; an unstable realm's mark is awake or dormant by the year, on
+## dice keyed on the dynasty seed, the year, the creature and the mark (never the dynasty's). Roster entries gain
+## `realms`, `marks`, `dormant`, `in_realm`, `adapt` and `settled`, each only when it says something, so a ranch that
+## never crosses worlds saves exactly what it did. The gate flags are story flags, saved with the rest of them.
 class_name GameRealms
 extends RefCounted
 
@@ -48,9 +50,36 @@ static func home() -> String:
 	return str(setting("home"))
 
 
-## Whether the worlds are joined, so creatures can cross and be crossed. Off until there are gates.
+## Whether the worlds' gates count at all (a switch for tests and for a world with no gates). On in realms.json.
 static func linked() -> bool:
 	return typeof(setting("linked")) == TYPE_BOOL and setting("linked")
+
+
+## The story flag that says a realm's gate is open.
+static func gate_flag(realm: String) -> String:
+	return str(setting("gate_prefix")) + realm
+
+
+## Whether a realm has a gate at all: every realm but home.
+static func gateable(realm: String) -> bool:
+	return has(realm) and realm != home()
+
+
+## Whether the way to a realm is open. Home's always is; another realm's is once its flag is set. Gates never close.
+static func gate_open(d: GameDynasty, realm: String) -> bool:
+	if not gateable(realm):
+		return true
+	return d.flags.has(gate_flag(realm))
+
+
+## Opens the gate to a realm, once. Returns the line to tell (and any quest line the flag completes), or "" when the
+## gate was open already or there is no gate. The caller tells the line: an event shows it, a test checks it.
+static func open_gate(d: GameDynasty, realm: String) -> String:
+	if not gateable(realm) or gate_open(d, realm):
+		return ""
+	var notes: Array = []
+	d.set_flag(gate_flag(realm), notes)
+	return " ".join([text("gate_open", {"realm": name_of(realm)})] + notes)
 
 
 ## The realm a species belongs to.
@@ -134,6 +163,9 @@ static func why_not(d: GameDynasty, id: int, to: String) -> String:
 		return text("there", {"name": str(e["name"]), "realm": name_of(to)})
 	if str(e.get("stage")) == "egg":
 		return text("egg")
+	for r in [to, where(e)]:   # the gates of the realms it enters and leaves
+		if not gate_open(d, str(r)):
+			return text("gate_shut", {"realm": name_of(str(r))})
 	return ""
 
 
@@ -185,12 +217,15 @@ static func _inherited(mother: Dictionary, father: Dictionary, first: Array) -> 
 	return marks.slice(0, int(setting("max_marks")))
 
 
-## Young are born: GameBreeding calls this with the new roster entry. Does nothing while the worlds are not linked.
-## Returns the lines to tell.
-static func on_birth(e: Dictionary, mother: Dictionary, father: Dictionary) -> Array:
+## Young are born: GameBreeding calls this with the new roster entry. Does nothing while the worlds are not linked,
+## and writes no realms or marks of two worlds unless both gates are open. Returns the lines to tell.
+static func on_birth(d: GameDynasty, e: Dictionary, mother: Dictionary, father: Dictionary) -> Array:
 	if not linked():
 		return []
 	var got := cross(mother, father)
+	for r in got["realms"]:
+		if not gate_open(d, str(r)):
+			return []
 	if not (got["realms"] as Array).is_empty():
 		e["realms"] = got["realms"]
 	if (got["marks"] as Array).is_empty():
@@ -328,6 +363,11 @@ static func validate() -> Array:
 		bad.append("the home realm has a mark or needs adapting to")
 	if typeof(setting("linked")) != TYPE_BOOL:
 		bad.append("settings.linked is not yes or no")
+	if str(setting("gate_prefix")) == "":
+		bad.append("settings.gate_prefix is empty: a gate would have no flag name")
+	for k in ["gate_open", "gate_shut"]:
+		if not dat["text"].has(k):
+			bad.append("realms.json has no text '%s'" % k)
 	if float(setting("foreign_value_mult")) < 1.0:
 		bad.append("a creature of another realm is worth less than one of home")
 	if int(setting("max_marks")) < 2:

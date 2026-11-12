@@ -188,7 +188,7 @@ static func _birth(d: GameDynasty, mother: Dictionary, father: Dictionary, r: Ra
 		e["sterile"] = true
 		out.append(text("sterile", {"name": e["name"]}))
 	mother["cooldown"] = float(setting("cooldown")[mode])
-	out.append_array(GameRealms.on_birth(e, mother, father))   # young of two worlds (nothing until the worlds are linked)
+	out.append_array(GameRealms.on_birth(d, e, mother, father))   # young of two worlds (only through open gates)
 	var def := GameCombat.creature_def(ms)
 	var vals := {"mother": str(mother["name"]), "name": e["name"], "young": e["young"], "species": str(def.get("name", ms)).to_lower()}
 	out.push_front(text("born_egg" if mode == "egg" else "born_live", vals))

@@ -103,7 +103,10 @@
     "chicken": "fowl",
     "goat": "flock",
     "goose": "fowl",
-    "horse": "herd"
+    "horse": "herd",
+    "thornhound": "medium",
+    "moss_stag": "large",
+    "glimmer_moth": "small"
   },
   "text": {
     "hatches": "{name} hatches: a {young} of the {species}.",
@@ -264,6 +267,9 @@
     "horse": {
       "kind": "haul",
       "gold": 16
+    },
+    "thornhound": {
+      "kind": "guard"
     }
   }
 }

@@ -14,7 +14,8 @@
       "ash_wyrm": 0.3,
       "star_eater": 0.15,
       "elder_dragon": 0.1,
-      "void_stalker": 0.3
+      "void_stalker": 0.3,
+      "glimmer_moth": 0.5
     },
     "class_bonus": {
       "ranger": 1.5,
