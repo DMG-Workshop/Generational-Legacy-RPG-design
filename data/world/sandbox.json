@@ -4,11 +4,31 @@
     "radius": 10,
     "keep": 4,
     "threat_near": 10.0,
-    "log_lines": 200
+    "log_lines": 200,
+    "route_nodes": 4000,
+    "walk_seconds": 0.2,
+    "tick_seconds": 0.25
+  },
+  "view": {
+    "cell_px": 16.0,
+    "cam_tiles_per_second": 12.0,
+    "move_threshold": 0.2,
+    "save_seconds": 60.0,
+    "dim_floor": 0.35
+  },
+  "colors": {
+    "water": [0.12, 0.27, 0.42],
+    "land": [0.22, 0.38, 0.2],
+    "built": [0.5, 0.42, 0.3],
+    "route": [0.95, 0.85, 0.4],
+    "heir": [0.98, 0.9, 0.55],
+    "creature": [0.85, 0.3, 0.3],
+    "companion": [0.4, 0.75, 0.95]
   },
   "text": {
     "not_a_step": "The heir can only step to a tile beside them.",
     "edge": "The edge of the world is there.",
+    "no_route": "There is no way there from here.",
     "blocked": "Something stands in the way: water, a tree, rock or a wall.",
     "dug": "The family digs down {depth} into the ground."
   }
