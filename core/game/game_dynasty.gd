@@ -19,6 +19,7 @@ var clock_carry: float = 0.0    # years the world clock has been fed but not yet
 var world_seconds: float = 0.0  # seconds the world clock has run, the day follows from it (see GameDay); saved only when above 0
 var house_titles: Array = []    # ids of the house titles the dynasty has earned (see GameTitles); saved only once there is one
 var achievements: Dictionary = {}   # milestones the house has reached, id -> {gen, year, heir} (see GameAchievements); saved only once there is one
+var hard: Dictionary = {}       # hard-mode options chosen at the founding (see GameHardMode); saved only when one is on
 var world_event: Dictionary = {}    # the war, famine or golden age running now, or the rest after one (see GameWorldEvents); saved only when not empty
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
@@ -48,7 +49,7 @@ var auto_party: Dictionary = {}      # the player's Auto switches for party comm
 var command_round: GameRound = null  # the battle's command round, made on first use (see battle_round)
 
 
-static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "") -> GameDynasty:
+static func new_game(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "", p_hard: Dictionary = {}) -> GameDynasty:
 	GameData.load_all()
 	var d := GameDynasty.new()
 	d.seed_value = p_seed
@@ -71,6 +72,8 @@ static func new_game(p_seed: int, founder_name: String, class_id: String, bloodl
 	d.heir = h
 	d._say("The %s dynasty begins with %s, %s %s." % [d.dynasty_name, h.name, h.race()["name"], h.cls()["name"]])
 	d._coming_of_age()
+	if not p_hard.is_empty():   # hard-mode options are chosen here or never (choices the rules refuse found a plain house)
+		GameHardMode.found(d, p_hard)
 	return d
 
 
@@ -798,9 +801,12 @@ func _die(cause: String) -> Array:
 	elif heir.level >= glory_level(heir):
 		var strength := 0.1 * float(heir.level) / glory_level(heir)
 		_add_echo("glory", "life", "%s lived a celebrated life" % heir.name, clampf(strength, 0.0, 0.2))
-	if gen >= GameAges.max_generations():
+	var line_ends := GameHardMode.line_ends(self, cause)
+	if gen >= GameHardMode.last_gen(self) or line_ends:
 		last_death = rec
 		GameAges.end_saga(self, msgs)
+		if line_ends:
+			msgs.append(GameHardMode.line_ends_text(self))
 		for m in msgs:
 			_say(m)
 		return msgs
@@ -935,7 +941,7 @@ func choose_heir(index: int) -> Array:
 	candidates = []
 	state = "life"
 	_say("Generation %s: %s takes up the family name." % [GameText.num(gen), c.full_name()])
-	if gen == GameAges.max_generations():
+	if gen == GameHardMode.last_gen(self):
 		msgs.append(GameAges.text("last_heir", {"heir": c.name, "house": dynasty_name}))
 	for m in msgs:
 		_say(m)
@@ -982,6 +988,8 @@ func to_dict() -> Dictionary:
 		out["world_event"] = world_event
 	if not auto_party.is_empty():   # only once the player has set a switch: older saves and fresh ones stay alike
 		out["auto_party"] = auto_party
+	if not hard.is_empty():   # only for a house founded with a hard-mode option
+		out["hard"] = hard
 	return out
 
 
@@ -1039,7 +1047,10 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 			if typeof(ap.get(k)) == TYPE_BOOL:
 				g.auto_party[k] = ap[k]
 	g.loot = GamePlague.load_loot(d.get("loot", {})) if g.state == "life" else {}
-	if g.state == "succession" and g.gen >= GameAges.max_generations():   # no heir is chosen past the last generation
+	g.hard = GameHardMode.load_state(d.get("hard"))
+	var cause: Variant = g.last_death.get("cause", "")
+	# no heir is chosen past the last generation, or after a death that ends the line
+	if g.state == "succession" and (g.gen >= GameHardMode.last_gen(g) or GameHardMode.line_ends(g, cause if typeof(cause) == TYPE_STRING else "")):
 		GameAges.end_saga(g, [])
 	_fill_sexes(g)
 	if typeof(d.get("battle")) == TYPE_STRING and g.state == "life":
@@ -1106,7 +1117,10 @@ static func _ints(v: Variant) -> Variant:
 ## Saves the dynasty, a fight in progress included: closing the game mid-fight neither loses the fight nor
 ## undoes it.
 func save_to_disk() -> bool:
-	return GameSaves.write_atomic(save_path, JSON.stringify(to_save()))
+	if not GameSaves.write_atomic(save_path, JSON.stringify(to_save())):
+		return false
+	GameHardMode.after_save(self, save_path)
+	return true
 
 
 ## True when the save file, or the ".bak" kept beside it, exists.

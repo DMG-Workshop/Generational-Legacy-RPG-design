@@ -117,8 +117,8 @@ func show_title() -> void:
 	_swap(s)
 
 
-func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "") -> void:
-	dynasty = GameDynasty.new_game(p_seed, p_name, class_id, bloodline, race_id, p_sex, p_subclass)
+func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "", p_hard: Dictionary = {}) -> void:
+	dynasty = GameDynasty.new_game(p_seed, p_name, class_id, bloodline, race_id, p_sex, p_subclass, p_hard)
 	dynasty.save_to_disk()
 	show_state()
 

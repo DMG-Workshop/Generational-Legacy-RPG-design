@@ -4,6 +4,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Clipboard := preload("res://ui/play/clipboard.gd")
 const FilePicker := preload("res://ui/play/file_picker.gd")
+const HardModePanel := preload("res://ui/play/hard_mode_panel.gd")
 
 var app: Node
 var name_edit: LineEdit
@@ -26,6 +27,8 @@ var slot_box: VBoxContainer
 var slot_note: Label
 var confirm_row: HBoxContainer
 var _pending: Callable = Callable()
+var hard_opts: Dictionary = {}   # the founder's hard-mode choices (see GameHardMode), none by default
+var hard_button: Button
 
 
 func _ready() -> void:
@@ -98,6 +101,10 @@ func _ready() -> void:
 	class_desc = Kit.label("", 14, Kit.dim())
 	class_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	form.add_child(class_desc)
+	hard_button = Kit.button("", _open_hard, Vector2(0, 0))
+	hard_button.custom_minimum_size.y = UiSettings.tap_h(0)
+	hard_button.clip_text = true
+	form.add_child(hard_button)
 
 	form2.add_child(Kit.label("Race"))
 	race_pick = OptionButton.new()
@@ -189,6 +196,7 @@ func _refresh() -> void:
 		class_desc.text += "\nChildren with another class may become: %s." % ", ".join(hybrids)
 	var r: Dictionary = GameData.races[race_ids[race_pick.selected]]
 	race_desc.text = "%s  Lives ~%d years, adult at %d.  %s" % [r["description"], int(r["lifespan"]), int(r["start_age"]), "  ".join(r.get("traits", []).map(func(t): return "%s: %s" % [GameData.trait_name(t), GameData.trait_def(t).get("description", "")]))]
+	hard_button.text = GameHardMode.text("button", {"summary": GameHardMode.summary(hard_opts)})
 	bloodline_desc.text = GameData.trait_def(bloodline_ids[bloodline_pick.selected]).get("description", "")
 	var sid: String = subclass_ids[subclass_pick.selected]
 	subclass_desc.text = "Anyone can take one later. One chosen now is stronger." if sid == "" else "%s  %s" % [str(GameSubclass.def(sid)["about"]), "  ".join(GameSubclass.perk_lines(null, sid, true))]
@@ -207,6 +215,8 @@ func _build_slots() -> void:
 			text = "Slot %d: damaged, cannot be read" % n
 		elif info["valid"]:
 			text = "Slot %d: House %s, gen %d. %s %s %s, level %d" % [n, info["house"], info["gen"], info["heir"], info["race"], info["class"], info["level"]]
+			if info["ironman"]:
+				text += GameHardMode.text("slot_mark")
 		var b := Kit.button(("> " if n == app.slot else "") + text, _pick.bind(n), Vector2(0, 0))
 		b.custom_minimum_size.y = UiSettings.tap_h(0)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -217,14 +227,17 @@ func _build_slots() -> void:
 	acts.add_theme_constant_override("separation", 8)
 	slot_box.add_child(acts)
 	var here := GameSaves.peek(app.slot)
+	var no_export := GameSaves.why_no_export(app.slot)     # an iron-man house: no backups out, nothing restored over it
+	var no_restore := GameSaves.why_no_restore(app.slot)
 	var copy := Kit.button("Copy backup", _copy_backup, Vector2(0, 0))
 	copy.custom_minimum_size.y = UiSettings.tap_h(0)
 	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	copy.disabled = not here["valid"]
+	copy.disabled = not here["valid"] or no_export != ""
 	acts.add_child(copy)
 	var restore := Kit.button("Restore backup", func(): _ask_if_full(_restore_backup, "Restore the backup over this slot's house?"), Vector2(0, 0))
 	restore.custom_minimum_size.y = UiSettings.tap_h(0)
 	restore.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	restore.disabled = no_restore != ""
 	acts.add_child(restore)
 	var del := Kit.button("Delete", func(): _ask_if_full(_delete_slot, "Erase this slot's house for good?"), Vector2(0, 0))
 	del.custom_minimum_size.y = UiSettings.tap_h(0)
@@ -237,11 +250,12 @@ func _build_slots() -> void:
 	var export := Kit.button("Export to file", _export_file, Vector2(0, 0))
 	export.custom_minimum_size.y = UiSettings.tap_h(0)
 	export.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	export.disabled = not here["valid"]
+	export.disabled = not here["valid"] or no_export != ""
 	files.add_child(export)
 	var import := Kit.button("Import from file", func(): _ask_if_full(_import_file, "Import the file over this slot's house?"), Vector2(0, 0))
 	import.custom_minimum_size.y = UiSettings.tap_h(0)
 	import.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	import.disabled = no_restore != ""
 	files.add_child(import)
 	confirm_row = HBoxContainer.new()
 	confirm_row.add_theme_constant_override("separation", 8)
@@ -250,6 +264,8 @@ func _build_slots() -> void:
 	slot_note = Kit.label("", 14, Kit.dim())
 	slot_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	slot_box.add_child(slot_note)
+	if no_export != "":   # the reason the backup buttons are shut, as text
+		slot_note.text = "%s %s" % [no_export, no_restore]
 	cont.disabled = not here["valid"]
 
 
@@ -293,7 +309,8 @@ func _confirmed() -> void:
 func _copy_backup() -> void:
 	var text := GameSaves.export_text(app.slot)
 	if text.is_empty():
-		_say("Nothing in this slot can be copied.")
+		var why := GameSaves.why_no_export(app.slot)
+		_say(why if why != "" else "Nothing in this slot can be copied.")
 		return
 	Clipboard.set_text(text)
 	_say("Backup copied (%d characters). Paste it into a note to keep it." % text.length())
@@ -326,8 +343,9 @@ func _restore(r: Dictionary) -> void:
 	if not r["ok"]:
 		_say(r["error"])
 		return
-	if not GameSaves.write_atomic(GameSaves.path_for(app.slot), r["json"]):
-		_say("The backup could not be written to this slot.")
+	var why := GameSaves.restore_into(app.slot, r["json"])
+	if why != "":
+		_say(why)
 		return
 	_build_slots()
 	_say("Restored House %s, generation %d, into slot %d." % [r["house"], r["gen"], app.slot])
@@ -346,4 +364,14 @@ func _start() -> void:
 func _begin() -> void:
 	var s := seed_edit.text.strip_edges()
 	var seed_value: int = int(s) if s.is_valid_int() else int(Time.get_unix_time_from_system()) % 1000000
-	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected], GameSex.SEXES[sex_pick.selected], subclass_ids[subclass_pick.selected])
+	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected], GameSex.SEXES[sex_pick.selected], subclass_ids[subclass_pick.selected], hard_opts)
+
+
+## The founder's hard-mode choices: a small panel over the title; the button says what is chosen.
+func _open_hard() -> void:
+	var p := HardModePanel.new()
+	p.opts = hard_opts
+	p.on_change = func(o: Dictionary):
+		hard_opts = o
+		_refresh()
+	add_child(p)
