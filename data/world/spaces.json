@@ -1,15 +1,768 @@
 {
-  "note": "World spaces and coordinates (roadmap item 41; core/game/game_spaces.gd, checked by tools/check_data.gd). Every place the game has is a space with an id of its own and a position, so the text game's map and the sandbox name places the same way. Ids are paths: `world` is the open world (the generated surface and the ground under it); a town or a stretch of wilds is an AREA of it, `world/hearthmere`, a region round the place's anchor tile that is walked into; a dungeon is an INTERIOR, `world/goblin_warrens`, a space of its own entered through a door on the open world; a town's services are interiors of the town, `world/hearthmere/forge`, each with its door a few tiles from the town's centre (`service_doors`, as [east, south] of it, inside the town's cleared ground); and the family house is an interior of the home town (`house`). `kind_of_type` says which kind each place type in world.json is. Nothing here is saved or random: a space is worked out from world.json, this file and GameWorldGen's anchors.",
-  "root": {"id": "world", "name": "The open world"},
-  "kind_of_type": {"town": "area", "wilds": "area", "dungeon": "interior"},
-  "service_names": {"forge": "Forge", "temple": "Temple", "store": "Store", "tavern": "Tavern", "board": "Notice board", "black_market": "Black market"},
-  "service_doors": {
-    "forge": [-4, -2],
-    "temple": [4, -3],
-    "store": [-3, 3],
-    "tavern": [2, 4],
-    "board": [0, -5],
-    "black_market": [5, 5]
-  },
-  "house": {"id": "house", "name": "The family house", "door": [3, 0]}
+	"note": "World spaces and coordinates (roadmap item 41; core/game/game_spaces.gd, checked by tools/check_data.gd). Every place the game has is a space with an id of its own and a position, so the text game's map and the sandbox name places the same way. Ids are paths: `world` is the open world (the generated surface and the ground under it); a town or a stretch of wilds is an AREA of it, `world/hearthmere`, a region round the place's anchor tile that is walked into; a dungeon is an INTERIOR, `world/goblin_warrens`, a space of its own entered through a door on the open world; a town's services are interiors of the town, `world/hearthmere/forge`, each with its door a few tiles from the town's centre (`service_doors`, as [east, south] of it, inside the town's cleared ground); and the family house is an interior of the home town (`house`). `kind_of_type` says which kind each place type in world.json is. UNDERWORLD: `underworld` gives the shaft, a tile of the open world where the ground goes down, and the mining zones (data/mining/mining.json) that are bands of it, each a space `world/underworld/<zone>`: the first is entered from the open world at the shaft, each deeper one from the band above it, all at the shaft's own tile, and a band's depth runs from its zone's first cell to the next zone's. REALMS: `realm_gates` gives the tile of the open world where each realm's gate stands (not the home realm, which has none); every realm in data/creatures/realms.json is a space `realm/<id>`, a child of the open world at its gate, and the home realm is listed with no door since the open world is its ground. ROOMS: `rooms` gives each interior's floor plan, keyed by the layout it uses (a service's name, a dungeon's place id, or the house's id). A layout is a list of rooms (`id`, `name`, `rect` [x, z, width, height] in tiles on the interior's own floor, x east and z south, origin at the door, which must lie in the one `entrance` room) and `doors` ({from, to, at}: `at` is the gap tile between two rooms that touch it). Nothing here is saved or random: a space is worked out from world.json, this file, mining.json, realms.json and GameWorldGen's anchors.",
+	"root": {
+		"id": "world",
+		"name": "The open world"
+	},
+	"kind_of_type": {
+		"town": "area",
+		"wilds": "area",
+		"dungeon": "interior"
+	},
+	"service_names": {
+		"forge": "Forge",
+		"temple": "Temple",
+		"store": "Store",
+		"tavern": "Tavern",
+		"board": "Notice board",
+		"black_market": "Black market"
+	},
+	"service_doors": {
+		"forge": [
+			-4,
+			-2
+		],
+		"temple": [
+			4,
+			-3
+		],
+		"store": [
+			-3,
+			3
+		],
+		"tavern": [
+			2,
+			4
+		],
+		"board": [
+			0,
+			-5
+		],
+		"black_market": [
+			5,
+			5
+		]
+	},
+	"house": {
+		"id": "house",
+		"name": "The family house",
+		"door": [
+			3,
+			0
+		]
+	},
+	"underworld": {
+		"id": "underworld",
+		"shaft": [
+			316,
+			316
+		],
+		"bands": [
+			"underground",
+			"deep"
+		]
+	},
+	"realm_gates": {
+		"verdant": [
+			116,
+			516
+		],
+		"hollow": [
+			540,
+			516
+		],
+		"dragon_isles": [
+			540,
+			116
+		],
+		"elemental": [
+			116,
+			116
+		],
+		"clockwork": [
+			316,
+			596
+		],
+		"dream": [
+			596,
+			316
+		],
+		"void": [
+			36,
+			316
+		]
+	},
+	"rooms": {
+		"forge": {
+			"rooms": [
+				{
+					"id": "yard",
+					"name": "Yard",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "smithy",
+					"name": "Smithy",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "coal_store",
+					"name": "Coal store",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "yard",
+					"to": "smithy",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "yard",
+					"to": "coal_store",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"temple": {
+			"rooms": [
+				{
+					"id": "nave",
+					"name": "Nave",
+					"rect": [
+						-3,
+						-2,
+						6,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "altar",
+					"name": "Altar",
+					"rect": [
+						-3,
+						3,
+						6,
+						2
+					]
+				},
+				{
+					"id": "vestry",
+					"name": "Vestry",
+					"rect": [
+						4,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "nave",
+					"to": "altar",
+					"at": [
+						0,
+						2
+					]
+				},
+				{
+					"from": "nave",
+					"to": "vestry",
+					"at": [
+						3,
+						0
+					]
+				}
+			]
+		},
+		"store": {
+			"rooms": [
+				{
+					"id": "shop",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "back_room",
+					"name": "Back room",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "cellar",
+					"name": "Cellar",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop",
+					"to": "back_room",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "shop",
+					"to": "cellar",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"tavern": {
+			"rooms": [
+				{
+					"id": "taproom",
+					"name": "Taproom",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "kitchen",
+					"name": "Kitchen",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "upstairs",
+					"name": "Upstairs",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "taproom",
+					"to": "kitchen",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "taproom",
+					"to": "upstairs",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"board": {
+			"rooms": [
+				{
+					"id": "notice_hall",
+					"name": "Notice hall",
+					"rect": [
+						-2,
+						-2,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "archive",
+					"name": "Archive",
+					"rect": [
+						-2,
+						2,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "notice_hall",
+					"to": "archive",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"black_market": {
+			"rooms": [
+				{
+					"id": "front",
+					"name": "Front",
+					"rect": [
+						-3,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "vault",
+					"name": "Vault",
+					"rect": [
+						2,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "back_alley",
+					"name": "Back alley",
+					"rect": [
+						-3,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "front",
+					"to": "vault",
+					"at": [
+						1,
+						0
+					]
+				},
+				{
+					"from": "front",
+					"to": "back_alley",
+					"at": [
+						-1,
+						2
+					]
+				}
+			]
+		},
+		"goblin_warrens": {
+			"rooms": [
+				{
+					"id": "mouth",
+					"name": "Mouth",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "warren",
+					"name": "Warren",
+					"rect": [
+						3,
+						-1,
+						5,
+						4
+					]
+				},
+				{
+					"id": "nest",
+					"name": "Nest",
+					"rect": [
+						-2,
+						3,
+						4,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "mouth",
+					"to": "warren",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "mouth",
+					"to": "nest",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"hollow_barrow": {
+			"rooms": [
+				{
+					"id": "antechamber",
+					"name": "Antechamber",
+					"rect": [
+						-2,
+						-2,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "burial_hall",
+					"name": "Burial hall",
+					"rect": [
+						-3,
+						2,
+						6,
+						4
+					]
+				},
+				{
+					"id": "tomb",
+					"name": "Tomb",
+					"rect": [
+						3,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "antechamber",
+					"to": "burial_hall",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "antechamber",
+					"to": "tomb",
+					"at": [
+						2,
+						-1
+					]
+				}
+			]
+		},
+		"emberpeak": {
+			"rooms": [
+				{
+					"id": "gate",
+					"name": "Gate",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "forge_hall",
+					"name": "Forge hall",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "lava_tube",
+					"name": "Lava tube",
+					"rect": [
+						-2,
+						3,
+						4,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "gate",
+					"to": "forge_hall",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "gate",
+					"to": "lava_tube",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"sunken_temple": {
+			"rooms": [
+				{
+					"id": "flooded_nave",
+					"name": "Flooded nave",
+					"rect": [
+						-3,
+						-2,
+						6,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "shrine",
+					"name": "Shrine",
+					"rect": [
+						-3,
+						3,
+						6,
+						3
+					]
+				},
+				{
+					"id": "sacristy",
+					"name": "Sacristy",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "flooded_nave",
+					"to": "shrine",
+					"at": [
+						0,
+						2
+					]
+				},
+				{
+					"from": "flooded_nave",
+					"to": "sacristy",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"deepstone_halls": {
+			"rooms": [
+				{
+					"id": "hall",
+					"name": "Hall",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "deep_gallery",
+					"name": "Deep gallery",
+					"rect": [
+						3,
+						-1,
+						6,
+						3
+					]
+				},
+				{
+					"id": "stone_court",
+					"name": "Stone court",
+					"rect": [
+						-2,
+						3,
+						4,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "hall",
+					"to": "deep_gallery",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "hall",
+					"to": "stone_court",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"the_rift": {
+			"rooms": [
+				{
+					"id": "edge",
+					"name": "Edge",
+					"rect": [
+						-2,
+						-2,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "fissure",
+					"name": "Fissure",
+					"rect": [
+						-2,
+						2,
+						4,
+						4
+					]
+				},
+				{
+					"id": "beyond",
+					"name": "Beyond",
+					"rect": [
+						3,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "edge",
+					"to": "fissure",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "edge",
+					"to": "beyond",
+					"at": [
+						2,
+						-1
+					]
+				}
+			]
+		},
+		"house": {
+			"rooms": [
+				{
+					"id": "front_room",
+					"name": "Front room",
+					"rect": [
+						-2,
+						-2,
+						4,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "kitchen",
+					"name": "Kitchen",
+					"rect": [
+						3,
+						-2,
+						3,
+						4
+					]
+				},
+				{
+					"id": "bedroom",
+					"name": "Bedroom",
+					"rect": [
+						-2,
+						3,
+						4,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "front_room",
+					"to": "kitchen",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "front_room",
+					"to": "bedroom",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		}
+	}
 }

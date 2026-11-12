@@ -91,7 +91,17 @@ func test_places() -> void:
 	ok(unique.size() == ids.size(), "every id is its own (%d spaces)" % ids.size())
 	ok(GameSpaces.of_place("atlantis") == "" and GameSpaces.space("world/atlantis").is_empty() and not GameSpaces.has("nowhere"), "a place the game does not have has no space")
 	ok(GameSpaces.chain("world/goblin_warrens") == ["world/goblin_warrens", "world"], "a space's chain runs up to the open world")
-	ok(GameSpaces.children("world").size() == places.size(), "the open world's children are the places")
+	var want := []
+	for l in places:
+		want.append("world/" + str(l["id"]))
+	want.append("world/underworld/underground")
+	for r in GameRealms.ids():
+		if GameSpaces.of_realm(str(r)) != "" and not GameSpaces.space(GameSpaces.of_realm(str(r)))["door"].is_empty():
+			want.append("realm/" + str(r))
+	want.sort()
+	var got := GameSpaces.children("world")
+	got.sort()
+	ok(got == want, "the open world's children are the places, the underworld's first band and the realms with a gate (%d)" % want.size())
 
 
 func test_interiors() -> void:
