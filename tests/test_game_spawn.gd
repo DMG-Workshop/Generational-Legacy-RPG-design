@@ -50,7 +50,7 @@ func ids(rows: Array) -> Array:
 
 func test_data() -> void:
 	ok(GameSpawn.validate().is_empty(), "the data is sound: %s" % str(GameSpawn.validate()))
-	ok(GameSpawn.wild().size() == 24 and GameSpawn.data()["creatures"].size() == 24, "24 wild creatures, each with an entry")
+	ok(GameSpawn.wild().size() == 27 and GameSpawn.data()["creatures"].size() == 27, "27 wild creatures, each with an entry")
 	var saved: Dictionary = GameSpawn.data().duplicate(true)
 	GameSpawn.data()["creatures"].erase("wolf")
 	ok(not GameSpawn.validate().is_empty(), "a wild creature with no entry is found")
