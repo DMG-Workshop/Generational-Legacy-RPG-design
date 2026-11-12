@@ -229,6 +229,25 @@ static func take(d: GameDynasty, id: String) -> Dictionary:
 	return {"ok": true, "text": line}
 
 
+## The faction that keeps the town the heir is in, or "" (a place with none, or no living heir).
+static func town_faction(d: GameDynasty) -> String:
+	if d == null or d.heir == null or d.state != "life":
+		return ""
+	return str(data().get("towns", {}).get(str(d.world.location), ""))
+
+
+## What the heir's standing with the faction of their town does to one kind of number: "price" (shops and the
+## temple), "fee" (companions' hire fees) or "train" (the XP of training). 1.0 outside such a town, and so
+## for every number the autopilot meets away from them.
+static func town_mult(d: GameDynasty, key: String) -> float:
+	var f := town_faction(d)
+	if f == "":
+		return 1.0
+	var rank_id := rank(d, f)
+	var fx: Dictionary = data().get("town_effects", {}).get(rank_id, {})
+	return float(fx.get(key, 1.0))
+
+
 static func _cap(s: String) -> String:
 	return s.substr(0, 1).to_upper() + s.substr(1)
 
@@ -336,6 +355,24 @@ static func validate() -> Array:
 		var w: Variant = t.get("when")
 		if typeof(w) == TYPE_DICTIONARY and w.has("faction") and str(titled.get(str(t["id"]), "")) != str(w["faction"]):
 			bad.append("title %s: is conferred by the faction '%s', which does not confer it" % [t["id"], w["faction"]])
+	var towns: Dictionary = dat.get("towns", {})
+	for loc in towns:
+		if not has(towns[loc]):
+			bad.append("town %s is kept by '%s', which is not a faction" % [loc, towns[loc]])
+		if not GameData.world["locations"].any(func(l): return str(l.get("id", "")) == str(loc) and str(l.get("type", "")) == "town"):
+			bad.append("'%s' is listed as a faction's town but is not a town" % loc)
+	var fx: Dictionary = dat.get("town_effects", {})
+	for r in rank_ids:
+		if not fx.has(r):
+			bad.append("town effects: rank '%s' has none" % r)
+	for r in fx:
+		if r not in rank_ids:
+			bad.append("town effects: '%s' is not a rank" % r)
+		for k in fx[r]:
+			if k not in ["price", "fee", "train"]:
+				bad.append("town effects: '%s' changes '%s', which nothing reads" % [r, k])
+			elif typeof(fx[r][k]) not in [TYPE_INT, TYPE_FLOAT] or float(fx[r][k]) < 0.5 or float(fx[r][k]) > 2.0:
+				bad.append("town effects: %s %s must be between 0.5 and 2" % [r, k])
 	for k in ["standing", "remembers", "nothing", "gift", "gift_gold", "gift_potions", "gift_xp", "no_faction", "not_alive", "low", "taken", "not_town"]:
 		if str(dat["text"].get(k, "")) == "":
 			bad.append("factions: the text '%s' is missing" % k)

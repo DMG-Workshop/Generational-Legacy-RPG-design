@@ -434,7 +434,7 @@ func work() -> Array:
 func train(stat: String) -> Array:
 	heir.training[stat] += 1.5
 	var msgs: Array = ["%s trains %s (+1.5 base)." % [heir.name, stat.to_upper()]]
-	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level) * GameHouse.train_xp_mult(self))))
+	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level) * GameHouse.train_xp_mult(self) * GameFactions.town_mult(self, "train"))))
 	if lv > 0:
 		msgs.append("Level up! Now level %s." % GameText.num(heir.level))
 	return _finish_time("train", msgs)
