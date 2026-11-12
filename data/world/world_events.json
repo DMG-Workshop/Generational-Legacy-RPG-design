@@ -1,0 +1,50 @@
+{
+  "note": "Random world events (roadmap item 19; core/game/game_world_events.gd, checked by tools/check_data.gd). Now and then the world turns: a war, a famine, a pestilence, a great fair, a golden age. One event runs at a time. For each whole year the world clock crosses with no event running and the rest after the last one over, an event may begin (`chance_per_year`), picked by `weight` among those whose window (`min_gen` to `max_gen`, generations within the Age, as creatures' windows are; absent means always) holds the generation; it lasts a whole number of years between its `years`, then the world rests `rest_years` before another can begin. Nothing begins in the house's first `grace_years`. Every roll is on dice keyed on the dynasty seed and the year, never the dynasty's own, so the rest of a life draws its dice as before. While it runs an event multiplies numbers the rules already have (`effects`, each 1 when absent): `price_mult` (shop, potion, temple and cure prices), `hunt_gold_mult` and `hunt_xp_mult` (what a won fight pays), `work_gold_mult` (what work pays), `disease_mult` (the chance an exposure takes). THIS IS A BALANCE CHANGE: the autopilot lives through these events too. `GameDynasty.world_event` is {id, began, until} while one runs or {id: \"\", until} while the world rests, saved only when not empty.",
+  "settings": {
+    "chance_per_year": 0.05,
+    "rest_years": 6,
+    "grace_years": 15,
+    "counter_flag": "world_events_seen"
+  },
+  "events": {
+    "war": {
+      "name": "the War of the River Lords", "weight": 3, "years": [3, 8],
+      "effects": {"price_mult": 1.25, "hunt_gold_mult": 1.3},
+      "begins": "War breaks out between the river lords. Goods grow dear, and there is coin in every fight.",
+      "ends": "The river lords make their peace.",
+      "about": "prices up a quarter, fights pay 30% more gold"
+    },
+    "famine": {
+      "name": "the Lean Years", "weight": 2, "years": [2, 5],
+      "effects": {"price_mult": 1.5, "work_gold_mult": 0.8, "disease_mult": 1.5},
+      "begins": "The harvest fails. Bread costs what meat did, work pays little, and the hungry sicken easily.",
+      "ends": "A good harvest ends the lean years.",
+      "about": "prices up by half, work pays a fifth less, sickness takes hold half again as easily"
+    },
+    "pestilence": {
+      "name": "the Grey Pestilence", "weight": 2, "years": [2, 6],
+      "effects": {"disease_mult": 2.5, "price_mult": 1.1},
+      "begins": "A pestilence spreads along the roads. Every sickness finds it easier to take hold.",
+      "ends": "The pestilence burns itself out.",
+      "about": "sickness takes hold two and a half times as easily, prices up a tenth"
+    },
+    "great_fair": {
+      "name": "the Great Fair", "weight": 2, "years": [1, 3],
+      "effects": {"price_mult": 0.9, "hunt_gold_mult": 1.1},
+      "begins": "Merchants from every road gather for a great fair. Prices fall, and pelts and trophies sell well.",
+      "ends": "The great fair packs up its tents.",
+      "about": "prices down a tenth, fights pay a tenth more gold"
+    },
+    "golden_age": {
+      "name": "a Golden Age", "weight": 2, "years": [5, 12], "min_gen": 3,
+      "effects": {"price_mult": 0.8, "hunt_xp_mult": 1.15, "work_gold_mult": 1.25},
+      "begins": "A golden age dawns: peace on the roads, full granaries, and masters glad to teach.",
+      "ends": "The golden age fades into ordinary years.",
+      "about": "prices down a fifth, fights teach 15% more, work pays a quarter more"
+    }
+  },
+  "text": {
+    "now": "{name} ({about}), until year {until}.",
+    "quiet": "The world is at peace."
+  }
+}
