@@ -8,6 +8,7 @@ const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Clipboard := preload("res://ui/play/clipboard.gd")
 const FilePicker := preload("res://ui/play/file_picker.gd")
 const GraphicsSettings := preload("res://ui/play/graphics_settings.gd")
+const Sound := preload("res://ui/play/sound.gd")
 
 var app: Node
 var note: Label
@@ -128,6 +129,20 @@ func _ready() -> void:
 	var bwhy := Kit.label(str(GraphicsSettings.data()["battery_saver"]["about"]), 14, Kit.dim())
 	bwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(bwhy)
+	var stext: Dictionary = Sound.data()["text"]
+	for pair in [["sound", "effects"], ["music", "music"]]:
+		var kind: String = pair[0]
+		v.add_child(Kit.label(str(stext[pair[1]]), 17, Kit.ACCENT))
+		var srow := HBoxContainer.new()
+		srow.add_theme_constant_override("separation", 8)
+		v.add_child(srow)
+		_choice(srow, str(stext["off"]), Sound.choice(kind) == "off", func(): app.set_sound(kind, "off"))
+		for lid in Sound.level_ids():
+			var level_id: String = lid
+			_choice(srow, str(Sound.data()["levels"][level_id]["name"]), Sound.choice(kind) == level_id, func(): app.set_sound(kind, level_id))
+	var swhy := Kit.label(str(stext["about"]), 14, Kit.dim())
+	swhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(swhy)
 	v.add_child(Kit.label("Problems", 17, Kit.ACCENT))
 	var erow := HBoxContainer.new()
 	erow.add_theme_constant_override("separation", 8)
