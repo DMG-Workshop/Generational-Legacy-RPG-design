@@ -4,6 +4,8 @@
 ## as one line of text, read back and played: every fingerprint and the end match. A changed command or a
 ## missing one is found at the command where the run goes differently; a damaged, foreign, newer or hand-made
 ## replay is turned away with a reason and never run into a crash; commands the game does not allow are refused.
+## A house founded with hard-mode options records them in its start (`hard`) and plays back as that house; a
+## plain replay is byte-identical to the one written before options were recorded (tests/fixtures/replay_plain.txt).
 ## Run: godot --headless --path . -s res://tests/test_game_replay.gd
 extends SceneTree
 
@@ -30,6 +32,10 @@ func _run() -> void:
 	test_divergence()
 	test_refusals()
 	test_damaged()
+	test_plain_fixture()
+	test_hard_replays()
+	test_damaged_hard()
+	test_house_differs()
 	print("%d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -237,3 +243,128 @@ func test_damaged() -> void:
 	ok(not res2["ok"] and res2["played"] == 3 and "Command 3" in res2["error"], "a command not allowed there stops the replay at it")
 	# a fresh read of a good one still plays after all that
 	ok(GameReplay.play(good)["ok"], "and the good one still plays")
+
+
+# ---------------------------------------------------------------- hard-mode options
+
+const HARD_SETS := [
+	{"permadeath": true},
+	{"ironman": true},
+	{"gen_cap": 10},
+	{"permadeath": true, "ironman": true, "gen_cap": 25},
+]
+
+
+## A plain replay (no options) is the text it was before options were recorded: the fixture was made by
+## tools/replay.gd on the commit before this change, and must still be the same text and play.
+func test_plain_fixture() -> void:
+	var fixture := FileAccess.get_file_as_string("res://tests/fixtures/replay_plain.txt")
+	var rec := GameReplay.begin(1, "Tess", "warrior", GameData.traits_in(["bloodline"])[1 % GameData.traits_in(["bloodline"]).size()], "human")
+	rec.bot_on(120)
+	ok(rec.to_text() == fixture, "a plain replay is byte-identical to the one from before options were recorded")
+	ok(not rec.to_dict()["start"].has("hard"), "and its start holds no hard-mode entry")
+	ok(GameReplay.play(GameReplay.from_text(fixture)["replay"])["ok"], "the old replay still plays")
+	var none := GameReplay.begin(1, "Tess", "warrior", GameData.traits_in(["bloodline"])[1 % GameData.traits_in(["bloodline"]).size()], "human", GameSex.MALE, 25, {"permadeath": false})
+	none.bot_on(120)
+	ok(none.to_text() == fixture, "options that are all off record nothing: the text is the same")
+
+
+## A house founded with each set of options records them, plays back to the same fingerprint and is that house.
+func test_hard_replays() -> void:
+	for opts in HARD_SETS:
+		var tag := JSON.stringify(opts)
+		var bloodline: String = GameData.traits_in(["bloodline"])[3]
+		var rec := GameReplay.begin(3, "Tess", "warrior", bloodline, "human", GameSex.MALE, 10, opts)
+		rec.bot_on(300)
+		var start: Dictionary = rec.to_dict()["start"]
+		ok(start.has("hard") and typeof(start["hard"]) == TYPE_DICTIONARY, "%s: the founding writes its options" % tag)
+		ok(GameHardMode.any(rec.dynasty) and rec.dynasty.hard == start["hard"], "%s: the house holds them as GameHardMode keeps them" % tag)
+		var played := _play_text(rec.to_text())
+		ok(played["ok"], "%s: a hard-mode replay plays back exactly (%s)" % [tag, played["error"]])
+		if played["ok"]:
+			var d: GameDynasty = played["dynasty"]
+			ok(GameReplay.fingerprint(d) == GameReplay.fingerprint(rec.dynasty), "%s: to the very same dynasty" % tag)
+			ok(d.hard == rec.dynasty.hard, "%s: founded with the same options" % tag)
+			ok(GameHardMode.permadeath(d) == opts.get("permadeath", false) and GameHardMode.ironman(d) == opts.get("ironman", false)
+				and GameHardMode.gen_cap(d) == int(opts.get("gen_cap", 0)), "%s: the options read back as set" % tag)
+	# the same founding without options is a different replay: the options are part of the run
+	var with := GameReplay.begin(3, "Tess", "warrior", GameData.traits_in(["bloodline"])[3], "human", GameSex.MALE, 10, {"ironman": true})
+	with.bot_on(40)
+	var plain := GameReplay.begin(3, "Tess", "warrior", GameData.traits_in(["bloodline"])[3], "human", GameSex.MALE, 10)
+	plain.bot_on(40)
+	ok(with.to_text() != plain.to_text(), "a house with an option is not the plain house's replay")
+
+
+## Each damaged or hand-made hard-mode entry is turned away with a reason, never a crash.
+## "Both iron-man and no-death set" reads as iron-man on with permadeath written out as off, a shape a house
+## never keeps; both options on together are fine and are tested above.
+func test_damaged_hard() -> void:
+	var good := GameReplay.begin(4, "Tess", "mage", GameData.traits_in(["bloodline"])[0], "elf", GameSex.FEMALE, 5, {"permadeath": true, "gen_cap": 25})
+	good.bot_on(40)
+	var base := good.to_dict()
+	ok(GameReplay.play(base)["ok"], "the good hard-mode replay plays before it is damaged")
+	var bad := {
+		"a wrong type": "permadeath",
+		"an unknown key": {"speed": true},
+		"a cap not on the list": {"gen_cap": 7},
+		"iron-man with permadeath written out as off": {"ironman": true, "permadeath": false},
+		"a huge cap": {"gen_cap": 1.0e300},
+		"a cap that is not a whole number": {"gen_cap": 25.5},
+		"a cap that is text": {"gen_cap": "25"},
+		"an option that is not yes or no": {"permadeath": "yes"},
+		"an option written off": {"permadeath": true, "ironman": false},
+	}
+	for name in bad:
+		var r: Dictionary = base.duplicate(true)
+		r["start"]["hard"] = bad[name]
+		var res := GameReplay.play(r)
+		ok(not res["ok"] and "hard-mode" in res["error"] and res["dynasty"] == null, "turned away with a reason: %s (%s)" % [name, res["error"]])
+		var chk := GameReplay.check(r)
+		ok(not chk["ok"] and chk["error"] != "", "and the check says why: %s" % name)
+	# the same damage as text: a pasted block is turned away at reading, with the reason
+	var r3: Dictionary = base.duplicate(true)
+	r3["start"]["hard"] = {"gen_cap": 7}
+	var read := GameReplay.from_text(GameReplay.PREFIX + Marshalls.raw_to_base64(JSON.stringify(r3).to_utf8_buffer().compress(FileAccess.COMPRESSION_GZIP)))
+	ok(not read["ok"] and "hard-mode" in read["error"], "a damaged block is refused as text, with the reason (%s)" % read["error"])
+	# an empty entry means no options and plays as a plain house
+	var r4: Dictionary = base.duplicate(true)
+	r4["start"]["hard"] = {}
+	ok(GameReplay.check(r4)["ok"], "an empty entry is no options")
+
+
+## A hard-mode replay played on a house that differs says where the run first went differently.
+func test_house_differs() -> void:
+	# founded differently: the fingerprint includes the options, so the first check is where it differs
+	var rec := GameReplay.begin(6, "Tess", "warrior", GameData.traits_in(["bloodline"])[2], "human", GameSex.MALE, 1, {"permadeath": true})
+	rec.bot_on(30)
+	var rep := rec.to_dict()
+	var swapped: Dictionary = rep.duplicate(true)
+	swapped["start"]["hard"] = {"ironman": true}
+	var res := GameReplay.play(swapped)
+	ok(not res["ok"] and res["diverged_at"] == 0 and "went differently after command 0" in res["error"],
+		"a house founded with other options is found at its first command (%d: %s)" % [res["diverged_at"], res["error"]])
+	var plain: Dictionary = rep.duplicate(true)
+	plain["start"].erase("hard")
+	var res2 := GameReplay.play(plain)
+	ok(not res2["ok"] and res2["diverged_at"] == 0, "a house founded plain is found at its first command too")
+	# a changed rule: a death the record survived (passed on) now ends the line. Find a run whose first death is one.
+	var rep_changed := {}
+	var cause := ""
+	for sd in range(1, 13):
+		var r2 := GameReplay.begin(sd, "Tess", "warrior", GameData.traits_in(["bloodline"])[sd % GameData.traits_in(["bloodline"]).size()], "human", GameSex.MALE, 1, {"permadeath": true})
+		r2.bot_on(400)
+		if not r2.dynasty.history.is_empty() and str(r2.dynasty.history[0]["cause"]) != "slain in battle":
+			rep_changed = r2.to_dict()
+			cause = str(r2.dynasty.history[0]["cause"])
+			break
+	ok(not rep_changed.is_empty(), "a permadeath run had a death it passed on (cause '%s')" % cause)
+	if rep_changed.is_empty():
+		return
+	ok(GameReplay.play(rep_changed)["ok"], "that run plays under the rule it was made with")
+	var causes: Array = GameHardMode.data()["settings"]["permadeath_causes"]
+	GameHardMode.data()["settings"]["permadeath_causes"] = causes + [cause]
+	var changed := GameReplay.play(rep_changed)
+	GameHardMode.data()["settings"]["permadeath_causes"] = causes
+	ok(not changed["ok"] and "went differently" in changed["error"] and changed["diverged_at"] >= 0,
+		"under a changed rule it says where: %s" % changed["error"])
+	ok(GameReplay.play(rep_changed)["ok"], "and with the rule put back the run plays again")
