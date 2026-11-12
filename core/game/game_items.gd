@@ -164,7 +164,7 @@ static func persuasion(d: GameDynasty) -> float:
 
 ## Shop price multiplier: generation scaling, the heir's persuasion, the house's infamy.
 static func price_mult(d: GameDynasty) -> float:
-	return GameData.enemy_scale(d.gen) * (1.0 + d.echo_total("infamy")) * (1.0 - persuasion(d))
+	return GameData.enemy_scale(d.gen) * (1.0 + d.echo_total("infamy")) * (1.0 - persuasion(d)) * GameWorldEvents.mult(d, "price_mult")
 
 
 static func price(d: GameDynasty, id: String) -> int:

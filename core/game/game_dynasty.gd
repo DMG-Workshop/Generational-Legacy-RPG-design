@@ -19,6 +19,7 @@ var clock_carry: float = 0.0    # years the world clock has been fed but not yet
 var world_seconds: float = 0.0  # seconds the world clock has run, the day follows from it (see GameDay); saved only when above 0
 var house_titles: Array = []    # ids of the house titles the dynasty has earned (see GameTitles); saved only once there is one
 var achievements: Dictionary = {}   # milestones the house has reached, id -> {gen, year, heir} (see GameAchievements); saved only once there is one
+var world_event: Dictionary = {}    # the war, famine or golden age running now, or the rest after one (see GameWorldEvents); saved only when not empty
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
@@ -264,7 +265,7 @@ func years_for(action: String) -> int:
 
 
 func potion_price() -> int:
-	var p := float(GameData.bal("potion_cost")) * GameData.enemy_scale(gen) * (1.0 + echo_total("infamy")) * (1.0 - GameItems.persuasion(self))
+	var p := float(GameData.bal("potion_cost")) * GameData.enemy_scale(gen) * (1.0 + echo_total("infamy")) * (1.0 - GameItems.persuasion(self)) * GameWorldEvents.mult(self, "price_mult")
 	return maxi(1, int(round(p)))
 
 
@@ -421,6 +422,7 @@ func rest() -> Array:
 func work() -> Array:
 	var amount := float(GameData.bal("work_gold")) * GameData.enemy_scale(gen) * rng.randf_range(0.8, 1.2)
 	amount *= 1.0 + heir.trait_total("work_gold") + heir.trait_total("theft") * 0.5 + echo_total("glory")
+	amount *= GameWorldEvents.mult(self, "work_gold_mult")
 	var g := maxi(1, int(round(amount)))
 	heir.gold += g
 	return _finish_time("work", ["%s works odd jobs and earns %s gold." % [heir.name, GameText.num(g)]])
@@ -649,7 +651,9 @@ func finish_battle() -> Array:
 						msgs.append("Heirloom claimed: %s! (+%d%% power for all descendants)" % [e["heirloom"], int(float(GameData.bal("heirloom_bonus")) * 100.0)])
 					_add_echo("slayer", e["id"], "%s slew %s" % [heir.name, e["name"]], 0.25)
 					msgs.append("Legend: %s has slain %s." % [heir.name, e["name"]])
-			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory"))))
+			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory")) * GameWorldEvents.mult(self, "hunt_gold_mult")))
+			if GameWorldEvents.mult(self, "hunt_xp_mult") != 1.0:
+				xp = int(round(float(xp) * GameWorldEvents.mult(self, "hunt_xp_mult")))
 			heir.gold += gold
 			heir.battles_won += 1
 			# A win that left the heir barely scratched adds to the clean run; a costly one ends it.
@@ -742,6 +746,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 	GameSkillTree.on_years(self, msgs)
 	heir.age += years
 	world.advance(years, rng)
+	GameWorldEvents.on_years(self, years, msgs)   # a war, a famine or a golden age may begin or end
 	party.on_years(self, years, msgs)
 	GameRanch.on_years(self, years, msgs)
 	GameRaids.on_years(self, years, msgs)   # a house with animals or a built house may be raided
@@ -973,6 +978,8 @@ func to_dict() -> Dictionary:
 		out["house_titles"] = house_titles
 	if not achievements.is_empty():   # only once reached
 		out["achievements"] = achievements
+	if not world_event.is_empty():   # only while one runs or the world rests after one
+		out["world_event"] = world_event
 	if not auto_party.is_empty():   # only once the player has set a switch: older saves and fresh ones stay alike
 		out["auto_party"] = auto_party
 	return out
@@ -1019,6 +1026,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
 	g.achievements = GameAchievements.load_state(d.get("achievements", {}))
+	g.world_event = GameWorldEvents.load_state(d.get("world_event", {}))
 	g.world_seconds = GameDay.load_seconds(d.get("world_seconds", 0.0))
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0

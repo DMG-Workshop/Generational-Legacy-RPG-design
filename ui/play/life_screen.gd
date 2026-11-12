@@ -127,6 +127,8 @@ func _refresh() -> void:
 	header.text = "House %s  -  Generation %s  -  Age %s  -  %s the %s %s" % [d.dynasty_name, GameText.num(d.gen), GameText.num(d.age_number()), h.name, h.race()["name"], h.cls()["name"]]
 	var place := d.world.here()
 	where.text = "%s (%s)  -  %s  -  %s: %s" % [place["name"], place["type"], d.world.date_text(), d.world.weather()["name"], d.world.weather().get("text", "")]
+	if GameWorldEvents.active(d) != "":   # a war, a famine or a golden age is named beside the weather while it runs
+		where.text += "  -  " + GameWorldEvents.describe(d)
 	header.tooltip_text = header.text
 	where.tooltip_text = where.text
 	Kit.clear(left)

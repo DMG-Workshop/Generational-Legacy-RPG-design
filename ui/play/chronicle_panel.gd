@@ -138,6 +138,9 @@ func _stats_text() -> String:
 	var st := GameStats.summary(dynasty)
 	var lines: Array = []
 	lines.append("[b]Heirs[/b]  %s lived through %s generation%s, now in Age %s" % [_n(st["heirs"]), _n(st["generations"]), "" if int(st["generations"]) == 1 else "s", _n(st["age"])])
+	var seen := int(dynasty.flags.get(str(GameWorldEvents.setting("counter_flag")), 0))
+	if seen > 0:   # only once the house has lived through one, so a new house's page is as it was
+		lines.append("[b]The world[/b]  %s  The house has lived through %s great event%s." % [GameWorldEvents.describe(dynasty), _n(seen), "" if seen == 1 else "s"])
 	lines.append("")
 	lines.append("[b]Deaths by cause[/b]")
 	if (st["causes"] as Array).is_empty():
