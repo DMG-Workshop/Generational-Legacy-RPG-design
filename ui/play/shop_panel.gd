@@ -472,7 +472,7 @@ func _effects_rich(effects: Array) -> RichTextLabel:
 		var col := Kit.good() if float(e["value"]) >= 0.0 else Kit.bad()
 		parts.append("[color=#%s]%s[/color]" % [col.to_html(false), GameItems.effect_text(str(e["stat"]), float(e["value"]))])
 	var r := _style_rich(RichTextLabel.new())
-	r.text = ", ".join(parts) if not parts.is_empty() else "[color=#8d88a0]no effect[/color]"
+	r.text = ", ".join(parts) if not parts.is_empty() else Kit.quiet_bb("no effect")
 	return r
 
 

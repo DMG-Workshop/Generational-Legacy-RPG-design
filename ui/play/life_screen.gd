@@ -158,9 +158,9 @@ func _skip_tips() -> void:
 
 func _colorize(line: String) -> String:
 	if line.begins_with("Victory") or line.begins_with("Level up") or line.begins_with("Milestone") or line.begins_with("Heirloom") or line.begins_with("Legend"):
-		return "[color=#6fcf6f]%s[/color]" % line
+		return "[color=#%s]%s[/color]" % [Kit.good().to_html(false), line]
 	if " dies" in line or "slain" in line or "DISASTER" in line or "failure" in line or "Fate (" in line:
-		return "[color=#e0605a]%s[/color]" % line
+		return "[color=#%s]%s[/color]" % [Kit.bad().to_html(false), line]
 	if line.begins_with("Generation") or line.begins_with("Age ") or "dynasty begins" in line:
 		return "[color=#e0b341][b]%s[/b][/color]" % line
 	return line

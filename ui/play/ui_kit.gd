@@ -32,6 +32,26 @@ static func dim() -> Color:
 	return DIM_HC if UiSettings.high_contrast() else DIM
 
 
+## Good and bad news in a state's colour where a label is drawn in it: the palette's own green-free or red-free
+## colour in the accessible modes, the given colour otherwise (so the standard screens do not change).
+static func good_muted() -> Color:
+	return GOOD_CB.darkened(0.25) if UiSettings.colour_blind() else Color("#6a8f6a")
+
+
+## A dark fill behind a good or bad state (an open skill, a queued member, a held one). Normal mode keeps `normal`.
+static func good_fill(normal: Color) -> Color:
+	return GOOD_CB.darkened(0.7) if UiSettings.colour_blind() else normal
+
+
+static func bad_fill(normal: Color) -> Color:
+	return BAD_CB.darkened(0.7) if UiSettings.colour_blind() else normal
+
+
+## Quiet text as BBCode, in the current quiet colour (so high contrast reaches it too).
+static func quiet_bb(text: String) -> String:
+	return "[color=#%s]%s[/color]" % [dim().to_html(false), text]
+
+
 static func style(color: Color, radius: int = 6, border: Color = Color(0, 0, 0, 0)) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = color
