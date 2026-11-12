@@ -120,7 +120,7 @@ func test_pools() -> void:
 		d2.gen = 1 + (i % 90)
 		picked[str(GameEvents._creature_for(d2, "local")["id"])] = true
 	ok(not picked.has("sheep") and not picked.has("cattle") and not picked.has("pig") and not picked.has("chicken"), "nor an event's fight")
-	ok(GameData.creatures.filter(func(c): return not c.get("boss", false) and not c.get("farm", false)).size() == 24, "the wild creatures a hunt draws on are the same 24 as before")
+	ok(GameData.creatures.filter(func(c): return not c.get("boss", false) and not c.get("farm", false)).size() == 27, "the wild creatures a hunt draws on are 27: the 24 from before and the three of the Verdant Court")
 
 
 func test_market() -> void:
