@@ -92,7 +92,7 @@ static func choices(opts: Dictionary) -> Dictionary:
 		var c: Variant = opts[GEN_CAP]
 		var whole: bool = typeof(c) == TYPE_INT or (typeof(c) == TYPE_FLOAT and is_finite(c) and c == floorf(c))
 		if not whole or (int(c) != 0 and int(c) not in caps()):
-			return {"ok": false, "text": text("bad_cap", {"caps": ", ".join(caps().map(func(n): return GameText.num(n)))}), "hard": {}}
+			return {"ok": false, "text": text("bad_cap", {"caps": GameMessages.text("life", "list_comma").join(caps().map(func(n): return GameText.num(n)))}), "hard": {}}
 		if int(c) != 0:
 			hard[GEN_CAP] = int(c)
 	return {"ok": true, "text": "", "hard": hard}
@@ -143,7 +143,7 @@ static func summary(opts: Dictionary) -> String:
 	for k in OPTIONS:
 		if (c["hard"] as Dictionary).has(k):
 			parts.append(text("short_" + k, {"cap": GameText.num(int(c["hard"].get(GEN_CAP, 0)))}))
-	return text("off") if parts.is_empty() else ", ".join(parts)
+	return text("off") if parts.is_empty() else GameMessages.text("life", "list_comma").join(parts)
 
 
 static func option_name(key: String) -> String:

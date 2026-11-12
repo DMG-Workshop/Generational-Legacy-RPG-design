@@ -110,19 +110,19 @@ static func from_text(text: String) -> Dictionary:
 	for ws in [" ", "\n", "\r", "\t"]:
 		t = t.replace(ws, "")
 	if not t.begins_with(PREFIX):
-		return _bad("That is not a replay.")
+		return _bad(GameMessages.text("life", "replay_not_replay"))
 	var body := t.substr(PREFIX.length())
 	var shape := RegEx.create_from_string("^[A-Za-z0-9+/]+={0,2}$")
 	if body.length() % 4 != 0 or shape.search(body) == null:
-		return _bad("The replay is damaged: it could not be read.")
+		return _bad(GameMessages.text("life", "replay_unreadable"))
 	var packed := Marshalls.base64_to_raw(body)
 	if packed.is_empty():
-		return _bad("The replay is damaged: it could not be read.")
+		return _bad(GameMessages.text("life", "replay_unreadable"))
 	if packed.size() < 18 or packed[0] != 0x1f or packed[1] != 0x8b:   # checked first so the engine never logs a decode error
-		return _bad("The replay is damaged: it could not be read.")
+		return _bad(GameMessages.text("life", "replay_unreadable"))
 	var raw := packed.decompress_dynamic(MAX_BYTES, FileAccess.COMPRESSION_GZIP)
 	if raw.is_empty():
-		return _bad("The replay is damaged or incomplete.")
+		return _bad(GameMessages.text("life", "replay_incomplete"))
 	var parsed: Variant = JSON.parse_string(raw.get_string_from_utf8())
 	return check(parsed)
 
@@ -130,42 +130,42 @@ static func from_text(text: String) -> Dictionary:
 ## Checks the shape of a replay dictionary (what is there and of which kind), not whether it plays.
 static func check(v: Variant) -> Dictionary:
 	if typeof(v) != TYPE_DICTIONARY:
-		return _bad("The replay is damaged: it holds nothing readable.")
+		return _bad(GameMessages.text("life", "replay_nothing"))
 	var d: Dictionary = v
 	if str(d.get("format", "")) != FORMAT:
-		return _bad("That is not a replay of this kind.")
+		return _bad(GameMessages.text("life", "replay_wrong_kind"))
 	var ver: Variant = d.get("version", null)
 	if typeof(ver) != TYPE_INT and typeof(ver) != TYPE_FLOAT:
-		return _bad("The replay does not say which game made it.")
+		return _bad(GameMessages.text("life", "replay_no_game"))
 	if int(ver) > GameSaveVersion.CURRENT:
-		return _bad("This replay comes from a newer version of the game. Update the game to play it.")
+		return _bad(GameMessages.text("life", "replay_newer"))
 	var s: Variant = d.get("start", null)
 	if typeof(s) != TYPE_DICTIONARY:
-		return _bad("The replay does not say how the dynasty began.")
+		return _bad(GameMessages.text("life", "replay_no_start"))
 	for k in ["seed", "name", "class", "bloodline", "race", "sex"]:
 		if not s.has(k):
-			return _bad("The replay's start lacks '%s'." % k)
+			return _bad(GameMessages.text("life", "replay_start_lacks", {"key": k}))
 	if typeof(s["seed"]) != TYPE_INT and typeof(s["seed"]) != TYPE_FLOAT:
-		return _bad("The replay's seed is not a number.")
+		return _bad(GameMessages.text("life", "replay_seed"))
 	for k in ["name", "class", "bloodline", "race", "sex"]:
 		if typeof(s[k]) != TYPE_STRING:
-			return _bad("The replay's start has a '%s' that is not text." % k)
+			return _bad(GameMessages.text("life", "replay_start_not_text", {"key": k}))
 	if not GameData.classes.has(s["class"]) or not GameData.races.has(s["race"]) or not GameData.traits.has(s["bloodline"]):
-		return _bad("The replay begins with a class, race or bloodline this game does not have.")
+		return _bad(GameMessages.text("life", "replay_unknown_start"))
 	var cmds: Variant = d.get("commands", null)
 	if typeof(cmds) != TYPE_ARRAY or (cmds as Array).size() > MAX_COMMANDS:
-		return _bad("The replay's commands are missing or too many.")
+		return _bad(GameMessages.text("life", "replay_commands"))
 	for c in cmds:
 		if typeof(c) != TYPE_DICTIONARY or typeof(c.get("op", null)) != TYPE_STRING:
-			return _bad("The replay holds a command that is not a command.")
+			return _bad(GameMessages.text("life", "replay_bad_command"))
 	var cks: Variant = d.get("checks", [])
 	if typeof(cks) != TYPE_ARRAY:
-		return _bad("The replay's checks are damaged.")
+		return _bad(GameMessages.text("life", "replay_checks"))
 	for c in cks:
 		if typeof(c) != TYPE_ARRAY or c.size() != 2 or typeof(c[0]) != TYPE_FLOAT and typeof(c[0]) != TYPE_INT or typeof(c[1]) != TYPE_STRING:
-			return _bad("The replay's checks are damaged.")
+			return _bad(GameMessages.text("life", "replay_checks"))
 	if typeof(d.get("end", "")) != TYPE_STRING:
-		return _bad("The replay's end is damaged.")
+		return _bad(GameMessages.text("life", "replay_end"))
 	return {"ok": true, "error": "", "replay": d}
 
 
@@ -187,7 +187,7 @@ static func play(rep: Dictionary, stop_at: int = -1) -> Dictionary:
 		return out
 	var d := found(rep["start"])
 	if d == null:
-		out["error"] = "The dynasty could not be founded."
+		out["error"] = GameMessages.text("life", "replay_no_founding")
 		return out
 	out["dynasty"] = d
 	var want: Dictionary = {}
@@ -204,11 +204,11 @@ static func play(rep: Dictionary, stop_at: int = -1) -> Dictionary:
 		out["played"] = i + 1
 		if want.has(i) and fingerprint(d) != want[i]:
 			out["diverged_at"] = i
-			out["error"] = "The run went differently after command %d (%s)." % [i, str(cmds[i].get("op", "?"))]
+			out["error"] = GameMessages.text("life", "replay_went_differently", {"i": int(i), "op": str(cmds[i].get("op", "?"))})
 			return out
 	if stop_at < 0 and str(rep.get("end", "")) != "" and fingerprint(d) != str(rep["end"]):
 		out["diverged_at"] = cmds.size() - 1
-		out["error"] = "The run ended differently from the replay."
+		out["error"] = GameMessages.text("life", "replay_ended_differently")
 		return out
 	out["ok"] = true
 	return out
@@ -234,32 +234,32 @@ static func _no(why: String) -> Dictionary:
 static func apply(d: GameDynasty, cmd: Dictionary) -> Dictionary:
 	var op := str(cmd.get("op", ""))
 	if op not in OPS:
-		return _no("'%s' is not a command." % op)
+		return _no(GameMessages.text("life", "replay_not_a_command", {"op": op}))
 	var fight := d.battle != null
 	var living := d.state == "life"
 	match op:
 		"choose_heir", "choose_best":
 			if d.state != "succession":
-				return _no("there is no heir to choose now")
+				return _no(GameMessages.text("life", "no_heir_now"))
 			if op == "choose_heir":
 				if not _int(cmd.get("index")) or int(cmd["index"]) < 0 or int(cmd["index"]) >= d.candidates.size():
-					return _no("that heir is not among the candidates")
+					return _no(GameMessages.text("life", "not_candidate"))
 				d.choose_heir(int(cmd["index"]))
 			else:
 				GameBot.choose_best(d)
 			return {"ok": true, "error": ""}
 		"turn", "act", "finish", "bot_fight":
 			if not living or not fight:
-				return _no("there is no fight")
+				return _no(GameMessages.text("life", "no_fight"))
 			if op == "finish":
 				if not d.battle.is_over():
-					return _no("the fight is not over")
+					return _no(GameMessages.text("life", "fight_not_over"))
 				d.finish_battle()
 			elif op == "bot_fight":
 				GameBot.fight(d)
 			else:
 				if d.battle.is_over():
-					return _no("the fight is over")
+					return _no(GameMessages.text("life", "fight_is_over"))
 				if op == "turn":
 					GameTactics.auto_turn(d.battle)
 				else:
@@ -269,19 +269,19 @@ static func apply(d: GameDynasty, cmd: Dictionary) -> Dictionary:
 			return {"ok": true, "error": ""}
 	# life ops
 	if not living or fight:
-		return _no("that cannot be done now")
+		return _no(GameMessages.text("life", "cannot_now"))
 	if op == "resolve":
 		if not d.has_pending_event():
-			return _no("no event is waiting")
+			return _no(GameMessages.text("life", "no_event"))
 		if not _int(cmd.get("choice")) or int(cmd["choice"]) < 0:
-			return _no("that is not a choice")
+			return _no(GameMessages.text("life", "not_a_choice"))
 		d.resolve_event(int(cmd["choice"]))
 		return {"ok": true, "error": ""}
 	if op == "bot_step":
 		GameBot.step(d)
 		return {"ok": true, "error": ""}
 	if d.has_pending_event():
-		return _no("an event is waiting for an answer")
+		return _no(GameMessages.text("life", "event_waiting"))
 	match op:
 		"rest":
 			d.rest()
@@ -293,30 +293,30 @@ static func apply(d: GameDynasty, cmd: Dictionary) -> Dictionary:
 			d.buy_potion()
 		"retire":
 			if not d.can_retire():
-				return _no("it is too soon to retire")
+				return _no(GameMessages.text("life", "too_soon_retire_replay"))
 			d.retire()
 		"found_family":
 			if not d.can_found_family():
-				return _no("the heir cannot found a family yet")
+				return _no(GameMessages.text("life", "cannot_found_yet"))
 			d.found_family(int(cmd["mate"]) if _int(cmd.get("mate")) else -1)
 		"train":
 			if typeof(cmd.get("stat")) != TYPE_STRING or not d.heir.training.has(cmd["stat"]):
-				return _no("that is not a stat to train")
+				return _no(GameMessages.text("life", "not_a_stat"))
 			d.train(cmd["stat"])
 		"travel":
 			if typeof(cmd.get("to")) != TYPE_STRING or str(cmd["to"]) == "":
-				return _no("there is nowhere to travel")
+				return _no(GameMessages.text("life", "nowhere_travel"))
 			d.travel(cmd["to"])
 		"hunt":
 			if typeof(cmd.get("kind")) != TYPE_STRING or not GameData.bal("hunt_rewards").has(cmd["kind"]):
-				return _no("that is not a kind of hunt")
+				return _no(GameMessages.text("life", "not_a_hunt"))
 			d.start_hunt(cmd["kind"])
 		"legend":
 			if d.start_legend() == null:
-				return _no("no legend is stirring")
+				return _no(GameMessages.text("life", "no_legend"))
 		"clock":
 			if (typeof(cmd.get("seconds")) != TYPE_FLOAT and typeof(cmd.get("seconds")) != TYPE_INT) or not is_finite(float(cmd["seconds"])) or float(cmd["seconds"]) <= 0.0:
-				return _no("that is not a time")
+				return _no(GameMessages.text("life", "not_a_time"))
 			GameClock.feed(d, float(cmd["seconds"]))
 	return {"ok": true, "error": ""}
 
@@ -330,13 +330,13 @@ static func _int(v: Variant) -> bool:
 static func _act(b: GameBattle, cmd: Dictionary) -> String:
 	var act := str(cmd.get("act", ""))
 	if act not in ACTS:
-		return "'%s' is not a battle action" % act
+		return GameMessages.text("life", "replay_not_battle_action", {"act": act})
 	var target := -1
 	var ref := str(cmd.get("target", ""))
 	if ref.begins_with("enemy:"):
 		target = int(ref.get_slice(":", 1))
 		if target < 0 or target >= b.enemies.size():
-			return "there is no such foe"
+			return GameMessages.text("life", "no_such_foe")
 	match act:
 		"attack":
 			b.attack(target)
@@ -350,7 +350,7 @@ static func _act(b: GameBattle, cmd: Dictionary) -> String:
 			var kind := str(cmd.get("kind", ""))
 			var id := str(cmd.get("id", ""))
 			if kind not in KINDS:
-				return "'%s' is not a kind of ability" % kind
+				return GameMessages.text("life", "replay_not_ability", {"kind": kind})
 			match kind:
 				"skill":
 					var skills: Array = GameSkillTree.skills(b.heir)
@@ -358,18 +358,18 @@ static func _act(b: GameBattle, cmd: Dictionary) -> String:
 						if str(skills[i]["id"]) == id:
 							b.use_skill(i, target)
 							return ""
-					return "the heir has no skill '%s'" % id
+					return GameMessages.text("life", "replay_no_skill", {"id": id})
 				"spell":
 					if id not in b.heir.spells:
-						return "the heir does not know the spell '%s'" % id
+						return GameMessages.text("life", "replay_no_spell", {"id": id})
 					b.cast_spell(id, target)
 				"feat":
 					var at := b.heir.equipped_feats.find(id)
 					if at < 0:
-						return "the feat '%s' is not equipped" % id
+						return GameMessages.text("life", "replay_feat_not_equipped", {"id": id})
 					b.use_feat(at, target)
 				"vial":
 					if id not in b.heir.inventory:
-						return "the heir has no '%s' to throw" % id
+						return GameMessages.text("life", "replay_no_vial", {"id": id})
 					b.throw_vial(id, target)
 	return ""

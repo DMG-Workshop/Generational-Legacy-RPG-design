@@ -15,17 +15,59 @@ class_name GameEvents
 extends RefCounted
 
 const DEGREES := ["crit_failure", "failure", "success", "crit_success"]
-const DEGREE_LABELS := {
-	"crit_failure": "Critical failure", "failure": "Failure", "success": "Success",
-	"crit_success": "Critical success", "always": "",
-}
-const ATTR_LABELS := {
-	"str": "STR", "mag": "MAG", "agi": "AGI", "vit": "VIT",
-	"persuasion": "Persuasion", "stealth": "Stealth", "theft": "Theft", "intimidation": "Intimidation",
-	"luck": "Luck", "prophecy_strength": "Prophecy", "healing_power": "Healing", "glamour_sight": "Fae-sight",
-	"divine_magic_power": "Faith", "dark_magic_power": "Dark arts", "element_power": "Elements",
-	"craft_quality": "Craft",
-}
+## The label of a check's degree ("Success"); "always" has none.
+static func degree_label(degree: String) -> String:
+	match degree:
+		"crit_failure":
+			return GameMessages.text("life", "degree_crit_failure")
+		"failure":
+			return GameMessages.text("life", "degree_failure")
+		"success":
+			return GameMessages.text("life", "degree_success")
+		"crit_success":
+			return GameMessages.text("life", "degree_crit_success")
+	return ""
+
+
+## The short name of an attribute on the check line ("STR", "Luck"); an unknown one is shown as it is.
+static func attr_label(attr: String) -> String:
+	match attr:
+		"str":
+			return GameMessages.text("life", "attr_str")
+		"mag":
+			return GameMessages.text("life", "attr_mag")
+		"agi":
+			return GameMessages.text("life", "attr_agi")
+		"vit":
+			return GameMessages.text("life", "attr_vit")
+		"persuasion":
+			return GameMessages.text("life", "attr_persuasion")
+		"stealth":
+			return GameMessages.text("life", "attr_stealth")
+		"theft":
+			return GameMessages.text("life", "attr_theft")
+		"intimidation":
+			return GameMessages.text("life", "attr_intimidation")
+		"luck":
+			return GameMessages.text("life", "attr_luck")
+		"prophecy_strength":
+			return GameMessages.text("life", "attr_prophecy_strength")
+		"healing_power":
+			return GameMessages.text("life", "attr_healing_power")
+		"glamour_sight":
+			return GameMessages.text("life", "attr_glamour_sight")
+		"divine_magic_power":
+			return GameMessages.text("life", "attr_divine_magic_power")
+		"dark_magic_power":
+			return GameMessages.text("life", "attr_dark_magic_power")
+		"element_power":
+			return GameMessages.text("life", "attr_element_power")
+		"craft_quality":
+			return GameMessages.text("life", "attr_craft_quality")
+	return attr
+
+
+const ATTR_IDS := ["str", "mag", "agi", "vit", "persuasion", "stealth", "theft", "intimidation", "luck", "prophecy_strength", "healing_power", "glamour_sight", "divine_magic_power", "dark_magic_power", "element_power", "craft_quality"]   # the checks an event may roll (their labels are in the catalog, attr_label)
 const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight", "find", "defend"]
 const SEEN := "event_seen_"   # once-only events: generation they were last seen
 const LAST := "event_last_"   # repeatable events: generation they last happened
@@ -54,7 +96,7 @@ static func fill(d: GameDynasty, text: String) -> String:
 	var founder: String = str(d.history[0]["name"]) if not d.history.is_empty() else d.heir.full_name()
 	return text.replace("{heir}", d.heir.name).replace("{house}", d.dynasty_name).replace("{founder}", founder) \
 		.replace("{generations}", GameAges.count(d.gen - 1, "generation")) \
-		.replace("{place}", str(place.get("name", ""))).replace("{ancestor}", str(d.pending_event.get("ancestor", "your forebears")))
+		.replace("{place}", str(place.get("name", ""))).replace("{ancestor}", str(d.pending_event.get("ancestor", GameMessages.text("life", "your_forebears"))))
 
 
 static func event_title(d: GameDynasty) -> String:
@@ -156,7 +198,7 @@ static func begin(d: GameDynasty, id: String, source: String = "explore") -> boo
 
 static func _ancestor_name(d: GameDynasty) -> String:
 	if d.history.is_empty():
-		return "your forebears"
+		return GameMessages.text("life", "your_forebears")
 	return str(d.history[d.rng.randi() % d.history.size()]["name"])
 
 
@@ -197,13 +239,13 @@ static func explore(d: GameDynasty) -> Array:
 		var xp := int(round(float(GameData.bal("event_quiet_xp")) * GameData.xp_level_scale(h.level)))
 		var msgs: Array = ["%s explores %s. Nothing stirs, but the land is better known for it (+%s XP)." % [h.name, place["name"], GameText.num(xp)]]
 		if h.gain_xp(xp) > 0:
-			msgs.append("Level up! %s is now level %s." % [h.name, GameText.num(h.level)])
+			msgs.append(GameMessages.text("life", "level_up_named", {"name": h.name, "level": GameText.num(h.level)}))
 		return d._finish_time("explore", msgs)
 	var span := d.years_for("explore")
-	var out := d._finish_time("explore", ["%s spends %s exploring %s." % [h.name, "a year" if span == 1 else "%d years" % span, place["name"]]])
+	var out := d._finish_time("explore", [GameMessages.text("life", "spends_exploring", {"name": h.name, "span": GameMessages.text("life", "a_year" if span == 1 else "years_many", {"n": span}), "place": place["name"]})])
 	if d.state == "life" and not d.has_pending_event():   # a raid that came with the year keeps its place
 		begin(d, ev["id"], "explore")
-		var m := "Something happens: %s." % event_title(d)
+		var m := GameMessages.text("life", "something_happens", {"title": event_title(d)})
 		d._say(m)
 		out.append(m)
 	return out
@@ -222,7 +264,7 @@ static func on_arrive(d: GameDynasty, place_id: String) -> Array:
 	if ev.is_empty():
 		return []
 	begin(d, ev["id"], "arrive")
-	var m := "On the way into %s: %s." % [GameWorld.place(place_id)["name"], event_title(d)]
+	var m := GameMessages.text("life", "on_the_way", {"place": GameWorld.place(place_id)["name"], "title": event_title(d)})
 	d._say(m)
 	return [m]
 
@@ -256,7 +298,7 @@ static func gold_amount(d: GameDynasty, base: float) -> int:
 
 
 static func _names(table: Dictionary, ids: Array) -> String:
-	return " or ".join(ids.map(func(x): return str(table.get(x, {}).get("name", x))))
+	return GameMessages.text("life", "list_or").join(ids.map(func(x): return str(table.get(x, {}).get("name", x))))
 
 
 ## Whether the heir may take a choice: {ok, reason ("Requires: The Sight"), tag (what opened it)}.
@@ -271,7 +313,7 @@ static func choice_status(d: GameDynasty, c: Dictionary) -> Dictionary:
 	if r.has("traits"):
 		var hit: Array = (r["traits"] as Array).filter(func(t): return t in h.all_traits())
 		if hit.is_empty():
-			failed.append(" or ".join((r["traits"] as Array).map(func(t): return GameData.trait_name(t))))
+			failed.append(GameMessages.text("life", "list_or").join((r["traits"] as Array).map(func(t): return GameData.trait_name(t))))
 		else:
 			passed.append(GameData.trait_name(hit[0]))
 	if r.has("race"):
@@ -288,7 +330,7 @@ static func choice_status(d: GameDynasty, c: Dictionary) -> Dictionary:
 		var items := _ids(r["item"])
 		var held: Array = items.filter(func(it): return _owns(h, it))
 		if held.is_empty():
-			failed.append(" or ".join(items.map(func(it): return _item_name(it))))
+			failed.append(GameMessages.text("life", "list_or").join(items.map(func(it): return _item_name(it))))
 		else:
 			passed.append(_item_name(held[0]))
 	if r.has("flag"):
@@ -306,13 +348,13 @@ static func choice_status(d: GameDynasty, c: Dictionary) -> Dictionary:
 		if h.gold >= cost:
 			passed.append("")
 		else:
-			failed.append("%s gold" % GameText.num(cost))
+			failed.append(GameMessages.text("life", "gold_amount", {"amount": GameText.num(cost)}))
 	var ok: bool = failed.is_empty() or (r.get("any", false) and not passed.is_empty())
 	var tags: Array = passed.filter(func(t): return t != "")
 	var tag: String = tags[0] if not tags.is_empty() else ""
 	if ok:
 		return {"ok": true, "reason": "", "tag": tag}
-	var why: String = r.get("reason", "Requires: " + (" or " if r.get("any", false) else ", ").join(failed))
+	var why: String = r.get("reason", GameMessages.text("life", "requires_prefix") + (GameMessages.text("life", "list_or") if r.get("any", false) else GameMessages.text("life", "list_comma")).join(failed))
 	return {"ok": false, "reason": fill(d, why), "tag": ""}
 
 
@@ -327,17 +369,17 @@ static func choice_label(d: GameDynasty, i: int) -> String:
 		text = "[%s] %s" % [st["tag"], text]
 	var extra: Array = []
 	if c.get("requires", {}).has("min_gold"):
-		extra.append("%s gold" % GameText.num(gold_amount(d, float(c["requires"]["min_gold"]))))
+		extra.append(GameMessages.text("life", "gold_amount", {"amount": GameText.num(gold_amount(d, float(c["requires"]["min_gold"])))}))
 	if c.has("check"):
 		extra.append(check_text(d, c["check"]))
 	else:
 		var o := outcome_for(c, "always")
 		var years := int(o.get("years", 0))
 		if years > 0:
-			extra.append("1 year" if years == 1 else "%d years" % years)
+			extra.append(GameMessages.text("life", "years_one" if years == 1 else "years_many", {"n": years}))
 		if o.has("fight"):
-			extra.append("Battle")
-	return text if extra.is_empty() else "%s  [%s]" % [text, ", ".join(extra)]
+			extra.append(GameMessages.text("life", "battle_label"))
+	return text if extra.is_empty() else GameMessages.text("life", "choice_extra", {"text": text, "extra": GameMessages.text("life", "list_comma").join(extra)})
 
 
 ## Hover text: how the bonus is made up and the odds of each degree.
@@ -347,14 +389,14 @@ static func choice_tooltip(d: GameDynasty, i: int) -> String:
 	if not st["ok"]:
 		return st["reason"]
 	if not c.has("check"):
-		return "No roll needed."
+		return GameMessages.text("life", "no_roll")
 	var lines: Array = []
 	for p in check_parts(d, c["check"]):
-		lines.append("%s %+d" % [p[0], p[1]])
-	lines.append("Difficulty %d" % check_dc(d, c["check"]))
+		lines.append(GameMessages.text("life", "check_part", {"name": p[0], "value": "%+d" % int(p[1])}))
+	lines.append(GameMessages.text("life", "difficulty", {"dc": int(check_dc(d, c["check"]))}))
 	var odds := degree_odds(d, c["check"])
 	for k in [3, 2, 1, 0]:
-		lines.append("%s: %d%%" % [DEGREE_LABELS[DEGREES[k]], int(round(odds[k] * 100.0))])
+		lines.append(GameMessages.text("life", "odds_line", {"degree": degree_label(DEGREES[k]), "pct": int(round(odds[k] * 100.0))}))
 	return "\n".join(lines)
 
 
@@ -396,7 +438,7 @@ static func _bonus_applies(h: GameHeir, b: Dictionary) -> String:
 static func check_parts(d: GameDynasty, check: Dictionary) -> Array:
 	var h := d.heir
 	var attr: String = check["attr"]
-	var parts: Array = [["Proficiency (level %s)" % GameText.num(h.level), proficiency(h.level)], [ATTR_LABELS.get(attr, attr), attr_bonus(h, attr)]]
+	var parts: Array = [[GameMessages.text("life", "proficiency_level", {"level": GameText.num(h.level)}), proficiency(h.level)], [attr_label(attr), attr_bonus(h, attr)]]
 	for b in check.get("bonus_if", []):
 		var who := _bonus_applies(h, b)
 		if who != "":
@@ -451,7 +493,7 @@ static func success_chance(d: GameDynasty, check: Dictionary) -> float:
 
 
 static func check_text(d: GameDynasty, check: Dictionary) -> String:
-	return "%s vs DC %d: %+d, %d%%" % [ATTR_LABELS.get(check["attr"], check["attr"]), check_dc(d, check), check_bonus(d, check), int(round(success_chance(d, check) * 100.0))]
+	return GameMessages.text("life", "check_text", {"attr": attr_label(check["attr"]), "dc": int(check_dc(d, check)), "bonus": "%+d" % int(check_bonus(d, check)), "chance": int(round(success_chance(d, check) * 100.0))})
 
 
 ## "d20 (14) +9 = 23 vs DC 15: Success" for a stored roll, noting a natural 1 or 20 that moved the result.
@@ -459,9 +501,9 @@ static func roll_text(roll: Dictionary) -> String:
 	if roll.is_empty():
 		return ""
 	var die := int(roll["die"])
-	var s := "d20 (%d) %+d = %d vs DC %d: %s" % [die, int(roll["bonus"]), int(roll["total"]), int(roll["dc"]), DEGREE_LABELS[roll["degree"]]]
+	var s := GameMessages.text("life", "roll_text", {"die": die, "bonus": "%+d" % int(roll["bonus"]), "total": int(roll["total"]), "dc": int(roll["dc"]), "degree": degree_label(roll["degree"])})
 	if (die == 1 or die == 20) and degree_index(10, int(roll["total"]), int(roll["dc"])) != DEGREES.find(roll["degree"]):
-		s += " (natural %d)" % die
+		s += GameMessages.text("life", "natural", {"die": die})
 	return s
 
 
@@ -514,14 +556,14 @@ static func _resolve(d: GameDynasty, choice: int, forced: String) -> Array:
 	var text := fill(d, str(outcome.get("text", "")))
 	var head := "%s - %s" % [event_title(d), fill(d, str(c["text"]))]
 	if not roll.is_empty():
-		head += " (%s %s)" % [ATTR_LABELS.get(roll["attr"], roll["attr"]), roll_text(roll)]
-	var msgs: Array = [head + "."]
+		head += GameMessages.text("life", "head_roll", {"attr": attr_label(roll["attr"]), "roll": roll_text(roll)})
+	var msgs: Array = [GameMessages.text("life", "sentence", {"text": head})]
 	if text != "":
 		msgs.append(text)
 	var fx := _apply(d, ev, outcome, msgs)
 	var years := int(outcome.get("years", 0))
 	if years > 0:
-		fx.append({"t": "1 year passes" if years == 1 else "%d years pass" % years, "k": "bad"})
+		fx.append({"t": GameMessages.text("life", "years_pass_one" if years == 1 else "years_pass_many", {"n": years}), "k": "bad"})
 		msgs = d._pass_years(float(years), msgs)
 	else:
 		for m in msgs:
@@ -531,9 +573,9 @@ static func _resolve(d: GameDynasty, choice: int, forced: String) -> Array:
 		var foes := _build_foes(d, outcome["fight"])
 		d._begin_battle(foes, "event")
 		fight_names = foes.map(func(e): return e["name"])
-		fx.append({"t": "Battle: %s" % ", ".join(fight_names), "k": "bad"})
+		fx.append({"t": GameMessages.text("life", "battle_names", {"names": GameMessages.text("life", "list_comma").join(fight_names)}), "k": "bad"})
 	if d.state != "life":
-		fx.append({"t": "%s's story ends here." % d.heir.name, "k": "bad"})
+		fx.append({"t": GameMessages.text("life", "story_ends", {"name": d.heir.name}), "k": "bad"})
 	d.pending_event["stage"] = "result"
 	d.pending_event["result"] = {
 		"choice": choice, "choice_text": fill(d, str(c["text"])), "roll": roll, "degree": degree,
@@ -544,6 +586,16 @@ static func _resolve(d: GameDynasty, choice: int, forced: String) -> Array:
 
 ## Applies an outcome's immediate effects; returns [{t: text, k: good|bad|info}] for the panel and
 ## appends journal lines to `msgs`. Years and fights are handled by the caller.
+## The kind of an echo as the effects list names it.
+static func _echo_kind_label(kind: String) -> String:
+	match kind:
+		"glory":
+			return GameMessages.text("life", "glory_kind")
+		"infamy":
+			return GameMessages.text("life", "infamy_kind")
+	return kind.capitalize()
+
+
 static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -> Array:
 	var h := d.heir
 	var fx: Array = []
@@ -557,7 +609,7 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 			g = -mini(-guarded, h.gold)
 		h.gold += g
 		if g != 0:
-			fx.append({"t": "%s gold" % GameText.signed(g), "k": "good" if g > 0 else "bad"})
+			fx.append({"t": GameMessages.text("life", "gold_amount", {"amount": GameText.signed(g)}), "k": "good" if g > 0 else "bad"})
 	if o.has("defend"):   # the heir trusts the guards (see GameRaids.defend)
 		for l in GameRaids.defend(d, str(o["defend"])):
 			msgs.append(str(l["t"]))
@@ -570,28 +622,28 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		var xp := int(round(float(o["xp"]) * GameData.xp_level_scale(h.level)))
 		fx.append({"t": "%s XP" % GameText.signed(xp), "k": "good"})
 		if h.gain_xp(xp) > 0:
-			fx.append({"t": "Level up! Now level %s" % GameText.num(h.level), "k": "good"})
-			level_up = "Level up! %s is now level %s." % [h.name, GameText.num(h.level)]
+			fx.append({"t": GameMessages.text("life", "level_up_fx", {"level": GameText.num(h.level)}), "k": "good", "level": true})
+			level_up = GameMessages.text("life", "level_up_named", {"name": h.name, "level": GameText.num(h.level)})
 	if o.has("hp_pct"):
 		var before := h.hp
 		h.hp = clampi(h.hp + int(round(float(h.max_hp()) * float(o["hp_pct"]))), 1, h.max_hp())   # events wound, never kill
 		if h.hp > before:
-			fx.append({"t": "Recovered %s HP" % GameText.num(h.hp - before), "k": "good"})
+			fx.append({"t": GameMessages.text("life", "recovered_hp", {"amount": GameText.num(h.hp - before)}), "k": "good"})
 		elif h.hp < before:
-			fx.append({"t": "Lost %s HP" % GameText.num(before - h.hp), "k": "bad"})
+			fx.append({"t": GameMessages.text("life", "lost_hp", {"amount": GameText.num(before - h.hp)}), "k": "bad"})
 	if o.has("potions"):
 		h.potions += int(o["potions"])
-		fx.append({"t": "+%d potion%s" % [int(o["potions"]), "" if int(o["potions"]) == 1 else "s"], "k": "good"})
+		fx.append({"t": GameMessages.text("life", "potions_one" if int(o["potions"]) == 1 else "potions_many", {"n": int(o["potions"])}), "k": "good"})
 	if o.has("add_trait"):
 		var t: String = o["add_trait"]
 		if d._add_trait(h, t):
-			fx.append({"t": "Trait gained: %s" % GameData.trait_name(t), "k": "bad" if is_harmful_trait(t) else "good"})
+			fx.append({"t": GameMessages.text("life", "trait_gained", {"trait": GameData.trait_name(t)}), "k": "bad" if is_harmful_trait(t) else "good"})
 	if o.has("remove_trait"):
 		for t in _ids(o["remove_trait"]):   # the first listed trait the heir has
 			if t in h.traits:
 				h.traits.erase(t)
 				h.lifespan = h.compute_lifespan()
-				fx.append({"t": "Trait lost: %s" % GameData.trait_name(t), "k": "good" if is_harmful_trait(t) else "bad"})
+				fx.append({"t": GameMessages.text("life", "trait_lost", {"trait": GameData.trait_name(t)}), "k": "good" if is_harmful_trait(t) else "bad"})
 				break
 	var notes: Array = []   # quest lines a flag completes; they follow this outcome's own lines
 	if o.has("flag"):
@@ -601,24 +653,24 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		if _owns(h, item):
 			var g := maxi(1, int(round(float(GameItems.item_def(item).get("price", 0)) * GameData.enemy_scale(d.gen) * float(GameData.bal("event_duplicate_item_gold")))))
 			h.gold += g
-			fx.append({"t": "Already owned %s: sold for %s gold" % [_item_name(item), GameText.num(g)], "k": "good"})
+			fx.append({"t": GameMessages.text("life", "already_owned", {"item": _item_name(item), "gold": GameText.num(g)}), "k": "good"})
 		else:
 			d.give_item(item)
-			fx.append({"t": "Received %s" % _item_name(item), "k": "good"})
+			fx.append({"t": GameMessages.text("life", "received_event_item", {"item": _item_name(item)}), "k": "good"})
 	if o.has("echo"):
 		var e: Dictionary = o["echo"]
 		var etext := fill(d, str(e["text"]))
 		d._add_echo(e["kind"], "event_" + str(ev["id"]), etext, float(e["strength"]))
-		fx.append({"t": "%s: %s" % [str(e["kind"]).capitalize(), etext], "k": "good" if e["kind"] == "glory" else "bad"})
+		fx.append({"t": GameMessages.text("life", "echo_line", {"kind": _echo_kind_label(str(e["kind"])), "text": etext}), "k": "good" if e["kind"] == "glory" else "bad"})
 	if o.has("fate"):
 		var before := h.fate_value
 		h.fate_value = snappedf(clampf(h.fate_value + float(o["fate"]), float(GameData.bal("fate_min")), float(GameData.bal("fate_max"))), GameFate.STEP)
 		var delta := h.fate_value - before
 		if absf(delta) > 0.00005:
-			fx.append({"t": "Fate Value %+.1f%%" % (delta * 100.0), "k": "good" if delta < 0.0 else "bad"})   # lower is kinder
-	var summary: Array = fx.filter(func(f): return not str(f["t"]).begins_with("Level up")).map(func(f): return f["t"])
+			fx.append({"t": GameMessages.text("life", "fate_value", {"change": "%+.1f" % (delta * 100.0)}), "k": "good" if delta < 0.0 else "bad"})   # lower is kinder
+	var summary: Array = fx.filter(func(f): return not f.has("level")).map(func(f): return f["t"])
 	if not summary.is_empty():
-		msgs.append(", ".join(summary) + ".")
+		msgs.append(GameMessages.text("life", "sentence", {"text": GameMessages.text("life", "list_comma").join(summary)}))
 	if level_up != "":
 		msgs.append(level_up)
 	msgs.append_array(notes)
@@ -806,7 +858,7 @@ static func validate() -> Array:
 			var outs: Dictionary = c.get("outcomes", {})
 			if c.has("check"):
 				var ch: Dictionary = c["check"]
-				if not ATTR_LABELS.has(ch.get("attr", "")):
+				if not ATTR_IDS.has(ch.get("attr", "")):
 					errs.append("%s: unknown check attribute %s" % [where, ch.get("attr", "")])
 				if not ch.has("dc"):
 					errs.append("%s: check without dc" % where)

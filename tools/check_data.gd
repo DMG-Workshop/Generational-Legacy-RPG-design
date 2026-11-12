@@ -69,47 +69,74 @@ static func _event_list() -> Array:
 	return out
 
 
-## The text catalog: every key the code asks for exists, every key is asked for, and a call gives exactly
-## the placeholders the line has.
+## The text catalogs: every key the code asks for exists in its catalog (battle through GameMessages.line, life
+## through GameMessages.text("life", key, vars)), every key is asked for, and every line is text.
+## The text between an open bracket at `at` and its matching close, string literals kept whole.
+static func _arguments(src: String, at: int) -> String:
+	var depth := 0
+	var quoted := false
+	for j in range(at, src.length()):
+		var ch := src[j]
+		if ch == "\"":
+			quoted = not quoted
+		elif not quoted:
+			if ch == "(":
+				depth += 1
+			elif ch == ")":
+				if depth == 0:
+					return src.substr(at, j - at)
+				depth -= 1
+	return src.substr(at, mini(200, src.length() - at))
+
+
 static func _text() -> Array:
 	var out: Array = []
-	var lines: Dictionary = GameData.messages.get("lines", {})
-	if lines.is_empty():
-		return ["the catalog is empty or unreadable"]
-	var call := RegEx.create_from_string("GameMessages\\.line\\(\\s*(\"(\\w+)\"|[^\"]*?\"(\\w+)\"[^\"]*?\"(\\w+)\")")
+	var catalogs := {"battle": GameData.messages.get("lines", {}), "life": GameData.life.get("lines", {})}
+	for c in catalogs:
+		if catalogs[c].is_empty():
+			return ["the %s catalog is empty or unreadable" % c]
 	var literal := RegEx.create_from_string("\"(\\w+)\"")
-	var used: Dictionary = {}
+	var brackets := RegEx.create_from_string("\\[[^\\]]*\\]")
+	var used := {"battle": {}, "life": {}}
 	for dir in CODE:
 		for f in DirAccess.get_files_at(dir):
 			if not f.ends_with(".gd"):
 				continue
 			var src := FileAccess.get_file_as_string(dir + f)
-			var at := 0
-			while true:
-				var i := src.find("GameMessages.line(", at)
-				if i < 0:
-					break
-				at = i + 1
-				var eol := src.find("\n", i)
-				var snippet := src.substr(i, eol - i if eol > 0 else src.length() - i)
-				# the key is the first string literal; a conditional key ("a" if x else "b") has two
-				var rest := snippet.substr("GameMessages.line(".length())
-				var keys: Array = []
-				var head := rest
-				var cut := head.find("{")
-				if cut >= 0:
-					head = head.substr(0, cut)
-				for m in literal.search_all(head):
-					keys.append(m.get_string(1))
-				if keys.is_empty():
-					out.append("%s%s asks for a message by a key it does not spell out: %s" % [dir, f, snippet.strip_edges()])
-				for k in keys:
-					used[k] = true
-					if not lines.has(k):
-						out.append("%s%s asks for the message '%s', which the catalog does not have" % [dir, f, k])
-	for k in lines:
-		if not used.has(k):
-			out.append("the message '%s' is in the catalog but nothing asks for it" % k)
-		if typeof(lines[k]) != TYPE_STRING or str(lines[k]).strip_edges() == "":
-			out.append("the message '%s' is not text" % k)
+			for call in ["GameMessages.line(", "GameMessages.text("]:
+				var at := 0
+				while true:
+					var i := src.find(call, at)
+					if i < 0:
+						break
+					at = i + 1
+					var eol := src.find("\n", i)
+					var snippet := src.substr(i, eol - i if eol > 0 else src.length() - i)
+					# the key is the first string literal (a conditional key has two); for text() the catalog comes first.
+					# The arguments end at the call's closing bracket, and the vars (a dictionary) are not part of them.
+					var head := _arguments(src, i + call.length())
+					var at_vars := head.find("{")
+					if at_vars >= 0:
+						head = head.substr(0, at_vars)
+					# a key is never inside brackets (an index such as o["potions"] or an array)
+					head = brackets.sub(head, "", true)
+					var names: Array = []
+					for m in literal.search_all(head):
+						names.append(m.get_string(1))
+					var catalog := "battle"
+					if call == "GameMessages.text(":
+						catalog = str(names.pop_front()) if not names.is_empty() else ""
+					if names.is_empty() or not catalogs.has(catalog):
+						out.append("%s%s asks for a message by a key it does not spell out, or in a catalog the game does not have: %s" % [dir, f, snippet.strip_edges()])
+						continue
+					for k in names:
+						used[catalog][k] = true
+						if not catalogs[catalog].has(k):
+							out.append("%s%s asks for the message '%s', which the %s catalog does not have" % [dir, f, k, catalog])
+	for c in catalogs:
+		for k in catalogs[c]:
+			if not used[c].has(k):
+				out.append("the message '%s' is in the %s catalog but nothing asks for it" % [k, c])
+			if typeof(catalogs[c][k]) != TYPE_STRING or str(catalogs[c][k]).strip_edges() == "":
+				out.append("the message '%s' is not text" % k)
 	return out

@@ -1,5 +1,5 @@
 {
-  "note": "Localisation (roadmap item 40; core/game/game_locale.gd, checked by tools/check_data.gd). `source` is the language the game's text is written in. A translation is a folder data/text/locales/<id>/ with one file per catalog (`battle.json`, `tutorial.json`), each {\"lines\": {key: text}}: a line may reorder its {placeholders} but must use exactly the ones the source line uses, and a line left out falls back to the source. The catalogs are the text that is in data today: the fight's log lines (data/text/battle.json) and the tutorial's tips (data/ui/tutorial.json, by step id); text still written in code is not translatable yet. `pseudo` is a made-up language for testing, built from the source on the fly: every letter gets an accent, the line is padded by `expand` of its length and wrapped in brackets, and {placeholders} are left alone, so text that is cut off, text that was never put in a catalog and a font that lacks accents all show at once. A locale marked `hidden` is not offered in the menu. `sample_chars` are letters the game's font must have for the languages meant to come first (western and central European).",
+  "note": "Localisation (roadmap item 40; core/game/game_locale.gd, checked by tools/check_data.gd). `source` is the language the game's text is written in. A translation is a folder data/text/locales/<id>/ with one file per catalog (`battle.json`, `life.json`, `tutorial.json`), each {\"lines\": {key: text}}: a line may reorder its {placeholders} but must use exactly the ones the source line uses, and a line left out falls back to the source. The catalogs are the text that is in data today: the fight's log lines (data/text/battle.json), the rest of the game's messages (data/text/life.json) and the tutorial's tips (data/ui/tutorial.json, by step id); text still written in code is not translatable yet. `pseudo` is a made-up language for testing, built from the source on the fly: every letter gets an accent, the line is padded by `expand` of its length and wrapped in brackets, and {placeholders} are left alone, so text that is cut off, text that was never put in a catalog and a font that lacks accents all show at once. A locale marked `hidden` is not offered in the menu. `sample_chars` are letters the game's font must have for the languages meant to come first (western and central European).",
   "source": "en",
   "locales": {
     "en": {"name": "English"},
@@ -17,6 +17,6 @@
       "N": "Ñ", "O": "Ö", "P": "Þ", "Q": "Q", "R": "Ŕ", "S": "Š", "T": "Ţ", "U": "Ü", "V": "Ѵ", "W": "Ŵ", "X": "Χ", "Y": "Ý", "Z": "Ž"
     }
   },
-  "catalogs": ["battle", "tutorial"],
+  "catalogs": ["battle", "life", "tutorial"],
   "sample_chars": "áàâäãåæçéèêëíìîïñóòôöõøœßúùûüýÿÁÀÂÄÃÅÆÇÉÈÊËÍÌÎÏÑÓÒÔÖÕØŒÚÙÛÜÝąćęłńśźżĄĆĘŁŃŚŹŻčďěňřšťůžČĎĚŇŘŠŤŮŽőűŐŰ¿¡«»„“”’–—"
 }

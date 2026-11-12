@@ -69,7 +69,7 @@ var tree_fx_e: int = -1
 
 
 func full_name() -> String:
-	return "%s %s" % [name, surname]
+	return GameMessages.text("life", "full_name", {"given": name, "surname": surname})
 
 
 func cls() -> Dictionary:

@@ -148,7 +148,7 @@ func test_translation() -> void:
 	ok(GameMessages.line("hit_ward_all", {"who": "Tess", "whom": "the wolf", "absorbed": 9}) == "Tess hits the wolf, and the ward absorbs all 9.", "a line with no translation falls back to the source")
 	var c := GameLocale.check("xx")
 	ok(c["problems"].size() == 2 and str(c["problems"]).contains("no_such_line") and str(c["problems"]).contains("hit_ward"), "checking the translation finds the unknown line and the wrong placeholders: %s" % str(c["problems"]))
-	ok(c["missing"].size() == GameLocale.source_lines("battle").size() - 3 + GameLocale.source_lines("tutorial").size(), "and lists every line still to translate (%d)" % c["missing"].size())
+	ok(c["missing"].size() == GameLocale.source_lines("battle").size() - 3 + GameLocale.source_lines("life").size() + GameLocale.source_lines("tutorial").size(), "and lists every line still to translate (%d)" % c["missing"].size())
 	GameLocale.set_locale("en")
 	GameLocale._cache = {}
 	GameLocale._translations = {}

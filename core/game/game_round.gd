@@ -324,7 +324,7 @@ func aim_of(cmd: Dictionary, by: int = -2) -> String:
 ## {ab, cost, skill, spell, feat, item, why}. `why` "" when the member can use it (aim aside).
 static func _ability_of(p_b: GameBattle, by: int, cmd: Dictionary) -> Dictionary:
 	if by < -1 or by >= p_b.allies.size():
-		return {"why": "Out of the fight."}
+		return {"why": GameMessages.text("life", "out_of_fight")}
 	var u := p_b.unit(by)
 	var id := str(cmd.get("id", ""))
 	match str(cmd.get("kind", "")):
@@ -336,37 +336,37 @@ static func _ability_of(p_b: GameBattle, by: int, cmd: Dictionary) -> Dictionary
 				var cost := GameBattle.unit_skill_cost(u, i)
 				var why := ""
 				if not GameSkills.unlocked(u, i):
-					why = "Opens at level %d." % GameSkills.level_of(skills[i])
+					why = GameMessages.text("life", "opens_at_level", {"level": int(GameSkills.level_of(skills[i]))})
 				elif p_b.unit_skill_used_up(by, i):
-					why = "Used this battle."
+					why = GameMessages.text("life", "used_this_battle")
 				elif not p_b.can_pay(by, cost):
 					why = _short_of(p_b, by)
 				return {"ab": skills[i], "cost": cost, "skill": i, "spell": "", "feat": "", "item": "", "why": why}
-			return {"why": "No such skill."}
+			return {"why": GameMessages.text("life", "no_such_skill")}
 		"spell":
 			if id not in p_b.unit_spells(by):
-				return {"why": "Not known."}
+				return {"why": GameMessages.text("life", "not_known")}
 			var sp := p_b.unit_spell(by, id)
 			if sp.is_empty():
-				return {"why": "Not known."}
+				return {"why": GameMessages.text("life", "not_known")}
 			var cost := GameCombat.ability_cost(sp, u.level)
 			return {"ab": sp, "cost": cost, "skill": -1, "spell": id, "feat": "", "item": "",
 				"why": "" if p_b.can_pay(by, cost) else _short_of(p_b, by)}
 		"feat":
 			if id not in p_b.unit_feats(by):
-				return {"why": "Not readied."}
+				return {"why": GameMessages.text("life", "not_readied_round")}
 			return {"ab": p_b.unit_feat(by, id), "cost": 0, "skill": -1, "spell": "", "feat": id, "item": "", "why": p_b.feat_block(by, id)}
 		"vial":
 			if by >= 0:
-				return {"why": "Only the heir throws vials."}
+				return {"why": GameMessages.text("life", "only_heir_vials")}
 			if id not in p_b.heir.inventory or GameItems.kind_of(id) != "vial":
-				return {"why": "No such vial."}
+				return {"why": GameMessages.text("life", "no_such_vial")}
 			return {"ab": GamePlague.vial_ability(id), "cost": 0, "skill": -1, "spell": "", "feat": "", "item": id, "why": ""}
-	return {"why": "Unknown command."}
+	return {"why": GameMessages.text("life", "unknown_command")}
 
 
 static func _short_of(p_b: GameBattle, by: int) -> String:
-	return "Too hurt." if p_b.pays_in_hp(by) else "Not enough MP."
+	return GameMessages.text("life", "too_hurt_round") if p_b.pays_in_hp(by) else GameMessages.text("life", "not_enough_mp")
 
 
 static func _foe_index(ref: String) -> int:
@@ -376,8 +376,8 @@ static func _foe_index(ref: String) -> int:
 static func _why_foe(p_b: GameBattle, ref: String) -> String:
 	var i := _foe_index(ref)
 	if i < 0 or i >= p_b.enemies.size():
-		return "Choose a foe."
-	return "" if p_b.enemies[i]["hp"] > 0 else "That foe has fallen."
+		return GameMessages.text("life", "choose_foe")
+	return "" if p_b.enemies[i]["hp"] > 0 else GameMessages.text("life", "foe_fallen")
 
 
 ## Party member a ref names: -1 the heir, an ally index, or -2 when it names none.
@@ -397,13 +397,13 @@ static func _why_not(p_b: GameBattle, by: int, cmd: Dictionary, held: Dictionary
 		"attack":
 			return "" if target == "" else _why_foe(p_b, target)
 		"defend":
-			return "" if by < 0 or bool(setting("ally_defend")) else "Companions do not defend."
+			return "" if by < 0 or bool(setting("ally_defend")) else GameMessages.text("life", "companions_no_defend")
 		"potion":
 			if by >= 0 and not bool(setting("potion_for_companions")):
-				return "Companions do not drink the house's potions."
-			return "" if p_b.heir.potions - int(held.get("potions", 0)) > 0 else "No potions left."
+				return GameMessages.text("life", "companions_no_potions")
+			return "" if p_b.heir.potions - int(held.get("potions", 0)) > 0 else GameMessages.text("life", "no_potions_left")
 		"flee":
-			return "Held fast." if p_b.heir_skip else ""
+			return GameMessages.text("life", "held_fast") if p_b.heir_skip else ""
 		"pass":
 			return ""
 		"ability":
@@ -417,17 +417,17 @@ static func _why_not(p_b: GameBattle, by: int, cmd: Dictionary, held: Dictionary
 					if w != "":
 						return w
 					if p_b.aoe_hits(ab, by, _foe_index(target)).is_empty():
-						return "Out of reach."
+						return GameMessages.text("life", "out_of_reach")
 				"ally":
 					if target != "":
 						var who := _party_index(target)
 						if who < -1 or who >= p_b.allies.size() or p_b.unit(who).hp <= 0:
-							return "Out of the fight."
+							return GameMessages.text("life", "out_of_fight")
 				_:
 					if GameCombat.aims_at_foe(ab) and p_b.aoe_hits(ab, by, p_b.first_target()).is_empty():
-						return "Out of reach."
+						return GameMessages.text("life", "out_of_reach")
 			return ""
-	return "Unknown command."
+	return GameMessages.text("life", "unknown_command")
 
 
 ## Potions the other members have queued (including choices a queued Flee has set aside, which
@@ -446,13 +446,13 @@ func _reserved(except: int) -> Dictionary:
 
 func check(by: int, cmd: Dictionary) -> String:
 	if b.is_over():
-		return "The fight is over."
+		return GameMessages.text("life", "fight_over")
 	if by not in members():
-		return "Out of the fight."
+		return GameMessages.text("life", "out_of_fight")
 	if state_of(by) == "held":
-		return "Held fast."
+		return GameMessages.text("life", "held_fast")
 	if str(cmd.get("act", "")) == "pass":   # GameRound's own, for the covered; never a choice
-		return "Unknown command."
+		return GameMessages.text("life", "unknown_command")
 	return _why_not(b, by, cmd, _reserved(by))
 
 
@@ -676,7 +676,7 @@ func _row(by: int, group: String, cmd: Dictionary, label: String, cost: String, 
 	var aim := "foe" if str(cmd.get("act", "")) == "attack" else (_aim(ab) if not ab.is_empty() else "none")
 	var enabled := why == ""
 	return {"cmd": cmd, "group": group, "label": label, "cost": cost, "enabled": enabled, "why": why, "aim": aim, "ab": ab,
-		"first": false, "level": 0, "tip": "" if ab.is_empty() else "%s. %s" % [GameCombat.shape_text(ab), GameCombat.describe(ab)]}
+		"first": false, "level": 0, "tip": "" if ab.is_empty() else GameMessages.text("life", "shape_tip", {"shape": GameCombat.shape_text(ab), "effect": GameCombat.describe(ab)})}
 
 
 ## Why a row cannot be used: for foe aims the best answer over every living foe.
@@ -693,7 +693,7 @@ func _row_why(by: int, cmd: Dictionary, ab: Dictionary) -> String:
 			return ""
 		if first == "":
 			first = why
-	return first if first != "" else "No foes."
+	return first if first != "" else GameMessages.text("life", "no_foes")
 
 
 func menu(by: int) -> Array:
@@ -707,7 +707,7 @@ func menu(by: int) -> Array:
 	rows.append(_row(by, "basic", defend, "Defend", "", {}, check(by, defend)))
 	var potion := {"act": "potion"}
 	var left := b.heir.potions - int(_reserved(by)["potions"])
-	var prow := _row(by, "basic", potion, "Potion", "%d left" % maxi(0, left), {}, check(by, potion))
+	var prow := _row(by, "basic", potion, GameMessages.text("life", "potion_label"), GameMessages.text("life", "potions_left", {"n": int(maxi(0, left))}), {}, check(by, potion))
 	rows.append(prow)
 	var flee := {"act": "flee"}
 	rows.append(_row(by, "basic", flee, "Flee", "", {}, check(by, flee)))
@@ -728,7 +728,7 @@ func menu(by: int) -> Array:
 		var ab := b.unit_feat(by, id)
 		var cmd := {"act": "ability", "kind": "feat", "id": str(id), "target": ""}
 		var hp := GameFeats.hp_cost(u, str(id), int(b.unit_numbers(by)["max_hp"]))
-		rows.append(_row(by, "feat", cmd, GameFeats.feat_name(str(id)), "%s HP" % GameText.num(hp) if hp > 0 else "", ab, _row_why(by, cmd, ab)))
+		rows.append(_row(by, "feat", cmd, GameFeats.feat_name(str(id)), GameMessages.text("life", "hp_amount", {"hp": GameText.num(hp)}) if hp > 0 else "", ab, _row_why(by, cmd, ab)))
 	if by < 0:
 		var seen := {}
 		for id in GamePlague.vials_carried(b.heir):
@@ -750,7 +750,7 @@ func _label(by: int, cmd: Dictionary) -> String:
 		"defend":
 			return "Defend"
 		"potion":
-			return "Potion"
+			return GameMessages.text("life", "potion_label")
 		"flee":
 			return "Flee"
 		"ability":
@@ -773,7 +773,7 @@ func _target_text(cmd: Dictionary) -> String:
 				same += 1
 				if j <= i:
 					nth += 1
-		return name if same <= 1 else "%s %d" % [name, nth]
+		return name if same <= 1 else GameMessages.text("life", "nth_name", {"name": name, "nth": int(nth)})
 	var who := _party_index(target)
 	if who >= -1 and who < b.allies.size():
 		return b.unit(who).name
@@ -792,7 +792,7 @@ func describe(by: int, cmd: Dictionary) -> Dictionary:
 	var label := _label(by, cmd)
 	var target := _target_text(cmd)
 	var abbrev: String = str(ct["abbrev"].get(str(cmd.get("act", "")), ""))
-	return {"full": label if target == "" else "%s > %s" % [label, target],
+	return {"full": label if target == "" else GameMessages.text("life", "target_arrow", {"label": label, "target": target}),
 		"short": _clip(label, int(ct["short_chars"])),
 		"tiny": abbrev if abbrev != "" and str(cmd.get("act", "")) != "ability" else _clip(label, int(ct["tiny_chars"]))}
 
@@ -849,7 +849,7 @@ func view() -> Dictionary:
 		for inst in b.status_list(GameBattle.ref_of(by)):
 			statuses.append(str(GameCombat.status_def(inst["id"]).get("name", inst["id"])))
 		var chip := _chip(by, decision, cmd)
-		var tip := "%s  HP %s/%s  MP %s/%s" % [u.name, GameText.num(u.hp), GameText.num(int(b.unit_numbers(by)["max_hp"])), GameText.num(u.mp), GameText.num(int(b.unit_numbers(by)["max_mp"]))]
+		var tip := GameMessages.text("life", "unit_tip", {"name": u.name, "hp": GameText.num(u.hp), "max_hp": GameText.num(int(b.unit_numbers(by)["max_hp"])), "mp": GameText.num(u.mp), "max_mp": GameText.num(int(b.unit_numbers(by)["max_mp"]))})
 		if not statuses.is_empty():
 			tip += "\n" + ", ".join(statuses)
 		if decision == "queued":
@@ -876,12 +876,12 @@ func set_cover(by: int, ref: String) -> String:
 		covers.erase(by)
 		return ""
 	if by not in members():
-		return "Only someone still standing can cover."
+		return GameMessages.text("life", "cover_standing")
 	var who := _party_index(ref)
 	if who == -2 or who not in members():
-		return "Choose someone still standing to cover."
+		return GameMessages.text("life", "cover_choose")
 	if who == by:
-		return "No one can cover themselves."
+		return GameMessages.text("life", "cover_self")
 	covers[by] = ref
 	return ""
 
@@ -953,7 +953,7 @@ func resolve() -> Dictionary:
 			b.events.append({"type": "act", "by": -1, "manual": false})
 			if heir_manual:   # what was chosen is no longer possible
 				b.events.append({"type": "act", "by": -1, "manual": false, "fallback": true})
-				b._say("%s improvises." % b.heir.name)
+				b._say(GameMessages.text("life", "improvises", {"name": b.heir.name}))
 			b.events.append_array(coated)
 			_heir_act(GameTactics.choose(b, -1))
 		if not b.round_acted and b.result == "":   # the battle turned the plan down: a plain blow, so a turn is never lost
@@ -964,7 +964,7 @@ func resolve() -> Dictionary:
 			continue
 		var e: Dictionary = entries[ai]
 		if fleeing and bool(setting("flee_covers_party")) and str(e["src"]) != "held":
-			plans[ai] = {"act": "pass", "cover": true, "text": "%s covers the retreat." % b.allies[ai].name}
+			plans[ai] = {"act": "pass", "cover": true, "text": GameMessages.text("life", "covers_retreat", {"name": b.allies[ai].name})}
 		elif str(e["src"]) in ["manual", "repeat"] and str(e["cmd"].get("act", "")) != "flee":
 			plans[ai] = e["cmd"]
 	b.round_covers = _live_covers()

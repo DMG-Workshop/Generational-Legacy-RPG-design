@@ -170,20 +170,20 @@ static func build(id: String) -> Dictionary:
 		if absf(v) > 0.0:
 			effects.append({"stat": k, "value": v})
 	var mat_name := GameMaterials.name_of(parts["material"])
-	var plain := "%s %s" % [mat_name, form["name"]]
+	var plain := GameMessages.text("life", "material_form", {"material": mat_name, "form": form["name"]})
 	var nm := plain
 	if mythic_name != "":
-		nm = "%s, %s" % [mythic_name, plain]
+		nm = GameMessages.text("life", "mythic_named", {"mythic": mythic_name, "plain": plain})
 	else:
 		if prefix_name != "":
 			nm = prefix_name + " " + nm
 		if suffix_name != "":
 			nm += " " + suffix_name
 	if grade > 0:
-		nm += " +%d" % grade
-	var desc := "%s %s, made of %s." % [str(rarity["name"]), str(form["name"]).to_lower(), mat_name.to_lower()]
+		nm += GameMessages.text("life", "grade_suffix", {"grade": int(grade)})
+	var desc := GameMessages.text("life", "made_of", {"rarity": str(rarity["name"]), "form": str(form["name"]).to_lower(), "material": mat_name.to_lower()})
 	if not extras.is_empty():
-		desc += " Also " + ", ".join(extras).to_lower() + "."
+		desc += GameMessages.text("life", "also_list", {"list": GameMessages.text("life", "list_comma").join(extras).to_lower()})
 	var price := int(round(float(setting("price_per_tier")[str(tier)]) * float(rarity["price_mult"]) * (1.0 + 0.05 * grade)))
 	var def := {
 		"id": id, "name": nm, "slot": parts["slot"], "tier": tier, "material": parts["material"],

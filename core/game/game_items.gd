@@ -87,7 +87,7 @@ static func effect_text(stat: String, value: float) -> String:
 	var pct := value * 100.0
 	var num: String = ("%d" % int(round(absf(pct)))) if is_equal_approx(pct, round(pct)) else ("%.1f" % absf(pct))
 	var label: String = str(_effect_labels().get(stat, stat.replace("_", " ")))
-	return "%s%s%% %s" % ["-" if pct < 0.0 else "+", num, label]
+	return GameMessages.text("life", "effect_text", {"sign": "-" if pct < 0.0 else "+", "num": num, "label": label})
 
 
 ## Short text for a list of effects: "+10% damage, +3% crit".
@@ -95,7 +95,7 @@ static func describe_effects(effects: Array) -> String:
 	var parts: Array = []
 	for e in effects:
 		parts.append(effect_text(str(e["stat"]), float(e["value"])))
-	return ", ".join(parts) if not parts.is_empty() else "no effect"
+	return GameMessages.text("life", "list_comma").join(parts) if not parts.is_empty() else GameMessages.text("life", "no_effect")
 
 
 ## Short effects text for an item, for shop rows and reward messages; consumables have a note.
@@ -108,7 +108,7 @@ static func describe(id: String) -> String:
 
 ## "Steel Sword (+20% damage)": an item's name with what it does.
 static func name_with_effects(id: String) -> String:
-	return "%s (%s)" % [item_name(id), describe(id)]
+	return GameMessages.text("life", "item_with_detail", {"name": item_name(id), "detail": describe(id)})
 
 
 # ---------------------------------------------------------------- shops
@@ -188,17 +188,17 @@ static func owns(h: GameHeir, id: String) -> bool:
 static func buy(d: GameDynasty, id: String) -> String:
 	var h := d.heir
 	if item_def(id).is_empty():
-		return "No such item."
+		return GameMessages.text("life", "no_such_item")
 	var iname := item_name(id)
 	if not sold_here(d, id):
-		return "No one in %s sells the %s." % [d.world.here()["name"], iname]
+		return GameMessages.text("life", "sells_none", {"place": d.world.here()["name"], "item": iname})
 	if stack_max(id) > 0 and count(h, id) >= stack_max(id):
-		return "%s cannot carry more than %d %s." % [h.name, stack_max(id), iname]
+		return GameMessages.text("life", "cannot_carry_more", {"name": h.name, "max": int(stack_max(id)), "item": iname})
 	if stack_max(id) <= 0 and owns(h, id):
-		return "%s already has the %s." % [h.name, iname]
+		return GameMessages.text("life", "already_has", {"name": h.name, "item": iname})
 	var cost := price(d, id)
 	if h.gold < cost:
-		return "Not enough gold for the %s (%s needed)." % [iname, GameText.num(cost)]
+		return GameMessages.text("life", "not_enough_gold_for", {"item": iname, "needed": GameText.num(cost)})
 	if not GameCarry.can_carry(h, id):
 		return GameCarry.why_not(h, id)
 	h.gold -= cost
@@ -206,52 +206,52 @@ static func buy(d: GameDynasty, id: String) -> String:
 	GameDisease.on_buy(d, id)
 	if slot_of(id) in SLOTS and equipped(h, slot_of(id)) == "":
 		_wear(h, id)
-		return _with(GameDisease.on_wear(d, id), "%s buys the %s for %s gold and puts it on." % [h.name, iname, GameText.num(cost)])
-	return "%s buys the %s for %s gold. It goes in the pack." % [h.name, iname, GameText.num(cost)]
+		return _with(GameDisease.on_wear(d, id), GameMessages.text("life", "buys_wears", {"name": h.name, "item": iname, "price": GameText.num(cost)}))
+	return GameMessages.text("life", "buys_pack", {"name": h.name, "item": iname, "price": GameText.num(cost)})
 
 
 static func _with(extra: String, msg: String) -> String:
-	return msg if extra == "" else msg + " " + extra
+	return msg if extra == "" else GameMessages.text("life", "joined", {"first": msg, "second": extra})
 
 
 ## Wear an item from the pack; whatever was in that slot goes back in the pack.
 static func equip(d: GameDynasty, id: String) -> String:
 	var h := d.heir
 	if id not in h.inventory:
-		return "The %s is not in the pack." % item_name(id)
+		return GameMessages.text("life", "not_in_pack", {"item": item_name(id)})
 	if slot_of(id) not in SLOTS:
-		return "The %s cannot be worn." % item_name(id)
+		return GameMessages.text("life", "cannot_be_worn", {"item": item_name(id)})
 	var old := _wear(h, id)
 	var sick := GameDisease.on_wear(d, id)
 	if old != "":
-		return _with(sick, "%s takes up the %s and packs away the %s." % [h.name, item_name(id), item_name(old)])
-	return _with(sick, "%s takes up the %s." % [h.name, item_name(id)])
+		return _with(sick, GameMessages.text("life", "takes_up_packs", {"name": h.name, "item": item_name(id), "old": item_name(old)}))
+	return _with(sick, GameMessages.text("life", "takes_up", {"name": h.name, "item": item_name(id)}))
 
 
 static func unequip(d: GameDynasty, slot: String) -> String:
 	var h := d.heir
 	var id := equipped(h, slot)
 	if id == "":
-		return "Nothing is worn there."
+		return GameMessages.text("life", "nothing_worn")
 	var keep := _vitals(h)
 	h.equipment[slot] = ""
 	h.inventory.append(id)
 	_restore_vitals(h, keep)
-	return "%s packs away the %s." % [h.name, item_name(id)]
+	return GameMessages.text("life", "packs_away", {"name": h.name, "item": item_name(id)})
 
 
 static func sell(d: GameDynasty, id: String) -> String:
 	var h := d.heir
 	if shops_here(d).is_empty():
-		return "No one in %s buys gear." % d.world.here()["name"]
+		return GameMessages.text("life", "buys_gear_none", {"place": d.world.here()["name"]})
 	if id not in h.inventory:
-		return "The %s is not in the pack." % item_name(id)
+		return GameMessages.text("life", "not_in_pack", {"item": item_name(id)})
 	var gold := sell_price(d, id)
 	h.inventory.erase(id)
 	if not owns(h, id):
 		h.tainted_gear.erase(id)
 	h.gold += gold
-	return "%s sells the %s for %s gold." % [h.name, item_name(id), GameText.num(gold)]
+	return GameMessages.text("life", "sells", {"name": h.name, "item": item_name(id), "price": GameText.num(gold)})
 
 
 ## Moves `id` from the pack into its slot. Returns the item it replaced ("" if none).
@@ -322,7 +322,7 @@ static func prayer_price(d: GameDynasty) -> int:
 ## Life milestones the heir has yet to face. Fate Value is only rolled against these.
 static func trials_left(h: GameHeir) -> int:
 	var n := 0
-	for m in GameFate.MILESTONE_LABELS:
+	for m in GameFate.MILESTONE_IDS:
 		if m not in h.milestones_done:
 			n += 1
 	return n
@@ -336,7 +336,7 @@ static func can_pray(d: GameDynasty) -> bool:
 static func cleanse(d: GameDynasty, trait_id: String) -> String:
 	var h := d.heir
 	if not d.world.has_service("temple"):
-		return "There is no temple in %s." % d.world.here()["name"]
+		return GameMessages.text("life", "no_temple", {"place": d.world.here()["name"]})
 	if trait_id not in curses_on(h):
 		return "%s carries no %s to lift." % [h.name, GameData.trait_name(trait_id)]
 	var cost := cleanse_price(d)
@@ -354,19 +354,19 @@ static func cleanse(d: GameDynasty, trait_id: String) -> String:
 static func pray(d: GameDynasty) -> String:
 	var h := d.heir
 	if not d.world.has_service("temple"):
-		return "There is no temple in %s." % d.world.here()["name"]
+		return GameMessages.text("life", "no_temple", {"place": d.world.here()["name"]})
 	if trials_left(h) == 0:
-		return "%s has faced every trial of this life. The priests say prayer can change nothing now." % h.name
+		return GameMessages.text("life", "trials_done", {"name": h.name})
 	if not can_pray(d):
-		return "The priests say %s's fate is as light as prayer can make it." % h.name
+		return GameMessages.text("life", "fate_light", {"name": h.name})
 	var cost := prayer_price(d)
 	if h.gold < cost:
-		return "An offering of %s gold is needed to pray." % GameText.num(cost)
+		return GameMessages.text("life", "offering_needed", {"price": GameText.num(cost)})
 	h.gold -= cost
 	var before := h.fate_value
 	h.fate_value = snappedf(maxf(float(GameData.bal("fate_min")), h.fate_value - float(GameData.bal("prayer_fate_drop"))), GameFate.STEP)
 	_count_use(d, "prayer")
-	return "%s keeps a vigil at the temple and offers %s gold. Fate Value %d%% -> %d%%." % [h.name, GameText.num(cost), int(round(before * 100.0)), int(round(h.fate_value * 100.0))]
+	return GameMessages.text("life", "vigil", {"name": h.name, "price": GameText.num(cost), "before": int(int(round(before * 100.0))), "after": int(int(round(h.fate_value * 100.0)))})
 
 
 # ---------------------------------------------------------------- autopilot

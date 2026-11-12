@@ -181,7 +181,7 @@ static func announce(d: GameDynasty) -> Array:
 	GameAchievements.announce(d)   # milestones first: one may be what a title waits for
 	var fresh := update(d)
 	for id in fresh:
-		d._say("%s earns a title: %s." % [d.heir.name, str(def(id)["name"])])
+		d._say(GameMessages.text("life", "earns_title", {"name": d.heir.name, "title": str(def(id)["name"])}))
 	return fresh
 
 
@@ -206,7 +206,7 @@ static func unwear(d: GameDynasty) -> void:
 ## The heir's name with the title they wear: "Tess Holloway, the Untouched".
 static func display_name(d: GameDynasty) -> String:
 	var id := worn(d)
-	return d.heir.full_name() if id == "" else "%s, %s" % [d.heir.full_name(), str(def(id)["name"])]
+	return d.heir.full_name() if id == "" else GameMessages.text("life", "titled_name", {"full": d.heir.full_name(), "title": str(def(id)["name"])})
 
 
 ## What the worn title gives toward `key` (a name in data `perk_keys`): 0 when none is worn or it gives none.
@@ -225,8 +225,8 @@ static func perk_text(t: Dictionary) -> String:
 		return ""
 	var parts: Array = []
 	for k in p:
-		parts.append("%s %s%d%%" % ["cheaper shops" if k == "persuasion" else str(k), "+" if float(p[k]) >= 0.0 else "", int(round(float(p[k]) * 100.0))])
-	return ", ".join(parts)
+		parts.append(GameMessages.text("life", "perk_term", {"stat": GameMessages.text("life", "cheaper_shops") if k == "persuasion" else str(k), "sign": "+" if float(p[k]) >= 0.0 else "", "pct": int(round(float(p[k]) * 100.0))}))
+	return GameMessages.text("life", "list_comma").join(parts)
 
 
 # ---------------------------------------------------------------- the data

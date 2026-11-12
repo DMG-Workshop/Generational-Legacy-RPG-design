@@ -140,8 +140,8 @@ static func weapon_text(kinds: Array) -> String:
 	var nouns: Array = kinds.map(func(k): return str(_src.get("weapon_kinds", {}).get(k, {}).get("noun", k)))
 	if nouns.is_empty():
 		return ""
-	var s: String = nouns[0] if nouns.size() == 1 else "%s or %s" % [", ".join(PackedStringArray(nouns.slice(0, -1))), nouns[-1]]
-	return ("an " if s.left(1) in ["a", "e", "i", "o", "u"] else "a ") + s
+	var s: String = nouns[0] if nouns.size() == 1 else GameMessages.text("life", "or_list", {"first": GameMessages.text("life", "list_comma").join(PackedStringArray(nouns.slice(0, -1))), "last": nouns[-1]})
+	return (GameMessages.text("life", "article_an") if s.left(1) in ["a", "e", "i", "o", "u"] else GameMessages.text("life", "article_a")) + s
 
 
 ## What one unit brings to every feat, worked out once: a plain blow's power, that power per point
@@ -291,20 +291,20 @@ static func news_text(h: GameHeir, news: Array) -> String:
 		slot = maxi(slot, slots_at(int(lv)) if slots_at(int(lv)) > slots_at(int(lv) - 1) else 0)
 	var parts: Array = []
 	if pts > 0:
-		parts.append("earns %s" % ("a feat point" if pts == 1 else "%d feat points" % pts))
+		parts.append(GameMessages.text("life", "earns_points", {"points": GameMessages.text("life", "a_feat_point") if pts == 1 else GameMessages.text("life", "feat_points_many", {"n": int(pts)})}))
 	if slot > 0:
-		parts.append("can now ready %d feats" % slot)
+		parts.append(GameMessages.text("life", "can_ready", {"n": int(slot)}))
 	if parts.is_empty():
 		return ""
-	return "%s %s (%s to spend)." % [h.name, " and ".join(PackedStringArray(parts)), GameText.num(h.feat_points)]
+	return GameMessages.text("life", "gains_points", {"name": h.name, "list": GameMessages.text("life", "list_and").join(PackedStringArray(parts)), "points": GameText.num(h.feat_points)})
 
 
 ## "With the old drills set aside, Tess forgets Cleave and Flurry, which no Mage is taught (2 feat
 ## points back)." for the feats a loaded save knew that the heir's class is not taught.
 static func forgot_text(h: GameHeir, names: Array, back: int) -> String:
-	var list: String = names[0] if names.size() == 1 else "%s and %s" % [", ".join(PackedStringArray(names.slice(0, -1))), names[-1]]
-	return "With the old drills set aside, %s forgets %s, which no %s is taught (%s feat point%s back)." % [h.name, list,
-		str(GameData.classes.get(h.class_id, {}).get("name", h.class_id)), GameText.num(back), "" if back == 1 else "s"]
+	var list: String = names[0] if names.size() == 1 else GameMessages.text("life", "names_and", {"first": GameMessages.text("life", "list_comma").join(PackedStringArray(names.slice(0, -1))), "last": names[-1]})
+	return GameMessages.text("life", "forgot_one" if back == 1 else "forgot_many", {"name": h.name, "list": list,
+		"class": str(GameData.classes.get(h.class_id, {}).get("name", h.class_id)), "points": GameText.num(back)})
 
 
 ## Time passes: the quiet after a rest is over, the feats a loaded save's class is not taught are
@@ -335,7 +335,7 @@ static func classes_text(classes: Array) -> String:
 	var names: Array = classes.map(func(c): return str(GameData.classes.get(c, {}).get("name", c)))
 	if names.size() <= 1:
 		return "".join(PackedStringArray(names))
-	return "%s or %s" % [", ".join(PackedStringArray(names.slice(0, -1))), names[-1]]
+	return GameMessages.text("life", "or_list", {"first": GameMessages.text("life", "list_comma").join(PackedStringArray(names.slice(0, -1))), "last": names[-1]})
 
 
 ## Whether a class may learn a feat taught to `classes`: one of them, or a hybrid with a parent
@@ -386,7 +386,7 @@ static func next_class_feat(h: GameHeir) -> String:
 		if lv > h.level and id not in h.known_feats and (best == "" or lv < at):
 			best = id
 			at = lv
-	return "" if best == "" else "%s at level %s" % [feat_name(best), GameText.num(at)]
+	return "" if best == "" else GameMessages.text("life", "feat_at_level", {"feat": feat_name(best), "level": GameText.num(at)})
 
 
 ## Level, class and weapon: what a feat asks of whoever learns or readies it ("" when met).
@@ -396,7 +396,7 @@ static func requirement_block(h: GameHeir, id: String) -> String:
 		return why
 	var kinds: Array = requires(id).get("weapon", [])
 	if not kinds.is_empty() and weapon_kind(held_weapon(h)) not in kinds:
-		return "Needs %s in hand." % weapon_text(kinds)
+		return GameMessages.text("life", "needs_in_hand", {"weapon": weapon_text(kinds)})
 	return ""
 
 
@@ -404,10 +404,10 @@ static func requirement_block(h: GameHeir, id: String) -> String:
 static func rank_block(h: GameHeir, id: String) -> String:
 	var req := requires(id)
 	if h.level < int(req.get("min_level", 1)):
-		return "Needs level %s." % GameText.num(int(req.get("min_level", 1)))
+		return GameMessages.text("life", "needs_level", {"level": GameText.num(int(req.get("min_level", 1)))})
 	var classes: Array = req.get("classes", [])
 	if not _class_ok(h.class_id, classes):
-		return "Taught only to a %s." % classes_text(classes)
+		return GameMessages.text("life", "taught_only", {"classes": classes_text(classes)})
 	return ""
 
 
@@ -417,7 +417,7 @@ static func requirement_parts(id: String) -> Array:
 	var out: Array = ["Level %s" % GameText.num(int(req.get("min_level", 1)))]
 	if not (req.get("weapon", []) as Array).is_empty():
 		var w := weapon_text(req["weapon"])
-		out.append("%s in hand" % (w.left(1).to_upper() + w.substr(1)))
+		out.append(GameMessages.text("life", "in_hand", {"weapon": w.left(1).to_upper() + w.substr(1)}))
 	if not (req.get("classes", []) as Array).is_empty():
 		out.append(classes_text(req["classes"]))
 	if not (req.get("biomes", []) as Array).is_empty():
@@ -436,12 +436,12 @@ static func use_block(u: GameHeir, id: String, biomes: Array, max_hp: int = -1) 
 static func gear_block(u: GameHeir, id: String, biomes: Array) -> String:
 	var f := def(id)
 	if f.is_empty():
-		return "No such feat."
+		return GameMessages.text("life", "no_such_feat")
 	var kinds: Array = f.get("requires", {}).get("weapon", [])
 	if not kinds.is_empty() and weapon_kind(held_weapon(u)) not in kinds:
-		return "Needs %s in hand." % weapon_text(kinds)
+		return GameMessages.text("life", "needs_in_hand", {"weapon": weapon_text(kinds)})
 	if not terrain_ok(id, biomes):
-		return "Needs %s." % str(f.get("terrain", "other ground"))
+		return GameMessages.text("life", "needs_terrain", {"terrain": str(f.get("terrain", GameMessages.text("life", "other_ground")))})
 	return ""
 
 
@@ -449,7 +449,7 @@ static func gear_block(u: GameHeir, id: String, biomes: Array) -> String:
 static func hurt_block(u: GameHeir, id: String, max_hp: int = -1) -> String:
 	var hp := hp_cost(u, id, max_hp)
 	if hp > 0 and u.hp <= hp:
-		return "Too hurt: it costs %s HP." % GameText.num(hp)
+		return GameMessages.text("life", "too_hurt", {"hp": GameText.num(hp)})
 	return ""
 
 
@@ -459,26 +459,26 @@ static func hurt_block(u: GameHeir, id: String, max_hp: int = -1) -> String:
 ## quiet right after a rest, and never in the middle of a fight.
 static func manage_block(d: GameDynasty) -> String:
 	if d.state != "life":
-		return "Only a living heir can train feats."
+		return GameMessages.text("life", "only_living")
 	if d.battle != null:
-		return "Not in the middle of a fight."
+		return GameMessages.text("life", "not_in_fight")
 	if d.world.is_town() or d.heir.downtime:
 		return ""
-	return "%s is no place to drill feats. Change them in a town or right after a rest." % d.world.here().get("name", "This")
+	return GameMessages.text("life", "no_place_drill", {"place": d.world.here().get("name", GameMessages.text("life", "this_place"))})
 
 
 ## Why the heir cannot learn a feat, wherever they stand ("" if they can).
 static func learn_block(h: GameHeir, id: String) -> String:
 	var f := def(id)
 	if f.is_empty():
-		return "No such feat."
+		return GameMessages.text("life", "no_such_feat")
 	if id in h.known_feats:
-		return "%s already knows %s." % [h.name, f["name"]]
+		return GameMessages.text("life", "already_knows", {"name": h.name, "feat": f["name"]})
 	var why := requirement_block(h, id)
 	if why != "":
 		return why
 	if points(h) < cost(id):
-		return "%s costs %d feat point%s; %s has %s." % [f["name"], cost(id), "" if cost(id) == 1 else "s", h.name, GameText.num(h.feat_points)]
+		return GameMessages.text("life", "costs_points_one" if cost(id) == 1 else "costs_points_many", {"feat": f["name"], "n": int(cost(id)), "name": h.name, "points": GameText.num(h.feat_points)})
 	return ""
 
 
@@ -486,13 +486,13 @@ static func learn_block(h: GameHeir, id: String) -> String:
 static func equip_block(h: GameHeir, id: String) -> String:
 	var f := def(id)
 	if f.is_empty():
-		return "No such feat."
+		return GameMessages.text("life", "no_such_feat")
 	if id not in h.known_feats:
-		return "%s has not learned %s." % [h.name, f["name"]]
+		return GameMessages.text("life", "not_learned", {"name": h.name, "feat": f["name"]})
 	if id in h.equipped_feats:
-		return "%s is already readied." % f["name"]
+		return GameMessages.text("life", "already_readied", {"feat": f["name"]})
 	if h.equipped_feats.size() >= slots(h):
-		return "All %d feat slots are full. Set one aside first." % slots(h)
+		return GameMessages.text("life", "slots_full", {"n": int(slots(h))})
 	return requirement_block(h, id)
 
 
@@ -510,8 +510,8 @@ static func learn(d: GameDynasty, id: String) -> String:
 	var readied := equip_block(h, id) == ""
 	if readied:
 		h.equipped_feats.append(id)
-	var text := "%s learns %s%s (%s feat point%s left)." % [h.name, feat_name(id), " and readies it" if readied else "",
-		GameText.num(h.feat_points), "" if h.feat_points == 1 else "s"]
+	var text := GameMessages.text("life", "learns_one" if h.feat_points == 1 else "learns_many", {"name": h.name, "feat": feat_name(id),
+		"readied": GameMessages.text("life", "and_readies") if readied else "", "points": GameText.num(h.feat_points)})
 	d._say(text)
 	return text
 
@@ -524,7 +524,7 @@ static func equip(d: GameDynasty, id: String) -> String:
 	if why != "":
 		return why
 	d.heir.equipped_feats.append(id)
-	var text := "%s readies %s." % [d.heir.name, feat_name(id)]
+	var text := GameMessages.text("life", "readies", {"name": d.heir.name, "feat": feat_name(id)})
 	d._say(text)
 	return text
 
@@ -535,11 +535,11 @@ static func unequip(d: GameDynasty, id: String) -> String:
 	if why != "":
 		return why
 	if def(id).is_empty():
-		return "No such feat."
+		return GameMessages.text("life", "no_such_feat")
 	if id not in d.heir.equipped_feats:
-		return "%s is not readied." % feat_name(id)
+		return GameMessages.text("life", "not_readied", {"feat": feat_name(id)})
 	d.heir.equipped_feats.erase(id)
-	var text := "%s sets %s aside." % [d.heir.name, feat_name(id)]
+	var text := GameMessages.text("life", "sets_aside", {"name": d.heir.name, "feat": feat_name(id)})
 	d._say(text)
 	return text
 
@@ -595,10 +595,10 @@ static func scaling_text(id: String) -> String:
 	var parts: Array = []
 	for k in ["str", "agi", "mag"]:
 		if float(sc.get(k, 0.0)) > 0.0:
-			parts.append("%s x%s" % [k.to_upper(), _num(float(sc[k]))])
+			parts.append(GameMessages.text("life", "scale_term", {"stat": GameEvents.attr_label(k), "n": _num(float(sc[k]))}))
 	if float(sc.get("weapon_tier", 0.0)) > 0.0:
-		parts.append("weapon +%s a tier" % _pct(float(sc["weapon_tier"])))
-	return ", ".join(PackedStringArray(parts))
+		parts.append(GameMessages.text("life", "weapon_tier", {"pct": _pct(float(sc["weapon_tier"]))}))
+	return GameMessages.text("life", "list_comma").join(PackedStringArray(parts))
 
 
 ## What a party or self effect does, from its status: "the party: +25% damage (3 turns)".
@@ -607,18 +607,18 @@ static func _boon_text(st: Dictionary) -> String:
 	var pot := float(st.get("potency", sd.get("default_potency", 0.0)))
 	var parts: Array = []
 	if sd.get("draws", false):
-		parts.append("every foe comes for you")
+		parts.append(GameMessages.text("life", "draws"))
 	if sd.get("absorb", false):
-		parts.append("a ward of %s max HP" % _pct(pot))
+		parts.append(GameMessages.text("life", "ward", {"pct": _pct(pot)}))
 	var mods: Dictionary = sd.get("mods", {})
-	var words := {"damage_dealt": "damage", "damage_taken": "damage taken", "dodge": "dodge", "crit": "crit"}
+	var words := {"damage_dealt": GameMessages.text("life", "word_damage"), "damage_taken": GameMessages.text("life", "word_damage_taken"), "dodge": GameMessages.text("life", "word_dodge"), "crit": GameMessages.text("life", "word_crit")}
 	for key in words:
 		if mods.has(key):
 			var v := float(mods[key]) * pot
-			parts.append("%s%s %s" % ["+" if v >= 0.0 else "-", _pct(absf(v)), words[key]])
+			parts.append(GameMessages.text("life", "mod_term", {"sign": "+" if v >= 0.0 else "-", "pct": _pct(absf(v)), "word": words[key]}))
 	var turns := int(st.get("turns", sd.get("default_turns", 1)))
-	var who := "the party: " if str(st.get("on", "")) == "party" else ""
-	return "%s%s (%d turn%s)" % [who, ", ".join(PackedStringArray(parts)), turns, "" if turns == 1 else "s"]
+	var who := GameMessages.text("life", "the_party") if str(st.get("on", "")) == "party" else ""
+	return GameMessages.text("life", "boon_turns_one" if turns == 1 else "boon_turns_many", {"who": who, "parts": GameMessages.text("life", "list_comma").join(PackedStringArray(parts)), "n": turns})
 
 
 ## One line on what a feat does: damage and area, effects, and its price in turns and HP.
@@ -634,11 +634,11 @@ static func describe(id: String) -> String:
 		parts.append(dmg)
 	var w: Dictionary = f.get("vs_wounded", {})
 	if not w.is_empty():
-		parts.append("x%s on a foe under %s HP" % [_num(float(w["mult"]) * float(f.get("mult", 1.0))), _pct(float(w["below"]))])
+		parts.append(GameMessages.text("life", "vs_wounded", {"mult": _num(float(w["mult"]) * float(f.get("mult", 1.0))), "below": _pct(float(w["below"]))}))
 	if float(f.get("crit_bonus", 0.0)) > 0.0:
-		parts.append("+%s crit chance" % _pct(float(f["crit_bonus"])))
+		parts.append(GameMessages.text("life", "crit_chance", {"pct": _pct(float(f["crit_bonus"]))}))
 	if float(f.get("pierce", 0.0)) > 0.0:
-		parts.append("ignores %s of armour" % _pct(float(f["pierce"])))
+		parts.append(GameMessages.text("life", "ignores_armour", {"pct": _pct(float(f["pierce"]))}))
 	var foes: Array = []
 	for st in f.get("statuses", []):
 		if str(st.get("on", "target")) == "target":
@@ -646,15 +646,15 @@ static func describe(id: String) -> String:
 		else:
 			parts.append(_boon_text(st))
 	if not foes.is_empty():
-		var who := " on every foe" if GameCombat.shape(f) == "all" and float(f.get("mult", 0.0)) <= 0.0 else ""
+		var who := GameMessages.text("life", "on_every_foe") if GameCombat.shape(f) == "all" and float(f.get("mult", 0.0)) <= 0.0 else ""
 		parts.append(GameCombat.describe({"statuses": foes}).to_lower() + who)
 	if f.has("field"):
 		var stay := int(f["field"].get("turns", 1))
-		parts.append("the ground holds it %d more turn%s" % [stay, "" if stay == 1 else "s"])
-	parts.append("ready again after %d turn%s" % [cooldown(id), "" if cooldown(id) == 1 else "s"] if cooldown(id) > 0 else "no wait")
+		parts.append(GameMessages.text("life", "holds_one" if stay == 1 else "holds_many", {"n": int(stay)}))
+	parts.append(GameMessages.text("life", "ready_again_one" if cooldown(id) == 1 else "ready_again_many", {"n": int(cooldown(id))}) if cooldown(id) > 0 else GameMessages.text("life", "no_wait"))
 	if float(f.get("hp_cost", 0.0)) > 0.0:
-		parts.append("costs %s of max HP" % _pct(float(f["hp_cost"])))
-	var s := ", ".join(PackedStringArray(parts))
+		parts.append(GameMessages.text("life", "costs_hp", {"pct": _pct(float(f["hp_cost"]))}))
+	var s := GameMessages.text("life", "list_comma").join(PackedStringArray(parts))
 	return s if s.begins_with("x") else s.left(1).to_upper() + s.substr(1)
 
 

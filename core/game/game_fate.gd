@@ -4,21 +4,18 @@ extends RefCounted
 
 const SEVERITIES := ["minor", "moderate", "major", "critical"]
 
-## Archetypes a failure can create in the next heir.
+## Archetypes a failure can create in the next heir: the bonus each gives (names and lines in the catalog).
 const ARCHETYPES := {
-	"restorer": {"name": "Restorer", "desc": "Wants back what was lost: +gold, +VIT.", "bonus": {"vit": 0.1}, "gold": 60},
-	"rebel": {"name": "Rebel", "desc": "Does the opposite of their parent: +AGI, +STR.", "bonus": {"agi": 0.1, "str": 0.05}},
-	"inheritor": {"name": "Inheritor", "desc": "Learns fast from past failure: +25% XP.", "bonus": {"xp": 0.25}},
-	"survivor": {"name": "Survivor", "desc": "Trusts no one, stays alive: +15% HP, +DEF.", "bonus": {"hp": 0.15, "vit": 0.05}},
-	"redeemer": {"name": "Redeemer", "desc": "Heals old wounds: sheds one curse, +MAG.", "bonus": {"mag": 0.1}, "purge_curse": true},
-	"successor": {"name": "Successor", "desc": "Keeps what worked: +5% all stats.", "bonus": {"all_stats": 0.05}},
+	"restorer": {"bonus": {"vit": 0.1}, "gold": 60},
+	"rebel": {"bonus": {"agi": 0.1, "str": 0.05}},
+	"inheritor": {"bonus": {"xp": 0.25}},
+	"survivor": {"bonus": {"hp": 0.15, "vit": 0.05}},
+	"redeemer": {"bonus": {"mag": 0.1}, "purge_curse": true},
+	"successor": {"bonus": {"all_stats": 0.05}},
 }
 
-const MILESTONE_LABELS := {
-	"coming_of_age": "Coming of Age", "first_quest": "First Quest", "family_founded": "Family Founded",
-	"midlife": "Midlife", "elder_years": "Elder Years",
-}
-
+## The milestones an heir can pass (their names are in the catalog: milestone_label).
+const MILESTONE_IDS := ["coming_of_age", "first_quest", "family_founded", "midlife", "elder_years"]
 
 ## Fate Values and echo strengths are kept on a 0.0001 grid. Saved JSON prints the nearest short
 ## decimal, which can parse to a neighbouring double, so loading must snap again (see from_dict).
@@ -37,6 +34,58 @@ static func milestone_chance(fate_value: float) -> float:
 
 static func roll_failure(fate_value: float, rng: RandomNumberGenerator) -> bool:
 	return rng.randf() < milestone_chance(fate_value)
+
+
+## The name of an archetype, as the family's chronicle shows it.
+static func archetype_name(id: String) -> String:
+	match id:
+		"restorer":
+			return GameMessages.text("life", "archetype_restorer")
+		"rebel":
+			return GameMessages.text("life", "archetype_rebel")
+		"inheritor":
+			return GameMessages.text("life", "archetype_inheritor")
+		"survivor":
+			return GameMessages.text("life", "archetype_survivor")
+		"redeemer":
+			return GameMessages.text("life", "archetype_redeemer")
+		"successor":
+			return GameMessages.text("life", "archetype_successor")
+	return id
+
+
+## What an archetype does, in a line.
+static func archetype_desc(id: String) -> String:
+	match id:
+		"restorer":
+			return GameMessages.text("life", "archetype_restorer_desc")
+		"rebel":
+			return GameMessages.text("life", "archetype_rebel_desc")
+		"inheritor":
+			return GameMessages.text("life", "archetype_inheritor_desc")
+		"survivor":
+			return GameMessages.text("life", "archetype_survivor_desc")
+		"redeemer":
+			return GameMessages.text("life", "archetype_redeemer_desc")
+		"successor":
+			return GameMessages.text("life", "archetype_successor_desc")
+	return ""
+
+
+## The name of a milestone, as the heir's journal shows it.
+static func milestone_label(id: String) -> String:
+	match id:
+		"coming_of_age":
+			return GameMessages.text("life", "milestone_coming_of_age")
+		"first_quest":
+			return GameMessages.text("life", "milestone_first_quest")
+		"family_founded":
+			return GameMessages.text("life", "milestone_family_founded")
+		"midlife":
+			return GameMessages.text("life", "milestone_midlife")
+		"elder_years":
+			return GameMessages.text("life", "milestone_elder_years")
+	return id
 
 
 static func roll_severity(fate_value: float, rng: RandomNumberGenerator) -> String:

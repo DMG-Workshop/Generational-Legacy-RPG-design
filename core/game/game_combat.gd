@@ -406,18 +406,18 @@ static func shape_text(ab: Dictionary) -> String:
 	var t: Dictionary = ab.get("target", {})
 	match shape(ab):
 		"burst":
-			return ("Around %s" if around_self(ab) else "Burst %s") % _num(float(t.get("radius", 3.0)))
+			return GameMessages.text("life", "around_radius" if around_self(ab) else "burst_radius", {"radius": _num(float(t.get("radius", 3.0)))})
 		"cone":
-			return "Cone %d°" % int(t.get("angle", 60))
+			return GameMessages.text("life", "cone_angle", {"angle": int(int(t.get("angle", 60)))})
 		"line":
-			return "Line"
+			return GameMessages.text("life", "shape_line")
 		"all":
-			return "All foes"
+			return GameMessages.text("life", "all_foes")
 		"party":
-			return "Party"
+			return GameMessages.text("life", "shape_party")
 		"self":
-			return "Self"
-	return "Single"
+			return GameMessages.text("life", "shape_self")
+	return GameMessages.text("life", "shape_single")
 
 
 static func _num(v: float) -> String:
@@ -430,9 +430,9 @@ static func describe(ab: Dictionary) -> String:
 	var mult := float(ab.get("mult", 0.0))
 	if mult > 0.0:
 		var el := str(ab.get("element", ""))
-		var dmg := "x%s %sdamage" % [_num(mult), (element_name(el) + " ").to_lower() if el != "" else ""]
+		var dmg := GameMessages.text("life", "damage_term", {"mult": _num(mult), "element": (element_name(el) + " ").to_lower() if el != "" else ""})
 		if int(ab.get("hits", 1)) > 1:
-			dmg = "%d hits of x%s" % [int(ab["hits"]), _num(mult)]
+			dmg = GameMessages.text("life", "hits_of", {"hits": int(int(ab["hits"])), "mult": _num(mult)})
 		match shape(ab):
 			"burst":
 				dmg += " to foes within %s paces of %s" % [_num(float(ab["target"].get("radius", 3.0))), "the user" if around_self(ab) else "the target"]
@@ -446,22 +446,22 @@ static func describe(ab: Dictionary) -> String:
 	if ab.has("pct_max_hp"):
 		parts.append("heals %s%d%% of max HP" % ["the party " if ab.get("party", false) else "", int(round(float(ab["pct_max_hp"]) * 100.0))])
 	if ab.get("cleanse", false):
-		parts.append("removes harmful effects")
+		parts.append(GameMessages.text("life", "removes_harmful"))
 	if ab.get("mana", false):
-		parts.append("restores %d%% MP" % int(round(float(setting("mana_tap_pct")) * 100.0)))
+		parts.append(GameMessages.text("life", "restores_mp", {"pct": int(int(round(float(setting("mana_tap_pct")) * 100.0)))}))
 	if float(ab.get("drain", 0.0)) > 0.0:
-		parts.append("drains %d%%" % int(round(float(ab["drain"]) * 100.0)))
+		parts.append(GameMessages.text("life", "drains", {"pct": int(int(round(float(ab["drain"]) * 100.0)))}))
 	for st in ab.get("statuses", []):
 		var def := status_def(str(st["id"]))
 		var chance := float(st.get("chance", 1.0))
 		var who: String = {"party": " on the party", "self": " on self"}.get(str(st.get("on", "target")), "")
 		var turns := int(st.get("turns", def.get("default_turns", 1)))
-		var odds := "" if chance >= 0.999 else "%d%% " % int(round(chance * 100.0))
+		var odds := "" if chance >= 0.999 else GameMessages.text("life", "chance_pct", {"pct": int(int(round(chance * 100.0)))})
 		var what := str(def.get("name", st["id"])).to_lower()
 		if str(def.get("basis", "")) == "max_hp" and not def.get("harmful", false):   # how much a ward holds or regrowth mends
 			var pct := int(round(float(st.get("potency", def.get("default_potency", 0.0))) * 100.0))
 			what += (" of %d%% max HP" if def.get("absorb", false) else " %d%% max HP a turn") % pct
-		parts.append("%s%s%s (%d turn%s)" % [odds, what, who, turns, "" if turns == 1 else "s"])
+		parts.append(GameMessages.text("life", "effect_turns_one" if turns == 1 else "effect_turns_many", {"odds": odds, "what": what, "who": who, "turns": int(turns)}))
 	var s := ", ".join(parts)
 	if s == "":
 		return str(ab.get("text", ""))

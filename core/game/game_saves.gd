@@ -183,7 +183,7 @@ static func restore_into(slot: int, json: String) -> String:
 	var why := why_no_restore(slot)
 	if why != "":
 		return why
-	return "" if write_atomic(path_for(slot), json) else "The backup could not be written to this slot."
+	return "" if write_atomic(path_for(slot), json) else GameMessages.text("life", "backup_not_written")
 
 
 # ---------------------------------------------------------------- backups as text
@@ -217,7 +217,7 @@ static func export_file(slot: int, path: String) -> Dictionary:
 		return {"ok": false, "error": why if why != "" else "Nothing in this slot can be saved to a file."}
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
-		return {"ok": false, "error": "The file could not be written to %s." % path}
+		return {"ok": false, "error": GameMessages.text("life", "file_not_written", {"path": path})}
 	f.store_string(text)
 	f.close()
 	return {"ok": true, "error": ""}
@@ -227,12 +227,12 @@ static func export_file(slot: int, path: String) -> Dictionary:
 ## be opened or is too big to be a save.
 static func import_file(path: String) -> Dictionary:
 	if path == "" or not FileAccess.file_exists(path):
-		return {"ok": false, "error": "That file is not there.", "json": "", "house": "", "gen": 0}
+		return {"ok": false, "error": GameMessages.text("life", "file_not_there"), "json": "", "house": "", "gen": 0}
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
-		return {"ok": false, "error": "That file could not be opened.", "json": "", "house": "", "gen": 0}
+		return {"ok": false, "error": GameMessages.text("life", "file_not_opened"), "json": "", "house": "", "gen": 0}
 	if f.get_length() > MAX_FILE_BYTES:
-		return {"ok": false, "error": "That file is too big to be a save.", "json": "", "house": "", "gen": 0}
+		return {"ok": false, "error": GameMessages.text("life", "file_too_big"), "json": "", "house": "", "gen": 0}
 	return import_text(f.get_as_text())
 
 

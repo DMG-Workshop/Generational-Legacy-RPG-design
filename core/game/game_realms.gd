@@ -199,7 +199,7 @@ static func on_birth(e: Dictionary, mother: Dictionary, father: Dictionary) -> A
 	var names: Array = []
 	for m in e["marks"]:
 		names.append(str(data()["marks"][m]["name"]))
-	return [text("born_marked", {"name": str(e["name"]), "marks": ", ".join(names)})]
+	return [text("born_marked", {"name": str(e["name"]), "marks": GameMessages.text("life", "list_comma").join(names)})]
 
 
 ## Whether an unstable mark is awake in a year: the same answer for the same seed, year, creature and mark.

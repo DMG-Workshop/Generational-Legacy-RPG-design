@@ -69,12 +69,12 @@ static func objective_text(q: Dictionary) -> String:
 	match kind(q):
 		"kill":
 			var names: Array = targets(q).map(func(t): return str(_creature(t).get("name", t)))
-			var where := " in %s" % place_name(str(o["place"])) if o.has("place") else ""
-			return "Slay %s x%d%s" % [" or ".join(names), goal(q), where]
+			var where := GameMessages.text("life", "in_place", {"place": place_name(str(o["place"]))}) if o.has("place") else ""
+			return GameMessages.text("life", "slay", {"names": GameMessages.text("life", "list_or").join(names), "goal": int(goal(q)), "where": where})
 		"visit":
-			return "Reach %s" % place_name(str(o.get("target", "")))
+			return GameMessages.text("life", "reach_place", {"place": place_name(str(o.get("target", "")))})
 		"flag":
-			return "See it done: %s" % str(o.get("flag", "")).capitalize()
+			return GameMessages.text("life", "see_it_done", {"flag": str(o.get("flag", "")).capitalize()})
 	return ""
 
 
@@ -94,14 +94,14 @@ static func reward_text(d: GameDynasty, q: Dictionary) -> String:
 	var g := reward_gold(d, q)
 	var x := reward_xp(d, q)
 	if g > 0:
-		parts.append("%s gold" % GameText.num(g))
+		parts.append(GameMessages.text("life", "gold_amount", {"amount": GameText.num(g)}))
 	if x > 0:
-		parts.append("%s XP" % GameText.num(x))
+		parts.append(GameMessages.text("life", "quest_xp", {"amount": GameText.num(x)}))
 	for it in q.get("reward", {}).get("items", []):
 		parts.append(str(GameItems.item_def(it).get("name", it)))
 	if q.get("reward", {}).has("echo"):
 		parts.append("renown")
-	return ", ".join(parts) if not parts.is_empty() else "thanks"
+	return GameMessages.text("life", "list_comma").join(parts) if not parts.is_empty() else GameMessages.text("life", "thanks")
 
 
 # ---------------------------------------------------------------- the house's log
@@ -168,19 +168,19 @@ func postings(d: GameDynasty, town: String) -> Array:
 func accept_block(d: GameDynasty, id: String) -> String:
 	var q := def(id)
 	if q.is_empty():
-		return "No such notice."
+		return GameMessages.text("life", "no_such_notice")
 	if is_active(id):
-		return "The house has already taken this up."
+		return GameMessages.text("life", "already_taken")
 	if d.world.location != q["giver"] or not d.world.has_service("board"):
-		return "This notice hangs in %s." % place_name(q["giver"])
+		return GameMessages.text("life", "notice_hangs", {"place": place_name(q["giver"])})
 	if not is_posted(d, q):
-		return "This notice is not posted now."
+		return GameMessages.text("life", "not_posted")
 	var max_active := int(GameData.bal("quest_max_active"))
 	if active.size() >= max_active:
-		return "The house already carries %d obligations." % max_active
+		return GameMessages.text("life", "carries", {"max": int(max_active)})
 	var lv := int(q.get("requires", {}).get("min_level", 1))
 	if d.heir.level < lv:
-		return "Needs level %d." % lv
+		return GameMessages.text("life", "needs_level", {"level": int(lv)})
 	return ""
 
 
@@ -191,12 +191,12 @@ func accept(d: GameDynasty, id: String) -> Array:
 	var q := def(id)
 	var e := {"id": id, "progress": 0, "gen": d.gen, "by": d.heir.name}
 	active.append(e)
-	var msgs: Array = ["%s takes down the notice: %s. %s." % [d.heir.name, q["name"], objective_text(q)]]
+	var msgs: Array = [GameMessages.text("life", "takes_notice", {"name": d.heir.name, "title": q["name"], "objective": objective_text(q)})]
 	# A deed the house has already done counts at once.
 	var o: Dictionary = q["objective"]
 	if (kind(q) == "flag" and d.flags.has(o.get("flag", ""))) or (kind(q) == "visit" and d.world.location == o.get("target", "")):
 		e["progress"] = 1
-		msgs.append("It is already done. Claim the reward here.")
+		msgs.append(GameMessages.text("life", "already_done"))
 	for m in msgs:
 		d._say(m)
 	return msgs
@@ -205,10 +205,10 @@ func accept(d: GameDynasty, id: String) -> Array:
 func abandon(d: GameDynasty, id: String) -> Array:
 	var e := entry(id)
 	if e.is_empty():
-		return ["The house has no such obligation."]
+		return [GameMessages.text("life", "no_such_obligation")]
 	active.erase(e)
 	var q := def(id)
-	var msg := "%s gives up %s. The notice goes back up in %s." % [d.heir.name, q.get("name", id), place_name(q.get("giver", ""))]
+	var msg := GameMessages.text("life", "gives_up", {"name": d.heir.name, "title": q.get("name", id), "place": place_name(q.get("giver", ""))})
 	d._say(msg)
 	return [msg]
 
@@ -216,12 +216,12 @@ func abandon(d: GameDynasty, id: String) -> Array:
 func turn_in(d: GameDynasty, id: String) -> Array:
 	var e := entry(id)
 	if e.is_empty():
-		return ["The house has no such obligation."]
+		return [GameMessages.text("life", "no_such_obligation")]
 	var q := def(id)
 	if not is_complete(e):
-		return ["%s is not finished yet." % q["name"]]
+		return [GameMessages.text("life", "not_finished", {"title": q["name"]})]
 	if d.world.location != q["giver"]:
-		return ["%s is paid at the board in %s." % [q["name"], place_name(q["giver"])]]
+		return [GameMessages.text("life", "paid_at_board", {"title": q["name"], "place": place_name(q["giver"])})]
 	active.erase(e)
 	record[id] = {"times": times_done(id) + 1, "gen": d.gen}
 	if id not in done:
@@ -230,18 +230,18 @@ func turn_in(d: GameDynasty, id: String) -> Array:
 	var gold := reward_gold(d, q)
 	var xp := reward_xp(d, q)
 	d.heir.gold += gold
-	var msgs: Array = ["Quest complete: %s. +%s gold, +%s XP." % [q["name"], GameText.num(gold), GameText.num(xp)]]
+	var msgs: Array = [GameMessages.text("life", "quest_complete", {"title": q["name"], "gold": GameText.num(gold), "xp": GameText.num(xp)})]
 	if q.has("outcome"):
 		msgs.append(str(q["outcome"]))
 	if d.heir.gain_xp(xp) > 0:
-		msgs.append("Level up! %s is now level %s." % [d.heir.name, GameText.num(d.heir.level)])
+		msgs.append(GameMessages.text("life", "level_up_named", {"name": d.heir.name, "level": GameText.num(d.heir.level)}))
 	for it in r.get("items", []):
 		msgs.append(_reward_item(d, str(it)))
 	var echo: Dictionary = r.get("echo", {})
 	if not echo.is_empty():
 		var text := str(echo.get("text", "{heir} answered the board")).format({"heir": d.heir.name})
 		d._add_echo("glory", "quest_" + id, text, float(echo.get("strength", 0.05)))
-		msgs.append("The tale spreads: %s." % text)
+		msgs.append(GameMessages.text("life", "tale_spreads", {"text": text}))
 	for m in msgs:
 		d._say(m)
 	# Flags last, so any quest they complete reports after this one.
@@ -260,13 +260,13 @@ static func _reward_item(d: GameDynasty, id: String) -> String:
 		return d.give_item(id)
 	var g := maxi(1, int(round(float(GameItems.item_def(id).get("price", 0)) * GameData.enemy_scale(d.gen) * float(GameData.bal("event_duplicate_item_gold")))))
 	h.gold += g
-	return "%s already has the %s; the board pays %s gold for it instead." % [h.name, GameItems.item_name(id), GameText.num(g)]
+	return GameMessages.text("life", "already_has_item", {"name": h.name, "item": GameItems.item_name(id), "price": GameText.num(g)})
 
 
 ## The hooks below journal at once, or append to `out` when the caller journals its own lines
 ## first (a travel or battle line must come before the quest it finished).
 func _complete_note(d: GameDynasty, q: Dictionary, out: Variant) -> void:
-	var line := "Quest done: %s. Report to the notice board in %s." % [q["name"], place_name(q["giver"])]
+	var line := GameMessages.text("life", "quest_done", {"title": q["name"], "place": place_name(q["giver"])})
 	if out is Array:
 		out.append(line)
 	else:
@@ -310,11 +310,11 @@ func on_succession(d: GameDynasty, msgs: Array) -> void:
 		var q := def(e["id"])
 		if not is_complete(e) and not achievable(d, q):
 			active.erase(e)
-			msgs.append("The notice for %s has rotted on the board in %s: none of that quarry is left." % [q["name"], place_name(q["giver"])])
+			msgs.append(GameMessages.text("life", "rotted", {"title": q["name"], "place": place_name(q["giver"])}))
 	if active.is_empty():
 		return
-	var names: Array = active.map(func(e): return "%s (%s)" % [def(e["id"])["name"], place_name(def(e["id"])["giver"])])
-	msgs.append("%s inherits the house's obligations: %s." % [d.heir.name, ", ".join(names)])
+	var names: Array = active.map(func(e): return GameMessages.text("life", "notice_at", {"title": def(e["id"])["name"], "place": place_name(def(e["id"])["giver"])}))
+	msgs.append(GameMessages.text("life", "inherits", {"name": d.heir.name, "names": GameMessages.text("life", "list_comma").join(names)}))
 
 
 # ---------------------------------------------------------------- autopilot

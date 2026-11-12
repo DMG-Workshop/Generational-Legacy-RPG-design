@@ -25,7 +25,7 @@ static func readable(d: Dictionary) -> bool:
 static func upgrade(d: Dictionary) -> String:
 	var v := of(d)
 	if v > CURRENT:
-		return "This save comes from a newer version of the game. Update the game to play it."
+		return GameMessages.text("life", "replay_newer")
 	while v < CURRENT:
 		match v:
 			1:

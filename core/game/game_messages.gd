@@ -20,6 +20,16 @@ static func line(key: String, vars: Dictionary = {}) -> String:
 	return fill(GameLocale.text("battle", key, str(lines[key])), vars, key)
 
 
+## The text for `key` of another catalog (`life`: data/text/life.json), with `vars` filled in. The same rules as `line`.
+static func text(catalog: String, key: String, vars: Dictionary = {}) -> String:
+	GameData.load_all()
+	var lines: Dictionary = GameData.life.get("lines", {}) if catalog == "life" else {}
+	if not lines.has(key):
+		problems.append("no message '%s' in %s" % [key, catalog])
+		return "[%s]" % key
+	return fill(GameLocale.text(catalog, key, str(lines[key])), vars, key)
+
+
 ## Fills {placeholder}s of `template` from `vars`; `where` names the message for the problem list.
 static func fill(template: String, vars: Dictionary, where: String = "") -> String:
 	if _placeholder == null:
