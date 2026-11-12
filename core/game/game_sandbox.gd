@@ -17,6 +17,7 @@ var companions: Array = []         # GameCompanions agents
 var tick := 0
 var next_uid := 1
 var log: Array = []                # {kind, text} lines for the screen, oldest first
+var route: Array = []              # tiles still to walk to (set by set_route), the next one first
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
 
 
@@ -117,6 +118,37 @@ func step(ticks: int = 1) -> void:
 		var keep_lines := int(setting("log_lines"))
 		if log.size() > keep_lines:
 			log = log.slice(log.size() - keep_lines)
+
+
+## Plans a walk from the heir to a tile of the open world over the ground as it is now (GamePath, a walker). Sets the
+## route when found and returns {ok, why, steps}; the heir then walks it one tile at a time with `walk_one`.
+func set_route(target: Vector2i) -> Dictionary:
+	route = []
+	if target == heir:
+		return {"ok": true, "why": "", "steps": 0}
+	if not GameWorldGen.in_bounds(target.x, target.y):
+		return {"ok": false, "why": _text("edge"), "steps": 0}
+	var found := GamePath.find(GamePath.world_ground(d), Vector3i(heir.x, -1, heir.y), Vector3i(target.x, -1, target.y),
+		"walker", int(setting("route_nodes")))
+	if not found["found"]:
+		return {"ok": false, "why": _text("no_route"), "steps": 0}
+	var path: Array = found["path"]
+	for i in range(1, path.size()):
+		route.append(Vector2i(path[i].x, path[i].z))
+	return {"ok": true, "why": "", "steps": route.size()}
+
+
+## The heir takes the next tile of the route. False when there is no route or the way is now blocked (the route is dropped).
+func walk_one() -> bool:
+	if route.is_empty():
+		return false
+	var next: Vector2i = route[0]
+	var r := move(next.x - heir.x, next.y - heir.y)
+	if not r["ok"]:
+		route = []
+		return false
+	route.pop_front()
+	return true
 
 
 ## Gives a companion an order (`GameCompanions.set_order`): {ok, text}.

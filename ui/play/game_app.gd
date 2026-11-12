@@ -17,6 +17,7 @@ const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const SuccessionScreen := preload("res://ui/play/succession_screen.gd")
 const EndingScreen := preload("res://ui/play/ending_screen.gd")
+const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
 
 var dynasty: GameDynasty
 var slot := 1   # the save slot in use (GameSaves); GameDynasty.save_path is its file
@@ -136,6 +137,13 @@ func continue_game() -> void:
 		return
 	dynasty = d
 	show_state()
+
+
+## The open world (roadmap items 39 and 51): the sandbox screen over the life. Back returns to the state's screen.
+func show_sandbox() -> void:
+	var s := SandboxScreen.new()
+	s.app = self
+	_swap(s)
 
 
 ## Show the screen that matches the dynasty's current state.
