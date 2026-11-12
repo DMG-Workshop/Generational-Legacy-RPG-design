@@ -125,16 +125,118 @@ func ground_height(x: float, z: float) -> int:
 	return clampi(1 + int(floor(2.2 + 1.8 * sin(x * 0.55) * cos(z * 0.45))), 1, 4)
 
 
+## Each block's top and sides come from a small atlas of hand-drawn-looking surfaces: four surfaces (grass, earth,
+## stone, snow) by eight variants, so no two neighbouring blocks match. A block's variant and tint come from its own
+## position through an integer mix (never Godot's global dice), so the same field is drawn every run.
+const ATLAS_COLS := 8
+const ATLAS_ROWS := 4
+const CELL := 16
+
+
+static func _mix(a: int, b: int) -> int:
+	var h := (a * 374761393 + b * 668265263) & 0x7fffffff
+	h = ((h ^ (h >> 13)) * 1274126177) & 0x7fffffff
+	return h ^ (h >> 16)
+
+
+static func _unit(h: int) -> float:
+	return float(h & 0xffff) / 65535.0
+
+
+## One variant of one surface, drawn pixel by pixel in greys (the block's colour is multiplied in by the shader), so
+## the surface reads as stone, earth, grass or snow whatever the tint.
+func _draw_cell(img: Image, col: int, row: int) -> void:
+	var ox := col * CELL
+	var oy := row * CELL
+	var seed_v := _mix(col + 1, row * 31 + 7)
+	var base := 0.80 + 0.10 * _unit(_mix(seed_v, 3))
+	for y in CELL:
+		for x in CELL:
+			var h := _mix(seed_v + x * 97, y * 131 + 11)
+			var v := base + (_unit(h) - 0.5) * 0.10   # fine grain, different in every variant
+			img.set_pixel(ox + x, oy + y, Color(v, v, v, 1.0))
+	match row:
+		0:   # grass: darker tufts and a few light blades, sparse
+			for i in 14:
+				var tx := int(floor(_unit(_mix(seed_v, 40 + i) ) * (CELL - 1)))
+				var ty := int(floor(_unit(_mix(seed_v, 80 + i) ) * (CELL - 1)))
+				img.set_pixel(ox + tx, oy + ty, Color(base - 0.22, base - 0.22, base - 0.22))
+				if ty > 0:
+					img.set_pixel(ox + tx, oy + ty - 1, Color(base + 0.08, base + 0.08, base + 0.08))
+		1:   # earth: flecks of pebble and a darker patch in some variants
+			for i in 9:
+				var tx := int(floor(_unit(_mix(seed_v, 120 + i)) * (CELL - 1)))
+				var ty := int(floor(_unit(_mix(seed_v, 160 + i)) * (CELL - 1)))
+				var c := base + (0.12 if i % 3 == 0 else -0.18)
+				img.set_pixel(ox + tx, oy + ty, Color(c, c, c))
+			if seed_v % 3 == 0:
+				for y in range(5, 10):
+					for x in range(4, 9):
+						var c2 := base - 0.12
+						img.set_pixel(ox + x, oy + y, Color(c2, c2, c2))
+		2:   # stone: a crack or two, and paler chips
+			var cx := 2 + int(_unit(_mix(seed_v, 200)) * 10)
+			for k in 6:
+				var y0 := (k * 3 + int(_unit(_mix(seed_v, 210 + k)) * 3)) % CELL
+				img.set_pixel(ox + clampi(cx + k % 3, 0, CELL - 1), oy + y0, Color(base - 0.3, base - 0.3, base - 0.3))
+			for i in 6:
+				var tx2 := int(floor(_unit(_mix(seed_v, 260 + i)) * (CELL - 1)))
+				var ty2 := int(floor(_unit(_mix(seed_v, 300 + i)) * (CELL - 1)))
+				img.set_pixel(ox + tx2, oy + ty2, Color(base + 0.14, base + 0.14, base + 0.14))
+		3:   # snow: a few bright glints and soft shadow hollows
+			for i in 5:
+				var tx3 := int(floor(_unit(_mix(seed_v, 340 + i)) * (CELL - 1)))
+				var ty3 := int(floor(_unit(_mix(seed_v, 380 + i)) * (CELL - 1)))
+				img.set_pixel(ox + tx3, oy + ty3, Color(1.0, 1.0, 1.0))
+			for i in 3:
+				var tx4 := int(floor(_unit(_mix(seed_v, 420 + i)) * (CELL - 1)))
+				var ty4 := int(floor(_unit(_mix(seed_v, 460 + i)) * (CELL - 1)))
+				img.set_pixel(ox + tx4, oy + ty4, Color(base - 0.10, base - 0.10, base - 0.10))
+
+
+func _make_atlas() -> ImageTexture:
+	var img := Image.create(ATLAS_COLS * CELL, ATLAS_ROWS * CELL, false, Image.FORMAT_RGBA8)
+	for row in ATLAS_ROWS:
+		for col in ATLAS_COLS:
+			_draw_cell(img, col, row)
+	return ImageTexture.create_from_image(img)
+
+
+const BLOCK_SHADER := """
+shader_type spatial;
+render_mode cull_back, depth_draw_opaque;
+uniform sampler2D atlas : filter_nearest, repeat_disable;
+uniform vec2 cells = vec2(8.0, 4.0);
+varying vec2 cell_at;
+varying vec4 tint;
+void vertex() {
+	cell_at = INSTANCE_CUSTOM.xy;
+	tint = COLOR;
+}
+void fragment() {
+	vec2 cell = floor(cell_at * cells + vec2(0.5));
+	vec2 uv = (cell + fract(UV)) / cells;
+	vec3 grey = texture(atlas, uv).rgb;
+	ALBEDO = grey * tint.rgb;
+	ROUGHNESS = 1.0;
+	SPECULAR = 0.0;
+}
+"""
+
+
 func _make_field() -> void:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3.ONE
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 1.0
+	var shader := Shader.new()
+	shader.code = BLOCK_SHADER
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	mat.set_shader_parameter("atlas", _make_atlas())
 	mesh.material = mat
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
+	mm.use_custom_data = true
 	mm.mesh = mesh
 	mm.instance_count = GRID * GRID
 	var tops := [Color("#6abf4b"), Color("#a8794a"), Color("#8c8c9a"), Color("#e6e6f0")]   # grass, earth, stone, snow
@@ -144,8 +246,14 @@ func _make_field() -> void:
 			var h := ground_height(gx - GRID / 2.0, gz - GRID / 2.0)
 			var t := Transform3D(Basis().scaled(Vector3(1.0, float(h), 1.0)), Vector3(gx - GRID / 2.0, float(h) * 0.5 - 0.5, gz - GRID / 2.0))
 			mm.set_instance_transform(i, t)
-			var shade := 1.0 - 0.06 * float((gx + gz) % 2)   # a checker, so the pixels' scale is readable
-			mm.set_instance_color(i, (tops[h - 1] as Color) * shade)
+			var r := _mix(gx * 7919 + 13, gz * 104729 + 29)
+			var variant := r % ATLAS_COLS
+			var jitter := 1.0 + (_unit(_mix(r, 5)) - 0.5) * 0.14   # each block's own brightness, a few per cent either way
+			var warm := (_unit(_mix(r, 9)) - 0.5) * 0.06             # and a slight warm or cool drift
+			var c: Color = (tops[h - 1] as Color) * jitter
+			c = Color(c.r * (1.0 + warm), c.g, c.b * (1.0 - warm), 1.0)
+			mm.set_instance_color(i, c)
+			mm.set_instance_custom_data(i, Color(float(variant) / float(ATLAS_COLS) + 0.5 / ATLAS_COLS, float(h - 1) / float(ATLAS_ROWS) + 0.5 / ATLAS_ROWS, 0.0, 0.0))
 	field = MultiMeshInstance3D.new()
 	field.multimesh = mm
 	world.add_child(field)
