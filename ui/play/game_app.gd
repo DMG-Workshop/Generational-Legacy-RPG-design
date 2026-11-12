@@ -11,6 +11,7 @@ const ReportPanel := preload("res://ui/play/report_panel.gd")
 const PadFocus := preload("res://ui/play/pad_focus.gd")
 const GraphicsSettings := preload("res://ui/play/graphics_settings.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const Sound := preload("res://ui/play/sound.gd")
 const TitleScreen := preload("res://ui/play/title_screen.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
@@ -26,6 +27,8 @@ var bg: ColorRect
 var frame: Control
 var hints: Node
 var pad: Node   # menus by gamepad and keyboard (PadFocus)
+var sound: Node   # cues and music (Sound): the screens ask it, it never touches the dynasty
+var _stung := ""   # the death or ending the sting has already played for, so a screen laid out again is quiet
 var safe_override := Rect2i()   # tests and screenshots: a pretend safe area, in window pixels
 var _safe_seen := Rect2i()
 var _safe_check := 0.0
@@ -50,6 +53,8 @@ func _ready() -> void:
 	pad = PadFocus.new()   # before the screens, so a screen's own Escape handling comes first
 	pad.app = self
 	add_child(pad)
+	sound = Sound.new()
+	add_child(sound)
 	frame = Control.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -115,6 +120,8 @@ func show_title() -> void:
 	var s := TitleScreen.new()
 	s.app = self
 	_swap(s)
+	_stung = ""
+	sound.music(Sound.track_for(null))
 
 
 func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "") -> void:
@@ -151,6 +158,18 @@ func show_state() -> void:
 		var l := LifeScreen.new()
 		l.app = self
 		_swap(l)
+	_sound_state()
+
+
+## The music of where the dynasty is (its Age, a fight), and a sting the first time a death or the saga's
+## end is shown. Sound only: nothing here changes the dynasty.
+func _sound_state() -> void:
+	sound.music(Sound.track_for(dynasty))
+	var sting := Sound.sting_for(dynasty.state) if dynasty.battle == null else ""
+	var key := "%s:%d" % [dynasty.state, dynasty.gen] if sting != "" else ""
+	if key != "" and key != _stung:
+		sound.cue(sting)
+	_stung = key
 
 
 func autosave() -> void:
@@ -210,6 +229,13 @@ func set_graphics(id: String) -> void:
 func set_battery_saver(on: bool) -> void:
 	GraphicsSettings.set_battery_saver(on)
 	GraphicsSettings.apply()
+	_relayout()
+
+
+## The menu's Sound effects and Music rows: "off", or a volume step, for `kind` ("sound" or "music").
+func set_sound(kind: String, id: String) -> void:
+	Sound.choose(kind, id)
+	sound.refresh()
 	_relayout()
 
 

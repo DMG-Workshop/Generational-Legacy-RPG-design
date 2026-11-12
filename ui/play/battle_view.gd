@@ -13,6 +13,7 @@ const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const SceneryArt := preload("res://ui/play/scenery_art.gd")
 const FigurePose := preload("res://ui/play/figure_pose.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
+const Sound := preload("res://ui/play/sound.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
 
@@ -1842,6 +1843,7 @@ func _play_all(events: Array) -> void:
 
 func _play_one(ev: Dictionary) -> void:
 	var by := int(ev.get("by", -1))
+	app.sound.event(ev)   # the event's cue, if the data gives it one
 	match ev["type"]:
 		"cast":
 			_lunge(_unit_node(by), 22.0)
@@ -2236,6 +2238,7 @@ func _show_result() -> void:
 	msgs.append_array(GameFinding.after_battle(d, b.result, b.enemies))   # a slain legend may have left its young (the screen asks, the rules do not)
 	hero_label.text = "%s  Lv%s" % [d.heir.name, GameText.num(d.heir.level)]
 	app.autosave()
+	app.sound.cue(Sound.result_cue(b.result))
 	var overlay := ColorRect.new()
 	overlay.z_index = 10   # above the enemy name labels, which sit at z 1
 	overlay.color = Color(0, 0, 0, 0.7)

@@ -1,0 +1,67 @@
+{
+  "note": "Sound and music (roadmap item 15; ui/play/sound.gd, checked by tools/check_data.gd). There are no recorded audio files: every sound is built in code from its description here, once, when first wanted. A sound is `wave` (sine, triangle, square, saw or noise), `notes` (one entry per step: a MIDI note number, 0 for a rest, or a list of numbers for a chord; 69 is the A above middle C), `step` (seconds per entry), `attack` and `release` (seconds each note takes to swell and to die away; together no longer than a step, so every note ends in silence and a looped track joins without a click), `volume` (0 to 1) and an optional `slide` (semitones each note bends by its end). `cues` play once; `tracks` loop and are built at `music_rate`, cues at `rate` (samples a second). `events` maps a battle event type from data/game/battle_events.json to a cue: a name, or `{cue, variants}` where the first variant whose `field` of the event equals `is` (true, false or text) gives the cue instead; an event not listed is silent. `results` maps how a fight ended to a cue, `stings` the succession and saga's-end screens, `screens` the title, a fight and the ended saga to a track (\"\" is silence), and `ages` lists the track of each Age of the world in turn (later Ages go round again). `levels` are the volume steps the menu offers, in decibels; sound effects and music each have their own and their own on or off, kept in settings.cfg, never the save. `voices` is how many cues can sound at once and `pitch_jitter` the share a cue's pitch may wander each time, for show. `limits` cap what the validator accepts, in seconds.",
+  "rate": 22050,
+  "music_rate": 11025,
+  "voices": 4,
+  "pitch_jitter": 0.03,
+  "waves": ["sine", "triangle", "square", "saw", "noise"],
+  "limits": {"max_cue_seconds": 4.0, "max_track_seconds": 16.0, "max_total_seconds": 90.0},
+  "level_order": ["low", "medium", "high"],
+  "default_level": "medium",
+  "levels": {
+    "low": {"name": "Low", "db": -24.0},
+    "medium": {"name": "Medium", "db": -14.0},
+    "high": {"name": "High", "db": -6.0}
+  },
+  "text": {
+    "effects": "Sound effects",
+    "music": "Music",
+    "off": "Off",
+    "about": "Battle sounds, and quiet music that changes with the Age. All of it is made by the game itself."
+  },
+  "cues": {
+    "hit": {"wave": "square", "notes": [45], "step": 0.12, "attack": 0.002, "release": 0.11, "volume": 0.5, "slide": -12},
+    "crit": {"wave": "square", "notes": [57, 69], "step": 0.08, "attack": 0.002, "release": 0.07, "volume": 0.55, "slide": -5},
+    "hurt": {"wave": "saw", "notes": [40], "step": 0.16, "attack": 0.002, "release": 0.15, "volume": 0.5, "slide": -7},
+    "miss": {"wave": "noise", "notes": [69], "step": 0.14, "attack": 0.05, "release": 0.09, "volume": 0.25},
+    "heal": {"wave": "sine", "notes": [72, 76, 79], "step": 0.09, "attack": 0.01, "release": 0.07, "volume": 0.5},
+    "cast": {"wave": "triangle", "notes": [64, 71], "step": 0.1, "attack": 0.01, "release": 0.08, "volume": 0.5, "slide": 5},
+    "guard": {"wave": "square", "notes": [50, 50], "step": 0.05, "attack": 0.002, "release": 0.04, "volume": 0.3},
+    "tick": {"wave": "sine", "notes": [60], "step": 0.07, "attack": 0.005, "release": 0.06, "volume": 0.25},
+    "fall": {"wave": "saw", "notes": [52], "step": 0.3, "attack": 0.005, "release": 0.28, "volume": 0.45, "slide": -19},
+    "ko": {"wave": "triangle", "notes": [55, 50, 43], "step": 0.14, "attack": 0.005, "release": 0.12, "volume": 0.55},
+    "flee": {"wave": "triangle", "notes": [67, 62, 67, 62], "step": 0.07, "attack": 0.005, "release": 0.06, "volume": 0.4},
+    "victory": {"wave": "triangle", "notes": [60, 64, 67, [60, 67, 72], [60, 67, 72]], "step": 0.15, "attack": 0.01, "release": 0.12, "volume": 0.6},
+    "defeat": {"wave": "triangle", "notes": [55, 52, 48, [36, 43]], "step": 0.22, "attack": 0.01, "release": 0.2, "volume": 0.6},
+    "death": {"wave": "sine", "notes": [[45, 52, 57], [44, 51, 56], [43, 50, 55], [38, 45, 50]], "step": 0.6, "attack": 0.05, "release": 0.5, "volume": 0.7},
+    "saga_end": {"wave": "sine", "notes": [[48, 55, 60], [50, 57, 62], [52, 59, 64], [48, 55, 64, 72]], "step": 0.8, "attack": 0.08, "release": 0.7, "volume": 0.7}
+  },
+  "tracks": {
+    "title": {"wave": "sine", "notes": [[45, 57], 64, 60, 64, [43, 55], 62, 59, 62], "step": 1.0, "attack": 0.2, "release": 0.8, "volume": 0.35},
+    "age_1": {"wave": "sine", "notes": [[45, 52], 57, 60, 64, [48, 55], 60, 64, 67], "step": 1.0, "attack": 0.2, "release": 0.8, "volume": 0.35},
+    "age_2": {"wave": "triangle", "notes": [[50, 57], 62, 65, 69, [48, 55], 60, 64, 67], "step": 1.0, "attack": 0.25, "release": 0.75, "volume": 0.3},
+    "age_3": {"wave": "sine", "notes": [[40, 47], 59, 55, 64, [43, 50], 62, 59, 67], "step": 1.2, "attack": 0.3, "release": 0.9, "volume": 0.35},
+    "age_4": {"wave": "triangle", "notes": [[41, 48], 60, 57, 65, [43, 50], 62, 59, 67], "step": 1.2, "attack": 0.3, "release": 0.9, "volume": 0.3},
+    "battle": {"wave": "triangle", "notes": [45, 0, 45, 52, 45, 0, 57, 52, 43, 0, 43, 50, 43, 0, 55, 50], "step": 0.4, "attack": 0.02, "release": 0.3, "volume": 0.3}
+  },
+  "events": {
+    "damage": {"cue": "hit", "variants": [
+      {"field": "side", "is": "player", "cue": "hurt"},
+      {"field": "side", "is": "ally", "cue": "hurt"},
+      {"field": "crit", "is": true, "cue": "crit"}
+    ]},
+    "miss": "miss",
+    "heal": "heal",
+    "tick": {"cue": "tick", "variants": [{"field": "heal", "is": true, "cue": "heal"}]},
+    "cast": "cast",
+    "defend": "guard",
+    "cover": "guard",
+    "death": "fall",
+    "ko": "ko",
+    "flee": "flee"
+  },
+  "results": {"victory": "victory", "defeat": "defeat"},
+  "stings": {"succession": "death", "ended": "saga_end"},
+  "screens": {"title": "title", "battle": "battle", "ended": ""},
+  "ages": ["age_1", "age_2", "age_3", "age_4"]
+}
