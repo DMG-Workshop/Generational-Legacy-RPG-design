@@ -30,6 +30,7 @@ func _run() -> void:
 	test_steps()
 	test_routes()
 	test_day()
+	test_build_and_orders()
 	print("sandbox screen tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -113,6 +114,47 @@ func test_routes() -> void:
 		var refused := s.set_route(wet)
 		ok(not refused["ok"] and str(refused["why"]) != "", "a route onto water is refused with a reason")
 		ok(s.route.is_empty(), "a refused route leaves no route")
+
+
+func _hire(d: GameDynasty, id: String) -> void:
+	d.party.members.append({"id": id, "name": GameParty.def(id)["name"], "hp": 1, "mp": 0, "level": 10, "gen": 1,
+		"due": 0.0, "battles": 0, "hired_gen": 1, "diseases": []})
+	d.party.history[id] = {"name": GameParty.def(id)["name"], "status": "serving", "gen": 1, "first_gen": 1, "battles": 0,
+		"fallen": [], "line": 0, "past": [], "born": d.world.year - 30.0, "rolled": d.world.year}
+
+
+## The build controls and the companion orders the sandbox screen drives: the pieces, a legal placement and its removal
+## with the refund's material, the orders turning in turn, and a refusal for someone not in the party.
+func test_build_and_orders() -> void:
+	var d := _house()
+	var s := GameSandbox.start(d)
+	ok(s.build_kinds() == ["wall", "floor", "road", "door"], "the pieces are the four the data lists, in order")
+	for m in GameBuild.pieces()["wall"]["cost"]:
+		GameCraft.add_material(d, str(m), 200)
+	d.heir.gold = 5000
+	var placed := false
+	for dz in [-1, 0, 1]:
+		for dx in [-1, 0, 1]:
+			if not placed and (dx != 0 or dz != 0) and s.build_check("wall", dx, dz) == "":
+				var t := s.heir + Vector2i(dx, dz)
+				var r := s.build("wall", dx, dz)
+				ok(r["ok"] and GameBuild.kind_at(d, t.x, -1, t.y) == "wall", "a legal wall is placed")
+				ok(s.build_check("wall", dx, dz) != "", "a placed wall cannot be placed again on its tile")
+				var back := s.remove_at(dx, dz)
+				ok(back["ok"] and GameBuild.kind_at(d, t.x, -1, t.y) == "", "a wall taken down leaves the ground")
+				ok(s.build_check("wall", dx, dz) == "", "a tile with nothing on it can take a wall again")
+				placed = true
+	ok(placed, "a legal wall tile can be found beside the heir")
+	var orders := ["follow", "stay", "gather", "guard", "follow"]
+	_hire(d, "bren_cask")
+	var s2 := GameSandbox.start(d)
+	var seen: Array = []
+	for i in 4:
+		var r := s2.cycle_order("bren_cask")
+		ok(r["ok"], "a companion's order can be cycled")
+		seen.append(GameCompanions.order_of(d, "bren_cask"))
+	ok(seen == orders.slice(1), "the orders turn in turn: stay, gather, guard, follow")
+	ok(not s2.cycle_order("nobody")["ok"], "cycling an order for someone not in the party is refused")
 
 
 func test_day() -> void:

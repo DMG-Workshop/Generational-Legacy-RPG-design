@@ -156,6 +156,35 @@ func order(id: String, which: String) -> Dictionary:
 	return GameCompanions.set_order(d, id, which)
 
 
+## Gives a companion the next order in turn (follow, stay, gather, guard, then follow again): {ok, text}.
+func cycle_order(id: String) -> Dictionary:
+	if not d.party.has_member(id):
+		return GameCompanions.set_order(d, id, GameCompanions.FOLLOW)   # not in the party: the same refusal
+	var orders: Array = GameCompanions.ORDERS
+	var next: String = orders[(orders.find(GameCompanions.order_of(d, id)) + 1) % orders.size()]
+	return GameCompanions.set_order(d, id, next)
+
+
+## The pieces the family may build, in the data's order (wall, floor, road, door).
+func build_kinds() -> Array:
+	return GameBuild.pieces().keys()
+
+
+## Why a piece cannot go on the tile `dx, dz` from the heir (GameBuild.check), or "" when it can.
+func build_check(kind: String, dx: int, dz: int) -> String:
+	var t := heir + Vector2i(dx, dz)
+	return GameBuild.check(d, kind, t.x, -1, t.y)
+
+
+## Takes the piece on the tile `dx, dz` from the heir down, with its refund (GameBuild.remove): {ok, text}.
+func remove_at(dx: int, dz: int) -> Dictionary:
+	var t := heir + Vector2i(dx, dz)
+	var out := GameBuild.remove(d, t.x, -1, t.y)
+	if out["ok"]:
+		log.append({"kind": "build", "text": str(out["text"])})
+	return out
+
+
 ## Digs the cell `depth` below the surface straight under the heir (`GameMine.dig`): {ok, why, ...}.
 func dig(depth: int) -> Dictionary:
 	var out := GameMine.dig(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)

@@ -29,6 +29,9 @@
     "not_a_step": "The heir can only step to a tile beside them.",
     "edge": "The edge of the world is there.",
     "no_route": "There is no way there from here.",
+    "no_companions": "No companions are hired.",
+    "ready": "{piece} can go here.",
+    "aim": "Aim: {x}, {z} from the heir.",
     "blocked": "Something stands in the way: water, a tree, rock or a wall.",
     "dug": "The family digs down {depth} into the ground."
   }

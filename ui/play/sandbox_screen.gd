@@ -14,6 +14,10 @@ var sb: GameSandbox
 var zoom := 1.0           # the view's zoom (WorldInput.zoom_after keeps it within the data's limits)
 var cam := Vector2.ZERO   # the view's offset from the heir, in tiles
 var facing_dir := Vector2i(0, 1)
+var mode := "walk"          # "walk" (the heir moves) or "build" (the stick aims a piece and the bar places it)
+var build_kind := "wall"    # the piece the Place button puts down
+var build_bar: HBoxContainer
+var orders_panel: VBoxContainer
 var status: Label
 var last_line := ""
 var _walk_wait := 0.0
@@ -52,11 +56,32 @@ func _ready() -> void:
 	add_child(bar)
 	bar.add_child(Kit.button("Back", func(): app.show_state(), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Dig", func(): _dig(), Vector2(72, BAR - 12)))
-	bar.add_child(Kit.button("Build wall", func(): _build(), Vector2(120, BAR - 12)))
+	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
+	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
 	status = Kit.label("", 14, Kit.dim())
 	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status.clip_text = true
 	bar.add_child(status)
+	# The build bar: the pieces the family may build, placing and taking down. Shown only in build mode.
+	build_bar = HBoxContainer.new()
+	build_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	build_bar.offset_top = -BAR
+	build_bar.add_theme_constant_override("separation", 6)
+	add_child(build_bar)
+	for kind in sb.build_kinds():
+		var k: String = kind
+		build_bar.add_child(Kit.button(str(GameBuild.pieces()[k]["name"]), func(): _pick(k), Vector2(96, BAR - 12)))
+	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
+	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
+	build_bar.visible = false
+	# The orders panel: each companion in the party with the order they hold; a tap moves it to the next.
+	orders_panel = VBoxContainer.new()
+	orders_panel.position = Vector2(maxf(0.0, size.x - 280.0), BAR + 8.0)
+	orders_panel.size = Vector2(272, 0)
+	orders_panel.add_theme_constant_override("separation", 6)
+	add_child(orders_panel)
+	orders_panel.visible = false
+	_refresh_orders()
 	_refresh_status()
 
 
@@ -76,12 +101,14 @@ func _process(delta: float) -> void:
 	var stepped := false
 	if step_for(mv) != Vector2i.ZERO:
 		sb.route = []
-		if _walk_wait <= 0.0:
+		if mode == "build":
+			facing_dir = step_for(mv)   # in build mode the stick aims the piece; the heir stays where they are
+		elif _walk_wait <= 0.0:
 			facing_dir = step_for(mv)
 			sb.move(facing_dir.x, facing_dir.y)
 			_walk_wait = float(GameSandbox.setting("walk_seconds"))
 			stepped = true
-	elif not sb.route.is_empty() and _walk_wait <= 0.0:
+	elif mode == "walk" and not sb.route.is_empty() and _walk_wait <= 0.0:
 		sb.walk_one()
 		_walk_wait = float(GameSandbox.setting("walk_seconds"))
 		stepped = true
@@ -126,6 +153,12 @@ func _tap(p: Vector2, area: Vector2) -> void:
 	var tile := tile_at(p, area, sb.heir, cam, _cell())
 	var dx := tile.x - sb.heir.x
 	var dz := tile.y - sb.heir.y
+	if mode == "build":
+		if absi(dx) <= 1 and absi(dz) <= 1 and (dx != 0 or dz != 0):
+			facing_dir = Vector2i(dx, dz)   # a tap beside the heir aims the piece there
+		_refresh_status()
+		queue_redraw()
+		return
 	if absi(dx) <= 1 and absi(dz) <= 1 and (dx != 0 or dz != 0):
 		sb.route = []
 		var r := sb.move(dx, dz)
@@ -154,12 +187,62 @@ func _dig() -> void:
 
 
 func _build() -> void:
-	var r := sb.build("wall", facing_dir.x, facing_dir.y)
+	var r := sb.build(build_kind, facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
 		app.dynasty.save_to_disk()
 	_refresh_status()
 	queue_redraw()
+
+
+func _remove() -> void:
+	var r := sb.remove_at(facing_dir.x, facing_dir.y)
+	last_line = str(r["text"])
+	if r["ok"]:
+		app.dynasty.save_to_disk()
+	_refresh_status()
+	queue_redraw()
+
+
+func _pick(kind: String) -> void:
+	build_kind = kind
+	_refresh_status()
+	queue_redraw()
+
+
+func _set_mode(m: String) -> void:
+	mode = m
+	build_bar.visible = m == "build"
+	_refresh_status()
+	queue_redraw()
+
+
+func _toggle_orders() -> void:
+	orders_panel.visible = not orders_panel.visible
+	_refresh_orders()
+
+
+## One button per companion in the party: their name and the order they hold; a tap moves them to the next order.
+func _refresh_orders() -> void:
+	for c in orders_panel.get_children():
+		c.queue_free()
+	var d: GameDynasty = app.dynasty
+	if d.party.members.is_empty():
+		orders_panel.add_child(Kit.label(str(GameSandbox.data()["text"]["no_companions"]), 14, Kit.dim()))
+		return
+	for m in d.party.members:
+		var id: String = str(m["id"])
+		var label := "%s: %s" % [str(m["name"]), GameCompanions.order_name(GameCompanions.order_of(d, id))]
+		orders_panel.add_child(Kit.button(label, func(): _cycle(id), Vector2(272, 44)))
+
+
+func _cycle(id: String) -> void:
+	var r := sb.cycle_order(id)
+	last_line = str(r["text"])
+	if r["ok"]:
+		app.dynasty.save_to_disk()
+	_refresh_orders()
+	_refresh_status()
 
 
 func _cell() -> float:
@@ -168,7 +251,12 @@ func _cell() -> float:
 
 func _refresh_status() -> void:
 	var d: GameDynasty = app.dynasty
-	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], last_line]
+	var line := last_line
+	if mode == "build":
+		var why := sb.build_check(build_kind, facing_dir.x, facing_dir.y)
+		var piece := str(GameBuild.pieces()[build_kind]["name"])
+		line = str(GameSandbox.data()["text"]["ready"]).format({"piece": piece}) if why == "" else why
+	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 
 func _draw() -> void:
@@ -206,6 +294,11 @@ func _draw() -> void:
 	for a in sb.companions:
 		var kp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 		draw_circle(kp, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
+	if mode == "build":
+		var gp := origin + (Vector2(sb.heir + facing_dir) - centre) * cell + area * 0.5
+		var legal := sb.build_check(build_kind, facing_dir.x, facing_dir.y) == ""
+		var gc := Color(0.3, 0.9, 0.4, 0.9) if legal else Color(0.95, 0.3, 0.3, 0.9)
+		draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
 	var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 	draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 
