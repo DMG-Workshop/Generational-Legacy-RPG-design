@@ -1,0 +1,15 @@
+{
+  "note": "The open world as it runs (roadmap items 39, 45, 48, 49, 50, 52; core/game/game_sandbox.gd). The heir's tiles, the creatures kept round them and the companions' threats are numbers here, not in code. Text is here too, so the screen and the log say the same thing.",
+  "settings": {
+    "radius": 10,
+    "keep": 4,
+    "threat_near": 10.0,
+    "log_lines": 200
+  },
+  "text": {
+    "not_a_step": "The heir can only step to a tile beside them.",
+    "edge": "The edge of the world is there.",
+    "blocked": "Something stands in the way: water, a tree, rock or a wall.",
+    "dug": "The family digs down {depth} into the ground."
+  }
+}
