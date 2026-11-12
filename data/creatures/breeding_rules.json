@@ -25,7 +25,8 @@
     "canine": [
       "wolf",
       "frost_wolf",
-      "grimfang"
+      "grimfang",
+      "thornhound"
     ],
     "draconic": [
       "drake",
@@ -69,6 +70,12 @@
     ],
     "equine": [
       "horse"
+    ],
+    "stag": [
+      "moss_stag"
+    ],
+    "moth": [
+      "glimmer_moth"
     ]
   },
   "traits": {

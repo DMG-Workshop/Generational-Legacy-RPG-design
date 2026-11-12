@@ -313,6 +313,20 @@
       "docile",
       "skittish",
       "herd"
+    ],
+    "thornhound": [
+      "aggressive",
+      "nocturnal"
+    ],
+    "moss_stag": [
+      "herd",
+      "skittish",
+      "territorial"
+    ],
+    "glimmer_moth": [
+      "flier",
+      "aggressive",
+      "coward"
     ]
   }
 }

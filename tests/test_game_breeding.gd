@@ -87,7 +87,7 @@ func test_data() -> void:
 		if GameBirth.born(str(c["id"])) != "none" and GameBreeding.family_of(str(c["id"])) != "":
 			in_family += 1
 	var born := GameData.creatures.filter(func(c): return GameBirth.born(str(c["id"])) != "none").size()
-	ok(in_family == born and born == 22, "every born creature is in a family (%d of %d)" % [in_family, born])
+	ok(in_family == born and born == 25, "every born creature is in a family (%d of %d)" % [in_family, born])
 
 
 func test_compatible() -> void:

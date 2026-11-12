@@ -26,7 +26,7 @@ const ATTR_LABELS := {
 	"divine_magic_power": "Faith", "dark_magic_power": "Dark arts", "element_power": "Elements",
 	"craft_quality": "Craft",
 }
-const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight", "find", "defend"]
+const EFFECT_KEYS := ["text", "gold", "xp", "hp_pct", "potions", "add_trait", "remove_trait", "flag", "item", "echo", "fate", "years", "fight", "find", "defend", "gate"]
 const SEEN := "event_seen_"   # once-only events: generation they were last seen
 const LAST := "event_last_"   # repeatable events: generation they last happened
 
@@ -605,6 +605,11 @@ static func _apply(d: GameDynasty, ev: Dictionary, o: Dictionary, msgs: Array) -
 		else:
 			d.give_item(item)
 			fx.append({"t": "Received %s" % _item_name(item), "k": "good"})
+	if o.has("gate"):   # a way between the worlds opens (GameRealms.open_gate; once, and told once)
+		var gate_line := GameRealms.open_gate(d, str(o["gate"]))
+		if gate_line != "":
+			msgs.append(gate_line)
+			fx.append({"t": gate_line, "k": "good"})
 	if o.has("echo"):
 		var e: Dictionary = o["echo"]
 		var etext := fill(d, str(e["text"]))
@@ -845,6 +850,8 @@ static func validate() -> Array:
 					for f in o["fight"].get("foes", []):
 						if not creature_ids.has(f):
 							errs.append("%s/%s: unknown or boss creature %s" % [where, k, f])
+				if o.has("gate") and not GameRealms.gateable(str(o["gate"])):
+					errs.append("%s/%s: gate names '%s', which is not a realm with a gate" % [where, k, o["gate"]])
 				if o.has("defend") and not GameRaids.data()["kinds"].has(str(o["defend"])):
 					errs.append("%s/%s: defend names '%s', which is not a kind of raid" % [where, k, o["defend"]])
 				if o.has("find"):

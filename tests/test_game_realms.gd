@@ -74,7 +74,8 @@ func _broken(edit: Callable) -> bool:
 
 func test_data() -> void:
 	ok(GameRealms.validate().is_empty(), "the realm data is sound: %s" % str(GameRealms.validate()))
-	ok(not GameRealms.linked(), "the worlds are not linked yet")
+	ok(GameRealms.linked(), "the worlds are linked: their gates decide who crosses")
+	ok(GameRealms.gate_open(dyn(), "material") and not GameRealms.gate_open(dyn(), "verdant"), "home's gate is open and the Verdant gate starts shut")
 	ok(GameRealms.ids().size() == 8 and GameRealms.home() == "material", "eight realms, home the Material Realm")
 	ok(_broken(func(x): x["settings"]["home"] = "nowhere"), "a home that is no realm is refused")
 	ok(_broken(func(x): x["realms"]["material"]["mark"] = "glamoured"), "a home with a mark is refused")
@@ -127,6 +128,10 @@ func test_reward() -> void:
 
 
 func test_off() -> void:
+	_with(func(x): x["settings"]["linked"] = false, _off_body)
+
+
+func _off_body() -> void:
 	var d := dyn()
 	var k := _adult(d, "drake", "male")
 	var got := GameRealms.move(d, int(k["id"]), "dragon_isles")
@@ -157,6 +162,9 @@ func test_move() -> void:
 		ok(GameRealms.why_not(d, int(w["id"]), "moon") == GameRealms.text("no_realm"), "no such realm")
 		ok(GameRealms.why_not(d, int(w["id"]), "material") != "", "it is already at home")
 		ok(GameRealms.why_not(d, int(egg["id"]), "void") == GameRealms.text("egg"), "an egg cannot cross")
+		ok(not GameRealms.move(d, int(k["id"]), "dragon_isles")["ok"], "a drake is not taken through a shut gate")
+		GameRealms.open_gate(d, "dragon_isles")
+		GameRealms.open_gate(d, "void")
 		var a := GameRealms.move(d, int(k["id"]), "dragon_isles")
 		ok(a["ok"] and k["in_realm"] == "dragon_isles" and GameRealms.settled(k) and a["text"] == "Ember is taken to the Dragon Isles.", "a drake taken to the Dragon Isles is at ease at once: %s" % a["text"])
 		var b := GameRealms.move(d, int(w["id"]), "void")
@@ -175,6 +183,8 @@ func test_settling() -> void:
 	_with(_link, func():
 		var d := dyn()
 		var w := _adult(d, "wolf", "male", "Grey")
+		GameRealms.open_gate(d, "verdant")
+		GameRealms.open_gate(d, "hollow")
 		GameRealms.move(d, int(w["id"]), "verdant")
 		var msgs: Array = []
 		GameRealms.on_years(d, 1.0, msgs, 1.0)
@@ -195,6 +205,7 @@ func test_settling() -> void:
 	var yw := _adult(y, "wolf", "male", "Grey")
 	_adult(x, "wolf", "male", "Grey")
 	_with(_link, func():
+		GameRealms.open_gate(y, "hollow")
 		GameRealms.move(y, int(yw["id"]), "hollow")
 		for i in 6:
 			x.pass_time(1.0)
@@ -229,6 +240,7 @@ func test_births() -> void:
 	GameBreeding.data()["settings"]["fertility"] = {"pure": 1.0, "hybrid": 1.0, "cross": 1.0}
 	_with(_link, func():
 		var d := dyn()
+		GameRealms.open_gate(d, "void")
 		var m := _adult(d, "plague_rat", "female", "Mother")
 		var f := _adult(d, "shard_crawler", "male", "Father")
 		m["breeding"] = true
