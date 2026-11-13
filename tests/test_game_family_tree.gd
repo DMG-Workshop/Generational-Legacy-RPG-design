@@ -127,7 +127,28 @@ func _run() -> void:
 	var tab_text := _tab_text(panel, "Family Tree")
 	ok(tab_text != "", "the chronicle has a Family Tree tab")
 	ok(tab_text.find(panel.dynasty.heir.full_name()) >= 0, "and the tab names the living heir")
+	ok(tab_text.find("Generation 1") >= 0, "the tab heads each generation")
 	panel.queue_free()
+
+	# A house with two generations and an echo: the tab draws the deaths, the marriage, the echo and the count of folded heirs.
+	var fd := _new(56)
+	_succeed(fd)
+	var keep2 = GameAges.settings()["history_full_keep"]
+	GameAges.settings()["history_full_keep"] = 1
+	for i in 3:
+		_succeed(fd)
+	GameAges.settings()["history_full_keep"] = keep2
+	fd.echoes.append({"kind": "glory", "key": "celebrated", "text": "Tess lived a celebrated life", "strength": 0.5, "gen": 1})
+	var fp: Control = ChroniclePanel.new()
+	fp.dynasty = fd
+	root.add_child(fp)
+	await process_frame
+	await process_frame
+	var ft := _tab_text(fp, "Family Tree")
+	ok(ft.find("Generation 4") >= 0 and ft.find("died old age") >= 0 and ft.find("Generation 2") < 0, "the tab shows the kept generations and how their heirs died, and not the folded ones")
+	ok(ft.find("legacy: Tess lived a celebrated life") >= 0, "the tab shows the echo of the generation it came from")
+	ok(ft.find("2 earlier heirs are told in the Ages tab") >= 0 and fd.ages.folded_heirs() == 2, "folded heirs are counted in the tab, not named")
+	fp.queue_free()
 
 	_wipe()
 	print("family tree tests: %d checks, %d failures" % [checks, fails])

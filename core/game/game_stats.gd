@@ -33,6 +33,7 @@ static func summary(d: GameDynasty) -> Dictionary:
 	return {
 		"generations": d.gen,
 		"age": d.age_number(),
+		"ages_reached": _ages_reached(d),
 		"heirs": heirs,
 		"causes": causes,
 		"legends": slain,
@@ -41,6 +42,18 @@ static func summary(d: GameDynasty) -> Dictionary:
 		"gold": gold,
 		"gold_by_age": _gold_by_age(d),
 	}
+
+
+## The Ages the saga has reached, oldest first: every Age a folded or kept heir died in, and the Age the saga
+## is in now (so a new house reaches its first Age before anyone has died).
+static func _ages_reached(d: GameDynasty) -> Array:
+	var seen := {}
+	for row in d.ages.age_rows(d):
+		seen[int(row["age"])] = true
+	seen[d.age_number()] = true
+	var out := seen.keys()
+	out.sort()
+	return out
 
 
 ## One entry per Age, oldest first: its number, the heirs whose gold at death is known, and their average

@@ -59,7 +59,7 @@ class MapCanvas extends Control:
 				fill = Color("#4a4466") if l["type"] != "town" else Color("#6a5a2a")
 			var r := Rect2(p - BOX * 0.5, BOX)
 			draw_rect(r, fill)
-			draw_rect(r, Kit.ACCENT if here else Color("#8d88a0"), false, 2.0 if here else 1.0)
+			draw_rect(r, Kit.ACCENT if here else Kit.dim(), false, 2.0 if here else 1.0)
 			var label: String = "?" if k == "seen" else str(l["name"])
 			var col := Kit.TEXT if k == "visited" else Kit.dim()
 			draw_string(font, p + Vector2(-BOX.x * 0.5, 4), label, HORIZONTAL_ALIGNMENT_CENTER, BOX.x, name_size(font, label), col)
