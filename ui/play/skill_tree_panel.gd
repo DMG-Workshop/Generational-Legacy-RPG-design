@@ -222,7 +222,7 @@ func _draw_tree(u: GameHeir) -> void:
 				ink = Kit.TEXT
 			"open":
 				edge = Kit.good()
-				fill = OPEN_FILL
+				fill = Kit.good_fill(OPEN_FILL)
 				ink = Kit.TEXT
 			"waiting":
 				edge = WAITING_EDGE
@@ -273,7 +273,7 @@ func _draw_edges(u: GameHeir) -> void:
 			var p := GameSkillTree.node(str(r))
 			var from := _spot(p) + Vector2(node_size.x * 0.5, node_size.y)
 			var lit := GameSkillTree.rank(u, str(r)) > 0
-			var col := Kit.ACCENT if lit and GameSkillTree.rank(u, id) > 0 else (Color("#6a8f6a") if lit else Color("#3a3650"))
+			var col := Kit.ACCENT if lit and GameSkillTree.rank(u, id) > 0 else (Kit.good_muted() if lit else Color("#3a3650"))
 			canvas.draw_line(from, to, col, 2.0 if lit else 1.5, true)
 
 

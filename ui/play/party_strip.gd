@@ -92,13 +92,13 @@ func _look(btn: Button, decision: String, active: bool) -> void:
 	var edge := Color("#4a4466")
 	match decision:
 		"queued":
-			fill = Color("#233025")
+			fill = Kit.good_fill(Color("#233025"))
 			edge = Kit.good()
 		"auto", "fallback":
 			fill = Color("#1f2a44")
 			edge = Kit.MP_BLUE
 		"held":
-			fill = Color("#33202a")
+			fill = Kit.bad_fill(Color("#33202a"))
 			edge = Kit.bad()
 		"cover":
 			fill = Color("#2e2a20")

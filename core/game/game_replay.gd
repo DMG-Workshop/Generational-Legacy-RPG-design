@@ -6,7 +6,8 @@
 ## and proof that a new view or renderer leaves the game alone. Logic only (no UI).
 ##
 ## A replay is {format, version, start, commands, checks, end}:
-##   start: {seed, name, class, bloodline, race, sex}                 how the dynasty was founded
+##   start: {seed, name, class, bloodline, race, sex, hard?}          how the dynasty was founded; `hard` (the house's
+##          hard-mode options exactly as GameHardMode keeps them) is written only when a house was founded with one
 ##   commands: [{op, ...}]                                            see OPS
 ##   checks: [[index, fingerprint]]                                   after command `index` (0 based)
 ##   end: fingerprint after the last command
@@ -49,11 +50,18 @@ var dynasty: GameDynasty = null     # the dynasty being recorded (recording only
 
 ## Founds a dynasty and starts a replay of it. `check_every` sets how often a fingerprint is kept (1 finds
 ## a divergence to the exact command).
+## `p_hard` founds the house with hard-mode options (GameHardMode.choices decides what they are). Options the game
+## would refuse found a plain house, as GameDynasty.new_game does, and the replay then says nothing about them.
+## The autopilot is given none by default, so its replays do not change.
 static func begin(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human",
-		p_sex: String = GameSex.MALE, p_check_every: int = 25) -> GameReplay:
+		p_sex: String = GameSex.MALE, p_check_every: int = 25, p_hard: Dictionary = {}) -> GameReplay:
 	var r := GameReplay.new()
 	r.check_every = maxi(1, p_check_every)
 	r.start = {"seed": p_seed, "name": founder_name, "class": class_id, "bloodline": bloodline_id, "race": race_id, "sex": p_sex}
+	if not p_hard.is_empty():
+		var c := GameHardMode.choices(p_hard)
+		if c["ok"] and not (c["hard"] as Dictionary).is_empty():
+			r.start["hard"] = (c["hard"] as Dictionary).duplicate(true)
 	r.dynasty = found(r.start)
 	return r
 
@@ -152,6 +160,10 @@ static func check(v: Variant) -> Dictionary:
 			return _bad(GameMessages.text("life", "replay_start_not_text", {"key": k}))
 	if not GameData.classes.has(s["class"]) or not GameData.races.has(s["race"]) or not GameData.traits.has(s["bloodline"]):
 		return _bad(GameMessages.text("life", "replay_unknown_start"))
+	if s.has("hard"):
+		var why := _hard_problem(s["hard"])
+		if why != "":
+			return _bad(why)
 	var cmds: Variant = d.get("commands", null)
 	if typeof(cmds) != TYPE_ARRAY or (cmds as Array).size() > MAX_COMMANDS:
 		return _bad(GameMessages.text("life", "replay_commands"))
@@ -167,6 +179,24 @@ static func check(v: Variant) -> Dictionary:
 	if typeof(d.get("end", "")) != TYPE_STRING:
 		return _bad(GameMessages.text("life", "replay_end"))
 	return {"ok": true, "error": "", "replay": d}
+
+
+## Why a replay's founding hard-mode options cannot stand, or "" when they can. An entry must be exactly what
+## GameHardMode keeps for a house (only the options that are on, a cap from its list), so a damaged or hand-made
+## entry is refused with the reason rather than founding a house the game never could. An empty entry is no options.
+static func _hard_problem(h: Variant) -> String:
+	if typeof(h) != TYPE_DICTIONARY:
+		return "The replay's hard-mode options are damaged: they are not a list of options."
+	var c := GameHardMode.choices(h)
+	if not c["ok"]:
+		return "The replay's hard-mode options are not allowed: " + str(c["text"])
+	var kept: Dictionary = c["hard"]
+	if kept.size() != (h as Dictionary).size():
+		return "The replay's hard-mode options are not written as a house keeps them: only options that are on are written."
+	for k in kept:
+		if h[k] != kept[k]:
+			return "The replay's hard-mode options are not written as a house keeps them: '%s' is not as kept." % str(k)
+	return ""
 
 
 static func _bad(why: String) -> Dictionary:
@@ -217,7 +247,8 @@ static func play(rep: Dictionary, stop_at: int = -1) -> Dictionary:
 # ---------------------------------------------------------------- the commands
 
 static func found(s: Dictionary) -> GameDynasty:
-	return GameDynasty.new_game(int(s["seed"]), str(s["name"]), str(s["class"]), str(s["bloodline"]), str(s["race"]), str(s["sex"]))
+	var hard: Dictionary = s["hard"] if typeof(s.get("hard")) == TYPE_DICTIONARY else {}
+	return GameDynasty.new_game(int(s["seed"]), str(s["name"]), str(s["class"]), str(s["bloodline"]), str(s["race"]), str(s["sex"]), "", hard)
 
 
 ## A short fingerprint of everything a run has made so far: the dynasty as it would be saved (a fight in

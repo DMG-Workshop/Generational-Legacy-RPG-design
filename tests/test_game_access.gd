@@ -7,6 +7,10 @@ extends SceneTree
 const GameApp := preload("res://ui/play/game_app.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Kit := preload("res://ui/play/ui_kit.gd")
+const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
+const LifeScreen := preload("res://ui/play/life_screen.gd")
+const FigurePose := preload("res://ui/play/figure_pose.gd")
+const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const DIR := "user://test_access/"
 
 var checks := 0
@@ -89,9 +93,90 @@ func _run() -> void:
 	ok(UiSettings.reduced_motion(), "the app stores the reduced motion choice")
 	await _frames(2)
 
+	# The accessible colours reach the places they are drawn, not only the helpers.
+	var quiet_off := Kit.quiet_bb("x")
+	UiSettings.set_access("colour_blind", false)
+	UiSettings.set_access("high_contrast", false)
+	ok(quiet_off.find(Kit.DIM.to_html(false)) >= 0, "quiet text is the standard grey with the options off")
+	ok(Kit.good_fill(Color("#25452c")) == Color("#25452c") and Kit.good_muted() == Color("#6a8f6a"), "fills and muted text keep the standard colours with the options off")
+	UiSettings.set_access("high_contrast", true)
+	ok(Kit.quiet_bb("x").find(Kit.DIM_HC.to_html(false)) >= 0, "high contrast reaches quiet text built as BBCode")
+	UiSettings.set_access("high_contrast", false)
+	UiSettings.set_access("colour_blind", true)
+	ok(Kit.good_fill(Color("#25452c")) != Color("#25452c") and Kit.bad_fill(Color("#33202a")) != Color("#33202a"), "good and bad fills change with colour-blind colours")
+	ok(Kit.good_muted() != Color("#6a8f6a"), "the muted good text changes with colour-blind colours")
+
+	# The life screen's journal: victories and deaths take the palette's colours.
+	var life: Control = LifeScreen.new()
+	var win: String = life._colorize("Victory over the wolves")
+	var dies: String = life._colorize("Tess dies of old age")
+	ok(win.find(Kit.GOOD_CB.to_html(false)) >= 0 and win.find("6fcf6f") < 0, "a victory line is blue with colour-blind colours, not green")
+	ok(dies.find(Kit.BAD_CB.to_html(false)) >= 0 and dies.find("e0605a") < 0, "a death line is orange with colour-blind colours, not red")
+	UiSettings.set_access("colour_blind", false)
+	ok(life._colorize("Victory over the wolves").find("6fcf6f") >= 0, "and the standard green and red with the options off")
+	life.free()
+
+	# The chronicle's quiet text follows high contrast on its Statistics tab.
+	var cd := GameDynasty.new_game(64, "Tess", "warrior", "faetouched", "human")
+	cd.pending_event = {}
+	var panel: Control = ChroniclePanel.new()
+	panel.dynasty = cd
+	root.add_child(panel)
+	await _frames(2)
+	ok(_tab_text(panel, "Statistics").find("8d88a0") >= 0, "the Statistics tab uses the standard quiet grey with the options off")
+	UiSettings.set_access("high_contrast", true)
+	panel.queue_free()
+	await _frames(2)
+	panel = ChroniclePanel.new()
+	panel.dynasty = cd
+	root.add_child(panel)
+	await _frames(2)
+	ok(_tab_text(panel, "Statistics").find("8d88a0") < 0 and _tab_text(panel, "Statistics").find(Kit.DIM_HC.to_html(false)) >= 0, "high contrast brightens the Statistics tab's quiet text")
+	panel.queue_free()
+	UiSettings.set_access("high_contrast", false)
+	UiSettings.set_access("colour_blind", false)
+
+	# Reduced motion: a figure's move does not move it at all; without it, the move does.
+	var tex := ImageTexture.create_from_image(Image.create(96, 160, false, Image.FORMAT_RGBA8))
+	var pose: Control = FigurePose.new()
+	root.add_child(pose)
+	pose.setup(tex, Vector2(120, 200), 1.0, 0.0)
+	# The move is sampled while it runs (it is back at its place by the end either way).
+	UiSettings.set_access("reduced_motion", true)
+	pose.play("attack")
+	var moved_reduced := false
+	for i in 15:
+		await process_frame
+		moved_reduced = moved_reduced or pose.position != Vector2.ZERO
+	ok(not moved_reduced and pose.last == "attack", "reduced motion: a fight move is recorded but the figure never leaves its place")
+	await _frames(40)
+	UiSettings.set_access("reduced_motion", false)
+	pose.play("attack")
+	var moved_full := false
+	for i in 15:
+		await process_frame
+		moved_full = moved_full or pose.position != Vector2.ZERO
+	ok(moved_full, "without reduced motion the same move moves the figure")
+	await _frames(40)
+	pose.queue_free()
+
 	DirAccess.remove_absolute(UiSettings.path)
 	print("access tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
+
+
+func _tab_text(panel: Node, tab: String) -> String:
+	for c in _all(panel):
+		if c is RichTextLabel and c.name == tab:
+			return (c as RichTextLabel).text
+	return ""
+
+
+func _all(n: Node, out: Array = []) -> Array:
+	out.append(n)
+	for c in n.get_children():
+		_all(c, out)
+	return out
 
 
 func _has_label(n: Node, text: String) -> bool:

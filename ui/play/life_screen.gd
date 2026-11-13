@@ -158,9 +158,9 @@ func _skip_tips() -> void:
 
 func _colorize(line: String) -> String:
 	if line.begins_with("Victory") or line.begins_with("Level up") or line.begins_with("Milestone") or line.begins_with("Heirloom") or line.begins_with("Legend"):
-		return "[color=#6fcf6f]%s[/color]" % line
+		return "[color=#%s]%s[/color]" % [Kit.good().to_html(false), line]
 	if " dies" in line or "slain" in line or "DISASTER" in line or "failure" in line or "Fate (" in line:
-		return "[color=#e0605a]%s[/color]" % line
+		return "[color=#%s]%s[/color]" % [Kit.bad().to_html(false), line]
 	if line.begins_with("Generation") or line.begins_with("Age ") or "dynasty begins" in line:
 		return "[color=#e0b341][b]%s[/b][/color]" % line
 	return line
@@ -322,6 +322,7 @@ func _build_actions() -> void:
 	fam.disabled = not d.can_found_family()
 	fam.tooltip_text = "Requires age %d+ and no family yet. Children inherit traits from both parents." % int(h.family_min_age())
 	var house := _act("House", func(): _open(HousePanel))
+	_act("Walk the world", func(): app.show_sandbox())
 	house.tooltip_text = "Build the House Hall (companion places) and the Training Yard (training XP) with the heir's gold."
 	var looks := _act("Looks", func(): _open(LooksPanel))
 	looks.tooltip_text = "Choose the shirt colours %s and the companions wear in battle." % h.name

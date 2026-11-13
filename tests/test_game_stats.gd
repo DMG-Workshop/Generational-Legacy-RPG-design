@@ -39,6 +39,7 @@ func _run() -> void:
 	ok(s["generations"] == 1 and s["heirs"] == 1, "a new dynasty has one heir in generation 1")
 	ok((s["causes"] as Array).is_empty() and s["legends"] == 0, "no deaths or legends yet")
 	ok((s["best"] as Dictionary).is_empty(), "no best heir before anyone has died")
+	ok(s["ages_reached"] == [1], "a new house has reached Age 1")
 	ok(s["gold"].size() == 1 and s["gold"][0]["gen"] == 1, "the living founder is the only gold entry")
 
 	# Two successions by old age: three heirs in all, two deaths counted.
@@ -62,6 +63,15 @@ func _run() -> void:
 	ok(s["heirs"] == 7 and s["generations"] == 7, "folded heirs still count: seven heirs by generation seven")
 	ok(s["causes"] == [["old age", 6]], "folded deaths still count by cause")
 	ok(s["gold"].size() < 7, "gold is kept only for the heirs in full")
+	ok((s["ages_reached"] as Array).has(s["age"]) and (s["ages_reached"] as Array).size() >= 1, "the Ages reached include the current Age, folded or not")
+	var reached: Array = GameStats.summary(f)["ages_reached"]
+	ok(reached == reached.duplicate(), "Ages reached is a list of distinct Ages")
+	var fp := _panel_for(f)
+	await process_frame
+	await process_frame
+	var tab := _tab_text(fp, "Statistics")
+	fp.queue_free()
+	ok(tab.find("Ages reached") >= 0, "the Statistics tab names the Ages reached")
 
 	# Gold over time: each Age has an average of the gold its heirs had at death, and it survives folding.
 	var ga: Array = GameStats.summary(f)["gold_by_age"]
@@ -97,6 +107,13 @@ func _run() -> void:
 
 	print("stats tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
+
+
+func _panel_for(d: GameDynasty) -> Control:
+	var p: Control = ChroniclePanel.new()
+	p.dynasty = d
+	root.add_child(p)
+	return p
 
 
 func _tab_text(panel: Node, tab: String) -> String:

@@ -69,13 +69,13 @@ func _n(v: Variant) -> String:
 func _lineage_text() -> String:
 	var lines: Array = []
 	if dynasty.history.is_empty():
-		lines.append("[color=#8d88a0]No ancestors have died yet.[/color]")
+		lines.append(Kit.quiet_bb("No ancestors have died yet."))
 	for i in dynasty.history.size():
 		lines.append(_record(dynasty.history[i]))
 		var a := dynasty.ages
 		if i == 0 and not a.summaries.is_empty():
 			var span := {"from": _n(a.summaries[0]["from"]), "to": _n(a.summaries.back()["to"]), "heirs": _n(a.folded_heirs())}
-			lines.append("[color=#8d88a0][i]%s[/i][/color]" % GameAges.text("folded", span))
+			lines.append(Kit.quiet_bb("[i]%s[/i]") % GameAges.text("folded", span))
 	if dynasty.heir != null and dynasty.state == "life":
 		lines.append("[color=#e0b341][b]Gen %s  %s  (living)[/b][/color]" % [_n(dynasty.gen), dynasty.heir.full_name()])
 	return "\n\n".join(lines)
@@ -102,14 +102,14 @@ func _tree_text() -> String:
 	var t := GameFamilyTree.tree(dynasty)
 	var blocks: Array = []
 	if int(t["folded"]) > 0:
-		blocks.append("[color=#8d88a0][i]%s earlier heirs are told in the Ages tab.[/i][/color]" % _n(t["folded"]))
+		blocks.append(Kit.quiet_bb("[i]%s earlier heirs are told in the Ages tab.[/i]") % _n(t["folded"]))
 	for entry in t["generations"]:
 		var lines: Array = ["[b]Generation %s[/b]" % _n(entry["gen"])]
 		for h in entry["heirs"]:
 			lines.append(_tree_heir(h))
 		blocks.append("\n".join(lines))
 	if blocks.is_empty():
-		blocks.append("[color=#8d88a0]No family yet.[/color]")
+		blocks.append(Kit.quiet_bb("No family yet."))
 	return "\n\n".join(blocks)
 
 
@@ -138,6 +138,8 @@ func _stats_text() -> String:
 	var st := GameStats.summary(dynasty)
 	var lines: Array = []
 	lines.append("[b]Heirs[/b]  %s lived through %s generation%s, now in Age %s" % [_n(st["heirs"]), _n(st["generations"]), "" if int(st["generations"]) == 1 else "s", _n(st["age"])])
+	var reached: Array = st["ages_reached"]
+	lines.append("[b]Ages reached[/b]  %s" % ("Age %s" % _n(reached[0]) if reached.size() == 1 else "%s Ages, Age %s to Age %s" % [_n(reached.size()), _n(reached[0]), _n(reached[-1])]))
 	if GameHardMode.any(dynasty):   # only a house founded with an option says so
 		lines.append("")
 		lines.append("[b]%s[/b]" % GameHardMode.text("stats_head"))
@@ -149,7 +151,7 @@ func _stats_text() -> String:
 	lines.append("")
 	lines.append("[b]Deaths by cause[/b]")
 	if (st["causes"] as Array).is_empty():
-		lines.append("[color=#8d88a0]None yet.[/color]")
+		lines.append(Kit.quiet_bb("None yet."))
 	for c in st["causes"]:
 		lines.append(" - %s %s" % [_n(c[1]), c[0]])
 	lines.append("")
@@ -157,7 +159,7 @@ func _stats_text() -> String:
 	lines.append("")
 	var best: Dictionary = st["best"]
 	if best.is_empty():
-		lines.append("[b]Greatest heir[/b]  [color=#8d88a0]none yet[/color]")
+		lines.append("[b]Greatest heir[/b]  %s" % Kit.quiet_bb("none yet"))
 	else:
 		lines.append("[b]Greatest heir[/b]  %s, %s %s, level %s (generation %s)" % [best["name"], GameData.races[best["race_id"]]["name"], GameData.classes[best["class_id"]]["name"], _n(best["level"]), _n(best["gen"])])
 	lines.append("")
@@ -171,7 +173,7 @@ func _stats_text() -> String:
 	lines.append("[b]Gold of the heirs kept in full[/b]")
 	for g in st["gold"]:
 		lines.append(" - generation %s: %s gold" % [_n(g["gen"]), _n(g["gold"])])
-	lines.append("[color=#8d88a0]Heirs folded into the Ages keep their deaths and counts, but not their gold.[/color]")
+	lines.append(Kit.quiet_bb("Heirs folded into the Ages keep their deaths and counts, but not their gold."))
 	return "\n".join(lines)
 
 
@@ -191,8 +193,8 @@ func _ages_text() -> String:
 	if d.state == "life" and (rows.is_empty() or int(rows.back()["age"]) < d.age_number()):
 		lines.append("[color=#e0b341][b]Age %s[/b]  begun in generation %s[/color]" % [_n(d.age_number()), _n(d.gen - d.era_gen() + 1)])
 	if lines.is_empty():
-		lines.append("[color=#8d88a0]No Age has been told yet.[/color]")
-	lines.append("[color=#8d88a0]An Age lasts %s generations. Legends rise again when a new one begins.[/color]" % _n(GameAges.age_length()))
+		lines.append(Kit.quiet_bb("No Age has been told yet."))
+	lines.append(Kit.quiet_bb("An Age lasts %s generations. Legends rise again when a new one begins.") % _n(GameAges.age_length()))
 	return "\n\n".join(lines)
 
 
@@ -206,13 +208,13 @@ func _causes(causes: Dictionary) -> String:
 func _echo_text() -> String:
 	var lines: Array = ["[b]Legacy Echoes[/b] (fade 15% each generation, compound when repeated)"]
 	if dynasty.echoes.is_empty():
-		lines.append("[color=#8d88a0]None yet. Slay legends, live well, or fail spectacularly.[/color]")
+		lines.append(Kit.quiet_bb("None yet. Slay legends, live well, or fail spectacularly."))
 	for e in dynasty.echoes:
 		lines.append(" - " + dynasty.describe_echo(e))
 	lines.append("")
 	lines.append("[b]Heirlooms[/b] (+%d%% power to all heirs)" % int(round(dynasty.heirloom_bonus() * 100.0)))
 	if dynasty.heirlooms.is_empty():
-		lines.append("[color=#8d88a0]None. Slay a Legend to claim one.[/color]")
+		lines.append(Kit.quiet_bb("None. Slay a Legend to claim one."))
 	for h in dynasty.heirlooms:
 		lines.append(" - %s (taken from %s, generation %s)" % [h["name"], h["boss"], _n(h["gen"])])
 	return "\n".join(lines)
