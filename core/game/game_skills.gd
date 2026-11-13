@@ -82,11 +82,11 @@ static func summary_lines(h: GameHeir) -> Array:
 			known.append(str(s["name"]))
 		else:
 			later.append(s)
-	var out: Array = ["Known: %s." % ", ".join(known)]
+	var out: Array = [GameMessages.text("life", "known_list", {"list": GameMessages.text("life", "list_comma").join(known)})]
 	if not later.is_empty():
-		var next := "Next: %s at level %s" % [later[0]["name"], GameText.num(level_of(later[0]))]
+		var next := GameMessages.text("life", "next_one", {"name": later[0]["name"], "level": GameText.num(level_of(later[0]))})
 		if later.size() > 1:
-			next += ", then %s at %s" % [later[1]["name"], GameText.num(level_of(later[1]))]
+			next += GameMessages.text("life", "next_then", {"name": later[1]["name"], "level": GameText.num(level_of(later[1]))})
 		out.append(next + ".")
 	return out
 
@@ -100,10 +100,10 @@ static func plan_text(class_id: String) -> String:
 		if level_of(s) <= 1:
 			first.append(str(s["name"]))
 		else:
-			later.append("%s (%s)" % [s["name"], GameText.num(level_of(s))])
-	var text := ", ".join(first)
+			later.append(GameMessages.text("life", "skill_at_level", {"name": s["name"], "level": GameText.num(level_of(s))}))
+	var text := GameMessages.text("life", "list_comma").join(first)
 	if not later.is_empty():
-		text += "; later " + ", ".join(later)
+		text += GameMessages.text("life", "later_list", {"list": GameMessages.text("life", "list_comma").join(later)})
 	return text
 
 
@@ -112,8 +112,8 @@ static func news_text(h: GameHeir, ids: Array) -> String:
 	if ids.is_empty():
 		return ""
 	var names: Array = ids.map(func(id): return skill_name(h.class_id, str(id)))
-	var list: String = names[0] if names.size() == 1 else "%s and %s" % [", ".join(PackedStringArray(names.slice(0, -1))), names[-1]]
-	return "%s can now use %s (class skill%s)." % [h.name, list, "" if names.size() == 1 else "s"]
+	var list: String = names[0] if names.size() == 1 else GameMessages.text("life", "names_and", {"first": GameMessages.text("life", "list_comma").join(PackedStringArray(names.slice(0, -1))), "last": names[-1]})
+	return GameMessages.text("life", "can_use_one" if names.size() == 1 else "can_use_many", {"name": h.name, "list": list})
 
 
 ## Tells the skills opened since last time, once (from GameDynasty._pass_years).
@@ -216,10 +216,10 @@ static func category(plan: Dictionary, _u: GameHeir = null) -> String:
 static func style_text(u: GameHeir) -> String:
 	match str(style(u.class_id)["kind"]):
 		"caster":
-			return "%s fights as a caster: spells and magic first, the staff only when MP runs dry." % u.name
+			return GameMessages.text("life", "fights_caster", {"name": u.name})
 		"hybrid":
-			return "%s fights as a %s: steel and spell by turns." % [u.name, str(u.cls().get("name", "hybrid")).to_lower()]
-	return "%s fights as a fighter: weapon, class strikes and feats." % u.name
+			return GameMessages.text("life", "steel_and_spell", {"name": u.name, "cls": str(u.cls().get("name", "hybrid")).to_lower()})
+	return GameMessages.text("life", "fights_fighter", {"name": u.name})
 
 
 # ---------------------------------------------------------------- data checks

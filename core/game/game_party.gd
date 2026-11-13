@@ -186,16 +186,16 @@ func decline(d: GameDynasty, id: String) -> float:
 
 ## "Age 34 of ~83" with old age and its toll when it has come.
 func age_text(d: GameDynasty, id: String) -> String:
-	var text := "Age %d of ~%d" % [int(age(d, id)), int(round(lifespan(d, id)))]
+	var text := GameMessages.text("life", "age_of", {"age": int(int(age(d, id))), "lifespan": int(int(round(lifespan(d, id))))})
 	if is_old(d, id):
-		text += ", " + old_text(d, id)
+		text = GameMessages.text("life", "age_old", {"age": text, "old": old_text(d, id)})
 	return text
 
 
 ## "old" and, once it shows, how much weaker: "old: 12% weaker".
 func old_text(d: GameDynasty, id: String) -> String:
 	var pct := int(round(decline(d, id) * 100.0))
-	return "old" if pct == 0 else "old: %d%% weaker" % pct
+	return GameMessages.text("life", "old") if pct == 0 else GameMessages.text("life", "old_weaker", {"pct": pct})
 
 
 func _place_name(id: String) -> String:
@@ -253,23 +253,23 @@ func locked_reason(d: GameDynasty, id: String) -> String:
 	if status == "fallen":
 		var back := int(history[id]["gen"]) + int(GameData.bal("companion_kin_gens"))
 		if d.gen < back:
-			return "In mourning until generation %s." % GameText.num(back)
+			return GameMessages.text("life", "in_mourning", {"gen": GameText.num(back)})
 	if status in ["dead", "retired"]:
 		if not c.has("successor"):
-			return "No one has come to take up the work."
+			return GameMessages.text("life", "no_successor")
 		var year := float(history[id].get("back_year", 0.0))
 		if d.world.year < year:
-			return "%s may take up the work from year %s." % [history[id]["name"], GameText.num(int(year) + 1)]
+			return GameMessages.text("life", "successor_wait", {"name": history[id]["name"], "year": GameText.num(int(year) + 1)})
 	if d.era_gen() < int(req.get("min_gen", 1)):
-		return "Not yet in this Age."
+		return GameMessages.text("life", "not_yet_age")
 	for f in req.get("flags", []):
 		if not d.flags.has(f):
-			return "Waiting on a deed your house has not done."
+			return GameMessages.text("life", "waiting_deed")
 	for place_id in req.get("visited", []):
 		if place_id not in d.world.visited:
-			return "Talks only to those who have walked %s." % GameWorld.place(place_id).get("name", place_id)
+			return GameMessages.text("life", "talks_walked", {"place": GameWorld.place(place_id).get("name", place_id)})
 	if d.heir.level < int(req.get("min_level", 1)):
-		return "Wants an heir of level %d." % int(req.get("min_level", 1))
+		return GameMessages.text("life", "wants_level", {"level": int(int(req.get("min_level", 1)))})
 	return ""
 
 
@@ -291,18 +291,18 @@ func available_here(d: GameDynasty) -> Array:
 ## Why the heir cannot hire this companion right now ("" if they can).
 func hire_block(d: GameDynasty, id: String) -> String:
 	if d.state != "life":
-		return "No one hires in mourning."
+		return GameMessages.text("life", "no_hire_mourning")
 	if has_member(id):
-		return "%s already rides with %s." % [display_name(id), d.heir.name]
+		return GameMessages.text("life", "already_rides", {"name": display_name(id), "heir": d.heir.name})
 	if not d.world.has_service("tavern") or id not in at_tavern(d, d.world.location):
-		return "%s does not drink here." % display_name(id)
+		return GameMessages.text("life", "does_not_drink", {"name": display_name(id)})
 	var lock := locked_reason(d, id)
 	if lock != "":
 		return lock
 	if members.size() >= max_size(d):
-		return "The party is full (%d)." % max_size(d)
+		return GameMessages.text("life", "party_full", {"size": int(max_size(d))})
 	if d.heir.gold < fee(d, id):
-		return "Not enough gold (%s needed)." % GameText.num(fee(d, id))
+		return GameMessages.text("life", "not_enough_gold", {"needed": GameText.num(fee(d, id))})
 	return ""
 
 
@@ -343,13 +343,13 @@ func hire(d: GameDynasty, id: String) -> String:
 	var c := def(id)
 	var text: String
 	if returning and is_old(d, id):
-		text = "%s, %d now and slower than before, comes back to House %s's service and asks no fee." % [nm, int(age(d, id)), d.dynasty_name]
+		text = GameMessages.text("life", "returns_old", {"name": nm, "age": int(int(age(d, id))), "house": d.dynasty_name})
 	elif returning:
-		text = "%s comes back to House %s's service and asks no fee." % [nm, d.dynasty_name]
+		text = GameMessages.text("life", "returns", {"name": nm, "house": d.dynasty_name})
 	else:
-		text = "%s, %s %s, joins %s for %s gold (upkeep %s a year)." % [nm, GameData.races[c["race"]]["name"], GameData.classes[c["class"]]["name"], d.heir.name, GameText.num(price), GameText.num(upkeep(d, id))]
+		text = GameMessages.text("life", "joins", {"name": nm, "race": GameData.races[c["race"]]["name"], "cls": GameData.classes[c["class"]]["name"], "heir": d.heir.name, "price": GameText.num(price), "upkeep": GameText.num(upkeep(d, id))})
 	if not (m["diseases"] as Array).is_empty():
-		text += " They still carry %s." % [names_text((m["diseases"] as Array).map(func(e): return GameDisease.disease_name(str(e["id"]))))]
+		text += GameMessages.text("life", "still_carry", {"names": names_text((m["diseases"] as Array).map(func(e): return GameDisease.disease_name(str(e["id"]))))})
 	d._say(text)
 	return text
 
@@ -357,12 +357,12 @@ func hire(d: GameDynasty, id: String) -> String:
 func dismiss(d: GameDynasty, id: String) -> String:
 	var m := member(id)
 	if m.is_empty():
-		return "No such companion."
+		return GameMessages.text("life", "no_such_companion")
 	_settle(d, m)
 	_part(d, m, "dismissed")
 	var home: Array = def(id).get("where", [])
-	var place: String = GameWorld.place(home[0]).get("name", "home") if not home.is_empty() else "home"
-	var text := "%s is paid off and heads back to %s. They would come again without a fee." % [m["name"], place]
+	var place: String = GameWorld.place(home[0]).get("name", GameMessages.text("life", "home_place")) if not home.is_empty() else GameMessages.text("life", "home_place")
+	var text := GameMessages.text("life", "paid_off", {"name": m["name"], "place": place})
 	d._say(text)
 	return text
 
@@ -434,7 +434,7 @@ func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 		m["due"] = float(m["due"]) + float(upkeep(d, m["id"])) * years
 		if not _settle(d, m):
 			_part(d, m, "left")
-			var text := "Wages go unpaid and %s walks out on %s. Winning them back will cost the full fee." % [m["name"], d.heir.name]
+			var text := GameMessages.text("life", "walks_out", {"name": m["name"], "heir": d.heir.name})
 			d._say(text)
 			msgs.append(text)
 			continue
@@ -469,7 +469,7 @@ func _grow_old(d: GameDynasty, msgs: Array) -> void:
 				_end(d, id, "retired", msgs)
 				continue
 		if was < old and now >= old and has_member(id):
-			var text := "%s, %d now, is growing old. Each year will take a little from their strength." % [rec["name"], int(now)]
+			var text := GameMessages.text("life", "growing_old", {"name": rec["name"], "age": int(int(now))})
 			d._say(text)
 			msgs.append(text)
 
@@ -487,7 +487,7 @@ func _end(d: GameDynasty, id: String, how: String, msgs: Array) -> void:
 		_settle(d, m)
 		_part(d, m, "dead" if how == "died" else "retired")
 		if how == "died":
-			text = "%s dies of old age at %d, still sworn to House %s." % [nm, years, d.dynasty_name]
+			text = GameMessages.text("life", "dies_sworn", {"name": nm, "age": int(years), "house": d.dynasty_name})
 		else:
 			var line: String = def(id).get("farewell", setting("farewell"))
 			text = line.format({"name": nm, "heir": d.heir.name, "place": _place_name(id), "age": years})
@@ -495,9 +495,9 @@ func _end(d: GameDynasty, id: String, how: String, msgs: Array) -> void:
 		rec["status"] = "dead" if how == "died" else "retired"
 		rec["gen"] = d.gen
 		if how == "died":
-			text = "Word reaches %s: %s, who once rode with House %s, has died of old age at %d." % [d.heir.name, nm, d.dynasty_name, years]
+			text = GameMessages.text("life", "word_died", {"heir": d.heir.name, "name": nm, "house": d.dynasty_name, "age": int(years)})
 		else:
-			text = "Word reaches %s: %s, who once rode with House %s, has retired to %s at %d." % [d.heir.name, nm, d.dynasty_name, _place_name(id), years]
+			text = GameMessages.text("life", "word_retired", {"heir": d.heir.name, "name": nm, "house": d.dynasty_name, "place": _place_name(id), "age": int(years)})
 	_close_line(d, id, {"name": nm, "end": how, "age": years, "year": int(d.world.year) + 1, "gen": d.gen, "served": serving})
 	if def(id).has("successor"):
 		rec["name"] = str(def(id)["successor"]).replace("{given}", GameInheritance.random_name(d.rng))
@@ -529,14 +529,14 @@ func on_succession(d: GameDynasty, msgs: Array) -> void:
 	rest(d)
 	var names: Array = members.map(func(m): return m["name"])
 	var one := names.size() == 1
-	msgs.append("%s stay%s with the family and swear%s to serve %s." % [names_text(names), "s" if one else "", "s" if one else "", d.heir.name])
+	msgs.append(GameMessages.text("life", "stays_one" if one else "stay_many", {"names": names_text(names), "heir": d.heir.name}))
 
 
 ## "Bren", "Bren and Maddy", "Bren, Maddy and Oriel".
 static func names_text(names: Array) -> String:
 	if names.size() <= 1:
 		return "".join(PackedStringArray(names))
-	return "%s and %s" % [", ".join(PackedStringArray(names.slice(0, names.size() - 1))), names.back()]
+	return GameMessages.text("life", "names_and", {"first": GameMessages.text("life", "list_comma").join(PackedStringArray(names.slice(0, names.size() - 1))), "last": names.back()})
 
 
 # ---------------------------------------------------------------- battle
@@ -568,7 +568,7 @@ func after_battle(d: GameDynasty, b: GameBattle) -> Array:
 			msgs.append(_fall(d, m))
 		else:
 			m["hp"] = maxi(1, int(round(float(u.max_hp()) * float(GameData.bal("companion_ko_recover_hp")))))
-			msgs.append("%s is carried from the field, battered but breathing." % m["name"])
+			msgs.append(GameMessages.text("life", "carried_off", {"name": m["name"]}))
 	return msgs
 
 
@@ -584,7 +584,7 @@ func _fall(d: GameDynasty, m: Dictionary) -> String:
 	_close_line(d, id, {"name": m["name"], "end": "fell", "age": years, "year": int(d.world.year) + 1, "gen": d.gen, "served": true})
 	var pattern: String = def(id).get("successor", "{given}")
 	rec["name"] = pattern.replace("{given}", GameInheritance.random_name(d.rng))
-	return "%s falls in the fighting and does not rise. House %s will remember." % [m["name"], d.dynasty_name]
+	return GameMessages.text("life", "falls", {"name": m["name"], "house": d.dynasty_name})
 
 
 ## A sickness takes a companion in service: kept in the record like a death of old age, with its

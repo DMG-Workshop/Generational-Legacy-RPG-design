@@ -158,7 +158,7 @@ static func work_text(e: Dictionary) -> String:
 static func kinds_text(by_kind: Dictionary) -> String:
 	var keys: Array = by_kind.keys()
 	keys.sort()
-	return ", ".join(keys.map(func(k): return "%s %s" % [str(data()["work"]["kinds"][k]["said"]), GameText.num(int(ceil(float(by_kind[k]))))]))
+	return GameMessages.text("life", "list_comma").join(keys.map(func(k): return GameMessages.text("life", "kind_income", {"said": str(data()["work"]["kinds"][k]["said"]), "gold": GameText.num(int(ceil(float(by_kind[k]))))})))
 
 
 ## What the whole roster costs to keep each year, in gold (a part of a gold is rounded up).

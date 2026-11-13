@@ -64,7 +64,7 @@ static func why_not(d: GameDynasty, id: String) -> String:
 	if d.state != "life" or d.heir == null:
 		return text("outside_life")
 	if not has(id):
-		return "No such subclass."
+		return GameMessages.text("life", "no_such_subclass")
 	if d.heir.subclass == id:
 		return text("already", {"name": name_of(id)})
 	if d.heir.gold < cost(d, id):

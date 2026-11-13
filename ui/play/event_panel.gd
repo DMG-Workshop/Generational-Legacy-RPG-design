@@ -96,7 +96,7 @@ func _build_result() -> void:
 	if not roll.is_empty():
 		var deg: String = roll.get("degree", "")
 		var col := Kit.good() if deg.ends_with("success") else Kit.bad()
-		var line := Kit.label("%s check:  %s" % [GameEvents.ATTR_LABELS.get(roll.get("attr", ""), ""), GameEvents.roll_text(roll)], 20, col)
+		var line := Kit.label("%s check:  %s" % [GameEvents.attr_label(roll.get("attr", "")), GameEvents.roll_text(roll)], 20, col)
 		body.add_child(line)
 	var text: String = r.get("text", "")
 	if text != "":

@@ -308,7 +308,7 @@ func _test_temple() -> void:
 	h.fate_value = 0.15
 	_check(GameItems.can_pray(d) and GameItems.trials_left(h) > 0, "prayer open while trials remain")
 	var done: Array = h.milestones_done.duplicate()
-	h.milestones_done = GameFate.MILESTONE_LABELS.keys()
+	h.milestones_done = GameFate.MILESTONE_IDS.duplicate()
 	g = h.gold
 	msg = GameItems.pray(d)
 	_check(GameItems.trials_left(h) == 0 and not GameItems.can_pray(d), "no prayer once every trial is faced")

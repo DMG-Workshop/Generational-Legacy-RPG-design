@@ -64,7 +64,7 @@ static func why_not(h: GameHeir, id: String) -> String:
 
 ## "12.4 of 61" for the screens.
 static func summary(h: GameHeir) -> String:
-	return "%s of %s" % [_n(carried(h)), _n(capacity(h))]
+	return GameMessages.text("life", "carried_of", {"carried": _n(carried(h)), "capacity": _n(capacity(h))})
 
 
 static func _n(x: float) -> String:

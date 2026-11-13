@@ -67,7 +67,7 @@ static func mark_infected(d: GameDynasty, foes: Array) -> void:
 		e["infected"] = id
 		var nm := str(e["name"])
 		var prefix := str(setting("infected_prefix"))
-		e["name"] = "Elite %s %s" % [prefix, nm.substr(6)] if nm.begins_with("Elite ") else "%s %s" % [prefix, nm]
+		e["name"] = GameMessages.text("life", "elite_prefixed", {"prefix": prefix, "name": nm.substr(6)}) if nm.begins_with("Elite ") else GameMessages.text("life", "prefixed", {"prefix": prefix, "name": nm})
 
 
 static func _pool_pick(d: GameDynasty) -> String:
@@ -152,9 +152,9 @@ static func risk_text(d: GameDynasty) -> String:
 		return str(data()["text"]["clean"])
 	var names: Array = risk_diseases(d).map(func(id): return GameDisease.disease_name(id))
 	var pct := risk(d) * 100.0
-	var odds := "under 1%" if pct < 1.0 else "about %d%%" % int(round(pct))
-	var who := "One of the dead carries" if n == 1 else "%d of the dead carry" % n
-	return "%s sickness (%s): %s risk of catching it." % [who, ", ".join(names), odds]
+	var odds := GameMessages.text("life", "under_one_pct") if pct < 1.0 else GameMessages.text("life", "about_pct", {"pct": int(round(pct))})
+	var who := GameMessages.text("life", "one_of_dead") if n == 1 else GameMessages.text("life", "many_of_dead", {"n": n})
+	return GameMessages.text("life", "sickness_risk", {"who": who, "names": GameMessages.text("life", "list_comma").join(names), "odds": odds})
 
 
 ## Search the bodies: extra gold, maybe a find, and one contagion check (see exposure).
@@ -196,9 +196,9 @@ static func _find(d: GameDynasty) -> String:
 			break
 	if pick.get("potion", false):
 		h.potions += 1
-		return text("search_find", {"h": h.name, "find": "a healing potion"})
+		return text("search_find", {"h": h.name, "find": GameMessages.text("life", "a_healing_potion")})
 	var id := str(pick["item"])
-	var iname := "a " + GameItems.item_name(id)
+	var iname := GameMessages.text("life", "a_item", {"item": GameItems.item_name(id)})
 	if GameItems.stack_max(id) > 0 and GameItems.count(h, id) >= GameItems.stack_max(id):
 		var g := GameItems.sell_price(d, id)
 		h.gold += g
@@ -378,15 +378,15 @@ static func cure_companion(d: GameDynasty, member_id: String, id: String) -> Str
 	var m := p.member(member_id)
 	var place: String = d.world.here()["name"]
 	if m.is_empty():
-		return "No such companion."
+		return GameMessages.text("life", "no_such_companion")
 	if not d.world.has_service("temple"):
-		return "There is no temple in %s." % place
+		return GameMessages.text("life", "no_temple", {"place": place})
 	var u := p.sick_body(d, m)
 	if not GameDisease.has(u, id):
-		return "%s is not sick with %s." % [m["name"], GameDisease.disease_name(id)]
+		return GameMessages.text("life", "not_sick_with", {"name": m["name"], "disease": GameDisease.disease_name(id)})
 	var cost := GameDisease.cure_price(d, id, u)
 	if d.heir.gold < cost:
-		return "The priests ask %s gold to cure %s." % [GameText.num(cost), GameDisease.disease_name(id)]
+		return GameMessages.text("life", "priests_ask", {"price": GameText.num(cost), "disease": GameDisease.disease_name(id)})
 	d.heir.gold -= cost
 	GameDisease.cure(u, id)
 	m["hp"] = clampi(int(m["hp"]), 1, u.max_hp())

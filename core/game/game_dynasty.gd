@@ -70,7 +70,7 @@ static func new_game(p_seed: int, founder_name: String, class_id: String, bloodl
 	d._setup_new_heir(h)
 	h.gold = int(GameData.bal("founder_gold"))
 	d.heir = h
-	d._say("The %s dynasty begins with %s, %s %s." % [d.dynasty_name, h.name, h.race()["name"], h.cls()["name"]])
+	d._say(GameMessages.text("life", "dynasty_begins", {"dynasty": d.dynasty_name, "heir": h.name, "race": h.race()["name"], "cls": h.cls()["name"]}))
 	d._coming_of_age()
 	if not p_hard.is_empty():   # hard-mode options are chosen here or never (choices the rules refuse found a plain house)
 		GameHardMode.found(d, p_hard)
@@ -157,11 +157,11 @@ func describe_echo(e: Dictionary) -> String:
 	var pct := int(round(float(e["strength"]) * 100.0))
 	match e["kind"]:
 		"slayer":
-			return "%s (+%d%% damage vs %s)" % [e["text"], pct, _creature_name(e["key"])]
+			return GameMessages.text("life", "echo_damage_vs", {"text": e["text"], "pct": int(pct), "foe": _creature_name(e["key"])})
 		"glory":
-			return "%s (+%d%% gold)" % [e["text"], pct]
+			return GameMessages.text("life", "echo_gold", {"text": e["text"], "pct": int(pct)})
 		"infamy":
-			return "%s (+%d%% shop prices)" % [e["text"], pct]
+			return GameMessages.text("life", "echo_shop", {"text": e["text"], "pct": int(pct)})
 	return e["text"]
 
 
@@ -185,20 +185,43 @@ func _add_trait(h: GameHeir, id: String) -> bool:
 
 ## "A bad omen at Coming of Age: you lose 40 gold and are Cursed." - with no gold, the loss is left out.
 func _setback_text(what: String, label: String, loss: int, extra: String) -> String:
+	if loss > 0 and extra != "":
+		return GameMessages.text("life", "setback_loss_extra", {"what": what, "label": label, "loss": GameText.num(loss), "extra": extra})
 	if loss > 0:
-		return "%s at %s: you lose %s gold%s." % [what, label, GameText.num(loss), " and " + extra if extra != "" else ""]
+		return GameMessages.text("life", "setback_loss", {"what": what, "label": label, "loss": GameText.num(loss)})
 	if extra != "":
-		return "%s at %s: you %s." % [what, label, extra]
-	return "%s at %s, but there was no gold to lose." % [what, label]
+		return GameMessages.text("life", "setback_extra", {"what": what, "label": label, "extra": extra})
+	return GameMessages.text("life", "setback_none", {"what": what, "label": label})
+
+
+## The name of a setback's severity, as the fate line shows it.
+func _severity_text(sev: String) -> String:
+	match sev:
+		"minor":
+			return GameMessages.text("life", "sev_minor")
+		"moderate":
+			return GameMessages.text("life", "sev_moderate")
+		"major":
+			return GameMessages.text("life", "sev_major")
+		"critical":
+			return GameMessages.text("life", "sev_critical")
+	return sev
+
+
+## How a death's cause reads in the message; a cause the catalog does not name is shown as it is.
+func _cause_text(cause: String) -> String:
+	if cause == "slain in battle":
+		return GameMessages.text("life", "cause_slain")
+	return cause
 
 
 func _check_milestone(milestone: String) -> void:
 	if milestone in heir.milestones_done:
 		return
 	heir.milestones_done.append(milestone)
-	var label: String = GameFate.MILESTONE_LABELS[milestone]
+	var label: String = GameFate.milestone_label(milestone)
 	if not GameFate.roll_failure(heir.fate_value, rng):
-		_say("Milestone passed: %s." % label)
+		_say(GameMessages.text("life", "milestone_passed", {"label": label}))
 		return
 	var sev := GameFate.roll_severity(heir.fate_value, rng)
 	var msgs: Array = []
@@ -206,23 +229,23 @@ func _check_milestone(milestone: String) -> void:
 		"minor":
 			var loss := int(float(heir.gold) * 0.2)
 			heir.gold -= loss
-			msgs.append(_setback_text("A minor setback", label, loss, ""))
+			msgs.append(_setback_text(GameMessages.text("life", "what_minor"), label, loss, ""))
 		"moderate":
 			var loss := int(float(heir.gold) * 0.4)
 			heir.gold -= loss
 			if rng.randf() < float(GameData.bal("moderate_curse_chance")):
 				_add_trait(heir, "cursed")
-				msgs.append(_setback_text("A bad omen", label, loss, "are Cursed"))
+				msgs.append(_setback_text(GameMessages.text("life", "what_omen"), label, loss, GameMessages.text("life", "omen_cursed")))
 			else:
-				msgs.append(_setback_text("A bad omen", label, loss, ""))
+				msgs.append(_setback_text(GameMessages.text("life", "what_omen"), label, loss, ""))
 		"major":
 			var loss := int(float(heir.gold) * 0.7)
 			heir.gold -= loss
 			var curse := ""
 			if rng.randf() < float(GameData.bal("major_curse_chance")):
 				curse = _random_new_curse(heir)
-			msgs.append(_setback_text("A major failure", label, loss, "gain %s" % GameData.trait_name(curse) if curse != "" else ""))
-			_add_echo("infamy", "major", "%s's failure is whispered about" % heir.name, 0.3)
+			msgs.append(_setback_text(GameMessages.text("life", "what_major"), label, loss, GameMessages.text("life", "gain_trait", {"trait": GameData.trait_name(curse)}) if curse != "" else ""))
+			_add_echo("infamy", "major", GameMessages.text("life", "echo_whispered", {"name": heir.name}), 0.3)
 		"critical":
 			var curse := _random_new_curse(heir)
 			_add_trait(heir, "scarred")
@@ -230,15 +253,15 @@ func _check_milestone(milestone: String) -> void:
 			heir.gold = int(float(heir.gold) * 0.2)
 			heir.age += 5.0
 			heir.hp = 1
-			var hurt: Array = ["are gravely hurt", "age 5 years"]
+			var hurt: Array = [GameMessages.text("life", "hurt_gravely"), GameMessages.text("life", "hurt_age")]
 			if had_gold:
-				hurt.append("lose most of your wealth")
+				hurt.append(GameMessages.text("life", "hurt_wealth"))
 			if curse != "":
-				hurt.append("gain " + GameData.trait_name(curse))
-			msgs.append("DISASTER at %s! You %s and %s." % [label, ", ".join(hurt.slice(0, -1)), hurt[-1]])
-			_add_echo("infamy", "critical", "%s's ruin became a cautionary tale" % heir.name, 0.5)
+				hurt.append(GameMessages.text("life", "gain_trait", {"trait": GameData.trait_name(curse)}))
+			msgs.append(GameMessages.text("life", "disaster", {"label": label, "hurt": GameMessages.text("life", "list_comma").join(hurt.slice(0, -1)), "last": hurt[-1]}))
+			_add_echo("infamy", "critical", GameMessages.text("life", "echo_ruin", {"name": heir.name}), 0.5)
 	pending_archetype = GameFate.roll_archetype(rng)
-	msgs.append("Fate (%s): the next heir will be shaped by this: %s." % [sev, GameFate.ARCHETYPES[pending_archetype]["name"]])
+	msgs.append(GameMessages.text("life", "fate_next", {"sev": _severity_text(sev), "archetype": GameFate.archetype_name(pending_archetype)}))
 	for m in msgs:
 		_say(m)
 	heir.hp = clampi(heir.hp, 1, heir.max_hp())
@@ -255,7 +278,7 @@ func _random_new_curse(h: GameHeir) -> String:
 
 func _coming_of_age() -> void:
 	heir.fate_value = GameFate.roll_fate_value(rng, heir.fate_modifier_total())
-	_say("%s comes of age. Fate Value: %d%%." % [heir.name, int(round(heir.fate_value * 100.0))])
+	_say(GameMessages.text("life", "comes_of_age", {"name": heir.name, "fate": int(int(round(heir.fate_value * 100.0)))}))
 	_check_milestone("coming_of_age")
 
 
@@ -310,7 +333,7 @@ func set_flag(flag: String, out: Variant = null) -> void:
 
 func give_item(id: String) -> String:
 	heir.inventory.append(id)
-	return "%s received %s." % [heir.name, GameItems.item_def(id).get("name", id)]
+	return GameMessages.text("life", "received_item", {"name": heir.name, "item": GameItems.item_def(id).get("name", id)})
 
 
 func has_pending_event() -> bool:
@@ -333,16 +356,16 @@ func travel(to: String) -> Array:
 		if r["to"] == to:
 			link = r
 	if link.is_empty():
-		return ["There is no open road from %s to %s." % [world.here()["name"], GameWorld.place(to).get("name", to)]]
+		return [GameMessages.text("life", "no_open_road", {"here": world.here()["name"], "there": GameWorld.place(to).get("name", to)})]
 	var years := world.travel_years(link)
 	var dest: Dictionary = GameWorld.place(to)
 	var msgs: Array = []
-	var slow := "" if float(world.weather().get("travel", 1.0)) <= 1.0 else " (slowed by %s)" % world.weather()["name"].to_lower()
+	var slow := "" if float(world.weather().get("travel", 1.0)) <= 1.0 else GameMessages.text("life", "slowed", {"weather": world.weather()["name"].to_lower()})
 	var first := to not in world.visited
 	world.visit(to)
-	msgs.append("%s travels to %s: %s%s." % [heir.name, dest["name"], _span_text(years), slow])
+	msgs.append(GameMessages.text("life", "travels", {"name": heir.name, "dest": dest["name"], "span": _span_text(years), "slow": slow}))
 	if first:
-		msgs.append("No one of House %s has walked %s before. %s" % [dynasty_name, dest["name"], dest.get("description", "")])
+		msgs.append(GameMessages.text("life", "no_one_walked", {"house": dynasty_name, "dest": dest["name"], "description": dest.get("description", "")}))
 	quests.on_arrive(self, to, msgs)
 	msgs = _pass_years(years, msgs)
 	if state == "life":
@@ -359,18 +382,18 @@ func buy_map(map_id: String) -> String:
 		if m["id"] == map_id:
 			var price := map_price(m)
 			if heir.gold < price:
-				return "Not enough gold (%s needed)." % GameText.num(price)
+				return GameMessages.text("life", "not_enough_gold", {"needed": GameText.num(price)})
 			heir.gold -= price
 			var n := world.chart(m["reveals"])
-			return "Bought the %s for %s gold: %d new place%s charted." % [m["name"], GameText.num(price), n, "" if n == 1 else "s"]
-	return "That map is not sold here."
+			return GameMessages.text("life", "bought_map", {"item": m["name"], "price": GameText.num(price), "places": GameMessages.text("life", "places_one" if n == 1 else "places_many", {"n": int(n)})})
+	return GameMessages.text("life", "map_not_sold")
 
 
 static func _span_text(years: float) -> String:
 	var seasons := int(round(years * 4.0))
 	if seasons < 4:
-		return "%d season%s" % [seasons, "" if seasons == 1 else "s"]
-	return "%.1f years" % years
+		return GameMessages.text("life", "seasons_one" if seasons == 1 else "seasons_many", {"n": int(seasons)})
+	return GameMessages.text("life", "years_fmt", {"years": ("%.1f" % [years])})
 
 
 func can_found_family() -> bool:
@@ -406,16 +429,16 @@ func shirt_of(by: int) -> String:
 func buy_potion() -> String:
 	var price := potion_price()
 	if heir.gold < price:
-		return "Not enough gold (%s needed)." % GameText.num(price)
+		return GameMessages.text("life", "not_enough_gold", {"needed": GameText.num(price)})
 	heir.gold -= price
 	heir.potions += 1
-	return "Bought a potion for %s gold." % GameText.num(price)
+	return GameMessages.text("life", "bought_potion", {"price": GameText.num(price)})
 
 
 func rest() -> Array:
 	heir.full_heal()
 	party.rest(self)
-	var msgs: Array = ["%s rests and recovers fully." % heir.name]
+	var msgs: Array = [GameMessages.text("life", "rests", {"name": heir.name})]
 	GameDisease.on_rest(self, msgs)
 	msgs = _finish_time("rest", msgs)
 	heir.downtime = state == "life"   # until the next action that takes time (see GameFeats)
@@ -428,15 +451,15 @@ func work() -> Array:
 	amount *= GameWorldEvents.mult(self, "work_gold_mult")
 	var g := maxi(1, int(round(amount)))
 	heir.gold += g
-	return _finish_time("work", ["%s works odd jobs and earns %s gold." % [heir.name, GameText.num(g)]])
+	return _finish_time("work", [GameMessages.text("life", "works_odd_jobs", {"name": heir.name, "gold": GameText.num(g)})])
 
 
 func train(stat: String) -> Array:
 	heir.training[stat] += 1.5
-	var msgs: Array = ["%s trains %s (+1.5 base)." % [heir.name, stat.to_upper()]]
+	var msgs: Array = [GameMessages.text("life", "trains", {"name": heir.name, "stat": stat.to_upper()})]
 	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level) * GameHouse.train_xp_mult(self) * GameFactions.town_mult(self, "train"))))
 	if lv > 0:
-		msgs.append("Level up! Now level %s." % GameText.num(heir.level))
+		msgs.append(GameMessages.text("life", "level_up_now", {"level": GameText.num(heir.level)}))
 	return _finish_time("train", msgs)
 
 
@@ -474,7 +497,7 @@ func _make_mate(r: RandomNumberGenerator, id: int) -> GameHeir:
 func found_family(mate: int = -1) -> Array:
 	var msgs: Array = []
 	if not can_found_family():
-		return ["You cannot found a family right now."]
+		return [GameMessages.text("life", "cannot_found")]
 	var mates := mate_candidates()
 	var sp: GameHeir
 	if mate >= 0 and mate < mates.size():
@@ -515,10 +538,10 @@ func found_family(mate: int = -1) -> Array:
 		c.lifespan = c.compute_lifespan()
 		heir.children.append(c)
 		for ev in res["events"]:
-			msgs.append("%s: %s" % [c.name, ev])
+			msgs.append(GameMessages.text("life", "child_event", {"name": c.name, "event": ev}))
 		msgs.append_array(GameDisease.on_birth(self, c))
 	heir.family_founded = true
-	msgs.push_front("%s marries %s, %s %s. %d child%s born." % [heir.name, sp.name, sp.race()["name"], sp.cls()["name"], n, "" if n == 1 else "ren"])
+	msgs.push_front(GameMessages.text("life", "marries", {"heir": heir.name, "spouse": sp.name, "race": sp.race()["name"], "cls": sp.cls()["name"], "children": GameMessages.text("life", "child_born_one" if n == 1 else "children_born", {"n": int(n)})}))
 	_say(msgs[0])
 	for i in range(1, msgs.size()):
 		_say(msgs[i])
@@ -579,7 +602,7 @@ func start_hunt(kind: String) -> GameBattle:
 		var kin: Dictionary = pack["creature"] if not pack.is_empty() else pool[rng.randi() % pool.size()]
 		var foe := _make_enemy(kin, float(cfg["scale"]) * float(pack.get("power", 1.0)), float(cfg["reward"]) * float(pack.get("reward", 1.0)), maxi(1, int(round(float(heir.level) * lv_mult))))
 		if elite:
-			foe["name"] = "Elite " + foe["name"]
+			foe["name"] = GameMessages.text("life", "elite_name", {"name": foe["name"]})
 		foes.append(foe)
 	return _begin_battle(foes, kind)
 
@@ -605,7 +628,7 @@ func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle.add_allies(party.battle_allies(self))
 	battle.open_with_breath()
 	battle_kind = kind
-	_say("A battle begins: %s." % ", ".join(foes.map(func(e): return e["name"])))
+	_say(GameMessages.text("life", "battle_begins", {"foes": GameMessages.text("life", "list_comma").join(foes.map(func(e): return e["name"]))}))
 	return battle
 
 
@@ -651,9 +674,9 @@ func finish_battle() -> Array:
 					elif e["heirloom"] != "":
 						heirlooms.append({"name": e["heirloom"], "boss": e["name"], "gen": gen})
 						heir.heirloom_bonus = heirloom_bonus()
-						msgs.append("Heirloom claimed: %s! (+%d%% power for all descendants)" % [e["heirloom"], int(float(GameData.bal("heirloom_bonus")) * 100.0)])
-					_add_echo("slayer", e["id"], "%s slew %s" % [heir.name, e["name"]], 0.25)
-					msgs.append("Legend: %s has slain %s." % [heir.name, e["name"]])
+						msgs.append(GameMessages.text("life", "heirloom_claimed", {"heirloom": e["heirloom"], "pct": int(int(float(GameData.bal("heirloom_bonus")) * 100.0))}))
+					_add_echo("slayer", e["id"], GameMessages.text("life", "echo_slew", {"name": heir.name, "foe": e["name"]}), 0.25)
+					msgs.append(GameMessages.text("life", "legend_slain", {"name": heir.name, "foe": e["name"]}))
 			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory")) * GameWorldEvents.mult(self, "hunt_gold_mult")))
 			if GameWorldEvents.mult(self, "hunt_xp_mult") != 1.0:
 				xp = int(round(float(xp) * GameWorldEvents.mult(self, "hunt_xp_mult")))
@@ -665,9 +688,9 @@ func finish_battle() -> Array:
 			else:
 				heir.clean_streak = 0
 			total_hunts += 1
-			msgs.append("Victory! +%s XP, +%s gold." % [GameText.num(xp), GameText.num(gold)])
+			msgs.append(GameMessages.text("life", "victory", {"xp": GameText.num(xp), "gold": GameText.num(gold)}))
 			if heir.gain_xp(xp) > 0:
-				msgs.append("Level up! %s is now level %s." % [heir.name, GameText.num(heir.level)])
+				msgs.append(GameMessages.text("life", "level_up_named", {"name": heir.name, "level": GameText.num(heir.level)}))
 			msgs.append_array(quest_msgs)
 			msgs.append_array(party_msgs)
 			for m in msgs:
@@ -678,7 +701,7 @@ func finish_battle() -> Array:
 				loot = GamePlague.offer(self, b)
 		"fled":
 			heir.clean_streak = 0
-			msgs.append("%s flees from the battle." % heir.name)
+			msgs.append(GameMessages.text("life", "flees", {"name": heir.name}))
 			msgs.append_array(party_msgs)
 			for m in msgs:
 				_say(m)
@@ -693,13 +716,13 @@ func finish_battle() -> Array:
 			if heir.trait_total("extra_life") > 0.0 and not heir.extra_life_used:
 				heir.extra_life_used = true
 				heir.hp = heir.max_hp()
-				msgs.append("Death refuses %s! Marked by Death, they rise again at full health." % heir.name)
+				msgs.append(GameMessages.text("life", "death_refuses", {"name": heir.name}))
 				msgs.append_array(party_msgs)
 				for m in msgs:
 					_say(m)
 				msgs.append_array(_finish_time(battle_kind, []))
 			elif rng.randf() < float(GameData.bal("death_chance_on_defeat")):
-				msgs.append("%s was slain in battle." % heir.name)
+				msgs.append(GameMessages.text("life", "slain_in_battle", {"name": heir.name}))
 				msgs.append_array(party_msgs)
 				for m in msgs:
 					_say(m)
@@ -710,7 +733,7 @@ func finish_battle() -> Array:
 				heir.hp = 1
 				heir.mp = 0
 				heir.age += float(GameData.bal("defeat_years"))
-				msgs.append("%s is dragged from the field, barely alive. Lost %s gold." % [heir.name, GameText.num(loss)])
+				msgs.append(GameMessages.text("life", "dragged", {"name": heir.name, "loss": GameText.num(loss)}))
 				msgs.append_array(party_msgs)
 				for m in msgs:
 					_say(m)
@@ -740,7 +763,7 @@ func _pass_years(years: float, msgs: Array) -> Array:
 	if state != "life":
 		return msgs
 	if not heir.spell_news.is_empty():
-		var learned := "%s learns to cast %s." % [heir.name, " and ".join(heir.spell_news.map(func(id): return GameCombat.spell(id).get("name", id)))]
+		var learned := GameMessages.text("life", "learns_spell", {"name": heir.name, "spells": GameMessages.text("life", "list_and").join(heir.spell_news.map(func(id): return GameCombat.spell(id).get("name", id)))})
 		heir.spell_news = []
 		msgs.append(learned)
 		_say(learned)
@@ -771,8 +794,8 @@ func _pass_years(years: float, msgs: Array) -> Array:
 
 func retire() -> Array:
 	if not can_retire():
-		return ["It is too soon to retire."]
-	_say("%s retires from adventuring." % heir.name)
+		return [GameMessages.text("life", "too_soon_retire")]
+	_say(GameMessages.text("life", "retires", {"name": heir.name}))
 	return _die("old age")
 
 
@@ -794,13 +817,13 @@ func _die(cause: String) -> Array:
 		rec["titles"] = heir.titles.duplicate()
 	history.append(rec)
 	ages.on_death(self, rec)
-	msgs.append("%s dies of %s at age %d." % [heir.name, cause, int(heir.age)] if cause == "old age" else "%s dies: %s, at age %d." % [heir.name, cause, int(heir.age)])
+	msgs.append(GameMessages.text("life", "dies_old_age", {"name": heir.name, "age": int(heir.age)}) if cause == "old age" else GameMessages.text("life", "dies_cause", {"name": heir.name, "cause": _cause_text(cause), "age": int(heir.age)}))
 	if cause == "slain in battle":
 		if killer_id != "":
-			_add_echo("slayer", killer_id, "%s fell to %s" % [heir.name, _creature_name(killer_id)], 0.15)
+			_add_echo("slayer", killer_id, GameMessages.text("life", "echo_fell", {"name": heir.name, "foe": _creature_name(killer_id)}), 0.15)
 	elif heir.level >= glory_level(heir):
 		var strength := 0.1 * float(heir.level) / glory_level(heir)
-		_add_echo("glory", "life", "%s lived a celebrated life" % heir.name, clampf(strength, 0.0, 0.2))
+		_add_echo("glory", "life", GameMessages.text("life", "echo_celebrated", {"name": heir.name}), clampf(strength, 0.0, 0.2))
 	var line_ends := GameHardMode.line_ends(self, cause)
 	if gen >= GameHardMode.last_gen(self) or line_ends:
 		last_death = rec
@@ -814,10 +837,10 @@ func _die(cause: String) -> Array:
 	if kids.is_empty():
 		var adoptees := _adoptees()
 		if adoptees.is_empty():
-			msgs.append("%s left no children. Distant cousins step forward." % heir.name)
+			msgs.append(GameMessages.text("life", "no_children_cousins", {"name": heir.name}))
 			kids = _cousins()
 		else:
-			msgs.append("%s left no children. Companions of the house are adopted to carry on the name." % heir.name)
+			msgs.append(GameMessages.text("life", "no_children_adopted", {"name": heir.name}))
 			kids = adoptees
 			if kids.size() < 2:
 				kids.append_array(_cousins(2 - kids.size()))
@@ -898,17 +921,17 @@ func choose_heir(index: int) -> Array:
 	if pending_archetype != "":
 		var a: Dictionary = GameFate.ARCHETYPES[pending_archetype]
 		c.archetype_bonus = a["bonus"].duplicate()
-		msgs.append("%s is a %s. %s" % [c.name, a["name"], a["desc"]])
+		msgs.append(GameMessages.text("life", "archetype_is", {"name": c.name, "archetype": GameFate.archetype_name(pending_archetype), "desc": GameFate.archetype_desc(pending_archetype)}))
 		if pending_archetype == "rebel":
 			var ids := GameData.starting_ids(GameData.classes).filter(func(x): return x != parent.class_id)
 			c.class_id = ids[rng.randi() % ids.size()]
-			msgs.append("%s rejects the family trade and becomes a %s." % [c.name, c.cls()["name"]])
+			msgs.append(GameMessages.text("life", "rejects_trade", {"name": c.name, "cls": c.cls()["name"]}))
 		if pending_archetype == "redeemer":
 			for t in c.traits:
 				if GameData.trait_def(t).get("category", "") == "curse":
 					c.traits.erase(t)
 					c.dormant.append(t)
-					msgs.append("%s shed the burden of %s (now dormant)." % [c.name, GameData.trait_name(t)])
+					msgs.append(GameMessages.text("life", "shed_burden", {"name": c.name, "trait": GameData.trait_name(t)}))
 					break
 	pending_archetype = ""
 	world.visit(GameData.world["start"])
@@ -916,7 +939,7 @@ func choose_heir(index: int) -> Array:
 		var m := party.member(c.companion_id)
 		if not m.is_empty():
 			party._part(self, m, "adopted")
-			msgs.append("%s leaves the company to take up the family name." % c.name)
+			msgs.append(GameMessages.text("life", "leaves_company", {"name": c.name}))
 		c.companion_id = ""
 	_setup_new_heir(c)
 	var born_to := GameSubclass.on_succession(self, parent, c)   # a child may be born to the parent's calling (own dice)
@@ -940,14 +963,14 @@ func choose_heir(index: int) -> Array:
 	quests.on_succession(self, msgs)
 	candidates = []
 	state = "life"
-	_say("Generation %s: %s takes up the family name." % [GameText.num(gen), c.full_name()])
+	_say(GameMessages.text("life", "generation_takes_name", {"gen": GameText.num(gen), "name": c.full_name()}))
 	if gen == GameHardMode.last_gen(self):
 		msgs.append(GameAges.text("last_heir", {"heir": c.name, "house": dynasty_name}))
 	for m in msgs:
 		_say(m)
 	# Re-roll nothing: fate value was rolled at birth. Run the first milestone.
 	_check_milestone("coming_of_age")
-	_say("Inherited %s gold." % GameText.num(c.gold))
+	_say(GameMessages.text("life", "inherited_gold", {"gold": GameText.num(c.gold)}))
 	return msgs
 
 

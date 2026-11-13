@@ -327,7 +327,7 @@ static func take_block(u: GameHeir, id: String) -> String:
 static func path_block(u: GameHeir, id: String) -> String:
 	var n := node(id)
 	if n.is_empty():
-		return "No such skill."
+		return GameMessages.text("life", "no_such_skill_tree")
 	if str(n["tree"]) not in trees_of(u):
 		var t := tree(str(n["tree"]))
 		return "%s is not on a %s %s's paths: it belongs to %s%s." % [n["name"], u.race()["name"], u.cls()["name"],
@@ -336,7 +336,7 @@ static func path_block(u: GameHeir, id: String) -> String:
 		return "%s is mastered." % n["name"] if max_rank(id) > 1 else "%s already holds %s." % [u.name, n["name"]]
 	var req: Array = n.get("requires", [])
 	if not req.is_empty() and not req.any(func(r): return rank(u, str(r)) > 0):
-		return "Needs %s first." % _or_list(req.map(func(r): return node_name(str(r))))
+		return GameMessages.text("life", "needs_first", {"list": _or_list(req.map(func(r): return node_name(str(r))))})
 	if n.has("keystone"):
 		var why := _keystone_block(u, str(n["keystone"]))
 		if why != "":
@@ -379,9 +379,9 @@ static func take(u: GameHeir, id: String) -> bool:
 ## Why ranks cannot be bought for anyone right now ("" if they can): a living heir, not mid-fight.
 static func spend_block(d: GameDynasty) -> String:
 	if d.state != "life":
-		return "Only a living heir can learn."
+		return GameMessages.text("life", "only_living_learn")
 	if d.battle != null:
-		return "Not in the middle of a fight."
+		return GameMessages.text("life", "not_in_fight")
 	return ""
 
 
@@ -391,7 +391,7 @@ static func spend(d: GameDynasty, who: String, id: String) -> String:
 	var why := spend_block(d)
 	var u := unit_of(d, who)
 	if why == "" and u == null:
-		why = "No such companion."
+		why = GameMessages.text("life", "no_such_companion_tree")
 	if why == "":
 		why = take_block(u, id)
 	if why != "":
@@ -443,14 +443,14 @@ static func respec_block(d: GameDynasty, who: String = "") -> String:
 		return why
 	var u := unit_of(d, who)
 	if u == null:
-		return "No such companion."
+		return GameMessages.text("life", "no_such_companion_tree")
 	if not (d.world.is_town() or d.heir.downtime):
-		return "%s is no place to unlearn. Refund skill points in a town or right after a rest." % d.world.here().get("name", "This")
+		return GameMessages.text("life", "no_place_unlearn", {"place": d.world.here().get("name", "This")})
 	if spent(u) <= 0:
-		return "%s has bought nothing to refund." % u.name
+		return GameMessages.text("life", "nothing_to_refund", {"name": u.name})
 	var fee := respec_fee(d, u)
 	if d.heir.gold < fee:
-		return "Unlearning costs %s gold; %s has %s." % [GameText.num(fee), d.heir.name, GameText.num(d.heir.gold)]
+		return GameMessages.text("life", "unlearn_costs", {"fee": GameText.num(fee), "name": d.heir.name, "gold": GameText.num(d.heir.gold)})
 	return ""
 
 
@@ -699,15 +699,15 @@ static func inherit_share(child: GameHeir) -> Dictionary:
 	var why: Array = []
 	if child.archetype != "":
 		share += float(setting("inherit_fate_failure"))
-		why.append("a failed fate thinned it")
+		why.append(GameMessages.text("life", "failed_fate_thinned"))
 	var curses := _count_of(child, setting("inherit_curses"))
 	var blessings := _count_of(child, setting("inherit_blessings"))
 	if curses.size() > 0:
 		share += float(setting("inherit_per_curse")) * float(curses.size())
-		why.append("%s thinned it" % _and_list(curses))
+		why.append(GameMessages.text("life", "thinned", {"list": _and_list(curses)}))
 	if blessings.size() > 0:
 		share += float(setting("inherit_per_blessing")) * float(blessings.size())
-		why.append("%s strengthened it" % _and_list(blessings))
+		why.append(GameMessages.text("life", "strengthened", {"list": _and_list(blessings)}))
 	return {"share": clampf(share, 0.0, float(setting("inherit_max"))), "why": why}
 
 
@@ -773,7 +773,7 @@ static func inherit(d: GameDynasty, parent: GameHeir, child: GameHeir, msgs: Arr
 	var direct := child.tree_free.duplicate()
 	var recast: Dictionary = _recast(child, n - given)
 	changed(child)
-	var why := "" if (s["why"] as Array).is_empty() else "; " + "; ".join(PackedStringArray(s["why"]))
+	var why := "" if (s["why"] as Array).is_empty() else "; " + GameMessages.text("life", "list_semicolon").join(PackedStringArray(s["why"]))
 	var placed := given + _sum(recast)
 	var text: String
 	if placed == 0:
@@ -784,7 +784,7 @@ static func inherit(d: GameDynasty, parent: GameHeir, child: GameHeir, msgs: Arr
 		var parts: Array = []
 		for id in order:
 			if direct.has(id):
-				parts.append("%s %d/%d" % [node_name(id), int(direct[id]), max_rank(id)])
+				parts.append(GameMessages.text("life", "rank_fraction", {"name": node_name(id), "have": int(int(direct[id])), "max": int(max_rank(id))}))
 		text = "The blood remembers: %s wakes with %s (%d of %s's %d rank%s%s)." % [child.name, _and_list(parts), placed, parent.name, total, "" if total == 1 else "s", why]
 	if not recast.is_empty():
 		var from: Array = []
@@ -839,7 +839,7 @@ static func _sum(ranks: Dictionary) -> int:
 static func _rank_parts(u: GameHeir, placed: Dictionary) -> Array:
 	var ids: Array = placed.keys()
 	ids.sort_custom(func(a, b): return int(node(a)["tier"]) < int(node(b)["tier"]) or (int(node(a)["tier"]) == int(node(b)["tier"]) and _pos(a) < _pos(b)))
-	return ids.map(func(id): return "%s %d/%d" % [node_name(id), int(u.tree_free.get(id, 0)), max_rank(id)])
+	return ids.map(func(id): return GameMessages.text("life", "rank_fraction", {"name": node_name(id), "have": int(int(u.tree_free.get(id, 0))), "max": int(max_rank(id))}))
 
 
 ## "Elven", or "Human and Elven" for a half race whose ranks landed on both its bloodlines.
@@ -871,13 +871,13 @@ static func preview_text(parent: GameHeir, child: GameHeir) -> String:
 	var direct := int(v["direct"])
 	var recast := int(v["recast"])
 	if direct + recast <= 0:
-		return "Blood: nothing yet to inherit"
+		return GameMessages.text("life", "blood_nothing")
 	if recast <= 0:
 		return "Blood: about %d inherited rank%s carry over" % [direct, "" if direct == 1 else "s"]
 	var shape := _and_list(trees_of(child).filter(func(t): return is_blood(t)).map(func(t): return people(t)))
 	if direct <= 0:
 		return "Blood: about %d rank%s take %s shape" % [recast, "" if recast == 1 else "s", shape]
-	return "Blood: about %d carry over, about %d take %s shape" % [direct, recast, shape]
+	return GameMessages.text("life", "blood_shape", {"direct": int(direct), "recast": int(recast), "shape": shape})
 
 
 ## Fits the unit's ranks to its class and race as they are now (a save from before bloodlines had
@@ -909,9 +909,9 @@ static func reshape(u: GameHeir, msgs: Array) -> bool:
 		var placed := _recast(u, off)
 		var text: String
 		if placed.is_empty():
-			text = "The old %s blood finds no place in %s" % [_and_list(from), u.name]
+			text = GameMessages.text("life", "blood_no_place", {"list": _and_list(from), "name": u.name})
 		else:
-			text = "The old %s blood settles into its %s shape: %s" % [_and_list(from), _shape_of(placed), _and_list(_rank_parts(u, placed))]
+			text = GameMessages.text("life", "blood_settles", {"list": _and_list(from), "shape": _shape_of(placed), "parts": _and_list(_rank_parts(u, placed))})
 		var lost := off - _sum(placed)
 		if lost > 0 and not placed.is_empty():
 			text += " (%d rank%s fade%s)" % [lost, "" if lost == 1 else "s", "s" if lost == 1 else ""]
@@ -919,9 +919,8 @@ static func reshape(u: GameHeir, msgs: Array) -> bool:
 	if refund > 0:
 		var parts: Array = []
 		for id in back:
-			parts.append("%s %d/%d" % [node_name(str(id)), int(back[id]), max_rank(str(id))])
-		msgs.append("%s cannot use the %s learned before; %s skill point%s come%s back." % [u.name, _and_list(parts), GameText.num(refund),
-			"" if refund == 1 else "s", "s" if refund == 1 else ""])
+			parts.append(GameMessages.text("life", "rank_fraction", {"name": node_name(str(id)), "have": int(int(back[id])), "max": int(max_rank(str(id)))}))
+		msgs.append(GameMessages.text("life", "refund_one" if refund == 1 else "refund_many", {"name": u.name, "list": _and_list(parts), "points": GameText.num(refund)}))
 	return true
 
 
@@ -1027,7 +1026,7 @@ static func plan_lines(d: GameDynasty, who: String) -> Array:
 	var parts: Array = []
 	for id in plan:
 		if rank(u, str(id)) < int(plan[id]):
-			parts.append("%s %d/%d" % [node_name(str(id)), int(plan[id]), max_rank(str(id))])
+			parts.append(GameMessages.text("life", "rank_fraction", {"name": node_name(str(id)), "have": int(int(plan[id])), "max": int(max_rank(str(id)))}))
 	if parts.is_empty():
 		return []
 	return ["%s will learn again first, as points return: %s. Unlearning forgets this." % [u.name, _and_list(parts)]]
@@ -1180,7 +1179,7 @@ static func auto(d: GameDynasty, who: String = "") -> String:
 	var why := spend_block(d)
 	var u := unit_of(d, who)
 	if why == "" and u == null:
-		why = "No such companion."
+		why = GameMessages.text("life", "no_such_companion_tree")
 	if why != "":
 		return why
 	var before := u.tree_ranks.duplicate()
@@ -1273,13 +1272,13 @@ static func _ranks(v: Variant) -> Dictionary:
 static func _or_list(names: Array) -> String:
 	if names.size() <= 1:
 		return "".join(PackedStringArray(names))
-	return "%s or %s" % [", ".join(PackedStringArray(names.slice(0, -1))), names[-1]]
+	return GameMessages.text("life", "or_list", {"first": GameMessages.text("life", "list_comma").join(PackedStringArray(names.slice(0, -1))), "last": names[-1]})
 
 
 static func _and_list(names: Array) -> String:
 	if names.size() <= 1:
 		return "".join(PackedStringArray(names))
-	return "%s and %s" % [", ".join(PackedStringArray(names.slice(0, -1))), names[-1]]
+	return GameMessages.text("life", "names_and", {"first": GameMessages.text("life", "list_comma").join(PackedStringArray(names.slice(0, -1))), "last": names[-1]})
 
 
 static func _n(v: float) -> String:
@@ -1336,8 +1335,8 @@ static func target_name(m: Dictionary, u: GameHeir = null) -> String:
 		if same.size() == 1:
 			return same[0]
 		if same.size() > 1:
-			return "%s skills (%s and %d more)" % [want.capitalize(), same[0], same.size() - 1]
-		return {"damage": "Class strike", "heal": "Class heal"}.get(want, want)
+			return GameMessages.text("life", "skills_and_more", {"want": want.capitalize(), "first": same[0], "more": int(same.size() - 1)})
+		return {"damage": GameMessages.text("life", "class_strike"), "heal": GameMessages.text("life", "class_heal")}.get(want, want)
 	if m.has("spell"):
 		return "Every spell" if str(m["spell"]) == "*" else str(GameCombat.spell(str(m["spell"])).get("name", m["spell"]))
 	return "Every feat" if str(m["feat"]) == "*" else GameFeats.feat_name(str(m["feat"]))
@@ -1351,26 +1350,26 @@ static func ability_line(m: Dictionary, r: int, u: GameHeir = null) -> String:
 		var v := float(m[k]) * r
 		match k:
 			"mult":
-				parts.append("+%s damage" % _p(v))
+				parts.append(GameMessages.text("life", "damage_bonus", {"p": _p(v)}))
 			"cost":
-				parts.append("%s cheaper" % _p(-v))
+				parts.append(GameMessages.text("life", "cheaper_term", {"p": _p(-v)}))
 			"heal":
-				parts.append("heals %s more" % _p(v))
+				parts.append(GameMessages.text("life", "heals_more", {"p": _p(v)}))
 			"crit":
 				parts.append("+%s crit chance" % _p(v))
 			"pierce":
-				parts.append("ignores %s more armour" % _p(v))
+				parts.append(GameMessages.text("life", "ignores_more", {"p": _p(v)}))
 			"cooldown":
-				parts.append("ready %s turn%s sooner" % [_n(-v), "" if -v == 1.0 else "s"])
+				parts.append(GameMessages.text("life", "sooner_one" if -v == 1.0 else "sooner_many", {"n": _n(-v)}))
 			"turns":
-				parts.append("its effects last %s more turn%s" % [_n(v), "" if v == 1.0 else "s"])
+				parts.append(GameMessages.text("life", "last_one" if v == 1.0 else "last_many", {"n": _n(v)}))
 			"angle":
-				parts.append("cone %s° wider" % _n(v))
+				parts.append(GameMessages.text("life", "cone_wider", {"n": _n(v)}))
 			"width":
-				parts.append("line %s paces wider" % _n(v))
+				parts.append(GameMessages.text("life", "line_wider", {"n": _n(v)}))
 			_:
-				parts.append("%s %s paces longer" % [k, _n(v)] if k != "radius" else "radius %s paces larger" % _n(v))
-	return "%s: %s" % [target_name(m, u), ", ".join(PackedStringArray(parts))]
+				parts.append(GameMessages.text("life", "paces_longer", {"k": k, "n": _n(v)}) if k != "radius" else GameMessages.text("life", "radius_larger", {"n": _n(v)}))
+	return GameMessages.text("life", "target_parts", {"target": target_name(m, u), "list": GameMessages.text("life", "list_comma").join(PackedStringArray(parts))})
 
 
 ## Hover text for a node as the unit stands: what it gives now and at the next rank, its price and
@@ -1383,16 +1382,16 @@ static func node_text(u: GameHeir, id: String) -> String:
 	if str(n.get("text", "")) != "":
 		lines.append(str(n["text"]))
 	if r > 0:
-		lines.append("Now: " + "; ".join(PackedStringArray(effect_lines(id, r, u))))
+		lines.append(GameMessages.text("life", "now_prefix") + GameMessages.text("life", "list_semicolon").join(PackedStringArray(effect_lines(id, r, u))))
 	if r < mx:
-		lines.append(("Next rank: " if r > 0 else "Gives: ") + "; ".join(PackedStringArray(effect_lines(id, r + 1, u))))
+		lines.append((GameMessages.text("life", "next_rank_prefix") if r > 0 else GameMessages.text("life", "gives_prefix")) + GameMessages.text("life", "list_semicolon").join(PackedStringArray(effect_lines(id, r + 1, u))))
 	var req: Array = n.get("requires", [])
 	if not req.is_empty():
-		lines.append("Needs a rank in %s." % _or_list(req.map(func(q): return node_name(str(q)))))
+		lines.append(GameMessages.text("life", "needs_rank", {"list": _or_list(req.map(func(q): return node_name(str(q))))}))
 	if int(u.tree_free.get(id, 0)) > 0:
 		lines.append("%d rank%s carried in the blood (free, never refunded)." % [int(u.tree_free[id]), "" if int(u.tree_free[id]) == 1 else "s"])
 	if inheritable(id):
-		lines.append("Inheritable: part of it passes to the next heir.")
+		lines.append(GameMessages.text("life", "inheritable_line"))
 	return "\n".join(PackedStringArray(lines))
 
 

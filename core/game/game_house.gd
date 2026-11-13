@@ -35,11 +35,11 @@ static func cost(d: GameDynasty, track: String) -> int:
 ## Why the next level cannot be bought now, or "" when it can.
 static func buy_error(d: GameDynasty, track: String) -> String:
 	if not TRACKS.has(track):
-		return "The house has no %s." % track
+		return GameMessages.text("life", "no_track", {"track": track})
 	if cost(d, track) < 0:
-		return "The %s is already at its best." % track_name(track)
+		return GameMessages.text("life", "at_best", {"track": track_name(track)})
 	if d.heir.gold < cost(d, track):
-		return "Not enough gold (%d needed)." % cost(d, track)
+		return GameMessages.text("life", "not_enough_gold_raw", {"needed": int(cost(d, track))})
 	return ""
 
 
@@ -51,7 +51,7 @@ static func buy(d: GameDynasty, track: String) -> String:
 	var price := cost(d, track)
 	d.heir.gold -= price
 	d.house[track] = level(d, track) + 1
-	return "Built the %s to level %d for %d gold." % [track_name(track), level(d, track), price]
+	return GameMessages.text("life", "built", {"track": track_name(track), "level": int(level(d, track)), "price": int(price)})
 
 
 ## A companion place for each level of the Hall.
@@ -65,7 +65,7 @@ static func train_xp_mult(d: GameDynasty) -> float:
 
 
 static func track_name(track: String) -> String:
-	return "House Hall" if track == HALL else "Training Yard" if track == YARD else "Ranch" if track == RANCH else track
+	return GameMessages.text("life", "track_hall") if track == HALL else GameMessages.text("life", "track_yard") if track == YARD else GameMessages.text("life", "track_ranch") if track == RANCH else track
 
 
 ## The saved house, checked: only known tracks with whole-number levels in range survive.

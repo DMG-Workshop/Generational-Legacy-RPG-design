@@ -149,13 +149,13 @@ static func from_text(block: String) -> Dictionary:
 ## Why a report's save cannot be played, or "".
 static func save_problem(save: Variant) -> String:
 	if not GameSaves.shape_ok(save):
-		return "it does not hold a house."
+		return GameMessages.text("life", "no_house")
 	var copy: Dictionary = (save as Dictionary).duplicate(true)
 	var too_new := GameSaveVersion.upgrade(copy)
 	if too_new != "":
 		return too_new
 	if GameDynasty.from_dict(copy) == null:
-		return "it does not hold a playable house."
+		return GameMessages.text("life", "no_playable_house")
 	return ""
 
 
@@ -180,10 +180,10 @@ static func backup_text(report: Dictionary) -> String:
 ## One line about a report, for whoever opens it.
 static func summary(report: Dictionary) -> String:
 	var save: Variant = report.get("save", null)
-	var house := "No save"
+	var house := GameMessages.text("life", "no_save")
 	var gen := 0
 	if typeof(save) == TYPE_DICTIONARY:
-		house = "House %s" % str(save.get("dynasty_name", "?"))
+		house = GameMessages.text("life", "house_name", {"house": str(save.get("dynasty_name", "?"))})
 		gen = int(save.get("gen", 0))
 	return text("summary", {"game": str(report.get("game", "?")), "save_version": int(report.get("save_version", 0)), "house": house, "gen": gen,
 		"errors": (report.get("errors", []) as Array).size()})

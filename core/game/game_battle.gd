@@ -740,7 +740,7 @@ func open_with_breath() -> void:
 		if amount > 0:
 			_lose_hp(enemy_ref(i), amount)
 			hit.append(i)
-	events.append({"type": "cast", "by": -1, "name": "Dragon's Breath", "cast": casts, "aoe": true, "element": "fire", "targets": hit})
+	events.append({"type": "cast", "by": -1, "name": GameMessages.text("life", "ability_dragons_breath"), "cast": casts, "aoe": true, "element": "fire", "targets": hit})
 	_say(GameMessages.line("dragons_breath", {"name": heir.name}))
 
 
@@ -913,7 +913,7 @@ func can_pay(by: int, mp_cost: int) -> bool:
 
 ## "6 MP", or "14 HP" under Blood Magic, for the buttons.
 func pay_text(by: int, mp_cost: int) -> String:
-	return "%s HP" % GameText.num(blood_cost(by, mp_cost)) if pays_in_hp(by) and mp_cost > 0 else "%s MP" % GameText.num(mp_cost)
+	return GameMessages.text("life", "hp_cost_amount", {"amount": GameText.num(blood_cost(by, mp_cost))}) if pays_in_hp(by) and mp_cost > 0 else GameMessages.text("life", "mp_cost_amount", {"amount": GameText.num(mp_cost)})
 
 
 ## Takes the cost; returns false (nothing paid) when the unit cannot.
@@ -966,7 +966,7 @@ func feat_wait(by: int, id: String) -> int:
 func feat_block(by: int, id: String) -> String:
 	var u := _unit(by)
 	if id not in u.equipped_feats:
-		return "Not readied."
+		return GameMessages.text("life", "not_readied_battle")
 	var wait := feat_wait(by, id)
 	if wait > 0:
 		var own := maxi(0, int(feat_ready.get(ref_of(by), {}).get(id, 0)) - turn)

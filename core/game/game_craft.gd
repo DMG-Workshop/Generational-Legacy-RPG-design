@@ -94,10 +94,10 @@ static func describe(d: GameDynasty) -> String:
 	var parts: Array = []
 	for m in GameMaterials.ids():
 		if have(d, str(m)) > 0:
-			parts.append("%d %s" % [have(d, str(m)), GameMaterials.name_of(str(m)).to_lower()])
+			parts.append(GameMessages.text("life", "stock_units", {"n": int(have(d, str(m))), "name": GameMaterials.name_of(str(m)).to_lower()}))
 	for a in essences(d):
-		parts.append("%d essence of %s" % [essence_have(d, str(a)), _affix_label(str(a))])
-	return ", ".join(parts) if not parts.is_empty() else text("nothing")
+		parts.append(GameMessages.text("life", "essence_of", {"n": int(essence_have(d, str(a))), "affix": _affix_label(str(a))}))
+	return GameMessages.text("life", "list_comma").join(parts) if not parts.is_empty() else text("nothing")
 
 
 static func _affix_label(affix: String) -> String:
@@ -110,8 +110,8 @@ static func _list(table: Dictionary, labels: bool = true) -> String:
 	var keys: Array = table.keys()
 	keys.sort()
 	for k in keys:
-		parts.append("%d %s" % [int(table[k]), GameMaterials.name_of(str(k)).to_lower()])
-	return ", ".join(parts)
+		parts.append(GameMessages.text("life", "stock_units_table", {"n": int(int(table[k])), "name": GameMaterials.name_of(str(k)).to_lower()}))
+	return GameMessages.text("life", "list_comma").join(parts)
 
 
 # ---------------------------------------------------------------- gathering
@@ -170,13 +170,13 @@ static func _tell(d: GameDynasty, got: Dictionary, gotess: Dictionary) -> Array:
 	keys.sort()
 	for k in keys:
 		add_material(d, str(k), int(got[k]))
-		parts.append("%d %s" % [int(got[k]), GameMaterials.name_of(str(k)).to_lower()])
+		parts.append(GameMessages.text("life", "stock_units_got", {"n": int(int(got[k])), "name": GameMaterials.name_of(str(k)).to_lower()}))
 	var ekeys: Array = gotess.keys()
 	ekeys.sort()
 	for a in ekeys:
 		add_essence(d, str(a), int(gotess[a]))
-		parts.append("%d essence of %s" % [int(gotess[a]), _affix_label(str(a))])
-	var line := text("gathered", {"h": d.heir.name, "list": ", ".join(parts)})
+		parts.append(GameMessages.text("life", "essence_of_got", {"n": int(int(gotess[a])), "affix": _affix_label(str(a))}))
+	var line := text("gathered", {"h": d.heir.name, "list": GameMessages.text("life", "list_comma").join(parts)})
 	d._say(line)
 	return [line]
 
@@ -215,11 +215,11 @@ static func salvage(d: GameDynasty, item_id: String) -> String:
 	var parts: Array = []
 	for m in y["materials"]:
 		add_material(d, str(m), int(y["materials"][m]))
-		parts.append("%d %s" % [int(y["materials"][m]), GameMaterials.name_of(str(m)).to_lower()])
+		parts.append(GameMessages.text("life", "stock_units_salvage", {"n": int(int(y["materials"][m])), "name": GameMaterials.name_of(str(m)).to_lower()}))
 	for a in y["essences"]:
 		add_essence(d, str(a), 1)
-		parts.append("1 essence of %s" % _affix_label(str(a)))
-	var line := text("salvaged", {"h": h.name, "name": name, "list": ", ".join(parts)})
+		parts.append(GameMessages.text("life", "essence_of_one", {"affix": _affix_label(str(a))}))
+	var line := text("salvaged", {"h": h.name, "name": name, "list": GameMessages.text("life", "list_comma").join(parts)})
 	d._say(line)
 	return line
 
@@ -320,7 +320,7 @@ static func craft(d: GameDynasty, form_id: String, material: String, chosen: Arr
 	d.heir.inventory.append(str(p["id"]))
 	var counter := str(setting("counter"))
 	d.stores[counter] = int(d.stores.get(counter, 0)) + 1
-	var line := text("made", {"h": d.heir.name, "a": "a", "name": p["item"]["name"], "units": p["units"], "material": GameMaterials.name_of(material).to_lower(), "quality": p["quality"]})
+	var line := text("made", {"h": d.heir.name, "a": GameMessages.text("life", "a_word"), "name": p["item"]["name"], "units": p["units"], "material": GameMaterials.name_of(material).to_lower(), "quality": p["quality"]})
 	d._say(line)
 	return line
 

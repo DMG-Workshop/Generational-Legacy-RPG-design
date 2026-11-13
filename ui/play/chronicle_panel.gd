@@ -89,7 +89,7 @@ func _record(r: Dictionary) -> String:
 	if (r["traits"] as Array).size() > 0:
 		line += "\n      traits: %s" % ", ".join(r["traits"])
 	if r["archetype"] != "":
-		line += "\n      shaped by fate as a %s" % GameFate.ARCHETYPES[r["archetype"]]["name"]
+		line += "\n      shaped by fate as a %s" % GameFate.archetype_name(r["archetype"])
 	var won := GameTitles.clean_ids(r.get("titles", []))
 	if not won.is_empty():
 		line += "\n      titles: %s" % ", ".join(won.map(func(id): return str(GameTitles.def(id)["name"])))

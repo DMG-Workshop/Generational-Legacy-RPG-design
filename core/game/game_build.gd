@@ -209,11 +209,11 @@ static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 		var n := int(floor(float(p["cost"][m]) * float(p["refund"])))
 		if n > 0:
 			GameCraft.add_material(d, str(m), n)
-			back.append("%d %s" % [n, GameMaterials.name_of(str(m)).to_lower()])
+			back.append(GameMessages.text("life", "stock_units", {"n": int(n), "name": GameMaterials.name_of(str(m)).to_lower()}))
 	var gold := int(floor(float(p["gold"]) * float(p["refund"])))
 	if gold > 0:
 		d.heir.gold += gold
-		back.append("%d gold" % gold)
+		back.append(GameMessages.text("life", "gold_plain", {"n": int(gold)}))
 	var piece := str(p["name"]).to_lower()
 	if back.is_empty():
 		return {"ok": true, "text": text("removed", {"piece": piece})}

@@ -26,7 +26,7 @@ func _ready() -> void:
 	var cname: String = "%s %s" % [GameData.races[dead.get("race_id", "human")]["name"], GameData.classes[dead["class_id"]]["name"]]
 	root.add_child(_wrapped(Kit.label("Generation %s  -  %s, level %s  -  died aged %d (%s)  -  %s, %s gold left" % [GameText.num(dead["gen"]), cname, GameText.num(dead["level"]), dead["age"], dead["cause"], "1 victory" if int(dead["battles_won"]) == 1 else "%s victories" % GameText.num(dead["battles_won"]), GameText.num(dead["gold"])], 16, Kit.dim())))
 	if d.pending_archetype != "":
-		var a: Dictionary = GameFate.ARCHETYPES[d.pending_archetype]
+		var a := {"name": GameFate.archetype_name(d.pending_archetype), "desc": GameFate.archetype_desc(d.pending_archetype)}
 		root.add_child(_wrapped(Kit.label("Fate has left its mark. The next heir will be a %s: %s" % [a["name"], a["desc"]], 16, Kit.bad())))
 	var into := "generation %s" % GameText.num(d.gen + 1)
 	if d.gen + 1 == GameHardMode.last_gen(d):

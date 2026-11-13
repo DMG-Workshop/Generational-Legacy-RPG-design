@@ -69,7 +69,7 @@ static func why_not_buy(d: GameDynasty, species: String) -> String:
 	if d.state != "life" or d.heir == null:
 		return text("outside_life")
 	if price(species) <= 0:
-		return "The market does not sell that."
+		return GameMessages.text("life", "market_no_sell")
 	if str(d.world.here().get("type", "")) != str(setting("market_place_type")):
 		return text("not_in_town")
 	if GameRoster.full(d):

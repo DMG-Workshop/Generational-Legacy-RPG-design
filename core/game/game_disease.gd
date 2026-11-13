@@ -254,8 +254,8 @@ static func pass_on(d: GameDynasty, from: GameHeir, to: GameHeir, id: String, re
 	infect(to, id, "family" if relation in ["spouse", "child"] else relation)
 	match relation:
 		"spouse", "child":
-			return "%s's %s %s catches %s." % [from.name, relation, to.name, disease_name(id)]
-	return "%s catches %s from %s." % [to.name, disease_name(id), from.name]
+			return GameMessages.text("life", "relation_catches", {"from": from.name, "relation": relation_word(relation), "to": to.name, "disease": disease_name(id)})
+	return GameMessages.text("life", "catches_from", {"to": to.name, "disease": disease_name(id), "from": from.name})
 
 
 ## For looting (battle phase): the sickness a fallen foe's corpse may carry here, and the base
@@ -346,7 +346,7 @@ static func _mend_home(d: GameDynasty, years: float, msgs: Array) -> void:
 			var p := maxf(float(setting("family_recovery")), natural_chance(id, int(e["stage"]))) * recovery_mult(m)
 			if d.rng.randf() < over_years(p, years):
 				cure(m, id)
-				_note(d, msgs, "%s's %s %s shakes off %s." % [h.name, "spouse" if m == h.spouse else "child", m.name, disease_name(id)])
+				_note(d, msgs, GameMessages.text("life", "shakes_off_relation", {"name": h.name, "relation": relation_word("spouse" if m == h.spouse else "child"), "other": m.name, "disease": disease_name(id)}))
 
 
 ## Each level milestone passed brings one roll against a common sickness; most are shrugged off.
@@ -403,10 +403,10 @@ static func on_rest(d: GameDynasty, msgs: Array) -> void:
 		if natural_chance(id, int(e["stage"])) > 0.0:
 			if d.rng.randf() < float(def(id)["cures"].get("rest", 0.0)) * mult:
 				cure(h, id)
-				msgs.append("Bed rest breaks %s's %s." % [h.name, disease_name(id)])
+				msgs.append(GameMessages.text("life", "bed_rest_breaks", {"name": h.name, "disease": disease_name(id)}))
 		else:
 			e["years_in_stage"] = _snap(float(e["years_in_stage"]) - span)
-			msgs.append("Bed rest keeps %s's %s from worsening." % [h.name, disease_name(id)])
+			msgs.append(GameMessages.text("life", "bed_rest_keeps", {"name": h.name, "disease": disease_name(id)}))
 
 
 ## A child born to a sick parent may be born with it. Returns journal lines.
@@ -419,7 +419,7 @@ static func on_birth(d: GameDynasty, child: GameHeir) -> Array:
 			var id: String = e["id"]
 			if _expose(d, child, id, contagion_chance(id, "birth")) == "caught":
 				infect(child, id, "birth")
-				out.append("%s is born with %s." % [child.name, disease_name(id)])
+				out.append(GameMessages.text("life", "born_with", {"name": child.name, "disease": disease_name(id)}))
 	return out
 
 
@@ -428,7 +428,7 @@ static func on_succession(_d: GameDynasty, parent: GameHeir, c: GameHeir, msgs: 
 	c.tainted_gear = parent.tainted_gear.duplicate()
 	c.disease_level = c.level
 	for e in c.diseases:
-		msgs.append("%s comes into the house still sick with %s (%s)." % [c.name, disease_name(e["id"]), stage_def(e)["name"]])
+		msgs.append(GameMessages.text("life", "comes_sick", {"name": c.name, "disease": disease_name(e["id"]), "stage": stage_def(e)["name"]}))
 
 
 # ---------------------------------------------------------------- treatment
@@ -447,15 +447,15 @@ static func temple_cure(d: GameDynasty, id: String) -> String:
 	var h := d.heir
 	var place: String = d.world.here()["name"]
 	if not d.world.has_service("temple"):
-		return "There is no temple in %s." % place
+		return GameMessages.text("life", "no_temple", {"place": place})
 	if not has(h, id):
-		return "%s is not sick with %s." % [h.name, disease_name(id)]
+		return GameMessages.text("life", "not_sick_with", {"name": h.name, "disease": disease_name(id)})
 	var cost := cure_price(d, id)
 	if h.gold < cost:
-		return "The priests ask %s gold to cure %s." % [GameText.num(cost), disease_name(id)]
+		return GameMessages.text("life", "priests_ask", {"price": GameText.num(cost), "disease": disease_name(id)})
 	h.gold -= cost
 	cure(h, id)
-	return "The priests of %s cure %s of %s for %s gold." % [place, h.name, disease_name(id), GameText.num(cost)]
+	return GameMessages.text("life", "priests_cure", {"place": place, "name": h.name, "disease": disease_name(id), "price": GameText.num(cost)})
 
 
 ## Stages a remedy item takes off (0 = not a remedy).
@@ -486,22 +486,22 @@ static func use_remedy(d: GameDynasty, item_id: String, id: String = "") -> Stri
 	var h := d.heir
 	var iname := GameItems.item_name(item_id)
 	if item_id not in h.inventory:
-		return "There is no %s in the pack." % iname
+		return GameMessages.text("life", "no_item_in_pack", {"item": iname})
 	if id == "":
 		id = remedy_target(h, item_id)
 	if id == "" or not has(h, id):
-		return "%s has nothing the %s can treat." % [h.name, iname]
+		return GameMessages.text("life", "nothing_to_treat", {"name": h.name, "item": iname})
 	if not treats(item_id, id):
-		return "The %s does nothing for %s." % [iname, disease_name(id)]
+		return GameMessages.text("life", "does_nothing", {"item": iname, "disease": disease_name(id)})
 	h.inventory.erase(item_id)
 	var e := entry(h, id)
 	var stage := int(e["stage"]) - remedy_power(item_id)
 	if stage < 0:
 		cure(h, id)
-		return "%s takes the %s, and the %s is gone." % [h.name, iname, disease_name(id)]
+		return GameMessages.text("life", "takes_and_gone", {"name": h.name, "item": iname, "disease": disease_name(id)})
 	_set_stage(h, e, stage)
 	e["years_in_stage"] = 0.0
-	return "%s takes the %s: %s eases to %s." % [h.name, iname, disease_name(id), stage_def(e)["name"]]
+	return GameMessages.text("life", "takes_eases", {"name": h.name, "item": iname, "disease": disease_name(id), "stage": stage_def(e)["name"]})
 
 
 # ---------------------------------------------------------------- the black market
@@ -515,7 +515,7 @@ static func is_bargain(item_id: String) -> bool:
 static func on_buy(d: GameDynasty, item_id: String) -> void:
 	var it := GameItems.item_def(item_id)
 	if str(it.get("shop", "")) == BLACK_MARKET:
-		d._add_echo("infamy", BLACK_MARKET, "House %s deals with smugglers" % d.dynasty_name, float(setting("black_market_infamy")))
+		d._add_echo("infamy", BLACK_MARKET, GameMessages.text("life", "smugglers", {"house": d.dynasty_name}), float(setting("black_market_infamy")))
 	if is_bargain(item_id) and item_id not in d.heir.tainted_gear:
 		if d.rng.randf() < float(it["taint"].get("chance", setting("bargain_taint_chance"))):
 			d.heir.tainted_gear.append(item_id)
@@ -534,9 +534,9 @@ static func on_wear(d: GameDynasty, item_id: String) -> String:
 	match _expose(d, h, id, 1.0):
 		"caught":
 			infect(h, id, "bargain")
-			return "It came cheap for a reason: %s has %s (%s)." % [h.name, disease_name(id), _fx(id, 0)]
+			return GameMessages.text("life", "came_cheap", {"name": h.name, "disease": disease_name(id), "fx": _fx(id, 0)})
 		"resisted":
-			return "It carried %s, but %s keeps %s well." % [disease_name(id), resist_sources(h, id)[0][1], h.name]
+			return GameMessages.text("life", "carried_but", {"disease": disease_name(id), "why": resist_sources(h, id)[0][1], "name": h.name})
 	return ""
 
 
@@ -621,6 +621,15 @@ static func age_band(h: GameHeir) -> String:
 	return "adult"
 
 
+static func relation_word(relation: String) -> String:
+	match relation:
+		"spouse":
+			return GameMessages.text("life", "relation_spouse")
+		"child":
+			return GameMessages.text("life", "relation_child")
+	return relation
+
+
 static func _caught_text(h: GameHeir, id: String, source: String) -> String:
 	var nm := disease_name(id)
 	var fx := _fx(id, 0)
@@ -628,24 +637,24 @@ static func _caught_text(h: GameHeir, id: String, source: String) -> String:
 		"level":
 			match age_band(h):
 				"young":
-					return "Green to the road, %s picks up %s (%s)." % [h.name, nm, fx]
+					return GameMessages.text("life", "green_road", {"name": h.name, "disease": nm, "fx": fx})
 				"elder":
-					return "%s finds %s at %d, slower to mend than once (%s)." % [nm, h.name, int(h.age), fx]
-			return "Hard years on the road: %s comes down with %s (%s)." % [h.name, nm, fx]
+					return GameMessages.text("life", "finds_at_age", {"disease": nm, "name": h.name, "age": int(h.age), "fx": fx})
+			return GameMessages.text("life", "hard_years", {"name": h.name, "disease": nm, "fx": fx})
 		"corpse":
-			return "%s handles the dead and catches %s (%s)." % [h.name, nm, fx]
+			return GameMessages.text("life", "handles_dead", {"name": h.name, "disease": nm, "fx": fx})
 		"vial":
-			return "The vial's fumes reach %s: %s (%s)." % [h.name, nm, fx]
+			return GameMessages.text("life", "vial_fumes", {"name": h.name, "disease": nm, "fx": fx})
 		"toxin":
-			return "Poison gets into %s's hands: %s (%s)." % [h.name, nm, fx]
-	return "%s catches %s (%s)." % [h.name, nm, fx]
+			return GameMessages.text("life", "poison_hands", {"name": h.name, "disease": nm, "fx": fx})
+	return GameMessages.text("life", "catches_fx", {"name": h.name, "disease": nm, "fx": fx})
 
 
 static func _resisted_text(h: GameHeir, id: String, source: String) -> String:
 	var why: String = resist_sources(h, id)[0][1]
 	if source == "level":
-		return "%s goes round the camp, but %s keeps %s well." % [disease_name(id), why, h.name]
-	return "%s brushes past %s; %s keeps it off." % [disease_name(id), h.name, why]
+		return GameMessages.text("life", "goes_round", {"disease": disease_name(id), "why": why, "name": h.name})
+	return GameMessages.text("life", "brushes_past", {"disease": disease_name(id), "name": h.name, "why": why})
 
 
 static func _worse_text(h: GameHeir, e: Dictionary) -> String:
@@ -654,21 +663,21 @@ static func _worse_text(h: GameHeir, e: Dictionary) -> String:
 	var fx := _fx(id, int(e["stage"]))
 	var line: String
 	if age_band(h) == "elder":
-		line = "At %d, %s cannot throw off %s: %s (%s)." % [int(h.age), h.name, disease_name(id), st["name"], fx]
+		line = GameMessages.text("life", "elder_worse", {"age": int(h.age), "name": h.name, "disease": disease_name(id), "stage": st["name"], "fx": fx})
 	else:
-		line = "%s's %s worsens: %s (%s)." % [h.name, disease_name(id), st["name"], fx]
+		line = GameMessages.text("life", "worsens", {"name": h.name, "disease": disease_name(id), "stage": st["name"], "fx": fx})
 	if is_last_stage(e):
-		line += " Untreated, it can kill." if is_lethal(id) else " Untreated, it may stay for life."
+		line += GameMessages.text("life", "untreated_kill") if is_lethal(id) else GameMessages.text("life", "untreated_stay")
 	return line
 
 
 static func _clear_text(h: GameHeir, id: String) -> String:
 	match age_band(h):
 		"young":
-			return "%s shakes off %s." % [h.name, disease_name(id)]
+			return GameMessages.text("life", "shakes_off", {"name": h.name, "disease": disease_name(id)})
 		"elder":
-			return "%s's %s clears at last." % [h.name, disease_name(id)]
-	return "%s's %s clears up." % [h.name, disease_name(id)]
+			return GameMessages.text("life", "clears_last", {"name": h.name, "disease": disease_name(id)})
+	return GameMessages.text("life", "clears_up", {"name": h.name, "disease": disease_name(id)})
 
 
 ## How a sickness stands, for the life screen: "worsens in 2 seasons", "can kill: 10% a year".
@@ -677,16 +686,16 @@ static func outlook(e: Dictionary) -> String:
 	var parts: Array = []
 	if not is_last_stage(e):
 		var left := maxf(0.25, float(stage_def(e).get("years", 1.0)) - maxf(0.0, float(e["years_in_stage"])))
-		parts.append("worsens in %s" % GameDynasty._span_text(left))
+		parts.append(GameMessages.text("life", "worsens_in", {"span": GameDynasty._span_text(left)}))
 	elif is_lethal(id):
-		parts.append("can kill: %d%% a year" % int(round(death_chance(id, int(e["stage"])) * 100.0)))
+		parts.append(GameMessages.text("life", "can_kill_year", {"pct": int(round(death_chance(id, int(e["stage"])) * 100.0))}))
 	elif natural_chance(id, int(e["stage"])) > 0.0:
-		parts.append("lingers; rarely clears without a cure")
+		parts.append(GameMessages.text("life", "lingers"))
 	else:
-		parts.append("stays until cured")
+		parts.append(GameMessages.text("life", "stays_cured"))
 	if not is_last_stage(e) and natural_chance(id, int(e["stage"])) > 0.0:
-		parts.append("may clear with rest")
-	return "; ".join(parts)
+		parts.append(GameMessages.text("life", "clears_rest"))
+	return GameMessages.text("life", "list_semicolon").join(parts)
 
 
 ## One line per sickness for panels: name, stage, effects and outlook.
@@ -701,7 +710,7 @@ static func describe_entry(e: Dictionary) -> Dictionary:
 
 ## "Camp Cough, Red Flux" (or "" when well), for family rows and heir cards.
 static func status_text(h: GameHeir) -> String:
-	return ", ".join(h.diseases.map(func(e): return disease_name(e["id"])))
+	return GameMessages.text("life", "list_comma").join(h.diseases.map(func(e): return disease_name(e["id"])))
 
 
 # ---------------------------------------------------------------- save / load & checks
