@@ -29,3 +29,8 @@ textures/vram_compression/import_etc2_astc=true
 [physics]
 
 2d/default_gravity=980
+
+[debug]
+
+# Keep a log file on every platform (user://logs/godot.log), so a crash on a phone can be read after the event.
+file_logging/enable_file_logging=true
