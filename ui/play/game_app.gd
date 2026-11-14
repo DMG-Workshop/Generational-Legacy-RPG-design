@@ -43,6 +43,7 @@ func _ready() -> void:
 	GraphicsSettings.apply()
 	GameLocale.set_locale(UiSettings.locale())
 	WorldInput.install()   # the open world's actions: nothing reads them until there is a sandbox screen
+	GameErrorFile.install()   # every error is written to user://crash_errors.txt as it happens, for a crash report
 	if UiSettings.error_log_on():   # only for a player who asked for it (the menu's Error log)
 		GameErrorLog.install()
 	closed_badly = GameSessionMark.begin(session_mark_path())
