@@ -30,10 +30,47 @@ static func start(dyn: GameDynasty) -> GameSandbox:
 	if t.x < 0 or t.y < 0:
 		var a := GameWorldGen.anchor(dyn.world.location)
 		t = Vector2i(int(a.get("x", 0)), int(a.get("z", 0)))
+	var back := s._remembered()
+	if back != Vector2i(-1, -1):
+		t = back
 	s.heir = t
 	s.companions = GameCompanions.agents_for(dyn, float(t.x) + 0.5, float(t.y) + 0.5)
 	s.refresh()
 	return s
+
+
+## The saved position, checked: whole numbers inside the world, a generation and a place name; {} when anything is missing or
+## of the wrong kind (a damaged save never crashes the load).
+static func load_at(v: Variant) -> Dictionary:
+	if typeof(v) != TYPE_DICTIONARY:
+		return {}
+	for k in ["x", "z", "gen"]:
+		if not v.has(k) or typeof(v[k]) not in [TYPE_INT, TYPE_FLOAT] or is_nan(float(v[k])) or is_inf(float(v[k])):
+			return {}
+	if not v.has("place") or typeof(v["place"]) != TYPE_STRING:
+		return {}
+	var x := int(v["x"])
+	var z := int(v["z"])
+	if not GameWorldGen.in_bounds(x, z):
+		return {}
+	return {"x": x, "z": z, "gen": int(v["gen"]), "place": str(v["place"])}
+
+
+## Where the heir stood last time, if that still holds: the same heir (generation) at the same place of the text game, on a
+## tile they can stand on. (-1, -1) when there is none, and the heir starts at the place's door as before.
+func _remembered() -> Vector2i:
+	var at := d.sandbox_at
+	if at.is_empty() or int(at["gen"]) != d.gen or str(at["place"]) != str(d.world.location):
+		return Vector2i(-1, -1)
+	var t := Vector2i(int(at["x"]), int(at["z"]))
+	if not GamePath.passable(GamePath.world_ground(d), Vector3i(t.x, -1, t.y), {"water": false, "ignore_blocks": false}):
+		return Vector2i(-1, -1)
+	return t
+
+
+## Writes where the heir stands onto the dynasty, to be saved with it.
+func remember() -> void:
+	d.sandbox_at = {"x": heir.x, "z": heir.y, "gen": d.gen, "place": str(d.world.location)}
 
 
 static func data() -> Dictionary:
