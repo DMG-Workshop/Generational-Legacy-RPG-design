@@ -19,6 +19,7 @@ var build_kind := "wall"    # the piece the Place button puts down
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
 var status: Label
+var piece_button: Button
 var last_line := ""
 var _walk_wait := 0.0
 var _tick_wait := 0.0
@@ -68,9 +69,9 @@ func _ready() -> void:
 	build_bar.offset_top = -BAR
 	build_bar.add_theme_constant_override("separation", 6)
 	add_child(build_bar)
-	for kind in sb.build_kinds():
-		var k: String = kind
-		build_bar.add_child(Kit.button(str(GameBuild.pieces()[k]["name"]), func(): _pick(k), Vector2(96, BAR - 12)))
+	piece_button = Kit.button("", func(): _next_piece(), Vector2(136, BAR - 12))
+	build_bar.add_child(piece_button)
+	_pick(build_kind)
 	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
 	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
 	build_bar.visible = false
@@ -204,8 +205,16 @@ func _remove() -> void:
 	queue_redraw()
 
 
+## The piece button steps through the pieces in the data's order (eight would not fit a phone's bar as eight buttons).
+func _next_piece() -> void:
+	var kinds: Array = sb.build_kinds()
+	_pick(kinds[(kinds.find(build_kind) + 1) % kinds.size()])
+
+
 func _pick(kind: String) -> void:
 	build_kind = kind
+	if piece_button != null:
+		piece_button.text = "Piece: %s" % GameBuild.pieces()[kind]["name"]
 	_refresh_status()
 	queue_redraw()
 
@@ -256,6 +265,9 @@ func _refresh_status() -> void:
 		var why := sb.build_check(build_kind, facing_dir.x, facing_dir.y)
 		var piece := str(GameBuild.pieces()[build_kind]["name"])
 		line = str(GameSandbox.data()["text"]["ready"]).format({"piece": piece}) if why == "" else why
+	var room := GameBuild.room_line(d, sb.heir.x, sb.heir.y)
+	if room != "" and mode != "build":
+		line = room if line == "" else line
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 

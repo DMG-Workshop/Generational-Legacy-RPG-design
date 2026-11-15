@@ -128,7 +128,7 @@ func _hire(d: GameDynasty, id: String) -> void:
 func test_build_and_orders() -> void:
 	var d := _house()
 	var s := GameSandbox.start(d)
-	ok(s.build_kinds() == ["wall", "floor", "road", "door"], "the pieces are the four the data lists, in order")
+	ok(s.build_kinds() == ["wall", "floor", "road", "door", "bed", "anvil", "hearth", "trough"], "the pieces are the ones the data lists, in order")
 	for m in GameBuild.pieces()["wall"]["cost"]:
 		GameCraft.add_material(d, str(m), 200)
 	d.heir.gold = 5000
