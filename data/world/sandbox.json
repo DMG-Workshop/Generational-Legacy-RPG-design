@@ -4,6 +4,9 @@
     "radius": 10,
     "keep": 4,
     "threat_near": 10.0,
+    "contact_range": 1.5,
+    "contact_join": 4.0,
+    "contact_max": 3,
     "log_lines": 200,
     "route_nodes": 4000,
     "walk_seconds": 0.2,
@@ -33,6 +36,7 @@
     "ready": "{piece} can go here.",
     "aim": "Aim: {x}, {z} from the heir.",
     "blocked": "Something stands in the way: water, a tree, rock or a wall.",
+    "contact": "{foes} caught up with {heir}!",
     "dug": "The family digs down {depth} into the ground."
   }
 }
