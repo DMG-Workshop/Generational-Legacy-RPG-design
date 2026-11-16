@@ -480,6 +480,18 @@ func _escape_tile(from: Vector2) -> Vector2i:
 	return best
 
 
+## After a fight on the map is over: if it was fled from, the heir gets clear of it now (the record `_contact` made), else
+## nothing changes. The creatures that fought are put back by the next `refresh`.
+func after_fight() -> void:
+	if d.battle != null or d.sandbox_escape.is_empty():
+		return
+	heir = Vector2i(int(d.sandbox_escape["x"]), int(d.sandbox_escape["z"]))
+	d.sandbox_escape = {}
+	route = []
+	refresh()
+	log.append({"kind": "fight", "text": _text("escaped", {"heir": d.heir.name})})
+
+
 ## The creatures within THREAT_NEAR tiles of the heir, as {x, z} points (the companions' threats).
 func _threats() -> Array:
 	var out: Array = []
