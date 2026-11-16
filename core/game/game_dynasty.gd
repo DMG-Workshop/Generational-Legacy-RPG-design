@@ -638,6 +638,10 @@ func start_legend() -> GameBattle:
 
 var battle_kind: String = ""
 
+## Runtime only, never saved: where the heir falls back to if they get away from the fight a creature in the open world began
+## (GameSandbox._contact): {x, z}. Kept while that fight is fled from, dropped for any other end of it.
+var sandbox_escape: Dictionary = {}
+
 
 func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	loot = {}
@@ -676,6 +680,8 @@ func finish_battle() -> Array:
 	var msgs: Array = []
 	if b == null:
 		return msgs
+	if b.result != "fled":
+		sandbox_escape = {}   # only a fight that was fled from sends the heir back clear of it
 	var party_msgs := party.after_battle(self, b)
 	party_msgs.append_array(GamePlague.after_battle(self, b))
 	match b.result:

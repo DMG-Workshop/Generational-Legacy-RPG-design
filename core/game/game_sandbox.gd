@@ -37,9 +37,17 @@ static func start(dyn: GameDynasty) -> GameSandbox:
 	var back := s._remembered()
 	if back != Vector2i(-1, -1):
 		t = back
+	var got_away := false
+	if not dyn.sandbox_escape.is_empty() and dyn.battle == null:
+		# A fight the heir fled from: they come back to the open world clear of it, not beside the creature.
+		t = Vector2i(int(dyn.sandbox_escape["x"]), int(dyn.sandbox_escape["z"]))
+		dyn.sandbox_escape = {}
+		got_away = true
 	s.heir = t
 	s.companions = GameCompanions.agents_for(dyn, float(t.x) + 0.5, float(t.y) + 0.5)
 	s.refresh()
+	if got_away:
+		s.log.append({"kind": "fight", "text": s._text("escaped", {"heir": dyn.heir.name})})
 	return s
 
 
@@ -447,11 +455,29 @@ func _contact() -> bool:
 	var fight := d.start_encounter(ids)
 	if fight == null:
 		return false
+	var away := _escape_tile(Vector2(float(creatures[first]["x"]), float(creatures[first]["z"])))
+	d.sandbox_escape = {"x": away.x, "z": away.y}
 	for a in gone:
 		creatures.erase(a)
 	var names: Array = fight.enemies.map(func(e): return str(e["name"]))
 	log.append({"kind": "fight", "text": _text("contact", {"foes": GameMessages.text("life", "list_comma").join(names), "heir": d.heir.name})})
 	return true
+
+
+## The tile `escape_tiles` away from the heir on the side opposite `from` (a creature's point), stopping at the last tile on the
+## way that can be stood on; the heir's own tile when there is none.
+func _escape_tile(from: Vector2) -> Vector2i:
+	var dir := heir_point() - from
+	dir = dir.normalized() if dir.length() > 0.001 else Vector2(0, 1)
+	var ground := GamePath.world_ground(d)
+	var mover: Dictionary = GamePath.data()["movers"]["walker"]
+	var best := heir
+	for i in range(1, int(setting("escape_tiles")) + 1):
+		var t := Vector2i(floori(heir_point().x + dir.x * float(i)), floori(heir_point().y + dir.y * float(i)))
+		if not GameWorldGen.in_bounds(t.x, t.y) or not GamePath.passable(ground, Vector3i(t.x, GameBuild.SURFACE, t.y), mover):
+			break
+		best = t
+	return best
 
 
 ## The creatures within THREAT_NEAR tiles of the heir, as {x, z} points (the companions' threats).
