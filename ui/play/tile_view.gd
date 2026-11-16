@@ -3,7 +3,8 @@
 ## near the view; chunks beyond `keep` chunks of the view are freed. A tile's look is its kind: a biome, water, or the
 ## piece built on it (a built piece covers the ground). The atlas is one row of flat colours made in code (the colours are
 ## data, `tiles` in data/world/sandbox.json); sprite art later replaces `make_tileset` and nothing else. A rendering node:
-## it reads the dynasty and draws, it never changes it. Chunk and kind rules are static so the tests need no scene.
+## it reads the dynasty and draws, it never changes it. Chunk and kind rules are static so the tests need no scene. A storey
+## above the ground is shown by `set_level`: the ground dims and that storey's pieces are drawn over it in layers of their own.
 class_name TileView
 extends Node2D
 
@@ -13,6 +14,8 @@ var tile_set: TileSet
 var fills := 0            # chunks filled so far (for tests)
 var interior_id := ""     # the interior shown instead of the open world ("" shows the world)
 var interior := {}        # its cells, "x,z" -> floor, door, exit or wall (GameInterior.cells); nothing is drawn elsewhere
+var level := 0            # the storey shown: 0 is the ground; above it the ground is dimmed and that storey's pieces are drawn over it
+var uppers := {}          # Vector2i chunk -> TileMapLayer of the shown storey's pieces (empty cells where nothing is built)
 
 
 static func settings() -> Dictionary:
@@ -87,11 +90,33 @@ func show_view(centre: Vector2, half: Vector2) -> void:
 	var want := wanted(centre, half, int(settings()["keep"]))
 	for c in want:
 		if not layers.has(c):
-			_fill(c)
+			_fill(c)   # a new chunk gets its storey layer here when a storey is shown
 	for c in layers.keys():
 		if not want.has(c):
 			(layers[c] as TileMapLayer).queue_free()
 			layers.erase(c)
+			if uppers.has(c):
+				(uppers[c] as TileMapLayer).queue_free()
+				uppers.erase(c)
+
+
+## Shows a storey (0 is the ground). Above the ground, the ground tiles are dimmed by `below_shade` and the pieces built at that
+## storey are drawn over them; going back to 0 puts the ground back and lets the storey's tiles go.
+func set_level(n: int) -> void:
+	var top := int(GameBuild.setting("max_storeys"))
+	n = clampi(n, 0, 0 if interior_id != "" else top)   # an interior has one floor
+	if n == level:
+		return
+	level = n
+	for c in uppers.keys():
+		(uppers[c] as TileMapLayer).queue_free()
+	uppers.clear()
+	var shade := float(settings()["below_shade"]) if level > 0 else 1.0
+	for c in layers:
+		(layers[c] as TileMapLayer).modulate = Color(shade, shade, shade)
+	for c in layers:
+		if level > 0:
+			_fill_upper(c)
 
 
 ## Shows an interior's floor in place of the open world (`id` "" goes back to the world). Everything drawn is dropped and
@@ -104,6 +129,10 @@ func set_interior(id: String, cells: Dictionary) -> void:
 	for c in layers.keys():
 		(layers[c] as TileMapLayer).queue_free()
 	layers.clear()
+	for c in uppers.keys():
+		(uppers[c] as TileMapLayer).queue_free()
+	uppers.clear()
+	level = 0   # an interior has one floor
 
 
 ## Places the view: the tile `centre` goes to the middle of `area` (the map's rectangle, top-left at `origin`), `cell` pixels a tile.
@@ -130,6 +159,26 @@ func _fill(c: Vector2i) -> void:
 				layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind), 0))
 	layers[c] = layer
 	fills += 1
+	if level > 0:
+		var shade := float(settings()["below_shade"])
+		layer.modulate = Color(shade, shade, shade)
+		_fill_upper(c)
+
+
+## The pieces of the shown storey in a chunk, as a layer over the ground's: a tile where something is built, none elsewhere.
+func _fill_upper(c: Vector2i) -> void:
+	var n := int(settings()["chunk"])
+	var layer := TileMapLayer.new()
+	layer.tile_set = tile_set
+	layer.position = Vector2(c.x * n, c.y * n) * float(int(settings()["px"]))
+	add_child(layer)
+	var all := kinds()
+	for dz in n:
+		for dx in n:
+			var kind := GameBuild.kind_at(d, c.x * n + dx, GameBuild.SURFACE - level, c.y * n + dz)
+			if kind != "":
+				layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind), 0))
+	uppers[c] = layer
 
 
 func _kind_at(x: int, z: int) -> String:
@@ -150,18 +199,26 @@ func refresh_cell(x: int, z: int) -> void:
 		(layers[c] as TileMapLayer).erase_cell(local)
 	else:
 		(layers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(here), 0))
+	if level > 0 and uppers.has(c):
+		var kind := GameBuild.kind_at(d, x, GameBuild.SURFACE - level, z)
+		if kind == "":
+			(uppers[c] as TileMapLayer).erase_cell(local)
+		else:
+			(uppers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(kind), 0))
 
 
 static func validate() -> Array:
 	var bad: Array = []
 	var s: Dictionary = settings() if GameSandbox.data().has("tiles") else {}
-	for k in ["px", "chunk", "keep", "colors"]:
+	for k in ["px", "chunk", "keep", "colors", "below_shade"]:
 		if not s.has(k):
 			bad.append("sandbox.json: tiles.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
 	if int(s["px"]) < 4 or int(s["chunk"]) < 4 or int(s["keep"]) < 0:
 		bad.append("sandbox.json: tiles px and chunk must be at least 4 and keep 0 or more")
+	if float(s["below_shade"]) <= 0.0 or float(s["below_shade"]) > 1.0:
+		bad.append("sandbox.json: tiles.below_shade must be above 0 and at most 1")
 	for k in kinds():
 		if not s["colors"].has(k) or typeof(s["colors"][k]) != TYPE_ARRAY or (s["colors"][k] as Array).size() != 3:
 			bad.append("sandbox.json: tiles.colors has no [r, g, b] for '%s'" % k)
