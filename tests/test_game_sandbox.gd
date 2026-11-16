@@ -177,10 +177,15 @@ func test_pure() -> void:
 	var before := JSON.stringify(d.to_dict())
 	var rng_before := d.rng.state
 	var s := GameSandbox.start(d)
+	# A creature reaching the heir starts a fight, which does draw the dice (tests/test_game_sandbox_contact.gd); this checks
+	# the world's own ticks, so contact is switched off here and put back after.
+	var contact: float = GameSandbox.data()["settings"]["contact_range"]
+	GameSandbox.data()["settings"]["contact_range"] = -1.0
 	s.step(60)
 	s.move(0, 0)
 	s.order("bren_cask", "stay")
 	s.step(40)
+	GameSandbox.data()["settings"]["contact_range"] = contact
 	var after := JSON.stringify(d.to_dict())
 	ok(d.rng.state == rng_before, "the open world draws none of the dynasty's dice")
 	# The order itself is the one saved change; everything else in the dynasty must be the same. (Gathering is the
