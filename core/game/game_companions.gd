@@ -6,7 +6,8 @@
 ## moving them by the router and ground rules creatures use (GameBehaviour, GamePath). Gathering takes a node's material
 ## (shared by the companion's class, data/companions/world.json `classes`) into `GameDynasty.stores` and marks the node
 ## in `GameDynasty.gathered` (saved only when not empty) until `regrow_years` of the world's calendar have passed.
-## Guards do not fight: one that sees a threat near its post goes out to meet it and says so (an `alert` event).
+## A guard that sees a threat near its post goes out to meet it and says so (an `alert` event); at the threat it fights it
+## (an `engage` event, settled by `duel`: a win drives the creature off, a loss leaves the guard hurt and resting for a while).
 ## Nothing here is random, and the autopilot (which never steps companions or gives orders) is unaffected.
 class_name GameCompanions
 extends RefCounted
@@ -114,7 +115,7 @@ static func load_gathered(v: Variant) -> Dictionary:
 ## A companion in the open world: where they are, their post (where they stand when given an order) and what they are doing.
 static func new_agent(uid: int, id: String, x: float, z: float) -> Dictionary:
 	return {"uid": uid, "id": id, "x": x, "z": z, "post_x": x, "post_z": z, "order": FOLLOW, "mode": "hold", "plan": [], "target": {},
-		"work": 0, "scanned": -1000000, "alerted": false}
+		"work": 0, "scanned": -1000000, "alerted": false, "rest_until": 0}
 
 
 static func _pos(a: Dictionary) -> Vector2:
@@ -175,9 +176,48 @@ static func event_text(e: Dictionary) -> String:
 			return text("alert", {"name": name})
 		"regrouped":
 			return text("regrouped", {"name": name})
+		"engage":
+			return ""   # told by what the fight comes to (guard_won, guard_hurt), not on its own
 		"nothing":
 			return text("nothing", {"name": name})
 	return ""
+
+
+# ---------------------------------------------------------------- a guard's fight
+
+## A guard meets a threat: the companion (as a fighter, at their own level and hp) fights one foe of that creature at
+## `guard_foe_level_mult` times their level, played to the end by GameTactics on dice of their own (keyed on the seed, the
+## companion, the creature and the tick, so the dynasty's dice are not touched). A win drives the creature off and brings the
+## family `guard_gold_share` of its gold; a loss leaves the guard hurt (never dead: 1 hp at least). A guard hurt below
+## `guard_min_hp_frac` of their health will not take it on (`refused`). Their hp is kept on the party member. Returns {} when
+## there is no such companion or creature, else {ok, won, refused, foe, gold, hp_before, hp_after}.
+static func duel(d: GameDynasty, id: String, creature_id: String, tick: int) -> Dictionary:
+	var m := d.party.member(id)
+	if m.is_empty():
+		return {}
+	var foe := d.foe_for(creature_id, maxi(1, int(round(float(m["level"]) * float(setting("guard_foe_level_mult"))))))
+	if foe.is_empty():
+		return {}
+	var body := d.party._body(d, m)
+	body.hp = clampi(int(m["hp"]), 1, body.max_hp())
+	var out := {"ok": true, "won": false, "refused": false, "foe": str(foe["name"]), "gold": 0, "hp_before": body.hp, "hp_after": body.hp}
+	if float(body.hp) < float(body.max_hp()) * float(setting("guard_min_hp_frac")):
+		out["refused"] = true
+		return out
+	var r := RandomNumberGenerator.new()
+	r.seed = hash([d.seed_value, "guard", id, creature_id, tick])
+	var b := GameBattle.new(body, [foe], r)
+	var guard := 0
+	while not b.is_over() and guard < 300:
+		guard += 1
+		GameTactics.auto_turn(b)
+	out["won"] = b.result == "victory"
+	m["hp"] = maxi(1, body.hp)
+	out["hp_after"] = int(m["hp"])
+	if out["won"]:
+		out["gold"] = int(round(float(foe["gold"]) * float(setting("guard_gold_share"))))
+		d.heir.gold += int(out["gold"])
+	return out
 
 
 # ---------------------------------------------------------------- the step
@@ -208,7 +248,7 @@ static func step_all(d: GameDynasty, agents: Array, view: Dictionary, tick: int)
 			"stay":
 				_stay(a, view)
 			"guard":
-				_guard(a, view, events)
+				_guard(a, view, events, tick)
 			"gather":
 				_gather(d, a, view, tick, claimed, events)
 			_:
@@ -262,8 +302,17 @@ static func _stay(a: Dictionary, view: Dictionary) -> void:
 		a["mode"] = "hold"
 
 
-static func _guard(a: Dictionary, view: Dictionary, events: Array) -> void:
+static func _guard(a: Dictionary, view: Dictionary, events: Array, tick: int = 0) -> void:
 	var post := _post(a)
+	if tick < int(a.get("rest_until", 0)):
+		# hurt in a fight: back to the post and out of it until rested
+		a["alerted"] = false
+		if _pos(a).distance_to(post) > 0.75:
+			a["mode"] = "return"
+			_go(a, post, view)
+		else:
+			a["mode"] = "hold"
+		return
 	var reach := float(setting("guard_radius")) * class_mult(str(a["id"]), "guard")
 	var best := Vector2.ZERO
 	var best_d := INF
@@ -286,6 +335,8 @@ static func _guard(a: Dictionary, view: Dictionary, events: Array) -> void:
 				var held := post + (moved - post).normalized() * reach
 				a["x"] = held.x
 				a["z"] = held.y
+		else:
+			events.append({"type": "engage", "id": a["id"], "x": best.x, "z": best.y})   # at the threat: the sandbox settles the fight (duel)
 		return
 	a["alerted"] = false
 	if _pos(a).distance_to(post) > 0.75:
@@ -386,7 +437,7 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["speed", "follow_min", "follow_max", "follow_catchup", "stay_radius", "gather_radius", "gather_reach", "gather_ticks", "rescan_ticks", "plan_size", "regrow_years", "guard_radius", "guard_engage"]:
+	for k in ["speed", "follow_min", "follow_max", "follow_catchup", "stay_radius", "gather_radius", "gather_reach", "gather_ticks", "rescan_ticks", "plan_size", "regrow_years", "guard_radius", "guard_engage", "guard_foe_level_mult", "guard_gold_share", "guard_rest_ticks", "guard_min_hp_frac"]:
 		if not s.has(k):
 			bad.append("companions/world.json: settings.%s is missing" % k)
 	if not bad.is_empty():
@@ -396,6 +447,8 @@ static func validate() -> Array:
 			bad.append("companions/world.json: settings.%s must be above 0" % k)
 	if float(s["follow_min"]) >= float(s["follow_max"]) or float(s["follow_max"]) >= float(s["follow_catchup"]):
 		bad.append("companions/world.json: follow_min < follow_max < follow_catchup is needed, or followers would never settle or never catch up")
+	if float(s["guard_gold_share"]) > 1.0 or float(s["guard_min_hp_frac"]) > 1.0:
+		bad.append("companions/world.json: guard_gold_share and guard_min_hp_frac are shares: at most 1")
 	if float(s["gather_reach"]) >= float(s["gather_radius"]):
 		bad.append("companions/world.json: gather_reach must be under gather_radius")
 	if int(s["gather_ticks"]) < 1 or int(s["plan_size"]) < 1 or int(s["rescan_ticks"]) < 1:

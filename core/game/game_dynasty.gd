@@ -629,6 +629,16 @@ func start_encounter(ids: Array) -> GameBattle:
 	return _begin_battle(foes, "hunt")
 
 
+## A wild creature built as a foe of `level` by the hunt's rules, or {} when the id is not a creature: no dice. What a guard
+## companion fights (GameCompanions.duel).
+func foe_for(creature_id: String, level: int) -> Dictionary:
+	var cfg: Dictionary = GameData.bal("hunt_rewards")["hunt"]
+	for c in GameData.creatures:
+		if c["id"] == creature_id:
+			return _make_enemy(c, float(cfg["scale"]), float(cfg["reward"]), maxi(1, level))
+	return {}
+
+
 func start_legend() -> GameBattle:
 	var boss := available_boss()
 	if boss.is_empty():

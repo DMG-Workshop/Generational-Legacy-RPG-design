@@ -1,5 +1,5 @@
 {
-  "note": "Companions in the open world (roadmap item 52; core/game/game_companions.gd, checked by tools/check_data.gd). A hired companion (the party rules, GameParty) is given an order: follow (keep close to the heir), stay (hold where they stand), gather (work the nodes within `gather_radius` of where they stand: trees, herbs, bones and ore outcrops, one after another, into the family's stores) or guard (hold a post and go out to meet a threat that comes within `guard_radius` of it). The order is saved on the party member, only once it is not follow; where they stand is not saved (a sandbox puts them beside the heir). `step_all` is one state machine over the companions' agents and moves them `speed` tiles a tick by the same router and ground rules as creatures (GameBehaviour, GamePath). A gathered node gives its material, with the companion's class share (`classes`, 1 when not listed), once per `regrow_years` of the world's calendar. A class's guard share widens the reach of its post. Nothing here is random or fights: a guard meets a threat and tells the caller (an `alert` event); fighting in the open world comes later.",
+  "note": "Companions in the open world (roadmap item 52; core/game/game_companions.gd, checked by tools/check_data.gd). A hired companion (the party rules, GameParty) is given an order: follow (keep close to the heir), stay (hold where they stand), gather (work the nodes within `gather_radius` of where they stand: trees, herbs, bones and ore outcrops, one after another, into the family's stores) or guard (hold a post and go out to meet a threat that comes within `guard_radius` of it). The order is saved on the party member, only once it is not follow; where they stand is not saved (a sandbox puts them beside the heir). `step_all` is one state machine over the companions' agents and moves them `speed` tiles a tick by the same router and ground rules as creatures (GameBehaviour, GamePath). A gathered node gives its material, with the companion's class share (`classes`, 1 when not listed), once per `regrow_years` of the world's calendar. A class's guard share widens the reach of its post. Nothing here draws the dynasty's dice: a guard meets a threat and tells the caller (an `alert` event), and at the threat it fights it (an `engage` event; `duel` settles it on dice of its own: `guard_foe_level_mult` times the guard's level for the foe, `guard_gold_share` of its gold on a win, `guard_rest_ticks` resting after a loss, and a guard hurt below `guard_min_hp_frac` of their health will not fight).",
   "settings": {
     "speed": 1.1,
     "follow_min": 2.5,
@@ -13,7 +13,11 @@
     "plan_size": 6,
     "regrow_years": 2.0,
     "guard_radius": 10.0,
-    "guard_engage": 1.5
+    "guard_engage": 1.5,
+    "guard_foe_level_mult": 1.0,
+    "guard_gold_share": 0.5,
+    "guard_rest_ticks": 60,
+    "guard_min_hp_frac": 0.35
   },
   "classes": {
     "default": {"gather": 1.0, "guard": 1.0},
@@ -42,6 +46,10 @@
     "gathered": "{name} gathered {n} {material}.",
     "alert": "{name} sees something coming.",
     "regrouped": "{name} catches up.",
+    "guard_won": "{name} drives off {foe}.",
+    "guard_won_gold": "{name} drives off {foe} and brings back {gold} gold.",
+    "guard_hurt": "{name} is hurt by {foe} and falls back to rest.",
+    "guard_too_hurt": "{name} is too hurt to take on {foe}.",
     "nothing": "{name} finds nothing to gather here.",
     "summary_none": "No companions.",
     "line": "{name}: {order}"
