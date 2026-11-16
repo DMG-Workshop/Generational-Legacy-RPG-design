@@ -1586,5 +1586,6 @@
    "........................",
    "........................"
   ]
- }
+ },
+    "bee": {"size": [24, 24], "palette": {"k": "#1b1626", "e": "#1b1626", "Y": "#e9b43a", "y": "#c98a20", "W": "#f6dc7a", "o": "#9a6418"}, "rows": ["........................", "........................", "..........kkkk..........", "........kkYYYYkk........", ".......kYYYYYYYYk.......", ".......kYYyyyyyok.......", "......kYYyyyyyyyok......", ".....kYYyyyyyyyyyok.....", ".....kWWYYYYYYYYYok.....", ".....kWWYYYYYYYYYok.....", "....kWWYYYYYYYYYYYok....", "....kYYyyyyyyyyyyyok....", "....kYYyyyyyyyyyyyok....", "...kYYyyyyyyyyyyyyyok...", "...kWWYYYYYYYYYYYYYok...", "...kWWYYYYYYYYYYYYYok...", "...kWWYYYYYeeYYYYYYok...", "...kYYyyyyeeeeyyyyyok...", "...kYYyyyyeeeeyyyyyok...", "..kYYyyyyyeeeeyyyyyyok..", "..kWWYYYYYeeeeYYYYYYok..", "..kkkkkkkkkkkkkkkkkkkk..", "........................", "........................"]}
 }}

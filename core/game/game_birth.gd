@@ -35,7 +35,13 @@ static func young_name(id: String) -> String:
 
 ## Whether a creature can be found young and bred at all.
 static func can_breed(id: String) -> bool:
-	return born(id) != "none"
+	return born(id) != "none" and not is_hive(id)
+
+
+## Whether a creature is a hive (a colony kept as one animal): bought as a swarm and kept like any creature, but with no sex that
+## matters and no pairs, so it never breeds (`hive` in creatures.json).
+static func is_hive(id: String) -> bool:
+	return _creature(id).get("hive", false) == true
 
 
 ## The rule for pairings of different ways of being born, one of RULES ("mother" when the data names none).
@@ -117,6 +123,8 @@ static func validate() -> Array:
 			out.append("creature %s: a creature that is not born has no young" % id)
 		if b != "none" and str(c.get("young", "")).strip_edges() == "":
 			out.append("creature %s: needs the name of its young" % id)
+		if c.get("hive", false) == true and (c.get("farm", false) != true or b == "none"):
+			out.append("creature %s: a hive must be a farm animal that is born (bought as a swarm)" % id)
 	if int(modes.get("egg", 0)) == 0 or int(modes.get("live", 0)) == 0:
 		out.append("creatures: there must be some that lay eggs and some that bear live young")
 	var settings: Dictionary = GameData.breeding.get("settings", {})

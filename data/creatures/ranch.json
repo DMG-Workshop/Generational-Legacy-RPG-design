@@ -79,6 +79,14 @@
       "elder": 2,
       "keep": 1,
       "value": 8
+    },
+    "hive": {
+      "egg": 1,
+      "young": 1,
+      "adult": 5,
+      "elder": 2,
+      "keep": 1,
+      "value": 20
     }
   },
   "size_of": {
@@ -104,6 +112,7 @@
     "goat": "flock",
     "goose": "fowl",
     "horse": "herd",
+    "bee": "hive",
     "thornhound": "medium",
     "moss_stag": "large",
     "glimmer_moth": "small"
@@ -209,6 +218,11 @@
         "name": "hauling",
         "about": "Hauls and ploughs: {gold} gold a year.",
         "said": "hauling"
+      },
+      "honey": {
+        "name": "honey",
+        "about": "Makes honey: {gold} gold a year.",
+        "said": "honey"
       }
     }
   },
@@ -267,6 +281,10 @@
     "horse": {
       "kind": "haul",
       "gold": 16
+    },
+    "bee": {
+      "kind": "honey",
+      "gold": 6
     },
     "thornhound": {
       "kind": "guard"
