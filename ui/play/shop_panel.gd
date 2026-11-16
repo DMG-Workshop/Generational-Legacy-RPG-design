@@ -19,6 +19,7 @@ const COMPACT_LEFT_W := 230
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
+var start_tab := ""       # the tab to open on, when the town has it (a shopkeeper sends the heir to their own)
 var gear_only := false    # just the Gear tab: opened from the life screen anywhere, shop or not
 
 var tab: String = ""
@@ -103,6 +104,8 @@ func _ready() -> void:
 
 	var shops := GameItems.shops_here(dynasty)
 	tab = shops[0] if not shops.is_empty() and not gear_only else "gear"
+	if start_tab != "" and start_tab in shops and not gear_only:
+		tab = start_tab
 	_rebuild()
 
 

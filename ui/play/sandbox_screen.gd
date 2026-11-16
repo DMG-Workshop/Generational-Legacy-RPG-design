@@ -10,6 +10,9 @@ const WorldInput := preload("res://ui/play/world_input.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchControls := preload("res://ui/play/touch_controls.gd")
 const CraftPanel := preload("res://ui/play/craft_panel.gd")
+const ShopPanel := preload("res://ui/play/shop_panel.gd")
+const TavernPanel := preload("res://ui/play/tavern_panel.gd")
+const BoardPanel := preload("res://ui/play/board_panel.gd")
 const BAR := 56.0
 
 var app: Node
@@ -241,6 +244,26 @@ func _open_workshop(forge: String) -> void:
 	add_child(panel)
 
 
+## A town's service over the map, from the person who runs it (GamePeople): shop (on its tab), tavern or notice board. The world
+## waits while it is open.
+func _open_service(kind: String, tab: String) -> void:
+	var panel: Control
+	match kind:
+		"shop":
+			panel = ShopPanel.new()
+			panel.start_tab = tab
+		"tavern":
+			panel = TavernPanel.new()
+		"board":
+			panel = BoardPanel.new()
+		_:
+			return
+	panel.dynasty = app.dynasty
+	panel.on_change = func(): _refresh_status()
+	panel.set_meta("modal", true)
+	add_child(panel)
+
+
 ## Whether a modal panel (the workshop) is open over the map.
 func _modal_open() -> bool:
 	for c in get_children():
@@ -256,6 +279,8 @@ func _use() -> void:
 	cam = Vector2.ZERO
 	if str(r.get("open", "")) == "workshop":
 		_open_workshop(str(r.get("forge", "")))
+	elif str(r.get("open", "")) in ["shop", "tavern", "board"]:
+		_open_service(str(r["open"]), str(r.get("tab", "")))
 	_refresh_status()
 	queue_redraw()
 
