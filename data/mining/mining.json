@@ -11,7 +11,14 @@
     "yield_min": 1,
     "yield_max": 2,
     "depth_per_age": 60,
-    "gateway_stage": "gateway"
+    "gateway_stage": "gateway",
+    "tool_levels_per_ore": 2,
+    "hazard_from_depth": 10,
+    "hazard_per_depth": 0.0005,
+    "hazard_max": 0.3,
+    "hazard_hp_pct": 0.12,
+    "prop_material": "oak",
+    "prop_cost": 1
   },
   "zones": [
     {"id": "surface", "name": "The Surface", "from": 0},
@@ -37,18 +44,21 @@
     {"material": "starmetal", "from": 260, "to": 400, "weight": 0.6, "chance": 0.08, "radius": 1.6}
   ],
   "stages": [
-    {"id": "quiet", "name": "Quiet", "at": 0, "hardness_mult": 1.0, "ore_bonus": 0.0, "about": "The rock is sound."},
-    {"id": "tremors", "name": "Tremors", "at": 40, "hardness_mult": 0.95, "ore_bonus": 0.05, "about": "Dust sifts from the roof when the picks fall silent."},
-    {"id": "cracked", "name": "Cracked", "at": 120, "hardness_mult": 0.85, "ore_bonus": 0.12, "about": "Hairline cracks run out from the shaft, and the veins swell along them."},
-    {"id": "weeping", "name": "Weeping", "at": 300, "hardness_mult": 0.7, "ore_bonus": 0.22, "about": "The walls sweat cold water and the rock cuts like cheese."},
-    {"id": "hollow", "name": "Hollow", "at": 600, "hardness_mult": 0.55, "ore_bonus": 0.35, "about": "The ground rings when it is struck. Something is below it."},
-    {"id": "gateway", "name": "Open", "at": 1000, "hardness_mult": 0.4, "ore_bonus": 0.5, "about": "The shaft opens onto a place that is not on any map."}
+    {"id": "quiet", "hazard": 0.0, "name": "Quiet", "at": 0, "hardness_mult": 1.0, "ore_bonus": 0.0, "about": "The rock is sound."},
+    {"id": "tremors", "hazard": 0.02, "name": "Tremors", "at": 40, "hardness_mult": 0.95, "ore_bonus": 0.05, "about": "Dust sifts from the roof when the picks fall silent."},
+    {"id": "cracked", "hazard": 0.04, "name": "Cracked", "at": 120, "hardness_mult": 0.85, "ore_bonus": 0.12, "about": "Hairline cracks run out from the shaft, and the veins swell along them."},
+    {"id": "weeping", "hazard": 0.06, "name": "Weeping", "at": 300, "hardness_mult": 0.7, "ore_bonus": 0.22, "about": "The walls sweat cold water and the rock cuts like cheese."},
+    {"id": "hollow", "hazard": 0.09, "name": "Hollow", "at": 600, "hardness_mult": 0.55, "ore_bonus": 0.35, "about": "The ground rings when it is struck. Something is below it."},
+    {"id": "gateway", "hazard": 0.08, "name": "Open", "at": 1000, "hardness_mult": 0.4, "ore_bonus": 0.5, "about": "The shaft opens onto a place that is not on any map."}
   ],
   "text": {
     "dug": "{h} digs through the {layer}{ore}.",
     "ore": ", and strikes {n} {material}",
     "stage": "The ground around the shaft is now {stage}: {about}",
     "gateway": "The shaft breaks through into the underworld.",
+    "cave_in": "The roof gives way: {h} is struck by falling rock and loses {n} health.",
+    "propped": "The roof groans, and a timber prop takes the weight.",
+    "unharmed": "The roof gives way, but {h} is already clear.",
     "too_deep": "No one has dug below {max} and come back.",
     "above": "That is above the ground.",
     "already": "That cell is already dug.",

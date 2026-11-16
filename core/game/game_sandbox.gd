@@ -493,6 +493,10 @@ func dig(depth: int) -> Dictionary:
 	var out := GameMine.dig(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
 	if out["ok"]:
 		log.append({"kind": "dig", "text": _text("dug", {"depth": depth})})
+		var h := GameMine.hazard(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
+		out["hazard"] = h
+		if bool(h["hit"]):
+			log.append({"kind": "hazard", "text": str(h["text"])})
 	return out
 
 
