@@ -28,6 +28,33 @@
     "stick_base": [0.9, 0.9, 0.9],
     "stick_knob": [0.98, 0.9, 0.55]
   },
+  "tiles": {
+    "note": "The open world drawn as tile chunks (ui/play/tile_view.gd). px is a tile's size in the atlas, chunk the tiles to a TileMapLayer, keep the chunks kept beyond the view. Each kind (a biome, water, a built piece) has a colour; a stand-in for sprite art, which replaces the atlas and nothing else.",
+    "px": 16,
+    "chunk": 16,
+    "keep": 1,
+    "colors": {
+      "plains": [0.30, 0.50, 0.24],
+      "forest": [0.16, 0.36, 0.18],
+      "hills": [0.40, 0.48, 0.26],
+      "mountains": [0.46, 0.44, 0.42],
+      "swamp": [0.24, 0.34, 0.26],
+      "tundra": [0.72, 0.78, 0.80],
+      "coast": [0.74, 0.68, 0.46],
+      "volcanic": [0.30, 0.20, 0.18],
+      "ocean": [0.12, 0.27, 0.42],
+      "water": [0.12, 0.27, 0.42],
+      "wall": [0.42, 0.34, 0.24],
+      "floor": [0.62, 0.50, 0.34],
+      "road": [0.55, 0.52, 0.46],
+      "door": [0.50, 0.30, 0.16],
+      "stairs": [0.70, 0.58, 0.40],
+      "bed": [0.64, 0.30, 0.34],
+      "anvil": [0.32, 0.34, 0.40],
+      "hearth": [0.80, 0.42, 0.16],
+      "trough": [0.36, 0.44, 0.52]
+    }
+  },
   "text": {
     "not_a_step": "The heir can only step to a tile beside them.",
     "edge": "The edge of the world is there.",
