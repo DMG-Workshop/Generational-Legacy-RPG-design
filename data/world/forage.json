@@ -1,0 +1,17 @@
+{
+  "note": "Foraging by the heir (roadmap item 44; core/game/game_forage.gd, checked by tools/check_data.gd). The Forage action gathers the nearest node (a tree, herb patch, bone pile or outcrop with a material, as GameWorldGen places them) within `reach` tiles of the heir that has not been gathered within the companions' `regrow_years`, takes its amount times the heir's class share (`classes`, `default` otherwise) into the family's stores and marks it gathered (GameDynasty.gathered, the same marks the companions use), so a node the heir has taken is not gathered again by a companion and the other way round. The time it takes is the world clock's, not the action's. No dice are drawn and the autopilot never forages.",
+  "settings": {"reach": 1.5},
+  "classes": {
+    "default": 1.0,
+    "ranger": 1.5,
+    "druid": 1.5,
+    "rogue": 1.25,
+    "warrior": 0.9
+  },
+  "text": {
+    "foraged": "{heir} gathers {n} {material}.",
+    "nothing": "There is nothing here to gather.",
+    "indoors": "Not while indoors.",
+    "upstairs": "There is nothing to gather up here."
+  }
+}
