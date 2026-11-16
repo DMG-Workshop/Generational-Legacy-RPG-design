@@ -9,6 +9,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchControls := preload("res://ui/play/touch_controls.gd")
+const CraftPanel := preload("res://ui/play/craft_panel.gd")
 const BAR := 56.0
 
 var app: Node
@@ -121,6 +122,8 @@ func _process(delta: float) -> void:
 	if d.battle != null or d.state != "life":
 		app.show_state()   # the clock (or the heir) has handed the screen over: a fight, a succession, the end
 		return
+	if _modal_open():
+		return   # the workshop is open: the world waits
 	var inp := WorldInput.read()
 	if int(inp["zoom"]) != 0:
 		zoom = WorldInput.zoom_after(zoom, int(inp["zoom"]))
@@ -228,11 +231,30 @@ func _tap(p: Vector2, area: Vector2) -> void:
 	queue_redraw()
 
 
+## The workshop over the map, at the family's forge: while it is open the world waits and the keys do nothing here.
+func _open_workshop(forge: String) -> void:
+	var panel: Control = CraftPanel.new()
+	panel.dynasty = app.dynasty
+	panel.on_change = func(): _refresh_status()
+	panel.forge = forge
+	add_child(panel)
+
+
+## Whether a modal panel (the workshop) is open over the map.
+func _modal_open() -> bool:
+	for c in get_children():
+		if c.has_meta("modal") and not c.is_queued_for_deletion():
+			return true
+	return false
+
+
 ## The Use action: in by the door the heir stands at, or out by the entrance of the interior they are in.
 func _use() -> void:
 	var r := sb.use()
 	last_line = str(r["text"])
 	cam = Vector2.ZERO
+	if str(r.get("open", "")) == "workshop":
+		_open_workshop(str(r.get("forge", "")))
 	_refresh_status()
 	queue_redraw()
 

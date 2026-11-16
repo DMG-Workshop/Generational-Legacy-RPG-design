@@ -22,7 +22,7 @@
     "trough": {"name": "Trough", "cost": {"oak": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true}
   },
   "room_types": [
-    {"id": "forge", "name": "Forge", "phrase": "a forge", "needs": {"anvil": 1, "hearth": 1}, "min_area": 4},
+    {"id": "forge", "name": "Forge", "phrase": "a forge", "needs": {"anvil": 1, "hearth": 1}, "min_area": 4, "use": {"kind": "craft", "hint": "Use to work at the forge."}},
     {"id": "kennel", "name": "Kennel", "phrase": "a kennel", "needs": {"trough": 1}, "min_area": 6},
     {"id": "bedroom", "name": "Bedroom", "phrase": "a bedroom", "needs": {"bed": 1}, "min_area": 4, "use": {"kind": "rest", "years": 0.25, "hint": "Use to rest."}}
   ],
@@ -50,6 +50,7 @@
     "needs_support": "Nothing holds that up: a storey rests on a wall, stairs or floor below it, or on a room.",
     "stairs_ground": "Stairs go up from the ground, not down into the earth.",
     "stairs_top": "That is the top storey: there is nothing above it to climb to.",
+    "forge_lit": "The family's forge is lit.",
     "nothing_to_use": "There is nothing to use here.",
     "in_room": "You are in {room}.",
     "in_plain_room": "You are in a room.",
