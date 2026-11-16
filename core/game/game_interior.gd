@@ -3,7 +3,7 @@
 ## into cells the sandbox can walk: every tile of a room is `floor`, each door between rooms is a `door`, the tile the heir
 ## enters on is the `exit` (standing on it and using it leads back out), and every tile that touches the floor and is not
 ## floor is a `wall`. Anything else is nothing at all (not a cell). Pure and deterministic: built from the layouts alone,
-## nothing saved, no dice. The kinds are the names the tile view has a colour for.
+## nothing saved, no dice. A person (GamePeople) stands on a floor cell, which is then `person`: solid, drawn, and talked to. The kinds are the names the tile view has a colour for.
 class_name GameInterior
 extends RefCounted
 
@@ -37,6 +37,10 @@ static func cells(space_id: String) -> Dictionary:
 	var e := entry()
 	if out.has(key(e.x, e.y)):
 		out[key(e.x, e.y)] = "exit"
+	for person in GamePeople.in_space(space_id):
+		var c := GamePeople.cell_of(person)
+		if out.get(key(c.x, c.y), "") == "floor":
+			out[key(c.x, c.y)] = "person"
 	var walls := {}
 	for k in out:
 		var p := _parse(k)

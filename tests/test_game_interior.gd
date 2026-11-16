@@ -62,10 +62,10 @@ func _door(id: String) -> Vector2i:
 func test_cells() -> void:
 	var forge := "world/hearthmere/forge"
 	var g := GameInterior.cells(forge)
-	var n := {"floor": 0, "door": 0, "exit": 0, "wall": 0}
+	var n := {"floor": 0, "door": 0, "exit": 0, "wall": 0, "person": 0}
 	for k in g:
 		n[g[k]] += 1
-	ok(n["floor"] + n["exit"] == 32 and n["door"] == 2 and n["exit"] == 1, "the forge's rooms are 32 tiles of floor (one the way out) and 2 doors: %s" % str(n))
+	ok(n["floor"] + n["exit"] + n["person"] == 32 and n["door"] == 2 and n["exit"] == 1 and n["person"] == 1, "the forge's rooms are 32 tiles of floor (one the way out, one with the smith on it) and 2 doors: %s" % str(n))
 	ok(g["0,0"] == "exit", "the way out is the origin")
 	ok(g["2,0"] == "door" and g["0,2"] == "door", "the doors are where the layout says")
 	ok(g["-3,-2"] == "wall" and g["-3,0"] == "wall", "walls stand round the floor")
