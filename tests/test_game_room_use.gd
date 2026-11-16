@@ -84,7 +84,7 @@ func test_room_use() -> void:
 	ok(GameBuild.room_use(d, x + 2, z + 2).get("kind", "") == "craft", "the same room as a forge crafts instead (the first type that fits wins)")
 	var h2 := _house()
 	GameBuild.place(h2["d"], "trough", h2["x"] + 1, S, h2["z"] + 1)
-	ok(GameBuild.room_use(h2["d"], h2["x"] + 2, h2["z"] + 2).is_empty(), "a kennel does nothing yet")
+	ok(GameBuild.room_use(h2["d"], h2["x"] + 2, h2["z"] + 2).get("kind", "") == "keep", "a kennel's use is to look at who is kept")
 
 
 func test_sandbox_rest() -> void:

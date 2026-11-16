@@ -374,6 +374,24 @@ static func room_use(d: GameDynasty, x: int, z: int) -> Dictionary:
 	return out
 
 
+## The places for creatures the family's kennels give: each kennel (a room that is a kennel, `places` in its row) up to
+## `max_kennels` of them. 0 when nothing is built.
+static func kennel_places(d: GameDynasty) -> int:
+	if d.built.is_empty():
+		return 0
+	var per := 0
+	for t in data().get("room_types", []):
+		if str(t["id"]) == "kennel":
+			per = int(t.get("places", 0))
+	if per <= 0:
+		return 0
+	var n := 0
+	for r in rooms(d):
+		if str(room_type(d, r).get("id", "")) == "kennel":
+			n += 1
+	return mini(n, int(setting("max_kennels"))) * per
+
+
 ## "You are in a forge." for the room a tile is in, or "" outside any room.
 static func room_line(d: GameDynasty, x: int, z: int) -> String:
 	var r := room_at(d, x, z)
@@ -495,11 +513,16 @@ static func validate() -> Array:
 			var u: Variant = t["use"]
 			if typeof(u) != TYPE_DICTIONARY or not (u as Dictionary).has("kind") or not (u as Dictionary).has("hint"):
 				bad.append("building.json: room type '%s' use needs a kind and a hint" % t["id"])
-			elif not str(u["kind"]) in ["rest", "craft"]:
+			elif not str(u["kind"]) in ["rest", "craft", "keep"]:
 				bad.append("building.json: room type '%s' use kind '%s' is not one the game knows" % [t["id"], u["kind"]])
 			elif str(u["kind"]) == "rest" and (not (u as Dictionary).has("years") or float(u["years"]) <= 0.0 or float(u["years"]) > 1.0):
 				bad.append("building.json: room type '%s' rests for years above 0 and at most 1" % t["id"])
-	for key_id in ["forge_lit", "nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
+	if int(s.get("max_kennels", 0)) < 1:
+		bad.append("building.json: settings.max_kennels must be at least 1")
+	for t in dat.get("room_types", []):
+		if t.has("places") and int(t["places"]) < 1:
+			bad.append("building.json: room type '%s' places must be at least 1" % t["id"])
+	for key_id in ["kennel_holds", "forge_lit", "nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
 		if not dat["text"].has(key_id):
 			bad.append("building.json: text.%s is missing" % key_id)
 	return bad

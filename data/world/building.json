@@ -7,6 +7,7 @@
     "max_span": 3,
     "max_room_area": 80,
     "max_storeys": 2,
+    "max_kennels": 3,
     "ground_bearers": ["wall", "stairs"],
     "upper_bearers": ["wall", "floor", "stairs"]
   },
@@ -23,7 +24,7 @@
   },
   "room_types": [
     {"id": "forge", "name": "Forge", "phrase": "a forge", "needs": {"anvil": 1, "hearth": 1}, "min_area": 4, "use": {"kind": "craft", "hint": "Use to work at the forge."}},
-    {"id": "kennel", "name": "Kennel", "phrase": "a kennel", "needs": {"trough": 1}, "min_area": 6},
+    {"id": "kennel", "name": "Kennel", "phrase": "a kennel", "needs": {"trough": 1}, "min_area": 6, "places": 2, "use": {"kind": "keep", "hint": "Use to see who is kept."}},
     {"id": "bedroom", "name": "Bedroom", "phrase": "a bedroom", "needs": {"bed": 1}, "min_area": 4, "use": {"kind": "rest", "years": 0.25, "hint": "Use to rest."}}
   ],
   "text": {
@@ -50,6 +51,7 @@
     "needs_support": "Nothing holds that up: a storey rests on a wall, stairs or floor below it, or on a room.",
     "stairs_ground": "Stairs go up from the ground, not down into the earth.",
     "stairs_top": "That is the top storey: there is nothing above it to climb to.",
+    "kennel_holds": "The kennels give {places} places. The family keeps {kept} of {cap}.",
     "forge_lit": "The family's forge is lit.",
     "nothing_to_use": "There is nothing to use here.",
     "in_room": "You are in {room}.",

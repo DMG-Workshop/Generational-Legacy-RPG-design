@@ -241,6 +241,8 @@ func use() -> Dictionary:
 	if u.is_empty():
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
+		"keep":
+			return {"ok": true, "text": GameBuild.text("kennel_holds", {"places": GameBuild.kennel_places(d), "kept": d.roster.size(), "cap": GameRoster.cap(d)})}
 		"craft":
 			# The screen opens the workshop for it (GameCraft with forge "home"); nothing changes here.
 			return {"ok": true, "text": GameBuild.text("forge_lit"), "open": "workshop", "forge": "home"}
