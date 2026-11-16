@@ -311,10 +311,47 @@ func step(ticks: int = 1) -> void:
 		var out := GameCompanions.step_all(d, companions, GameCompanions.view(d, heir_point().x, heir_point().y, threats, router), tick)
 		companions = out["agents"]
 		for e in out["events"]:
+			if str(e["type"]) == "engage":
+				_guard_fights(e)
+				continue
 			log.append({"kind": "companion", "text": GameCompanions.event_text(e)})
 		var keep_lines := int(setting("log_lines"))
 		if log.size() > keep_lines:
 			log = log.slice(log.size() - keep_lines)
+
+
+## A guard is at the creature it went out to meet (`engage`): they fight (GameCompanions.duel). A win drives the creature out of
+## the world (the next `refresh` may bring another of its place back) and the family gets a share of its gold; a loss leaves the
+## guard hurt and resting at their post (`rest_until`) and the creature where it is; a guard too hurt to fight says so and rests.
+func _guard_fights(e: Dictionary) -> void:
+	var at := Vector2(float(e["x"]), float(e["z"]))
+	var hit := -1
+	var best := INF
+	for i in creatures.size():
+		var a: Dictionary = creatures[i]
+		var dist := Vector2(float(a["x"]), float(a["z"])).distance_to(at)
+		if dist < best and dist <= 1.0:
+			best = dist
+			hit = i
+	if hit < 0:
+		return
+	var id := str(e["id"])
+	var r := GameCompanions.duel(d, id, str(creatures[hit]["id"]), tick)
+	if r.is_empty():
+		return
+	var name := str(d.party.member(id).get("name", id))
+	var foe := str(r["foe"]).to_lower()
+	for c in companions:
+		if str(c["id"]) == id and (not bool(r["won"])):
+			c["rest_until"] = tick + int(GameCompanions.setting("guard_rest_ticks"))
+	if bool(r["refused"]):
+		log.append({"kind": "guard", "text": GameCompanions.text("guard_too_hurt", {"name": name, "foe": foe})})
+	elif bool(r["won"]):
+		creatures.remove_at(hit)
+		var key := "guard_won_gold" if int(r["gold"]) > 0 else "guard_won"
+		log.append({"kind": "guard", "text": GameCompanions.text(key, {"name": name, "foe": foe, "gold": int(r["gold"])})})
+	else:
+		log.append({"kind": "guard", "text": GameCompanions.text("guard_hurt", {"name": name, "foe": foe})})
 
 
 ## Plans a walk from the heir to a tile of the open world over the ground as it is now (GamePath, a walker). Sets the
