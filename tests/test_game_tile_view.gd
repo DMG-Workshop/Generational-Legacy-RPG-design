@@ -35,6 +35,7 @@ func _run() -> void:
 	test_chunks()
 	test_cells()
 	test_place()
+	test_levels()
 	await test_screen()
 	print("tile view tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -147,6 +148,57 @@ func test_place() -> void:
 	v.free()
 
 
+func test_levels() -> void:
+	var d := _dyn()
+	GameCraft.add_material(d, "oak", 100)
+	var b := GameBuild.base()
+	var x := int(b["x"]) + 1
+	var z := int(b["z"])
+	GameBuild.place(d, "wall", x, GameBuild.SURFACE, z)
+	GameBuild.place(d, "floor", x, GameBuild.SURFACE - 1, z)
+	GameBuild.place(d, "floor", x + 1, GameBuild.SURFACE, z)   # a ground-floor piece beside it
+	var v := TileView.new()
+	v.setup(d)
+	v.show_view(Vector2(x, z), Vector2(4, 4))
+	ok(v.level == 0 and v.uppers.is_empty(), "on the ground there are no storey layers")
+	var c := TileView.chunk_of(x, z)
+	var n: int = TileView.settings()["chunk"]
+	var local := Vector2i(x - c.x * n, z - c.y * n)
+	var shade: float = TileView.settings()["below_shade"]
+	v.set_level(1)
+	ok(v.level == 1 and v.uppers.size() == v.layers.size(), "at storey 1 each chunk has a layer for it: %d" % v.uppers.size())
+	var up: TileMapLayer = v.uppers[c]
+	ok(up.get_cell_atlas_coords(local).x == TileView.kinds().find("floor"), "the floor built at that storey is drawn")
+	ok(up.get_cell_source_id(local + Vector2i(1, 0)) == -1 and up.get_cell_source_id(local + Vector2i(0, 1)) == -1, "and nothing is drawn where nothing is built (the ground shows through)")
+	ok((v.layers[c] as TileMapLayer).modulate == Color(shade, shade, shade), "the ground is dimmed")
+	GameBuild.place(d, "wall", x, GameBuild.SURFACE - 1, z + 1)   # needs support: a wall below it
+	ok(GameBuild.kind_at(d, x, GameBuild.SURFACE - 1, z + 1) == "", "(a piece with nothing under it is not built)")
+	GameBuild.place(d, "wall", x, GameBuild.SURFACE, z + 1)
+	GameBuild.place(d, "wall", x, GameBuild.SURFACE - 1, z + 1)
+	v.refresh_cell(x, z + 1)
+	ok(up.get_cell_atlas_coords(local + Vector2i(0, 1)).x == TileView.kinds().find("wall"), "a piece built at the storey shows once the tile is refreshed")
+	GameBuild.remove(d, x, GameBuild.SURFACE - 1, z + 1)
+	v.refresh_cell(x, z + 1)
+	ok(up.get_cell_source_id(local + Vector2i(0, 1)) == -1, "and goes when it is taken down")
+	v.set_level(2)
+	ok((v.uppers[c] as TileMapLayer).get_cell_source_id(local) == -1, "storey 2 has none of storey 1's pieces")
+	v.set_level(99)
+	ok(v.level == int(GameBuild.setting("max_storeys")), "a storey above the top is the top")
+	v.set_level(0)
+	ok(v.uppers.is_empty() and (v.layers[c] as TileMapLayer).modulate == Color(1, 1, 1), "back on the ground the layers go and the ground is bright")
+	v.set_level(1)
+	v.show_view(Vector2(x + 300, z), Vector2(4, 4))
+	ok(not v.uppers.has(c) and v.uppers.size() == v.layers.size(), "a chunk that is let go loses its storey layer, a new one gets one: %d of %d" % [v.uppers.size(), v.layers.size()])
+	var shade_of_new: float = (v.layers.values()[0] as TileMapLayer).modulate.r
+	ok(absf(shade_of_new - shade) < 0.001, "and a new chunk's ground is dimmed at once")
+	var keep: float = TileView.settings()["below_shade"]
+	TileView.settings()["below_shade"] = 0.0
+	ok(not TileView.validate().is_empty(), "a shade of nothing is caught")
+	TileView.settings()["below_shade"] = keep
+	ok(TileView.validate().is_empty(), "and putting it back clears it")
+	v.free()
+
+
 func test_screen() -> void:
 	var d := _dyn()
 	var app := FakeApp.new()
@@ -170,6 +222,12 @@ func test_screen() -> void:
 			bar_index = i
 	ok(kids.find(scr.overlay) < bar_index, "and the buttons over both")
 	ok(scr.overlay.mouse_filter == Control.MOUSE_FILTER_IGNORE and scr.map.mouse_filter == Control.MOUSE_FILTER_IGNORE, "so neither takes the taps")
+	scr.sb.build_level = 1
+	await process_frame
+	ok(scr.tile_view.level == 1 and not scr.tile_view.uppers.is_empty(), "the screen shows the storey the build level is on")
+	scr.sb.build_level = 0
+	await process_frame
+	ok(scr.tile_view.level == 0 and scr.tile_view.uppers.is_empty(), "and goes back to the ground")
 	scr.zoom = 2.0
 	await process_frame
 	ok(absf(scr.tile_view.scale.x - float(scr._cell()) / float(TileView.settings()["px"])) < 0.001, "zooming rescales the tiles")
