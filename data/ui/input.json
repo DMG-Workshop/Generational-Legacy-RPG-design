@@ -27,6 +27,8 @@
     "world_dig": {"name": "Dig", "keys": ["E"], "mouse": ["left"], "pad_buttons": ["x"]},
     "world_build": {"name": "Build", "keys": ["R"], "mouse": ["right"], "pad_buttons": ["y"]},
     "world_interact": {"name": "Use", "keys": ["F"], "pad_buttons": ["a"]},
+    "world_climb_up": {"name": "Climb up", "keys": ["Q"], "pad_buttons": ["right_stick"]},
+    "world_climb_down": {"name": "Climb down", "keys": ["Z"], "pad_buttons": ["left_stick"]},
     "world_cancel": {"name": "Back", "keys": ["Escape"], "pad_buttons": ["b"]},
     "world_menu": {"name": "Menu", "keys": ["Tab"], "pad_buttons": ["start"]},
     "world_pan": {"name": "Drag the view", "mouse": ["middle"], "pointer_only": true}

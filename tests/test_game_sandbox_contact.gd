@@ -23,6 +23,7 @@ func _init() -> void:
 func _run() -> void:
 	GameData.load_all()
 	test_rules()
+	test_out_of_reach()
 	test_step()
 	test_fight()
 	print("sandbox contact tests: %d checks, %d failures" % [checks, fails])
@@ -85,6 +86,23 @@ func test_rules() -> void:
 	_put(s4, id, "chase", 1.0)
 	ok(not s4._contact() and s4.creatures.size() == 1, "nothing starts when the heir is not in life")
 	ok(_sandbox().d.start_encounter([]) == null and _sandbox().d.start_encounter(["no_such_beast"]) == null, "a fight with nothing known is no fight")
+
+
+## Nothing reaches the heir upstairs or indoors: a hunter at their side starts no fight there, and starts one once they are back.
+func test_out_of_reach() -> void:
+	var id := _wild_id()
+	var up := _sandbox()
+	_put(up, id, "chase", 0.5)
+	up.heir_y = -2
+	ok(not up._contact() and up.d.battle == null and up.creatures.size() == 1, "no fight with the heir upstairs")
+	up.heir_y = -1
+	ok(up._contact() and up.d.battle != null, "and one as soon as they are back on the ground")
+	var inside := _sandbox()
+	_put(inside, id, "chase", 0.5)
+	inside.space = "world/hearthmere/forge"
+	ok(not inside._contact() and inside.d.battle == null and inside.creatures.size() == 1, "no fight with the heir indoors")
+	inside.space = "world"
+	ok(inside._contact() and inside.d.battle != null, "and one when they come out")
 
 
 func test_step() -> void:

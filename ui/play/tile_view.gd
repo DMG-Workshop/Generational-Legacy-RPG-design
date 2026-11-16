@@ -12,6 +12,8 @@ var d: GameDynasty
 var layers := {}          # Vector2i chunk -> TileMapLayer
 var tile_set: TileSet
 var fills := 0            # chunks filled so far (for tests)
+var interior_id := ""     # the interior shown instead of the open world ("" shows the world)
+var interior := {}        # its cells, "x,z" -> floor, door, exit or wall (GameInterior.cells); nothing is drawn elsewhere
 var level := 0            # the storey shown: 0 is the ground; above it the ground is dimmed and that storey's pieces are drawn over it
 var uppers := {}          # Vector2i chunk -> TileMapLayer of the shown storey's pieces (empty cells where nothing is built)
 
@@ -26,6 +28,7 @@ static func kinds() -> Array:
 	out.append("water")
 	for id in GameBuild.pieces():
 		out.append(id)
+	out.append("exit")   # an interior's way out (its floor, doors and walls use the floor, door and wall colours)
 	return out
 
 
@@ -101,7 +104,7 @@ func show_view(centre: Vector2, half: Vector2) -> void:
 ## storey are drawn over them; going back to 0 puts the ground back and lets the storey's tiles go.
 func set_level(n: int) -> void:
 	var top := int(GameBuild.setting("max_storeys"))
-	n = clampi(n, 0, top)
+	n = clampi(n, 0, 0 if interior_id != "" else top)   # an interior has one floor
 	if n == level:
 		return
 	level = n
@@ -114,6 +117,22 @@ func set_level(n: int) -> void:
 	for c in layers:
 		if level > 0:
 			_fill_upper(c)
+
+
+## Shows an interior's floor in place of the open world (`id` "" goes back to the world). Everything drawn is dropped and
+## drawn again from the new cells at the next `show_view`.
+func set_interior(id: String, cells: Dictionary) -> void:
+	if id == interior_id:
+		return
+	interior_id = id
+	interior = cells
+	for c in layers.keys():
+		(layers[c] as TileMapLayer).queue_free()
+	layers.clear()
+	for c in uppers.keys():
+		(uppers[c] as TileMapLayer).queue_free()
+	uppers.clear()
+	level = 0   # an interior has one floor
 
 
 ## Places the view: the tile `centre` goes to the middle of `area` (the map's rectangle, top-left at `origin`), `cell` pixels a tile.
@@ -135,7 +154,9 @@ func _fill(c: Vector2i) -> void:
 		for dx in n:
 			var x := c.x * n + dx
 			var z := c.y * n + dz
-			layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(_kind_at(x, z)), 0))
+			var kind := _kind_at(x, z)
+			if kind != "":
+				layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind), 0))
 	layers[c] = layer
 	fills += 1
 	if level > 0:
@@ -161,6 +182,8 @@ func _fill_upper(c: Vector2i) -> void:
 
 
 func _kind_at(x: int, z: int) -> String:
+	if interior_id != "":
+		return str(interior.get("%d,%d" % [x, z], ""))   # nothing where the interior has no cell
 	return kind_for(GameWorldGen.tile(d, x, z), GameBuild.kind_at(d, x, GameBuild.SURFACE, z))
 
 
@@ -170,8 +193,12 @@ func refresh_cell(x: int, z: int) -> void:
 	if not layers.has(c):
 		return
 	var n := int(settings()["chunk"])
+	var here := _kind_at(x, z)
 	var local := Vector2i(x - c.x * n, z - c.y * n)
-	(layers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(_kind_at(x, z)), 0))
+	if here == "":
+		(layers[c] as TileMapLayer).erase_cell(local)
+	else:
+		(layers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(here), 0))
 	if level > 0 and uppers.has(c):
 		var kind := GameBuild.kind_at(d, x, GameBuild.SURFACE - level, z)
 		if kind == "":
