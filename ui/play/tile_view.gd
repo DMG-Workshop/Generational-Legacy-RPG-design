@@ -11,6 +11,8 @@ var d: GameDynasty
 var layers := {}          # Vector2i chunk -> TileMapLayer
 var tile_set: TileSet
 var fills := 0            # chunks filled so far (for tests)
+var interior_id := ""     # the interior shown instead of the open world ("" shows the world)
+var interior := {}        # its cells, "x,z" -> floor, door, exit or wall (GameInterior.cells); nothing is drawn elsewhere
 
 
 static func settings() -> Dictionary:
@@ -23,6 +25,7 @@ static func kinds() -> Array:
 	out.append("water")
 	for id in GameBuild.pieces():
 		out.append(id)
+	out.append("exit")   # an interior's way out (its floor, doors and walls use the floor, door and wall colours)
 	return out
 
 
@@ -91,6 +94,18 @@ func show_view(centre: Vector2, half: Vector2) -> void:
 			layers.erase(c)
 
 
+## Shows an interior's floor in place of the open world (`id` "" goes back to the world). Everything drawn is dropped and
+## drawn again from the new cells at the next `show_view`.
+func set_interior(id: String, cells: Dictionary) -> void:
+	if id == interior_id:
+		return
+	interior_id = id
+	interior = cells
+	for c in layers.keys():
+		(layers[c] as TileMapLayer).queue_free()
+	layers.clear()
+
+
 ## Places the view: the tile `centre` goes to the middle of `area` (the map's rectangle, top-left at `origin`), `cell` pixels a tile.
 func place(origin: Vector2, area: Vector2, centre: Vector2, cell: float, light: float) -> void:
 	var px := float(int(settings()["px"]))
@@ -110,12 +125,16 @@ func _fill(c: Vector2i) -> void:
 		for dx in n:
 			var x := c.x * n + dx
 			var z := c.y * n + dz
-			layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(_kind_at(x, z)), 0))
+			var kind := _kind_at(x, z)
+			if kind != "":
+				layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind), 0))
 	layers[c] = layer
 	fills += 1
 
 
 func _kind_at(x: int, z: int) -> String:
+	if interior_id != "":
+		return str(interior.get("%d,%d" % [x, z], ""))   # nothing where the interior has no cell
 	return kind_for(GameWorldGen.tile(d, x, z), GameBuild.kind_at(d, x, GameBuild.SURFACE, z))
 
 
@@ -125,7 +144,12 @@ func refresh_cell(x: int, z: int) -> void:
 	if not layers.has(c):
 		return
 	var n := int(settings()["chunk"])
-	(layers[c] as TileMapLayer).set_cell(Vector2i(x - c.x * n, z - c.y * n), 0, Vector2i(kinds().find(_kind_at(x, z)), 0))
+	var here := _kind_at(x, z)
+	var local := Vector2i(x - c.x * n, z - c.y * n)
+	if here == "":
+		(layers[c] as TileMapLayer).erase_cell(local)
+	else:
+		(layers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(here), 0))
 
 
 static func validate() -> Array:
