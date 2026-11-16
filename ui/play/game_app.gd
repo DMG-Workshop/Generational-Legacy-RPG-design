@@ -8,6 +8,7 @@ const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const MenuPanel := preload("res://ui/play/menu_panel.gd")
 const ReportPanel := preload("res://ui/play/report_panel.gd")
+const ControlsPanel := preload("res://ui/play/controls_panel.gd")
 const PadFocus := preload("res://ui/play/pad_focus.gd")
 const GraphicsSettings := preload("res://ui/play/graphics_settings.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
@@ -259,6 +260,12 @@ func set_error_log(on: bool) -> void:
 
 
 ## The menu's Report a problem: what a report holds, a note, and the report to copy or save. Nothing is sent.
+func open_controls() -> Control:
+	var c: Control = ControlsPanel.new()
+	current.add_child(c)
+	return c
+
+
 func open_report() -> Control:
 	var r: Control = ReportPanel.new()
 	r.app = self
