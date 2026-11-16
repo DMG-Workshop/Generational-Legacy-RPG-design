@@ -34,6 +34,7 @@ var total_hunts: int = 0
 var roster: Array = []          # eggs and young the family keeps (see GameRoster); saved only when not empty
 var mine: Dictionary = {}       # the ground dug at each site, its strain and its gateways (see GameMine); saved only when not empty
 var built: Dictionary = {}      # the pieces the family has built, {"x,y,z": kind} (see GameBuild); saved only when not empty
+var sandbox_at: Dictionary = {} # where the heir last stood in the open world, {x, z, gen, place} (see GameSandbox); saved only when set
 var gathered: Dictionary = {}   # nodes companions have gathered, {"x,z": world year} (see GameCompanions); saved only when not empty
 var stores: Dictionary = {}     # materials and essences the family has gathered, and how many pieces it has made (see GameCraft); saved only when not empty
 var world: GameWorld
@@ -1018,6 +1019,8 @@ func to_dict() -> Dictionary:
 		out["built"] = built
 	if not gathered.is_empty():   # and only once a companion has gathered
 		out["gathered"] = gathered
+	if not sandbox_at.is_empty():   # and only once the heir has walked the open world
+		out["sandbox_at"] = sandbox_at
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
 		out["house"] = house
 	if world_seconds > 0.0:   # likewise: only once the clock has run
@@ -1076,6 +1079,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.mine = GameMine.load_state(d.get("mine", {}))
 	g.built = GameBuild.load_state(d.get("built", {}))
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
+	g.sandbox_at = GameSandbox.load_at(d.get("sandbox_at", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
 	g.achievements = GameAchievements.load_state(d.get("achievements", {}))
 	g.world_event = GameWorldEvents.load_state(d.get("world_event", {}))

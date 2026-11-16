@@ -7,6 +7,8 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
+const TouchControls := preload("res://ui/play/touch_controls.gd")
 const BAR := 56.0
 
 var app: Node
@@ -18,12 +20,18 @@ var mode := "walk"          # "walk" (the heir moves) or "build" (the stick aims
 var build_kind := "wall"    # the piece the Place button puts down
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
+var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
+var actions: VBoxContainer           # Dig and Place under the thumb, shown only with a touch layout
 var status: Label
+var map: Control          # clips the tile view to the map area, under the bar and the overlay
+var tile_view: TileView   # the ground, as tile chunks
+var overlay: Control      # the route, creatures, heir, ghost and stick, over the tiles
+var piece_button: Button
+var level_button: Button
 var last_line := ""
 var _walk_wait := 0.0
 var _tick_wait := 0.0
 var _save_wait := 0.0
-var _tiles := {}          # "x,z" -> the generated tile (pure of the seed; cached for drawing)
 var _press := Vector2.ZERO
 var _press_ms := 0
 
@@ -49,6 +57,20 @@ func _ready() -> void:
 	if not WorldInput.installed():
 		WorldInput.install()   # the app installs them at start; a screen made on its own installs them itself
 	sb = GameSandbox.start(app.dynasty)
+	map = Control.new()
+	map.clip_contents = true
+	map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map.position = Vector2(0, BAR)
+	map.size = Vector2(size.x, maxf(0.0, size.y - BAR))
+	add_child(map)
+	tile_view = TileView.new()
+	tile_view.setup(app.dynasty)
+	map.add_child(tile_view)
+	overlay = Overlay.new()
+	overlay.screen = self
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
 	var bar := HBoxContainer.new()
 	bar.position = Vector2(8, 4)
 	bar.size = Vector2(maxf(0.0, size.x - 16.0), BAR - 8.0)
@@ -68,9 +90,12 @@ func _ready() -> void:
 	build_bar.offset_top = -BAR
 	build_bar.add_theme_constant_override("separation", 6)
 	add_child(build_bar)
-	for kind in sb.build_kinds():
-		var k: String = kind
-		build_bar.add_child(Kit.button(str(GameBuild.pieces()[k]["name"]), func(): _pick(k), Vector2(96, BAR - 12)))
+	piece_button = Kit.button("", func(): _next_piece(), Vector2(136, BAR - 12))
+	build_bar.add_child(piece_button)
+	_pick(build_kind)
+	level_button = Kit.button("", func(): _next_level(), Vector2(104, BAR - 12))
+	build_bar.add_child(level_button)
+	_next_level(false)
 	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
 	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
 	build_bar.visible = false
@@ -82,7 +107,10 @@ func _ready() -> void:
 	add_child(orders_panel)
 	orders_panel.visible = false
 	_refresh_orders()
+	if UiSettings.touch():
+		_make_action_buttons()
 	_refresh_status()
+	_sync_tiles()
 
 
 func _process(delta: float) -> void:
@@ -97,6 +125,8 @@ func _process(delta: float) -> void:
 	if look.length() > 0.0:
 		cam += look * float(setting("cam_tiles_per_second")) * delta
 	var mv: Vector2 = inp["move"]
+	if fingers.steering() and fingers.move().length() > 0.0:
+		mv = fingers.move()   # a finger on the stick steers over the keys
 	_walk_wait -= delta
 	var stepped := false
 	if step_for(mv) != Vector2i.ZERO:
@@ -123,7 +153,7 @@ func _process(delta: float) -> void:
 		last_line = str(e.get("text", e)) if e is Dictionary else str(e)
 	_save_wait -= delta
 	if _save_wait <= 0.0:
-		d.save_to_disk()
+		_save()
 		_save_wait = float(setting("save_seconds"))
 	if inp["cancel"]:
 		app.show_state()
@@ -133,10 +163,24 @@ func _process(delta: float) -> void:
 	if inp["build"]:
 		_build()
 	_refresh_status()
+	_sync_tiles()
+	overlay.queue_redraw()
 	queue_redraw()
 
 
 func _gui_input(event: InputEvent) -> void:
+	var area_size := Vector2(size.x, size.y - BAR)
+	if event is InputEventScreenTouch:
+		var st := event as InputEventScreenTouch
+		fingers.touch(st.index, st.position - Vector2(0, BAR), st.pressed, area_size)
+		queue_redraw()
+		return
+	if event is InputEventScreenDrag:
+		var sd := event as InputEventScreenDrag
+		fingers.drag(sd.index, sd.position - Vector2(0, BAR))
+		zoom = fingers.pinch(zoom)
+		queue_redraw()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var e := event as InputEventMouseButton
 		var area := Vector2(size.x, size.y - BAR)
@@ -179,7 +223,7 @@ func _dig() -> void:
 	var r := sb.dig(0)
 	if r["ok"]:
 		last_line = str(sb.log.back()["text"])   # GameSandbox.dig logged the line just now
-		app.dynasty.save_to_disk()
+		_save()
 	else:
 		last_line = str(r["why"])
 	_refresh_status()
@@ -190,7 +234,8 @@ func _build() -> void:
 	var r := sb.build(build_kind, facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
-		app.dynasty.save_to_disk()
+		tile_view.refresh_cell(sb.heir.x + facing_dir.x, sb.heir.y + facing_dir.y)
+		_save()
 	_refresh_status()
 	queue_redraw()
 
@@ -199,13 +244,31 @@ func _remove() -> void:
 	var r := sb.remove_at(facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
-		app.dynasty.save_to_disk()
+		tile_view.refresh_cell(sb.heir.x + facing_dir.x, sb.heir.y + facing_dir.y)
+		_save()
+	_refresh_status()
+	queue_redraw()
+
+
+## The piece button steps through the pieces in the data's order (eight would not fit a phone's bar as eight buttons).
+func _next_piece() -> void:
+	var kinds: Array = sb.build_kinds()
+	_pick(kinds[(kinds.find(build_kind) + 1) % kinds.size()])
+
+
+## The level button steps the build level up a storey and back to the ground (stairs and upper floors).
+func _next_level(step: bool = true) -> void:
+	if step:
+		sb.cycle_level()
+	level_button.text = "Level: %s" % ("ground" if sb.build_level == 0 else str(sb.build_level))
 	_refresh_status()
 	queue_redraw()
 
 
 func _pick(kind: String) -> void:
 	build_kind = kind
+	if piece_button != null:
+		piece_button.text = "Piece: %s" % GameBuild.pieces()[kind]["name"]
 	_refresh_status()
 	queue_redraw()
 
@@ -240,9 +303,35 @@ func _cycle(id: String) -> void:
 	var r := sb.cycle_order(id)
 	last_line = str(r["text"])
 	if r["ok"]:
-		app.dynasty.save_to_disk()
+		_save()
 	_refresh_orders()
 	_refresh_status()
+
+
+## Dig and Place as big buttons at the right-hand thumb, for a touch layout (the top bar and the piece bar stay).
+func _make_action_buttons() -> void:
+	var px := float(setting("action_button_px"))
+	actions = VBoxContainer.new()
+	actions.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	actions.offset_left = -px - 12.0
+	actions.offset_right = -12.0
+	actions.offset_top = -(px * 2.0 + 8.0) - BAR - 12.0
+	actions.offset_bottom = -BAR - 12.0
+	actions.add_theme_constant_override("separation", 8)
+	add_child(actions)
+	actions.add_child(Kit.button("Dig", func(): _dig(), Vector2(px, px)))
+	actions.add_child(Kit.button("Place", func(): _build(), Vector2(px, px)))
+
+
+## Writes where the heir stands onto the dynasty, then saves it.
+func _save() -> void:
+	sb.remember()
+	app.dynasty.save_to_disk()
+
+
+func _exit_tree() -> void:
+	if sb != null:
+		sb.remember()   # leaving the screen (Back, a fight, a succession) keeps where the heir was
 
 
 func _cell() -> float:
@@ -256,60 +345,78 @@ func _refresh_status() -> void:
 		var why := sb.build_check(build_kind, facing_dir.x, facing_dir.y)
 		var piece := str(GameBuild.pieces()[build_kind]["name"])
 		line = str(GameSandbox.data()["text"]["ready"]).format({"piece": piece}) if why == "" else why
+	var room := GameBuild.room_line(d, sb.heir.x, sb.heir.y)
+	if room != "" and mode != "build":
+		line = room if line == "" else line
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 
 func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0))
+
+
+## Keeps the tile chunks of the view and puts them where the view is (the heir at the middle, the camera's offset, the zoom, the light).
+func _sync_tiles() -> void:
+	var d: GameDynasty = app.dynasty
+	var area := Vector2(size.x, size.y - BAR)
+	var cell := _cell()
+	var centre := Vector2(sb.heir) + cam
+	var light := clampf(float(GameDay.look(d)["light"]), float(setting("dim_floor")), 1.0)
+	map.size = area
+	tile_view.show_view(centre, area * 0.5 / cell + Vector2(1, 1))
+	tile_view.place(Vector2.ZERO, area, centre, cell, light)
+
+
+## What is drawn over the tiles: the night's tint, the route, creatures, companions, the build ghost, the heir and the touch stick.
+func _paint(c: Control) -> void:
 	var d: GameDynasty = app.dynasty
 	var area := Vector2(size.x, size.y - BAR)
 	var origin := Vector2(0, BAR)
 	var cell := _cell()
 	var colors: Dictionary = GameSandbox.data()["colors"]
 	var look := GameDay.look(d)
-	var light := clampf(float(look["light"]), float(setting("dim_floor")), 1.0)
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0))
 	var centre := Vector2(sb.heir) + cam
-	var half := area * 0.5 / cell
-	var x0 := floori(centre.x - half.x) - 1
-	var z0 := floori(centre.y - half.y) - 1
-	for z in range(z0, ceili(centre.y + half.y) + 2):
-		for x in range(x0, ceili(centre.x + half.x) + 2):
-			var t := _tile(d, x, z)
-			var col := _rgb(colors["water"]) if t["water"] else _rgb(colors["land"])
-			if GameBuild.kind_at(d, x, -1, z) != "":
-				col = _rgb(colors["built"])
-			col = col * light
-			var p := origin + (Vector2(x, z) - centre) * cell + area * 0.5
-			draw_rect(Rect2(p, Vector2(cell, cell)), col)
 	var tint: Array = look["tint"]
 	var night_alpha := (1.0 - float(look["light"])) * 0.5
 	if night_alpha > 0.0:
-		draw_rect(Rect2(origin, area), Color(float(tint[0]), float(tint[1]), float(tint[2]), night_alpha))
+		c.draw_rect(Rect2(origin, area), Color(float(tint[0]), float(tint[1]), float(tint[2]), night_alpha))
+	if sb.build_level > 0:
+		# The storey being built on: its pieces, over the ground's tiles (the tile view shows the ground floor only).
+		var half := area * 0.5 / cell
+		for z in range(floori(centre.y - half.y) - 1, ceili(centre.y + half.y) + 2):
+			for x in range(floori(centre.x - half.x) - 1, ceili(centre.x + half.x) + 2):
+				if GameBuild.kind_at(d, x, sb.build_y(), z) != "":
+					c.draw_rect(Rect2(origin + (Vector2(x, z) - centre) * cell + area * 0.5, Vector2(cell, cell)), _rgb(colors["upper"]))
 	for i in range(sb.route.size()):
 		var rp := origin + (Vector2(sb.route[i]) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
-		draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
+		c.draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
 	for a in sb.creatures:
 		var cp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
-		draw_circle(cp, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
+		c.draw_circle(cp, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
 	for a in sb.companions:
 		var kp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
-		draw_circle(kp, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
+		c.draw_circle(kp, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 	if mode == "build":
 		var gp := origin + (Vector2(sb.heir + facing_dir) - centre) * cell + area * 0.5
 		var legal := sb.build_check(build_kind, facing_dir.x, facing_dir.y) == ""
 		var gc := Color(0.3, 0.9, 0.4, 0.9) if legal else Color(0.95, 0.3, 0.3, 0.9)
-		draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
+		c.draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
 	var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
-	draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+	c.draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+	if fingers.steering():
+		var base := _rgb(colors["stick_base"])
+		var radius := WorldInput.setting("touch_stick_radius_px")
+		c.draw_arc(origin + fingers.origin, radius, 0.0, TAU, 40, Color(base, 0.5), 3.0)
+		c.draw_circle(origin + fingers.knob(), radius * 0.35, Color(_rgb(colors["stick_knob"]), 0.7))
 
 
-func _tile(d: GameDynasty, x: int, z: int) -> Dictionary:
-	var k := "%d,%d" % [x, z]
-	if not _tiles.has(k):
-		if _tiles.size() > 20000:
-			_tiles.clear()
-		_tiles[k] = GameWorldGen.tile(d, x, z)
-	return _tiles[k]
+## The control over the tiles: it only hands its drawing back to the screen.
+class Overlay extends Control:
+	var screen: Control
+
+	func _draw() -> void:
+		if screen != null:
+			screen._paint(self)
 
 
 static func _rgb(v: Array) -> Color:

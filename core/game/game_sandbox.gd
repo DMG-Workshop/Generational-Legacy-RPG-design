@@ -30,10 +30,47 @@ static func start(dyn: GameDynasty) -> GameSandbox:
 	if t.x < 0 or t.y < 0:
 		var a := GameWorldGen.anchor(dyn.world.location)
 		t = Vector2i(int(a.get("x", 0)), int(a.get("z", 0)))
+	var back := s._remembered()
+	if back != Vector2i(-1, -1):
+		t = back
 	s.heir = t
 	s.companions = GameCompanions.agents_for(dyn, float(t.x) + 0.5, float(t.y) + 0.5)
 	s.refresh()
 	return s
+
+
+## The saved position, checked: whole numbers inside the world, a generation and a place name; {} when anything is missing or
+## of the wrong kind (a damaged save never crashes the load).
+static func load_at(v: Variant) -> Dictionary:
+	if typeof(v) != TYPE_DICTIONARY:
+		return {}
+	for k in ["x", "z", "gen"]:
+		if not v.has(k) or typeof(v[k]) not in [TYPE_INT, TYPE_FLOAT] or is_nan(float(v[k])) or is_inf(float(v[k])):
+			return {}
+	if not v.has("place") or typeof(v["place"]) != TYPE_STRING:
+		return {}
+	var x := int(v["x"])
+	var z := int(v["z"])
+	if not GameWorldGen.in_bounds(x, z):
+		return {}
+	return {"x": x, "z": z, "gen": int(v["gen"]), "place": str(v["place"])}
+
+
+## Where the heir stood last time, if that still holds: the same heir (generation) at the same place of the text game, on a
+## tile they can stand on. (-1, -1) when there is none, and the heir starts at the place's door as before.
+func _remembered() -> Vector2i:
+	var at := d.sandbox_at
+	if at.is_empty() or int(at["gen"]) != d.gen or str(at["place"]) != str(d.world.location):
+		return Vector2i(-1, -1)
+	var t := Vector2i(int(at["x"]), int(at["z"]))
+	if not GamePath.passable(GamePath.world_ground(d), Vector3i(t.x, -1, t.y), {"water": false, "ignore_blocks": false}):
+		return Vector2i(-1, -1)
+	return t
+
+
+## Writes where the heir stands onto the dynasty, to be saved with it.
+func remember() -> void:
+	d.sandbox_at = {"x": heir.x, "z": heir.y, "gen": d.gen, "place": str(d.world.location)}
 
 
 static func data() -> Dictionary:
@@ -167,6 +204,21 @@ func cycle_order(id: String) -> Dictionary:
 	return GameCompanions.set_order(d, id, next)
 
 
+## The storey the build controls work on: 0 is the ground floor, 1 and up are above it (not saved; a visit starts on the ground).
+var build_level := 0
+
+
+## The layer of the build level (GameBuild's y).
+func build_y() -> int:
+	return GameBuild.SURFACE - build_level
+
+
+## Steps the build level up a storey, and back to the ground after the top one.
+func cycle_level() -> int:
+	build_level = (build_level + 1) % (int(GameBuild.setting("max_storeys")) + 1)
+	return build_level
+
+
 ## The pieces the family may build, in the data's order (wall, floor, road, door).
 func build_kinds() -> Array:
 	return GameBuild.pieces().keys()
@@ -175,13 +227,13 @@ func build_kinds() -> Array:
 ## Why a piece cannot go on the tile `dx, dz` from the heir (GameBuild.check), or "" when it can.
 func build_check(kind: String, dx: int, dz: int) -> String:
 	var t := heir + Vector2i(dx, dz)
-	return GameBuild.check(d, kind, t.x, -1, t.y)
+	return GameBuild.check(d, kind, t.x, build_y(), t.y)
 
 
 ## Takes the piece on the tile `dx, dz` from the heir down, with its refund (GameBuild.remove): {ok, text}.
 func remove_at(dx: int, dz: int) -> Dictionary:
 	var t := heir + Vector2i(dx, dz)
-	var out := GameBuild.remove(d, t.x, -1, t.y)
+	var out := GameBuild.remove(d, t.x, build_y(), t.y)
 	if out["ok"]:
 		log.append({"kind": "build", "text": str(out["text"])})
 	return out
@@ -198,7 +250,7 @@ func dig(depth: int) -> Dictionary:
 ## Places a piece on the tile `dx, dz` from the heir at the surface (`GameBuild.place`): {ok, text}.
 func build(kind: String, dx: int, dz: int) -> Dictionary:
 	var to := heir + Vector2i(dx, dz)
-	var out := GameBuild.place(d, kind, to.x, -1, to.y)
+	var out := GameBuild.place(d, kind, to.x, build_y(), to.y)
 	if out["ok"]:
 		log.append({"kind": "build", "text": str(out["text"])})
 	return out

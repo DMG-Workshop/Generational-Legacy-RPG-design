@@ -23,6 +23,11 @@
     "wall": {"solid": true, "cost": 1.0},
     "floor": {"solid": false, "cost": 1.0},
     "road": {"solid": false, "cost": 0.6},
-    "door": {"solid": false, "cost": 1.5}
+    "door": {"solid": false, "cost": 1.5},
+    "bed": {"solid": true, "cost": 1.0},
+    "anvil": {"solid": true, "cost": 1.0},
+    "hearth": {"solid": true, "cost": 1.0},
+    "trough": {"solid": true, "cost": 1.0},
+    "stairs": {"solid": false, "cost": 1.2, "stairs": true}
   }
 }
