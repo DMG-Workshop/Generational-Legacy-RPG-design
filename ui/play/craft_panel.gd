@@ -57,6 +57,7 @@ func _build() -> void:
 	note = _wrap("", 15, Kit.TEXT)
 	_body.add_child(note)
 	_build_make()
+	_build_brew()
 	_build_salvage()
 
 
@@ -162,6 +163,28 @@ func _preview(p: Dictionary) -> String:
 func _make(chosen: Array) -> void:
 	_say(GameCraft.craft(dynasty, form_id, mat_id, chosen, forge))
 	picks = ["", "", ""]
+
+
+# ---------------------------------------------------------------- brew
+
+func _build_brew() -> void:
+	_body.add_child(Kit.label("Brew at the forge", 18, Kit.ACCENT))
+	for id in GameCraft.brews():
+		var bid: String = id
+		var p := GameCraft.brew_plan(dynasty, bid, forge)
+		var parts: Array = []
+		for m in p["cost"]:
+			parts.append("%d %s" % [int(p["cost"][m]), GameMaterials.name_of(str(m)).to_lower()])
+		var row := VBoxContainer.new()
+		row.add_theme_constant_override("separation", 2)
+		row.add_child(_wrap("%s: %d from %s and %s gold." % [str(p["name"]).capitalize(), int(p["makes"]), ", ".join(parts), GameText.num(int(p["fee"]))], 15, Kit.TEXT))
+		var b := Kit.button("Brew", func(): _say(GameCraft.brew(dynasty, bid, forge)), Vector2(_column, 44))
+		b.name = "Brew"
+		b.disabled = not p["ok"]
+		row.add_child(b)
+		if not p["ok"]:
+			row.add_child(_wrap(str(p["why"]), 14))
+		_body.add_child(row)
 
 
 # ---------------------------------------------------------------- salvage

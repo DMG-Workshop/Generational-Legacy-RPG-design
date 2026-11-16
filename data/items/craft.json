@@ -17,7 +17,11 @@
     "quality_per_craft_quality": 10,
     "quality_roll_max": 2,
     "quality_floor": 0,
-    "counter": "crafted"
+    "counter": "crafted",
+    "brew_counter": "brewed"
+  },
+  "brews": {
+    "healing_potion": {"name": "healing potion", "cost": {"herb": 2}, "fee": 6, "makes": 1}
   },
   "drops": {
     "slime": {
@@ -653,6 +657,9 @@
     "made": "{h} makes {a} {name} from {units} {material} (quality {quality}).",
     "salvaged": "{h} breaks up the {name}: {list}.",
     "cannot_salvage": "There is no {name} in the pack to break up.",
+    "brewed": "{h} brews {n} {name} from {list}.",
+    "no_brew": "No one brews that.",
+    "short_brew": "Not enough {material} to brew it: {need} needed, {have} in the stores.",
     "nothing": "nothing"
   }
 }
