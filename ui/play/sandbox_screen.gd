@@ -23,13 +23,15 @@ var orders_panel: VBoxContainer
 var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
 var actions: VBoxContainer           # Dig and Place under the thumb, shown only with a touch layout
 var status: Label
+var map: Control          # clips the tile view to the map area, under the bar and the overlay
+var tile_view: TileView   # the ground, as tile chunks
+var overlay: Control      # the route, creatures, heir, ghost and stick, over the tiles
 var piece_button: Button
 var level_button: Button
 var last_line := ""
 var _walk_wait := 0.0
 var _tick_wait := 0.0
 var _save_wait := 0.0
-var _tiles := {}          # "x,z" -> the generated tile (pure of the seed; cached for drawing)
 var _press := Vector2.ZERO
 var _press_ms := 0
 
@@ -55,6 +57,20 @@ func _ready() -> void:
 	if not WorldInput.installed():
 		WorldInput.install()   # the app installs them at start; a screen made on its own installs them itself
 	sb = GameSandbox.start(app.dynasty)
+	map = Control.new()
+	map.clip_contents = true
+	map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map.position = Vector2(0, BAR)
+	map.size = Vector2(size.x, maxf(0.0, size.y - BAR))
+	add_child(map)
+	tile_view = TileView.new()
+	tile_view.setup(app.dynasty)
+	map.add_child(tile_view)
+	overlay = Overlay.new()
+	overlay.screen = self
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
 	var bar := HBoxContainer.new()
 	bar.position = Vector2(8, 4)
 	bar.size = Vector2(maxf(0.0, size.x - 16.0), BAR - 8.0)
@@ -94,6 +110,7 @@ func _ready() -> void:
 	if UiSettings.touch():
 		_make_action_buttons()
 	_refresh_status()
+	_sync_tiles()
 
 
 func _process(delta: float) -> void:
@@ -146,6 +163,8 @@ func _process(delta: float) -> void:
 	if inp["build"]:
 		_build()
 	_refresh_status()
+	_sync_tiles()
+	overlay.queue_redraw()
 	queue_redraw()
 
 
@@ -215,6 +234,7 @@ func _build() -> void:
 	var r := sb.build(build_kind, facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
+		tile_view.refresh_cell(sb.heir.x + facing_dir.x, sb.heir.y + facing_dir.y)
 		_save()
 	_refresh_status()
 	queue_redraw()
@@ -224,6 +244,7 @@ func _remove() -> void:
 	var r := sb.remove_at(facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
+		tile_view.refresh_cell(sb.heir.x + facing_dir.x, sb.heir.y + facing_dir.y)
 		_save()
 	_refresh_status()
 	queue_redraw()
@@ -331,63 +352,71 @@ func _refresh_status() -> void:
 
 
 func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0))
+
+
+## Keeps the tile chunks of the view and puts them where the view is (the heir at the middle, the camera's offset, the zoom, the light).
+func _sync_tiles() -> void:
+	var d: GameDynasty = app.dynasty
+	var area := Vector2(size.x, size.y - BAR)
+	var cell := _cell()
+	var centre := Vector2(sb.heir) + cam
+	var light := clampf(float(GameDay.look(d)["light"]), float(setting("dim_floor")), 1.0)
+	map.size = area
+	tile_view.show_view(centre, area * 0.5 / cell + Vector2(1, 1))
+	tile_view.place(Vector2.ZERO, area, centre, cell, light)
+
+
+## What is drawn over the tiles: the night's tint, the route, creatures, companions, the build ghost, the heir and the touch stick.
+func _paint(c: Control) -> void:
 	var d: GameDynasty = app.dynasty
 	var area := Vector2(size.x, size.y - BAR)
 	var origin := Vector2(0, BAR)
 	var cell := _cell()
 	var colors: Dictionary = GameSandbox.data()["colors"]
 	var look := GameDay.look(d)
-	var light := clampf(float(look["light"]), float(setting("dim_floor")), 1.0)
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0))
 	var centre := Vector2(sb.heir) + cam
-	var half := area * 0.5 / cell
-	var x0 := floori(centre.x - half.x) - 1
-	var z0 := floori(centre.y - half.y) - 1
-	for z in range(z0, ceili(centre.y + half.y) + 2):
-		for x in range(x0, ceili(centre.x + half.x) + 2):
-			var t := _tile(d, x, z)
-			var col := _rgb(colors["water"]) if t["water"] else _rgb(colors["land"])
-			if GameBuild.kind_at(d, x, -1, z) != "":
-				col = _rgb(colors["built"])
-			if sb.build_level > 0 and GameBuild.kind_at(d, x, sb.build_y(), z) != "":
-				col = _rgb(colors["upper"])
-			col = col * light
-			var p := origin + (Vector2(x, z) - centre) * cell + area * 0.5
-			draw_rect(Rect2(p, Vector2(cell, cell)), col)
 	var tint: Array = look["tint"]
 	var night_alpha := (1.0 - float(look["light"])) * 0.5
 	if night_alpha > 0.0:
-		draw_rect(Rect2(origin, area), Color(float(tint[0]), float(tint[1]), float(tint[2]), night_alpha))
+		c.draw_rect(Rect2(origin, area), Color(float(tint[0]), float(tint[1]), float(tint[2]), night_alpha))
+	if sb.build_level > 0:
+		# The storey being built on: its pieces, over the ground's tiles (the tile view shows the ground floor only).
+		var half := area * 0.5 / cell
+		for z in range(floori(centre.y - half.y) - 1, ceili(centre.y + half.y) + 2):
+			for x in range(floori(centre.x - half.x) - 1, ceili(centre.x + half.x) + 2):
+				if GameBuild.kind_at(d, x, sb.build_y(), z) != "":
+					c.draw_rect(Rect2(origin + (Vector2(x, z) - centre) * cell + area * 0.5, Vector2(cell, cell)), _rgb(colors["upper"]))
 	for i in range(sb.route.size()):
 		var rp := origin + (Vector2(sb.route[i]) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
-		draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
+		c.draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
 	for a in sb.creatures:
 		var cp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
-		draw_circle(cp, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
+		c.draw_circle(cp, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
 	for a in sb.companions:
 		var kp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
-		draw_circle(kp, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
+		c.draw_circle(kp, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 	if mode == "build":
 		var gp := origin + (Vector2(sb.heir + facing_dir) - centre) * cell + area * 0.5
 		var legal := sb.build_check(build_kind, facing_dir.x, facing_dir.y) == ""
 		var gc := Color(0.3, 0.9, 0.4, 0.9) if legal else Color(0.95, 0.3, 0.3, 0.9)
-		draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
+		c.draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
 	var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
-	draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+	c.draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 	if fingers.steering():
 		var base := _rgb(colors["stick_base"])
 		var radius := WorldInput.setting("touch_stick_radius_px")
-		draw_arc(origin + fingers.origin, radius, 0.0, TAU, 40, Color(base, 0.5), 3.0)
-		draw_circle(origin + fingers.knob(), radius * 0.35, Color(_rgb(colors["stick_knob"]), 0.7))
+		c.draw_arc(origin + fingers.origin, radius, 0.0, TAU, 40, Color(base, 0.5), 3.0)
+		c.draw_circle(origin + fingers.knob(), radius * 0.35, Color(_rgb(colors["stick_knob"]), 0.7))
 
 
-func _tile(d: GameDynasty, x: int, z: int) -> Dictionary:
-	var k := "%d,%d" % [x, z]
-	if not _tiles.has(k):
-		if _tiles.size() > 20000:
-			_tiles.clear()
-		_tiles[k] = GameWorldGen.tile(d, x, z)
-	return _tiles[k]
+## The control over the tiles: it only hands its drawing back to the screen.
+class Overlay extends Control:
+	var screen: Control
+
+	func _draw() -> void:
+		if screen != null:
+			screen._paint(self)
 
 
 static func _rgb(v: Array) -> Color:
