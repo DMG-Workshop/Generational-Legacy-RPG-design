@@ -59,7 +59,7 @@ func test_data() -> void:
 	ok(GameBuild.top_y() == S - int(GameBuild.setting("max_storeys")), "the top layer is max_storeys above the surface")
 	var set: Dictionary = GameBuild.data()["settings"]
 	var keep: Array = set["upper_bearers"]
-	set["upper_bearers"] = ["roof"]
+	set["upper_bearers"] = ["ghost"]
 	ok(not GameBuild.validate().is_empty(), "a bearer that is not a piece is caught")
 	set["upper_bearers"] = keep
 	var st: Dictionary = GamePath.data()["built"]["stairs"]

@@ -308,7 +308,7 @@ func _next_piece() -> void:
 func _next_level(step: bool = true) -> void:
 	if step:
 		sb.cycle_level()
-	level_button.text = "Level: %s" % ("ground" if sb.build_level == 0 else str(sb.build_level))
+	level_button.text = "Level: %s" % sb.level_name()
 	_refresh_status()
 	queue_redraw()
 
@@ -399,7 +399,7 @@ func _refresh_status() -> void:
 	elif room != "" and mode != "build":
 		line = room if line == "" else line
 	if level_button != null:
-		level_button.text = "Level: %s" % ("ground" if sb.build_level == 0 else str(sb.build_level))
+		level_button.text = "Level: %s" % sb.level_name()
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 

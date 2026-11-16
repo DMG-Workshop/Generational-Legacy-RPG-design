@@ -111,10 +111,10 @@ func place_line() -> String:
 			if str(r["id"]) == room:
 				room_name = str(r["name"])
 		return _text("inside_at", {"place": name, "room": room_name.to_lower()})
+	var line := GameBuild.room_line(d, heir.x, heir.y, heir_y)
 	if storey() > 0:
-		return _text("upstairs_at", {"n": storey()})
-	var line := GameBuild.room_line(d, heir.x, heir.y)
-	var u := GameBuild.room_use(d, heir.x, heir.y)
+		line = _text("upstairs_at", {"n": storey()}) if line == "" else "%s %s" % [_text("upstairs_at", {"n": storey()}), line]
+	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	return line if u.is_empty() else "%s %s" % [line, str(u["hint"])]
 
 
@@ -237,7 +237,7 @@ func use() -> Dictionary:
 		return leave()
 	if door_here() != "":
 		return enter()
-	var u := GameBuild.room_use(d, heir.x, heir.y) if storey() == 0 else {}
+	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty():
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
@@ -386,9 +386,16 @@ func build_y() -> int:
 	return GameBuild.SURFACE - build_level
 
 
+## The build level as the Level button says it: "ground", the storey's number, or "roof" for the layer over the top storey.
+func level_name() -> String:
+	if build_level == 0:
+		return "ground"
+	return "roof" if build_level > int(GameBuild.setting("max_storeys")) else str(build_level)
+
+
 ## Steps the build level up a storey, and back to the ground after the top one.
 func cycle_level() -> int:
-	build_level = (build_level + 1) % (int(GameBuild.setting("max_storeys")) + 1)
+	build_level = (build_level + 1) % (int(GameBuild.setting("max_storeys")) + 2)   # the last step is the roof layer
 	return build_level
 
 
