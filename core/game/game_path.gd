@@ -297,6 +297,50 @@ static func router(ground: Dictionary, mover_name: String = "walker", max_nodes:
 		return Vector2(float(step.x) + 0.5, float(step.z) + 0.5)
 
 
+## A step cache for many movers: `{steps: {}, hits: 0, misses: 0, stamp: 0}`. A router built with it (`cached_router`) remembers the
+## next tile for each (mover, from, to), so a crowd heading for the same goal pays for one search per tile and not one each. It is
+## only right while the ground is as it was: `sync` clears it when the ground's stamp changes (the built pieces and the dug ground
+## hashed), and it is held to `cache_max` entries (cleared when full) so it cannot grow without bound.
+static func new_cache() -> Dictionary:
+	return {"steps": {}, "hits": 0, "misses": 0, "stamp": 0, "clears": 0}
+
+
+## What the ground is now, as one number: changes when anything is built, taken down, damaged or dug.
+static func ground_stamp(d: GameDynasty) -> int:
+	return hash([d.built.hash(), d.mine.hash()])
+
+
+## Clears the cache if the ground has changed since it was filled.
+static func sync(cache: Dictionary, d: GameDynasty) -> void:
+	var stamp := ground_stamp(d)
+	if int(cache["stamp"]) != stamp:
+		cache["steps"].clear()
+		cache["stamp"] = stamp
+		cache["clears"] = int(cache["clears"]) + 1
+
+
+## `router`, with a cache: the same answers, found once for each (from, to) while the ground holds.
+static func cached_router(ground: Dictionary, cache: Dictionary, mover_name: String = "walker", max_nodes: int = 4000) -> Callable:
+	var plain := router(ground, mover_name, max_nodes)
+	return func(from: Vector2, to: Vector2) -> Vector2:
+		var k := "%s|%d,%d|%d,%d" % [mover_name, int(floor(from.x)), int(floor(from.y)), int(floor(to.x)), int(floor(to.y))]
+		var steps: Dictionary = cache["steps"]
+		if steps.has(k):
+			cache["hits"] = int(cache["hits"]) + 1
+			return steps[k]
+		cache["misses"] = int(cache["misses"]) + 1
+		var out: Vector2 = plain.call(from, to)
+		if steps.size() >= int(setting("cache_max")):
+			steps.clear()
+		steps[k] = out
+		return out
+
+
+## "12 steps kept, 340 reused, 12 found, cleared 3 times" for the pathing line.
+static func cache_line(cache: Dictionary) -> String:
+	return str(data()["text"]["cache_line"]).format({"kept": cache["steps"].size(), "hits": int(cache["hits"]), "misses": int(cache["misses"]), "clears": int(cache["clears"])})
+
+
 # ---------------------------------------------------------------- the data
 
 static func validate() -> Array:
@@ -308,13 +352,15 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["max_nodes", "diagonal_mult", "slope_penalty", "up_mult", "min_cost"]:
+	for k in ["max_nodes", "diagonal_mult", "slope_penalty", "up_mult", "min_cost", "cache_max"]:
 		if not s.has(k):
 			bad.append("pathing.json: settings.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
 	if int(s["max_nodes"]) < 10 or float(s["diagonal_mult"]) < 1.0 or float(s["up_mult"]) < 1.0 or float(s["slope_penalty"]) < 0.0 or float(s["min_cost"]) <= 0.0:
 		bad.append("pathing.json: max_nodes must be at least 10, diagonal_mult and up_mult at least 1, slope_penalty 0 or more and min_cost above 0")
+	if int(s["cache_max"]) < 1 or not dat.has("text") or not dat["text"].has("cache_line"):
+		bad.append("pathing.json: cache_max must be at least 1 and text.cache_line must exist")
 	if float(s["diagonal_mult"]) > 2.0:
 		bad.append("pathing.json: a diagonal that costs more than two steps would never be taken")
 	for m in dat["movers"]:

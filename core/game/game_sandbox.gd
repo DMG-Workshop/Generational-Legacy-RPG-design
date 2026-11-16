@@ -356,7 +356,8 @@ func step(ticks: int = 1) -> void:
 		var cview := GameBehaviour.world_view(d, [{"x": heir_point().x, "z": heir_point().y}], night)
 		creatures = GameBehaviour.step_all(creatures, cview, d.seed_value, tick)
 		companions = GameCompanions.reconcile(d, companions, heir_point().x, heir_point().y)
-		var router := GamePath.router(GamePath.world_ground(d))
+		GamePath.sync(path_cache, d)
+		var router := GamePath.cached_router(GamePath.world_ground(d), path_cache)
 		var out := GameCompanions.step_all(d, companions, GameCompanions.view(d, heir_point().x, heir_point().y, threats, router), tick)
 		companions = out["agents"]
 		for e in out["events"]:
@@ -364,6 +365,15 @@ func step(ticks: int = 1) -> void:
 		var keep_lines := int(setting("log_lines"))
 		if log.size() > keep_lines:
 			log = log.slice(log.size() - keep_lines)
+
+
+## The companions' step cache (runtime only): their routes are found once for each (from, to) while the ground holds.
+var path_cache := GamePath.new_cache()
+
+
+## The cache's line for a pathing readout.
+func path_line() -> String:
+	return GamePath.cache_line(path_cache)
 
 
 ## Plans a walk from the heir to a tile of the open world over the ground as it is now (GamePath, a walker). Sets the
