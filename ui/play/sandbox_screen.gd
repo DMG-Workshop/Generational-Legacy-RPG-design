@@ -80,6 +80,7 @@ func _ready() -> void:
 	bar.add_child(Kit.button("Dig", func(): _dig(), Vector2(72, BAR - 12)))
 	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
+	bar.add_child(Kit.button("Use", func(): _use(), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Up", func(): _climb(-1), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Down", func(): _climb(1), Vector2(72, BAR - 12)))
 	status = Kit.label("", 14, Kit.dim())
@@ -160,6 +161,8 @@ func _process(delta: float) -> void:
 	if inp["cancel"]:
 		app.show_state()
 		return
+	if inp["interact"]:
+		_use()
 	if inp["climb_up"]:
 		_climb(-1)
 	if inp["climb_down"]:
@@ -220,6 +223,15 @@ func _tap(p: Vector2, area: Vector2) -> void:
 			last_line = str(planned["why"])
 		else:
 			_walk_wait = 0.0
+	cam = Vector2.ZERO
+	_refresh_status()
+	queue_redraw()
+
+
+## The Use action: in by the door the heir stands at, or out by the entrance of the interior they are in.
+func _use() -> void:
+	var r := sb.use()
+	last_line = str(r["text"])
 	cam = Vector2.ZERO
 	_refresh_status()
 	queue_redraw()
@@ -381,6 +393,10 @@ func _sync_tiles() -> void:
 	var centre := Vector2(sb.heir) + cam
 	var light := clampf(float(GameDay.look(d)["light"]), float(setting("dim_floor")), 1.0)
 	map.size = area
+	var indoors := sb.space != "world"
+	tile_view.set_interior(sb.space if indoors else "", sb.interior)
+	if indoors:
+		light = 1.0   # indoors it is always light
 	tile_view.set_level(sb.build_level)
 	tile_view.show_view(centre, area * 0.5 / cell + Vector2(1, 1))
 	tile_view.place(Vector2.ZERO, area, centre, cell, light)
@@ -397,18 +413,21 @@ func _paint(c: Control) -> void:
 	var centre := Vector2(sb.heir) + cam
 	var tint: Array = look["tint"]
 	var night_alpha := (1.0 - float(look["light"])) * 0.5
+	if sb.space != "world":
+		night_alpha = 0.0   # indoors: no night, and none of the open world's route, creatures or companions to draw
 	if night_alpha > 0.0:
 		c.draw_rect(Rect2(origin, area), Color(float(tint[0]), float(tint[1]), float(tint[2]), night_alpha))
-	for i in range(sb.route.size()):
+	var outdoors := sb.space == "world"   # indoors none of the open world's route, creatures or companions is on this floor
+	for i in range(sb.route.size() if outdoors else 0):
 		var rp := origin + (Vector2(sb.route[i]) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 		c.draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
-	for a in sb.creatures:
+	for a in (sb.creatures if outdoors else []):
 		var cp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 		c.draw_circle(cp, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
-	for a in sb.companions:
+	for a in (sb.companions if outdoors else []):
 		var kp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 		c.draw_circle(kp, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
-	if mode == "build":
+	if mode == "build" and outdoors:
 		var gp := origin + (Vector2(sb.heir + facing_dir) - centre) * cell + area * 0.5
 		var legal := sb.build_check(build_kind, facing_dir.x, facing_dir.y) == ""
 		var gc := Color(0.3, 0.9, 0.4, 0.9) if legal else Color(0.95, 0.3, 0.3, 0.9)
