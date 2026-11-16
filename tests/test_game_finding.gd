@@ -399,8 +399,8 @@ func test_screens() -> void:
 	ok(_find_label(hp, str(GameRanch.data()["ranch"]["levels"][1]["about"])) != null or hp.find_children("*", "Label", true, false).any(func(l): return str(GameRanch.data()["ranch"]["levels"][1]["about"]) in (l as Label).text), "that says what the next level builds")
 	d.heir.gold = 100000
 	var builds := hp.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text == "Build (%s gold)" % GameText.num(GameHouse.cost(d, GameHouse.RANCH)))
-	var build: Button = builds.back() if not builds.is_empty() else null   # the three tracks cost the same: the Ranch's is the last
-	ok(build != null and builds.size() == 3, "and a button to build it, after the Hall's and the Yard's")
+	var build: Button = builds[GameHouse.TRACKS.find(GameHouse.RANCH)] if builds.size() == GameHouse.TRACKS.size() else null   # the tracks cost the same: the Ranch's is its place in the list
+	ok(build != null, "and a button to build it, one for each track")
 	if build != null:
 		build.pressed.emit()
 		await _frames(2)
