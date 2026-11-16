@@ -7,6 +7,8 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
+const TouchControls := preload("res://ui/play/touch_controls.gd")
 const BAR := 56.0
 
 var app: Node
@@ -18,6 +20,8 @@ var mode := "walk"          # "walk" (the heir moves) or "build" (the stick aims
 var build_kind := "wall"    # the piece the Place button puts down
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
+var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
+var actions: VBoxContainer           # Dig and Place under the thumb, shown only with a touch layout
 var status: Label
 var piece_button: Button
 var last_line := ""
@@ -83,6 +87,8 @@ func _ready() -> void:
 	add_child(orders_panel)
 	orders_panel.visible = false
 	_refresh_orders()
+	if UiSettings.touch():
+		_make_action_buttons()
 	_refresh_status()
 
 
@@ -98,6 +104,8 @@ func _process(delta: float) -> void:
 	if look.length() > 0.0:
 		cam += look * float(setting("cam_tiles_per_second")) * delta
 	var mv: Vector2 = inp["move"]
+	if fingers.steering() and fingers.move().length() > 0.0:
+		mv = fingers.move()   # a finger on the stick steers over the keys
 	_walk_wait -= delta
 	var stepped := false
 	if step_for(mv) != Vector2i.ZERO:
@@ -138,6 +146,18 @@ func _process(delta: float) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	var area_size := Vector2(size.x, size.y - BAR)
+	if event is InputEventScreenTouch:
+		var st := event as InputEventScreenTouch
+		fingers.touch(st.index, st.position - Vector2(0, BAR), st.pressed, area_size)
+		queue_redraw()
+		return
+	if event is InputEventScreenDrag:
+		var sd := event as InputEventScreenDrag
+		fingers.drag(sd.index, sd.position - Vector2(0, BAR))
+		zoom = fingers.pinch(zoom)
+		queue_redraw()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var e := event as InputEventMouseButton
 		var area := Vector2(size.x, size.y - BAR)
@@ -254,6 +274,21 @@ func _cycle(id: String) -> void:
 	_refresh_status()
 
 
+## Dig and Place as big buttons at the right-hand thumb, for a touch layout (the top bar and the piece bar stay).
+func _make_action_buttons() -> void:
+	var px := float(setting("action_button_px"))
+	actions = VBoxContainer.new()
+	actions.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	actions.offset_left = -px - 12.0
+	actions.offset_right = -12.0
+	actions.offset_top = -(px * 2.0 + 8.0) - BAR - 12.0
+	actions.offset_bottom = -BAR - 12.0
+	actions.add_theme_constant_override("separation", 8)
+	add_child(actions)
+	actions.add_child(Kit.button("Dig", func(): _dig(), Vector2(px, px)))
+	actions.add_child(Kit.button("Place", func(): _build(), Vector2(px, px)))
+
+
 func _cell() -> float:
 	return float(setting("cell_px")) * zoom
 
@@ -313,6 +348,11 @@ func _draw() -> void:
 		draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
 	var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 	draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+	if fingers.steering():
+		var base := _rgb(colors["stick_base"])
+		var radius := WorldInput.setting("touch_stick_radius_px")
+		draw_arc(origin + fingers.origin, radius, 0.0, TAU, 40, Color(base, 0.5), 3.0)
+		draw_circle(origin + fingers.knob(), radius * 0.35, Color(_rgb(colors["stick_knob"]), 0.7))
 
 
 func _tile(d: GameDynasty, x: int, z: int) -> Dictionary:
