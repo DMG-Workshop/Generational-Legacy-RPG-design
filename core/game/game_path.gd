@@ -74,6 +74,8 @@ static func passable(ground: Dictionary, c: Vector3i, mover: Dictionary) -> bool
 		if bool(info["block"]) and not bool(mover["ignore_blocks"]):
 			return false
 		return true
+	if c.y < SURFACE:
+		return false   # above the ground only a built floor, stairs, road or door can be stood on
 	if c.y < 0 or c.y > int(ground.get("max_depth", 0)):
 		return false
 	return bool(ground["dug"].call(c.x, c.y, c.z))
@@ -117,6 +119,18 @@ static func neighbours(ground: Dictionary, c: Vector3i, mover: Dictionary) -> Ar
 		var down := Vector3i(c.x, 0, c.z)
 		if passable(ground, down, mover):
 			out.append([down, cell_cost(ground, down)])
+		_stairs_up(ground, c, mover, out)
+		return out
+	if c.y < SURFACE:
+		# A storey: walk its built floor four ways, up where these are stairs, down where the cell below is.
+		for dir4 in [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 0, 1), Vector3i(0, 0, -1)]:
+			var n4: Vector3i = c + dir4
+			if passable(ground, n4, mover):
+				out.append([n4, cell_cost(ground, n4)])
+		_stairs_up(ground, c, mover, out)
+		var below := Vector3i(c.x, c.y + 1, c.z)
+		if _is_stairs(ground, below) and (below.y == SURFACE or passable(ground, below, mover)):
+			out.append([below, cell_cost(ground, below)])
 		return out
 	for dir3: Vector3i in [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 0, 1), Vector3i(0, 0, -1), Vector3i(0, 1, 0), Vector3i(0, -1, 0)]:
 		var n3: Vector3i = c + dir3
@@ -130,6 +144,18 @@ static func neighbours(ground: Dictionary, c: Vector3i, mover: Dictionary) -> Ar
 			continue
 		out.append([target, cell_cost(ground, target) * (float(setting("up_mult")) if up else 1.0)])
 	return out
+
+
+static func _is_stairs(ground: Dictionary, c: Vector3i) -> bool:
+	return bool(_built_kind(ground, c).get("stairs", false))
+
+
+## Stairs in a cell lead up to the cell above it, when that holds something a mover can stand on.
+static func _stairs_up(ground: Dictionary, c: Vector3i, mover: Dictionary, out: Array) -> void:
+	if _is_stairs(ground, c):
+		var up := Vector3i(c.x, c.y - 1, c.z)
+		if passable(ground, up, mover):
+			out.append([up, cell_cost(ground, up) * float(setting("up_mult"))])
 
 
 # ---------------------------------------------------------------- the search

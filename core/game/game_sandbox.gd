@@ -165,6 +165,21 @@ func cycle_order(id: String) -> Dictionary:
 	return GameCompanions.set_order(d, id, next)
 
 
+## The storey the build controls work on: 0 is the ground floor, 1 and up are above it (not saved; a visit starts on the ground).
+var build_level := 0
+
+
+## The layer of the build level (GameBuild's y).
+func build_y() -> int:
+	return GameBuild.SURFACE - build_level
+
+
+## Steps the build level up a storey, and back to the ground after the top one.
+func cycle_level() -> int:
+	build_level = (build_level + 1) % (int(GameBuild.setting("max_storeys")) + 1)
+	return build_level
+
+
 ## The pieces the family may build, in the data's order (wall, floor, road, door).
 func build_kinds() -> Array:
 	return GameBuild.pieces().keys()
@@ -173,13 +188,13 @@ func build_kinds() -> Array:
 ## Why a piece cannot go on the tile `dx, dz` from the heir (GameBuild.check), or "" when it can.
 func build_check(kind: String, dx: int, dz: int) -> String:
 	var t := heir + Vector2i(dx, dz)
-	return GameBuild.check(d, kind, t.x, -1, t.y)
+	return GameBuild.check(d, kind, t.x, build_y(), t.y)
 
 
 ## Takes the piece on the tile `dx, dz` from the heir down, with its refund (GameBuild.remove): {ok, text}.
 func remove_at(dx: int, dz: int) -> Dictionary:
 	var t := heir + Vector2i(dx, dz)
-	var out := GameBuild.remove(d, t.x, -1, t.y)
+	var out := GameBuild.remove(d, t.x, build_y(), t.y)
 	if out["ok"]:
 		log.append({"kind": "build", "text": str(out["text"])})
 	return out
@@ -196,7 +211,7 @@ func dig(depth: int) -> Dictionary:
 ## Places a piece on the tile `dx, dz` from the heir at the surface (`GameBuild.place`): {ok, text}.
 func build(kind: String, dx: int, dz: int) -> Dictionary:
 	var to := heir + Vector2i(dx, dz)
-	var out := GameBuild.place(d, kind, to.x, -1, to.y)
+	var out := GameBuild.place(d, kind, to.x, build_y(), to.y)
 	if out["ok"]:
 		log.append({"kind": "build", "text": str(out["text"])})
 	return out

@@ -27,6 +27,7 @@ var map: Control          # clips the tile view to the map area, under the bar a
 var tile_view: TileView   # the ground, as tile chunks
 var overlay: Control      # the route, creatures, heir, ghost and stick, over the tiles
 var piece_button: Button
+var level_button: Button
 var last_line := ""
 var _walk_wait := 0.0
 var _tick_wait := 0.0
@@ -92,6 +93,9 @@ func _ready() -> void:
 	piece_button = Kit.button("", func(): _next_piece(), Vector2(136, BAR - 12))
 	build_bar.add_child(piece_button)
 	_pick(build_kind)
+	level_button = Kit.button("", func(): _next_level(), Vector2(104, BAR - 12))
+	build_bar.add_child(level_button)
+	_next_level(false)
 	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
 	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
 	build_bar.visible = false
@@ -250,6 +254,15 @@ func _remove() -> void:
 func _next_piece() -> void:
 	var kinds: Array = sb.build_kinds()
 	_pick(kinds[(kinds.find(build_kind) + 1) % kinds.size()])
+
+
+## The level button steps the build level up a storey and back to the ground (stairs and upper floors).
+func _next_level(step: bool = true) -> void:
+	if step:
+		sb.cycle_level()
+	level_button.text = "Level: %s" % ("ground" if sb.build_level == 0 else str(sb.build_level))
+	_refresh_status()
+	queue_redraw()
 
 
 func _pick(kind: String) -> void:
