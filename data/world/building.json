@@ -1,17 +1,21 @@
 {
-  "note": "Building and placement rules (roadmap item 50; core/game/game_build.gd, checked by tools/check_data.gd). The family house is the first base: a family may build only inside a claim round the home town (`base_place`), which grows with every level bought in the house (`radius_per_house_level`). A piece (`pieces`, the same four kinds GamePath walks: wall, floor, road, door) goes in one cell of the surface (layer y = -1) or of dug ground (y = 0 and down) and is paid for in the family's stores (`cost`, materials) and the heir's gold. Rules: a cell holds one piece; nothing is built on a tree or rock outcrop; a piece needs level ground (`max_slope`: the biggest step in height to a dry neighbour); only a floor or road may go over water and only as a bridge that reaches land within `max_span` tiles; a door needs a wall on each of two opposite sides (`needs_frame`) and the wall cannot be taken away while it hangs; underground a piece goes only into a cell that has been dug. A room is a region closed by walls (and doors) that is no bigger than `max_room_area`. Taking a piece down gives back `refund` of its cost. Furniture (a piece marked `inside`: bed, anvil, hearth, trough) can only be built in a room and is solid (pathing.json). `room_types` names a room by what stands in it: the first type whose `needs` (a count of each piece) and `min_area` the room meets wins, so list the most demanding first; a room that meets none is just a room. Nothing here is random, and the autopilot never builds.",
+  "note": "Building and placement rules (roadmap item 50; core/game/game_build.gd, checked by tools/check_data.gd). The family house is the first base: a family may build only inside a claim round the home town (`base_place`), which grows with every level bought in the house (`radius_per_house_level`). A piece (`pieces`, the same four kinds GamePath walks: wall, floor, road, door) goes in one cell of the surface (layer y = -1) or of dug ground (y = 0 and down) and is paid for in the family's stores (`cost`, materials) and the heir's gold. Rules: a cell holds one piece; nothing is built on a tree or rock outcrop; a piece needs level ground (`max_slope`: the biggest step in height to a dry neighbour); only a floor or road may go over water and only as a bridge that reaches land within `max_span` tiles; a door needs a wall on each of two opposite sides (`needs_frame`) and the wall cannot be taken away while it hangs; underground a piece goes only into a cell that has been dug. A room is a region closed by walls (and doors) that is no bigger than `max_room_area`. Taking a piece down gives back `refund` of its cost. Furniture (a piece marked `inside`: bed, anvil, hearth, trough) can only be built in a room and is solid (pathing.json). `room_types` names a room by what stands in it: the first type whose `needs` (a count of each piece) and `min_area` the room meets wins, so list the most demanding first; a room that meets none is just a room. Storeys: a piece may stand above the ground, at layer y = -1 - n for n up to `max_storeys`; it needs support below it (`ground_bearers` on the ground floor: a wall or stairs, or any tile of a room; `upper_bearers` higher up), and a piece that holds another up cannot be taken down. Stairs (`stairs: true`) join a cell to the one above it (GamePath), go only on or above the ground and not on the top storey. Nothing here is random, and the autopilot never builds.",
   "settings": {
     "base_place": "hearthmere",
     "base_radius": 12,
     "radius_per_house_level": 3,
     "max_span": 3,
-    "max_room_area": 80
+    "max_room_area": 80,
+    "max_storeys": 2,
+    "ground_bearers": ["wall", "stairs"],
+    "upper_bearers": ["wall", "floor", "stairs"]
   },
   "pieces": {
     "wall": {"name": "Wall", "cost": {"oak": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false},
     "floor": {"name": "Floor", "cost": {"oak": 1}, "gold": 0, "refund": 0.5, "max_slope": 2, "over_water": true, "needs_frame": false},
     "road": {"name": "Road", "cost": {}, "gold": 3, "refund": 0.0, "max_slope": 3, "over_water": true, "needs_frame": false},
     "door": {"name": "Door", "cost": {"oak": 1, "iron": 1}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": true},
+    "stairs": {"name": "Stairs", "cost": {"oak": 3}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "stairs": true},
     "bed": {"name": "Bed", "cost": {"oak": 2, "linen": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
     "anvil": {"name": "Anvil", "cost": {"iron": 4}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
     "hearth": {"name": "Hearth", "cost": {"copper": 2, "iron": 1}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
@@ -43,6 +47,9 @@
     "removed": "Took down a {piece}.",
     "removed_back": "Took down a {piece} and saved {back}.",
     "needs_room": "A {piece} has to stand inside a room: a space shut in by walls and doors.",
+    "needs_support": "Nothing holds that up: a storey rests on a wall, stairs or floor below it, or on a room.",
+    "stairs_ground": "Stairs go up from the ground, not down into the earth.",
+    "stairs_top": "That is the top storey: there is nothing above it to climb to.",
     "in_room": "You are in {room}.",
     "in_plain_room": "You are in a room.",
     "summary": "{pieces} pieces built, {rooms} rooms."

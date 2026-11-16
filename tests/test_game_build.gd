@@ -369,7 +369,7 @@ func test_saving() -> void:
 	var old := json.duplicate(true)
 	old.erase("built")
 	ok(GameDynasty.from_dict(old).built.is_empty(), "an old save with no 'built' loads with nothing built")
-	for junk in [5, "wall", [], null, {"1,2": "wall"}, {"a,b,c": "wall"}, {"1,-1,2": "tower"}, {"1,-1,2": 5}, {"-5,-1,2": "wall"}, {"1,-2,2": "wall"}, {"1,9999,2": "wall"}, {"999999,-1,2": "wall"}, {"1.5,-1,2": "wall"}]:
+	for junk in [5, "wall", [], null, {"1,2": "wall"}, {"a,b,c": "wall"}, {"1,-1,2": "tower"}, {"1,-1,2": 5}, {"-5,-1,2": "wall"}, {"1,-9,2": "wall"}, {"1,9999,2": "wall"}, {"999999,-1,2": "wall"}, {"1.5,-1,2": "wall"}]:
 		var damaged := json.duplicate(true)
 		damaged["built"] = junk
 		var g := GameDynasty.from_dict(damaged)

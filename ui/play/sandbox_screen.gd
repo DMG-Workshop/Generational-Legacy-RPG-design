@@ -24,6 +24,7 @@ var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
 var actions: VBoxContainer           # Dig and Place under the thumb, shown only with a touch layout
 var status: Label
 var piece_button: Button
+var level_button: Button
 var last_line := ""
 var _walk_wait := 0.0
 var _tick_wait := 0.0
@@ -76,6 +77,9 @@ func _ready() -> void:
 	piece_button = Kit.button("", func(): _next_piece(), Vector2(136, BAR - 12))
 	build_bar.add_child(piece_button)
 	_pick(build_kind)
+	level_button = Kit.button("", func(): _next_level(), Vector2(104, BAR - 12))
+	build_bar.add_child(level_button)
+	_next_level(false)
 	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
 	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
 	build_bar.visible = false
@@ -231,6 +235,15 @@ func _next_piece() -> void:
 	_pick(kinds[(kinds.find(build_kind) + 1) % kinds.size()])
 
 
+## The level button steps the build level up a storey and back to the ground (stairs and upper floors).
+func _next_level(step: bool = true) -> void:
+	if step:
+		sb.cycle_level()
+	level_button.text = "Level: %s" % ("ground" if sb.build_level == 0 else str(sb.build_level))
+	_refresh_status()
+	queue_redraw()
+
+
 func _pick(kind: String) -> void:
 	build_kind = kind
 	if piece_button != null:
@@ -325,6 +338,8 @@ func _draw() -> void:
 			var col := _rgb(colors["water"]) if t["water"] else _rgb(colors["land"])
 			if GameBuild.kind_at(d, x, -1, z) != "":
 				col = _rgb(colors["built"])
+			if sb.build_level > 0 and GameBuild.kind_at(d, x, sb.build_y(), z) != "":
+				col = _rgb(colors["upper"])
 			col = col * light
 			var p := origin + (Vector2(x, z) - centre) * cell + area * 0.5
 			draw_rect(Rect2(p, Vector2(cell, cell)), col)

@@ -92,7 +92,7 @@ static func check(d: GameDynasty, kind: String, x: int, y: int, z: int) -> Strin
 		return text("unknown", {"kind": kind})
 	var p: Dictionary = pieces()[kind]
 	var piece := str(p["name"]).to_lower()
-	if y < SURFACE or y > int(GameMine.setting("max_depth")):
+	if y < top_y() or y > int(GameMine.setting("max_depth")):
 		return text("out_of_range")
 	if not GameWorldGen.in_bounds(x, z):
 		return text("off_map")
@@ -100,7 +100,15 @@ static func check(d: GameDynasty, kind: String, x: int, y: int, z: int) -> Strin
 		return text("outside_claim", {"radius": int(claim_radius(d)), "place": str(base()["name"])})
 	if d.built.has(key(x, y, z)):
 		return text("occupied")
-	if y == SURFACE:
+	if bool(p.get("stairs", false)):
+		if y > SURFACE:
+			return text("stairs_ground")
+		if y == top_y():
+			return text("stairs_top")
+	if y < SURFACE:
+		if not supported(d, x, y, z):
+			return text("needs_support")
+	elif y == SURFACE:
 		var surf: Callable = GamePath.world_ground(d)["surface"]
 		var info: Dictionary = surf.call(x, z)
 		if bool(info["water"]):
@@ -133,6 +141,45 @@ static func _cost_problem(d: GameDynasty, p: Dictionary) -> String:
 	if int(p["gold"]) > d.heir.gold:
 		return text("gold", {"need": int(p["gold"])})
 	return ""
+
+
+## The highest layer a piece may stand on: the surface plus `max_storeys` storeys above it.
+static func top_y() -> int:
+	return SURFACE - int(setting("max_storeys"))
+
+
+## Whether a storey cell (y above the surface) is held up: on the ground floor by a wall or stairs below it or by standing over
+## a room; higher up by a wall, floor or stairs on the storey below. `rooms` may be passed (a set of Vector2i) to avoid refilling.
+static func supported(d: GameDynasty, x: int, y: int, z: int, room_cells: Variant = null) -> bool:
+	var below := kind_at(d, x, y + 1, z)
+	if y + 1 == SURFACE:
+		if below in setting("ground_bearers"):
+			return true
+		if room_cells != null:
+			return (room_cells as Dictionary).has(Vector2i(x, z))
+		return not room_at(d, x, z).is_empty()
+	return below in setting("upper_bearers")
+
+
+static func _room_set(d: GameDynasty) -> Dictionary:
+	var out := {}
+	for r in rooms(d):
+		for c in r["cells"]:
+			out[c] = true
+	return out
+
+
+## Whether every storey piece is still held up, as the pieces stand.
+static func all_supported(d: GameDynasty) -> bool:
+	var set: Variant = null
+	for k in d.built:
+		var c: Variant = parse(str(k))
+		if c != null and (c as Vector3i).y < SURFACE:
+			if set == null:
+				set = _room_set(d)
+			if not supported(d, c.x, c.y, c.z, set):
+				return false
+	return true
 
 
 ## Whether a cell has a wall on each of two opposite sides (a door's frame), not counting the cell `ignore`.
@@ -195,6 +242,11 @@ static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 		for dir in DIRS4:
 			if kind_at(d, x + dir.x, y, z + dir.y) == "door" and not _framed(d, x + dir.x, y, z + dir.y, k):
 				return {"ok": false, "text": text("hangs")}
+	d.built.erase(k)
+	var holds := all_supported(d)
+	d.built[k] = kind
+	if not holds:
+		return {"ok": false, "text": text("bears")}
 	if y == SURFACE:
 		var surf: Callable = GamePath.world_ground(d)["surface"]
 		if bool(surf.call(x, z)["water"]):
@@ -338,7 +390,7 @@ static func load_state(v: Variant) -> Dictionary:
 		if c == null or typeof(v[k]) != TYPE_STRING or not pieces().has(str(v[k])):
 			continue
 		var cell: Vector3i = c
-		if cell.y < SURFACE or cell.y > int(GameMine.setting("max_depth")) or not GameWorldGen.in_bounds(cell.x, cell.z):
+		if cell.y < top_y() or cell.y > int(GameMine.setting("max_depth")) or not GameWorldGen.in_bounds(cell.x, cell.z):
 			continue
 		out[key(cell.x, cell.y, cell.z)] = str(v[k])
 	return out
@@ -367,6 +419,17 @@ static func validate() -> Array:
 		bad.append("building.json: the base should be a town (the family's home), not a %s" % home["type"])
 	if float(s["base_radius"]) < 3.0 or float(s["radius_per_house_level"]) < 0.0:
 		bad.append("building.json: base_radius must be at least 3 and radius_per_house_level 0 or more")
+	for k in ["max_storeys", "ground_bearers", "upper_bearers"]:
+		if not s.has(k):
+			bad.append("building.json: settings.%s is missing" % k)
+	if not bad.is_empty():
+		return bad
+	if int(s["max_storeys"]) < 0 or int(s["max_storeys"]) > 8:
+		bad.append("building.json: max_storeys must be 0 to 8")
+	for list_key in ["ground_bearers", "upper_bearers"]:
+		for b in s[list_key]:
+			if not dat["pieces"].has(b):
+				bad.append("building.json: %s names '%s', which is not a piece" % [list_key, b])
 	if int(s["max_span"]) < 1 or int(s["max_room_area"]) < 1:
 		bad.append("building.json: max_span and max_room_area must be at least 1")
 	var kinds: Dictionary = GamePath.data()["built"]
@@ -393,6 +456,8 @@ static func validate() -> Array:
 			bad.append("building.json: piece '%s' refund must be 0 to 1" % id)
 		if int(p["max_slope"]) < 0:
 			bad.append("building.json: piece '%s' max_slope must be 0 or more" % id)
+		if bool(p.get("stairs", false)) != bool(kinds.get(id, {}).get("stairs", false)):
+			bad.append("building.json: piece '%s' and pathing.json disagree about whether it is stairs" % id)
 		if bool(p.get("inside", false)) and not bool(kinds.get(id, {}).get("solid", false)):
 			bad.append("building.json: furniture ('%s') must be solid in pathing.json" % id)
 		if bool(p["over_water"]) and bool(kinds.get(id, {}).get("solid", false)):
@@ -414,7 +479,7 @@ static func validate() -> Array:
 				bad.append("building.json: room type '%s' needs '%s', which is not furniture" % [t["id"], need])
 			elif int(t["needs"][need]) < 1:
 				bad.append("building.json: room type '%s' needs a non-positive count of '%s'" % [t["id"], need])
-	for key_id in ["unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
+	for key_id in ["unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
 		if not dat["text"].has(key_id):
 			bad.append("building.json: text.%s is missing" % key_id)
 	return bad
