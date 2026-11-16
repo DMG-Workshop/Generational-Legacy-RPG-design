@@ -121,6 +121,8 @@ static func check(d: GameDynasty, kind: String, x: int, y: int, z: int) -> Strin
 		return text("undug")
 	if bool(p["needs_frame"]) and not _framed(d, x, y, z, ""):
 		return text("needs_frame")
+	if bool(p.get("inside", false)) and (y != SURFACE or room_at(d, x, z).is_empty()):
+		return text("needs_room", {"piece": piece})
 	return _cost_problem(d, p)
 
 
@@ -288,6 +290,38 @@ static func room_at(d: GameDynasty, x: int, z: int) -> Dictionary:
 	return {}
 
 
+## What a room is: the first of `room_types` whose pieces stand in it and whose floor is big enough, as its data row, or {}.
+static func room_type(d: GameDynasty, room: Dictionary) -> Dictionary:
+	if room.is_empty():
+		return {}
+	var have := {}
+	for c in room["cells"]:
+		var kind := str(d.built.get(key(c.x, SURFACE, c.y), ""))
+		if kind != "":
+			have[kind] = int(have.get(kind, 0)) + 1
+	for t in data().get("room_types", []):
+		if int(room["area"]) < int(t["min_area"]):
+			continue
+		var met := true
+		for need in t["needs"]:
+			if int(have.get(need, 0)) < int(t["needs"][need]):
+				met = false
+		if met:
+			return t
+	return {}
+
+
+## "You are in a forge." for the room a tile is in, or "" outside any room.
+static func room_line(d: GameDynasty, x: int, z: int) -> String:
+	var r := room_at(d, x, z)
+	if r.is_empty():
+		return ""
+	var t := room_type(d, r)
+	if t.is_empty():
+		return text("in_plain_room")
+	return text("in_room", {"room": str(t["phrase"])})
+
+
 static func describe(d: GameDynasty) -> String:
 	return text("summary", {"pieces": count(d), "rooms": rooms(d).size()})
 
@@ -359,9 +393,28 @@ static func validate() -> Array:
 			bad.append("building.json: piece '%s' refund must be 0 to 1" % id)
 		if int(p["max_slope"]) < 0:
 			bad.append("building.json: piece '%s' max_slope must be 0 or more" % id)
+		if bool(p.get("inside", false)) and not bool(kinds.get(id, {}).get("solid", false)):
+			bad.append("building.json: furniture ('%s') must be solid in pathing.json" % id)
 		if bool(p["over_water"]) and bool(kinds.get(id, {}).get("solid", false)):
 			bad.append("building.json: a solid piece ('%s') cannot be a bridge" % id)
-	for key_id in ["unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
+	var seen_types := {}
+	for t in dat.get("room_types", []):
+		for k in ["id", "name", "phrase", "needs", "min_area"]:
+			if typeof(t) != TYPE_DICTIONARY or not t.has(k):
+				bad.append("building.json: a room type has no %s" % k)
+		if not bad.is_empty():
+			return bad
+		if seen_types.has(t["id"]):
+			bad.append("building.json: room type '%s' is listed twice" % t["id"])
+		seen_types[t["id"]] = true
+		if t["needs"].is_empty() or int(t["min_area"]) < 1 or int(t["min_area"]) > int(s["max_room_area"]):
+			bad.append("building.json: room type '%s' needs a piece and a size that fits max_room_area" % t["id"])
+		for need in t["needs"]:
+			if not dat["pieces"].has(need) or not bool(dat["pieces"][need].get("inside", false)):
+				bad.append("building.json: room type '%s' needs '%s', which is not furniture" % [t["id"], need])
+			elif int(t["needs"][need]) < 1:
+				bad.append("building.json: room type '%s' needs a non-positive count of '%s'" % [t["id"], need])
+	for key_id in ["unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
 		if not dat["text"].has(key_id):
 			bad.append("building.json: text.%s is missing" % key_id)
 	return bad

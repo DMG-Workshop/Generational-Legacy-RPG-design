@@ -1,5 +1,5 @@
 {
-  "note": "Building and placement rules (roadmap item 50; core/game/game_build.gd, checked by tools/check_data.gd). The family house is the first base: a family may build only inside a claim round the home town (`base_place`), which grows with every level bought in the house (`radius_per_house_level`). A piece (`pieces`, the same four kinds GamePath walks: wall, floor, road, door) goes in one cell of the surface (layer y = -1) or of dug ground (y = 0 and down) and is paid for in the family's stores (`cost`, materials) and the heir's gold. Rules: a cell holds one piece; nothing is built on a tree or rock outcrop; a piece needs level ground (`max_slope`: the biggest step in height to a dry neighbour); only a floor or road may go over water and only as a bridge that reaches land within `max_span` tiles; a door needs a wall on each of two opposite sides (`needs_frame`) and the wall cannot be taken away while it hangs; underground a piece goes only into a cell that has been dug. A room is a region closed by walls (and doors) that is no bigger than `max_room_area`. Taking a piece down gives back `refund` of its cost. Nothing here is random, and the autopilot never builds.",
+  "note": "Building and placement rules (roadmap item 50; core/game/game_build.gd, checked by tools/check_data.gd). The family house is the first base: a family may build only inside a claim round the home town (`base_place`), which grows with every level bought in the house (`radius_per_house_level`). A piece (`pieces`, the same four kinds GamePath walks: wall, floor, road, door) goes in one cell of the surface (layer y = -1) or of dug ground (y = 0 and down) and is paid for in the family's stores (`cost`, materials) and the heir's gold. Rules: a cell holds one piece; nothing is built on a tree or rock outcrop; a piece needs level ground (`max_slope`: the biggest step in height to a dry neighbour); only a floor or road may go over water and only as a bridge that reaches land within `max_span` tiles; a door needs a wall on each of two opposite sides (`needs_frame`) and the wall cannot be taken away while it hangs; underground a piece goes only into a cell that has been dug. A room is a region closed by walls (and doors) that is no bigger than `max_room_area`. Taking a piece down gives back `refund` of its cost. Furniture (a piece marked `inside`: bed, anvil, hearth, trough) can only be built in a room and is solid (pathing.json). `room_types` names a room by what stands in it: the first type whose `needs` (a count of each piece) and `min_area` the room meets wins, so list the most demanding first; a room that meets none is just a room. Nothing here is random, and the autopilot never builds.",
   "settings": {
     "base_place": "hearthmere",
     "base_radius": 12,
@@ -11,8 +11,17 @@
     "wall": {"name": "Wall", "cost": {"oak": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false},
     "floor": {"name": "Floor", "cost": {"oak": 1}, "gold": 0, "refund": 0.5, "max_slope": 2, "over_water": true, "needs_frame": false},
     "road": {"name": "Road", "cost": {}, "gold": 3, "refund": 0.0, "max_slope": 3, "over_water": true, "needs_frame": false},
-    "door": {"name": "Door", "cost": {"oak": 1, "iron": 1}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": true}
+    "door": {"name": "Door", "cost": {"oak": 1, "iron": 1}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": true},
+    "bed": {"name": "Bed", "cost": {"oak": 2, "linen": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
+    "anvil": {"name": "Anvil", "cost": {"iron": 4}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
+    "hearth": {"name": "Hearth", "cost": {"copper": 2, "iron": 1}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
+    "trough": {"name": "Trough", "cost": {"oak": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true}
   },
+  "room_types": [
+    {"id": "forge", "name": "Forge", "phrase": "a forge", "needs": {"anvil": 1, "hearth": 1}, "min_area": 4},
+    {"id": "kennel", "name": "Kennel", "phrase": "a kennel", "needs": {"trough": 1}, "min_area": 6},
+    {"id": "bedroom", "name": "Bedroom", "phrase": "a bedroom", "needs": {"bed": 1}, "min_area": 4}
+  ],
   "text": {
     "unknown": "There is no such thing as a {kind} to build.",
     "out_of_range": "That is beyond the ground that can be built on.",
@@ -33,6 +42,9 @@
     "bears": "Other planks rest on that.",
     "removed": "Took down a {piece}.",
     "removed_back": "Took down a {piece} and saved {back}.",
+    "needs_room": "A {piece} has to stand inside a room: a space shut in by walls and doors.",
+    "in_room": "You are in {room}.",
+    "in_plain_room": "You are in a room.",
     "summary": "{pieces} pieces built, {rooms} rooms."
   }
 }

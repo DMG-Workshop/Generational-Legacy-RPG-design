@@ -168,11 +168,13 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["stick_deadzone", "touch_stick_radius_px", "touch_stick_deadzone", "tap_max_px", "tap_max_seconds", "pinch_zoom_per_px", "zoom_min", "zoom_max", "zoom_step", "camera_follow_seconds"]:
+	for k in ["stick_deadzone", "touch_stick_radius_px", "touch_stick_deadzone", "stick_zone_share", "tap_max_px", "tap_max_seconds", "pinch_zoom_per_px", "zoom_min", "zoom_max", "zoom_step", "camera_follow_seconds"]:
 		if not s.has(k):
 			bad.append("input.json: settings.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
+	if float(s["stick_zone_share"]) <= 0.0 or float(s["stick_zone_share"]) >= 1.0:
+		bad.append("input.json: stick_zone_share must be above 0 and below 1")
 	for k in ["stick_deadzone", "touch_stick_deadzone"]:
 		if float(s[k]) < 0.0 or float(s[k]) >= 1.0:
 			bad.append("input.json: %s must be 0 up to (not including) 1" % k)

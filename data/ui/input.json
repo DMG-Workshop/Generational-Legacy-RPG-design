@@ -4,6 +4,7 @@
     "stick_deadzone": 0.25,
     "touch_stick_radius_px": 80,
     "touch_stick_deadzone": 0.15,
+    "stick_zone_share": 0.5,
     "tap_max_px": 14,
     "tap_max_seconds": 0.3,
     "pinch_zoom_per_px": 0.005,

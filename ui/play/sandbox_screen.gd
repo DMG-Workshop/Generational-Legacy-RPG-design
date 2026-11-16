@@ -7,6 +7,8 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
+const TouchControls := preload("res://ui/play/touch_controls.gd")
 const BAR := 56.0
 
 var app: Node
@@ -18,7 +20,10 @@ var mode := "walk"          # "walk" (the heir moves) or "build" (the stick aims
 var build_kind := "wall"    # the piece the Place button puts down
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
+var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
+var actions: VBoxContainer           # Dig and Place under the thumb, shown only with a touch layout
 var status: Label
+var piece_button: Button
 var last_line := ""
 var _walk_wait := 0.0
 var _tick_wait := 0.0
@@ -68,9 +73,9 @@ func _ready() -> void:
 	build_bar.offset_top = -BAR
 	build_bar.add_theme_constant_override("separation", 6)
 	add_child(build_bar)
-	for kind in sb.build_kinds():
-		var k: String = kind
-		build_bar.add_child(Kit.button(str(GameBuild.pieces()[k]["name"]), func(): _pick(k), Vector2(96, BAR - 12)))
+	piece_button = Kit.button("", func(): _next_piece(), Vector2(136, BAR - 12))
+	build_bar.add_child(piece_button)
+	_pick(build_kind)
 	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
 	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
 	build_bar.visible = false
@@ -82,6 +87,8 @@ func _ready() -> void:
 	add_child(orders_panel)
 	orders_panel.visible = false
 	_refresh_orders()
+	if UiSettings.touch():
+		_make_action_buttons()
 	_refresh_status()
 
 
@@ -97,6 +104,8 @@ func _process(delta: float) -> void:
 	if look.length() > 0.0:
 		cam += look * float(setting("cam_tiles_per_second")) * delta
 	var mv: Vector2 = inp["move"]
+	if fingers.steering() and fingers.move().length() > 0.0:
+		mv = fingers.move()   # a finger on the stick steers over the keys
 	_walk_wait -= delta
 	var stepped := false
 	if step_for(mv) != Vector2i.ZERO:
@@ -137,6 +146,18 @@ func _process(delta: float) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	var area_size := Vector2(size.x, size.y - BAR)
+	if event is InputEventScreenTouch:
+		var st := event as InputEventScreenTouch
+		fingers.touch(st.index, st.position - Vector2(0, BAR), st.pressed, area_size)
+		queue_redraw()
+		return
+	if event is InputEventScreenDrag:
+		var sd := event as InputEventScreenDrag
+		fingers.drag(sd.index, sd.position - Vector2(0, BAR))
+		zoom = fingers.pinch(zoom)
+		queue_redraw()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var e := event as InputEventMouseButton
 		var area := Vector2(size.x, size.y - BAR)
@@ -204,8 +225,16 @@ func _remove() -> void:
 	queue_redraw()
 
 
+## The piece button steps through the pieces in the data's order (eight would not fit a phone's bar as eight buttons).
+func _next_piece() -> void:
+	var kinds: Array = sb.build_kinds()
+	_pick(kinds[(kinds.find(build_kind) + 1) % kinds.size()])
+
+
 func _pick(kind: String) -> void:
 	build_kind = kind
+	if piece_button != null:
+		piece_button.text = "Piece: %s" % GameBuild.pieces()[kind]["name"]
 	_refresh_status()
 	queue_redraw()
 
@@ -267,6 +296,9 @@ func _refresh_status() -> void:
 		var why := sb.build_check(build_kind, facing_dir.x, facing_dir.y)
 		var piece := str(GameBuild.pieces()[build_kind]["name"])
 		line = str(GameSandbox.data()["text"]["ready"]).format({"piece": piece}) if why == "" else why
+	var room := GameBuild.room_line(d, sb.heir.x, sb.heir.y)
+	if room != "" and mode != "build":
+		line = room if line == "" else line
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 
@@ -312,6 +344,11 @@ func _draw() -> void:
 		draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
 	var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 	draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+	if fingers.steering():
+		var base := _rgb(colors["stick_base"])
+		var radius := WorldInput.setting("touch_stick_radius_px")
+		draw_arc(origin + fingers.origin, radius, 0.0, TAU, 40, Color(base, 0.5), 3.0)
+		draw_circle(origin + fingers.knob(), radius * 0.35, Color(_rgb(colors["stick_knob"]), 0.7))
 
 
 func _tile(d: GameDynasty, x: int, z: int) -> Dictionary:
