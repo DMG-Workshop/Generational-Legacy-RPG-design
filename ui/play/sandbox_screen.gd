@@ -154,6 +154,9 @@ func _process(delta: float) -> void:
 		stepped = true
 	if stepped:
 		cam = Vector2.ZERO   # the view follows the heir while they walk
+	if sb.arrived != "":
+		last_line = str(sb.log[sb.log.size() - 1]["text"])   # walked into a place: say so
+		sb.arrived = ""
 	_tick_wait -= delta
 	while _tick_wait <= 0.0:
 		sb.step(1)

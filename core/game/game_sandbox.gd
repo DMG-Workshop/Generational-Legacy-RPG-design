@@ -153,8 +153,37 @@ func move(dx: int, dz: int) -> Dictionary:
 	if not c["ok"]:
 		return c
 	heir += Vector2i(dx, dz)
+	_arrive()
 	refresh()
 	return {"ok": true, "why": ""}
+
+
+## Walking into a place's ground (a town or the wilds round an anchor) is arriving there: the family's place becomes it, as a
+## journey on the map would make it, but with no years spent (the open world has its own clock), no arrival event and no dice.
+## The place is marked visited and its quests told. Leaving it for open ground changes nothing: the family is still at the last
+## place walked into. Only on the ground of the open world.
+func _arrive() -> void:
+	if space != "world" or heir_y != GameBuild.SURFACE:
+		return
+	var place := str(GameSpaces.space(GameSpaces.at_tile(heir.x, heir.y)).get("place", ""))
+	if place == "" or place == str(d.world.location) or GameWorld.place(place).is_empty():
+		return
+	var dest: Dictionary = GameWorld.place(place)
+	var first: bool = place not in d.world.visited
+	d.world.visit(place)
+	var line := _text("arrived", {"heir": d.heir.name, "place": str(dest["name"])})
+	log.append({"kind": "arrive", "text": line})
+	if first:
+		log.append({"kind": "arrive", "text": GameMessages.text("life", "no_one_walked", {"house": d.dynasty_name, "dest": dest["name"], "description": dest.get("description", "")})})
+	var msgs: Array = []
+	d.quests.on_arrive(d, place, msgs)
+	for m in msgs:
+		log.append({"kind": "arrive", "text": str(m)})
+	arrived = place
+
+
+## The place the heir has just walked into, until the screen has said so (runtime only).
+var arrived := ""
 
 
 ## Spawns the creatures the world has in the square round the heir and lets go of those far behind.
