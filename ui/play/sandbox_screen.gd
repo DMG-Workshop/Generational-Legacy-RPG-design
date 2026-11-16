@@ -136,7 +136,7 @@ func _process(delta: float) -> void:
 		last_line = str(e.get("text", e)) if e is Dictionary else str(e)
 	_save_wait -= delta
 	if _save_wait <= 0.0:
-		d.save_to_disk()
+		_save()
 		_save_wait = float(setting("save_seconds"))
 	if inp["cancel"]:
 		app.show_state()
@@ -204,7 +204,7 @@ func _dig() -> void:
 	var r := sb.dig(0)
 	if r["ok"]:
 		last_line = str(sb.log.back()["text"])   # GameSandbox.dig logged the line just now
-		app.dynasty.save_to_disk()
+		_save()
 	else:
 		last_line = str(r["why"])
 	_refresh_status()
@@ -215,7 +215,7 @@ func _build() -> void:
 	var r := sb.build(build_kind, facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
-		app.dynasty.save_to_disk()
+		_save()
 	_refresh_status()
 	queue_redraw()
 
@@ -224,7 +224,7 @@ func _remove() -> void:
 	var r := sb.remove_at(facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
-		app.dynasty.save_to_disk()
+		_save()
 	_refresh_status()
 	queue_redraw()
 
@@ -282,7 +282,7 @@ func _cycle(id: String) -> void:
 	var r := sb.cycle_order(id)
 	last_line = str(r["text"])
 	if r["ok"]:
-		app.dynasty.save_to_disk()
+		_save()
 	_refresh_orders()
 	_refresh_status()
 
@@ -300,6 +300,17 @@ func _make_action_buttons() -> void:
 	add_child(actions)
 	actions.add_child(Kit.button("Dig", func(): _dig(), Vector2(px, px)))
 	actions.add_child(Kit.button("Place", func(): _build(), Vector2(px, px)))
+
+
+## Writes where the heir stands onto the dynasty, then saves it.
+func _save() -> void:
+	sb.remember()
+	app.dynasty.save_to_disk()
+
+
+func _exit_tree() -> void:
+	if sb != null:
+		sb.remember()   # leaving the screen (Back, a fight, a succession) keeps where the heir was
 
 
 func _cell() -> float:
