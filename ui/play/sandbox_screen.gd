@@ -155,6 +155,10 @@ func _process(delta: float) -> void:
 		stepped = true
 	if stepped:
 		cam = Vector2.ZERO   # the view follows the heir while they walk
+	if not sb.dirty.is_empty():
+		for c in sb.dirty:
+			tile_view.refresh_cell(int(c.x), int(c.y))   # a node gathered, a shaft dug: its tile looks different
+		sb.dirty.clear()
 	if sb.arrived != "":
 		last_line = str(sb.log[sb.log.size() - 1]["text"])   # walked into a place: say so
 		sb.arrived = ""
