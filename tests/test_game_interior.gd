@@ -182,8 +182,13 @@ func test_tile_view() -> void:
 	var world_chunks := v.layers.size()
 	ok(world_chunks > 0 and v.interior_id == "", "the view starts on the open world")
 	var g := GameInterior.cells(forge)
+	v.set_level(1)
+	ok(v.level == 1 and not v.uppers.is_empty(), "(a storey is shown on the open world)")
 	v.set_interior(forge, g)
 	ok(v.layers.is_empty() and v.interior_id == forge, "going into an interior drops the world's tiles")
+	ok(v.uppers.is_empty() and v.level == 0, "and its storey layers, and the storey")
+	v.set_level(2)
+	ok(v.level == 0 and v.uppers.is_empty(), "an interior has one floor: no storey can be shown in it")
 	v.show_view(Vector2(0, 0), Vector2(8, 6))
 	var c := TileView.chunk_of(0, 0)
 	var n: int = TileView.settings()["chunk"]
