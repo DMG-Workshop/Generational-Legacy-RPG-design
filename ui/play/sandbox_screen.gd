@@ -274,6 +274,21 @@ func _cycle(id: String) -> void:
 	_refresh_status()
 
 
+## Dig and Place as big buttons at the right-hand thumb, for a touch layout (the top bar and the piece bar stay).
+func _make_action_buttons() -> void:
+	var px := float(setting("action_button_px"))
+	actions = VBoxContainer.new()
+	actions.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	actions.offset_left = -px - 12.0
+	actions.offset_right = -12.0
+	actions.offset_top = -(px * 2.0 + 8.0) - BAR - 12.0
+	actions.offset_bottom = -BAR - 12.0
+	actions.add_theme_constant_override("separation", 8)
+	add_child(actions)
+	actions.add_child(Kit.button("Dig", func(): _dig(), Vector2(px, px)))
+	actions.add_child(Kit.button("Place", func(): _build(), Vector2(px, px)))
+
+
 ## Writes where the heir stands onto the dynasty, then saves it.
 func _save() -> void:
 	sb.remember()
