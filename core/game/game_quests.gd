@@ -80,12 +80,12 @@ static func objective_text(q: Dictionary) -> String:
 
 static func reward_gold(d: GameDynasty, q: Dictionary) -> int:
 	var base := float(q.get("reward", {}).get("gold", 0))
-	return int(round(base * GameData.enemy_scale(d.gen) * float(GameData.bal("quest_gold_mult"))))
+	return int(round(base * GameData.enemy_scale(d.gen) * float(GameData.bal("quest_gold_mult")) * GameFactions.quest_mult(d, q, "gold")))
 
 
 static func reward_xp(d: GameDynasty, q: Dictionary) -> int:
 	var base := float(q.get("reward", {}).get("xp", 0))
-	return int(round(base * GameData.xp_level_scale(d.heir.level) * float(GameData.bal("quest_xp_mult"))))
+	return int(round(base * GameData.xp_level_scale(d.heir.level) * float(GameData.bal("quest_xp_mult")) * GameFactions.quest_mult(d, q, "xp")))
 
 
 ## "66 gold, 35 XP, Prayer Beads" at the current generation and heir level.
