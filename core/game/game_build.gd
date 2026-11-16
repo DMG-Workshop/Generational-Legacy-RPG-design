@@ -261,6 +261,7 @@ static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 					return {"ok": false, "text": text("bears")}
 			d.built[k] = kind
 	d.built.erase(k)
+	d.damage.erase(k)
 	var back: Array = []
 	for m in p["cost"]:
 		var n := int(floor(float(p["cost"][m]) * float(p["refund"])))
@@ -277,6 +278,34 @@ static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 	if back.is_empty():
 		return {"ok": true, "text": text("removed", {"piece": piece})}
 	return {"ok": true, "text": text("removed_back", {"piece": piece, "back": ", ".join(back)})}
+
+
+## Lets fall every storey piece (and door) left with nothing to hold it, again and again until what stands is held. Returns how
+## many fell. Damage on them goes too.
+static func collapse(d: GameDynasty) -> int:
+	var n := 0
+	var again := true
+	while again:
+		again = false
+		var set: Variant = null
+		for k in d.built.keys():
+			var c: Variant = parse(str(k))
+			if c == null:
+				continue
+			var fall := false
+			if (c as Vector3i).y < SURFACE:
+				if set == null:
+					set = _room_set(d)
+				fall = not supported(d, c.x, c.y, c.z, set)
+			if not fall and str(d.built[k]) == "door" and not _framed(d, c.x, c.y, c.z, ""):
+				fall = true
+			if fall:
+				d.built.erase(k)
+				d.damage.erase(k)
+				n += 1
+				again = true
+				set = null
+	return n
 
 
 # ---------------------------------------------------------------- rooms
@@ -348,7 +377,7 @@ static func rooms_on(d: GameDynasty, y: int) -> Array:
 			door_list.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x or (a.x == b.x and a.y < b.y))
 			var roofed := true
 			for c in region:
-				if not kind_at(d, c.x, y - 1, c.y) in setting("roof_covers"):
+				if not kind_at(d, c.x, y - 1, c.y) in setting("roof_covers") or d.damage.has(key(c.x, y - 1, c.y)):
 					roofed = false
 					break
 			out.append({"cells": region, "area": region.size(), "doors": door_list, "sealed": door_list.is_empty(), "y": y, "roofed": roofed})
@@ -497,6 +526,7 @@ static func validate() -> Array:
 		for b in s[list_key]:
 			if not dat["pieces"].has(b):
 				bad.append("building.json: %s names '%s', which is not a piece" % [list_key, b])
+	bad.append_array(GameRepair.validate())
 	if int(s["max_span"]) < 1 or int(s["max_room_area"]) < 1:
 		bad.append("building.json: max_span and max_room_area must be at least 1")
 	for b in s["upper_bearers"] + s["ground_bearers"]:
@@ -563,7 +593,7 @@ static func validate() -> Array:
 	for t in dat.get("room_types", []):
 		if t.has("places") and int(t["places"]) < 1:
 			bad.append("building.json: room type '%s' places must be at least 1" % t["id"])
-	for key_id in ["kennel_holds", "forge_lit", "nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "roof_low", "in_room", "in_room_roofed", "in_plain_room", "in_plain_room_roofed", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
+	for key_id in ["kennel_holds", "forge_lit", "nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "roof_low", "in_room", "in_room_roofed", "in_plain_room", "in_plain_room_roofed", "undamaged", "repaired", "repair_missing", "repair_gold", "damaged_piece", "ruined", "collapsed", "vandals_hit", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
 		if not dat["text"].has(key_id):
 			bad.append("building.json: text.%s is missing" % key_id)
 	return bad

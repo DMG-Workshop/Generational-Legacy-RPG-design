@@ -102,6 +102,7 @@ func _ready() -> void:
 	_next_level(false)
 	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
 	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
+	build_bar.add_child(Kit.button("Repair", func(): _repair(), Vector2(88, BAR - 12)))
 	build_bar.visible = false
 	# The orders panel: each companion in the party with the order they hold; a tap moves it to the next.
 	orders_panel = VBoxContainer.new()
@@ -280,6 +281,16 @@ func _dig() -> void:
 
 func _build() -> void:
 	var r := sb.build(build_kind, facing_dir.x, facing_dir.y)
+	last_line = str(r["text"])
+	if r["ok"]:
+		tile_view.refresh_cell(sb.heir.x + facing_dir.x, sb.heir.y + facing_dir.y)
+		_save()
+	_refresh_status()
+	queue_redraw()
+
+
+func _repair() -> void:
+	var r := sb.repair_at(facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
 		tile_view.refresh_cell(sb.heir.x + facing_dir.x, sb.heir.y + facing_dir.y)

@@ -32,6 +32,12 @@
       "takes": "kill",
       "who": "beasts"
     },
+    "vandals": {
+      "event": "raid_vandals",
+      "weight": 2,
+      "takes": "pieces",
+      "who": "vandals"
+    },
     "burglars": {
       "event": "raid_burglars",
       "weight": 3,
@@ -49,6 +55,7 @@
     "killed_animal": "The beasts kill {name} the {species}.",
     "no_stock": "There is nothing in the pens to take.",
     "stole_item": "The burglars make off with {item}.",
-    "nothing_carried": "There is nothing carried worth taking."
+    "nothing_carried": "There is nothing carried worth taking.",
+    "nothing_built": "There is nothing built for them to break."
   }
 }

@@ -48,7 +48,8 @@ static func house_value(d: GameDynasty) -> int:
 	for track in GameHouse.TRACKS:
 		for i in GameHouse.level(d, track):
 			spent += base * pow(growth, i)
-	return int(round(spent * float(setting("house_value_share"))))
+	var built := float(d.built.size()) * float(GameBuild.data()["repair"]["built_piece_value"])   # and the pieces built in the open world
+	return int(round((spent + built) * float(setting("house_value_share"))))
 
 
 ## Whether the heir holds a purse worth a raid, from `plain_min_gold` up: a plain house with a full purse is a target
@@ -96,6 +97,8 @@ static func applicable(d: GameDynasty, kind: String) -> bool:
 		return d.heir != null and d.heir.gold > 0
 	if takes == "item":
 		return d.heir != null and not d.heir.inventory.is_empty()
+	if takes == "pieces":
+		return not d.built.is_empty()
 	return not d.roster.is_empty()
 
 
@@ -161,6 +164,11 @@ static func defend(d: GameDynasty, kind: String) -> Array:
 			d.heir.gold -= lost
 			var saved := maxi(0, mini(want, d.heir.gold + lost) - lost)
 			return _said(text("stole_gold_saved" if saved > 0 else "stole_gold", {"gold": GameText.num(lost), "saved": GameText.num(saved)}), "bad")
+		"pieces":
+			if d.built.is_empty():
+				return _said(text("nothing_built"), "info")
+			var hits := GameRepair.vandalise(d, r)
+			return _said(GameBuild.text("vandals_hit", {"what": " ".join(hits)}), "bad")
 		"item":
 			if d.heir.inventory.is_empty():
 				return _said(text("nothing_carried"), "info")
@@ -209,8 +217,8 @@ static func validate() -> Array:
 		for key in ["event", "weight", "takes", "who"]:
 			if not k.has(key):
 				bad.append("raids.json: kind '%s' has no %s" % [kind, key])
-		if k.has("takes") and str(k["takes"]) not in ["gold", "animal", "kill", "item"]:
-			bad.append("raids.json: kind '%s' takes '%s', which is not gold, animal, kill or item" % [kind, k["takes"]])
+		if k.has("takes") and str(k["takes"]) not in ["gold", "animal", "kill", "item", "pieces"]:
+			bad.append("raids.json: kind '%s' takes '%s', which is not gold, animal, kill, item or pieces" % [kind, k["takes"]])
 		if k.has("weight") and float(k["weight"]) <= 0.0:
 			bad.append("raids.json: kind '%s' needs a positive weight" % kind)
 		if k.has("event"):
@@ -227,7 +235,7 @@ static func validate() -> Array:
 					used = true
 			if not used:
 				bad.append("raids.json: the raid event '%s' is used by no kind" % ev["id"])
-	for key in ["comes", "beaten_off", "stole_gold", "stole_gold_saved", "nothing_to_take", "stole_animal", "killed_animal", "no_stock", "stole_item", "nothing_carried"]:
+	for key in ["comes", "beaten_off", "stole_gold", "stole_gold_saved", "nothing_to_take", "stole_animal", "killed_animal", "no_stock", "stole_item", "nothing_carried", "nothing_built"]:
 		if not dat["text"].has(key):
 			bad.append("raids.json: text.%s is missing" % key)
 	return bad

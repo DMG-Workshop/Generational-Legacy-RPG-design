@@ -145,8 +145,8 @@ func test_upper_furniture() -> void:
 func test_sandbox() -> void:
 	var d := _fresh()
 	var b := _base()
-	var sb := GameSandbox.new()
-	sb.start(d)
+	
+	var sb := GameSandbox.start(d)
 	ok(sb.level_name() == "ground", "the level button says ground")
 	sb.build_level = 1
 	ok(sb.level_name() == "1", "then the storey")

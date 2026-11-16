@@ -1906,6 +1906,17 @@
           }
         }
       ]
+    },
+    {
+      "id": "raid_vandals",
+      "title": "Vandals at the Walls",
+      "text": "Axes ring on timber in the dark. Someone has come to knock down what the family built, for spite or for the wood.",
+      "raid": true,
+      "choices": [
+        {"text": "Trust the guards", "outcomes": {"always": {"text": "You bar the door and let the guards drive them off.", "defend": "vandals"}}},
+        {"text": "Chase them off the walls", "outcomes": {"always": {"text": "You go out with a weapon in your hand and meet them in the yard.", "xp": 10, "fight": {"foes": ["bandit"]}}}},
+        {"text": "Pay them to leave", "outcomes": {"always": {"text": "A purse on the gatepost; the axes stop.", "gold": -30}}}
+      ]
     }
   ]
 }
