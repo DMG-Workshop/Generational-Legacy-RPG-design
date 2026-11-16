@@ -56,7 +56,8 @@
       "bed": [0.64, 0.30, 0.34],
       "anvil": [0.32, 0.34, 0.40],
       "hearth": [0.80, 0.42, 0.16],
-      "trough": [0.36, 0.44, 0.52]
+      "trough": [0.36, 0.44, 0.52],
+      "exit": [0.85, 0.75, 0.35]
     }
   },
   "text": {
@@ -68,6 +69,23 @@
     "aim": "Aim: {x}, {z} from the heir.",
     "blocked": "Something stands in the way: water, a tree, rock or a wall.",
     "contact": "{foes} caught up with {heir}!",
-    "dug": "The family digs down {depth} into the ground."
+    "dug": "The family digs down {depth} into the ground.",
+    "no_stairs": "There are no stairs here.",
+    "stairs_blocked": "There is nothing to stand on at the top of the stairs.",
+    "stairs_bottom": "There are no stairs below to go down by.",
+    "climbed_up": "{heir} climbs to storey {n}.",
+    "climbed_down": "{heir} comes down to the ground.",
+    "climbed_part": "{heir} comes down to storey {n}.",
+    "upstairs_route": "Routes are for the ground: walk up here with the stick.",
+    "upstairs_dig": "The family can only dig from the ground.",
+    "upstairs_at": "Upstairs, storey {n}.",
+    "fell": "The floor gave way and {heir} dropped to the ground.",
+    "no_door": "There is no door here to go in by.",
+    "entered": "{heir} goes into {place}.",
+    "left": "{heir} steps back outside.",
+    "no_exit": "The way out is back at the door.",
+    "indoors": "Not while indoors.",
+    "inside_at": "Inside {place}, {room}.",
+    "inside_in": "Inside {place}."
   }
 }

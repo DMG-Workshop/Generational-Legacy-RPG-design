@@ -18,6 +18,10 @@ var tick := 0
 var next_uid := 1
 var log: Array = []                # {kind, text} lines for the screen, oldest first
 var route: Array = []              # tiles still to walk to (set by set_route), the next one first
+var space := "world"               # where the heir is: the open world, or the id of an interior they have gone into (never saved)
+var outside := Vector2i.ZERO       # the open-world tile to come back to when the heir goes out of an interior
+var interior: Dictionary = {}      # the cells of the interior the heir is in (GameInterior.cells), {} on the open world
+var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
 
 
@@ -68,8 +72,11 @@ func _remembered() -> Vector2i:
 	return t
 
 
-## Writes where the heir stands onto the dynasty, to be saved with it.
+## Writes where the heir stands onto the dynasty, to be saved with it. Upstairs it keeps the last place on the ground, because
+## the storey is not saved and a column of floors is not a place to start from.
 func remember() -> void:
+	if heir_y != GameBuild.SURFACE or space != "world":
+		return
 	d.sandbox_at = {"x": heir.x, "z": heir.y, "gen": d.gen, "place": str(d.world.location)}
 
 
@@ -87,14 +94,49 @@ func heir_point() -> Vector2:
 	return Vector2(float(heir.x) + 0.5, float(heir.y) + 0.5)
 
 
+## Which storey the heir is on: 0 is the ground, 1 and up are above it.
+func storey() -> int:
+	return GameBuild.SURFACE - heir_y
+
+
+## "Upstairs, storey 1." while above the ground, else the room the heir is in (or "").
+func place_line() -> String:
+	if space != "world":
+		var name := str(GameSpaces.space(space).get("name", space))
+		var room := GameInterior.room_at(space, heir.x, heir.y)
+		if room == "":
+			return _text("inside_in", {"place": name})
+		var room_name := room
+		for r in GameSpaces.rooms(space):
+			if str(r["id"]) == room:
+				room_name = str(r["name"])
+		return _text("inside_at", {"place": name, "room": room_name.to_lower()})
+	if storey() > 0:
+		return _text("upstairs_at", {"n": storey()})
+	return GameBuild.room_line(d, heir.x, heir.y)
+
+
 ## Whether the heir can step onto a tile: a neighbour in the open world, dry and not blocked (a tree, a rock outcrop, a wall).
 func can_step(dx: int, dz: int) -> Dictionary:
 	if absi(dx) > 1 or absi(dz) > 1 or (dx == 0 and dz == 0):
 		return {"ok": false, "why": _text("not_a_step")}
 	var to := heir + Vector2i(dx, dz)
+	if space != "world":
+		# Indoors the heir walks the floor, a tile at a time, never cutting a corner of a wall.
+		var diagonal := dx != 0 and dz != 0
+		if not GameInterior.passable(interior, to.x, to.y) or (diagonal and not (GameInterior.passable(interior, heir.x + dx, heir.y) and GameInterior.passable(interior, heir.x, heir.y + dz))):
+			return {"ok": false, "why": _text("blocked")}
+		return {"ok": true, "why": ""}
 	if not GameWorldGen.in_bounds(to.x, to.y):
 		return {"ok": false, "why": _text("edge")}
 	var ground := GamePath.world_ground(d)
+	if storey() > 0:
+		# On a storey the heir walks the same rules as everything else (GamePath): built floors, no cutting a corner.
+		var here := Vector3i(heir.x, heir_y, heir.y)
+		for nb in GamePath.neighbours(ground, here, GamePath.data()["movers"]["walker"]):
+			if nb[0] == Vector3i(to.x, heir_y, to.y):
+				return {"ok": true, "why": ""}
+		return {"ok": false, "why": _text("blocked")}
 	if not GamePath.passable(ground, Vector3i(to.x, -1, to.y), {"water": false, "ignore_blocks": false}):
 		return {"ok": false, "why": _text("blocked")}
 	return {"ok": true, "why": ""}
@@ -112,6 +154,8 @@ func move(dx: int, dz: int) -> Dictionary:
 
 ## Spawns the creatures the world has in the square round the heir and lets go of those far behind.
 func refresh() -> void:
+	if space != "world":
+		return   # nothing lives or spawns indoors
 	var night := GameDay.is_night(d)
 	var radius := int(setting("radius"))
 	var kept: Array = []
@@ -137,11 +181,117 @@ func refresh() -> void:
 			_occupied[k] = true
 
 
+## The interior whose door is on the tile the heir stands on ("" when there is none): a dungeon's door on the open world, a
+## town service's or the family house's in its town. Only from the open world's ground floor.
+func door_here() -> String:
+	if space != "world" or storey() > 0:
+		return ""
+	for id in GameSpaces.ids():
+		if GameSpaces.kind(id) == "interior":
+			var door: Dictionary = GameSpaces.space(id).get("door", {})
+			if int(door.get("x", -1)) == heir.x and int(door.get("z", -1)) == heir.y:
+				return id
+	return ""
+
+
+## Goes in by the door the heir stands at: the heir is on the interior's floor at its entrance, the open world waits. {ok, text}.
+func enter() -> Dictionary:
+	var id := door_here()
+	if id == "":
+		return {"ok": false, "text": _text("no_door")}
+	var cells := GameInterior.cells(id)
+	if cells.is_empty():
+		return {"ok": false, "text": _text("no_door")}
+	outside = heir
+	space = id
+	interior = cells
+	heir = GameInterior.entry()
+	route = []
+	var line := _text("entered", {"heir": d.heir.name, "place": str(GameSpaces.space(id).get("name", id)).to_lower()})
+	log.append({"kind": "door", "text": line})
+	return {"ok": true, "text": line}
+
+
+## Goes out by the entrance, back to the door on the open world. {ok, text}.
+func leave() -> Dictionary:
+	if space == "world":
+		return {"ok": false, "text": _text("no_door")}
+	if heir != GameInterior.entry():
+		return {"ok": false, "text": _text("no_exit")}
+	space = "world"
+	interior = {}
+	heir = outside
+	route = []
+	refresh()
+	var line := _text("left", {"heir": d.heir.name})
+	log.append({"kind": "door", "text": line})
+	return {"ok": true, "text": line}
+
+
+## The Use action: in by a door, or out by the entrance. {ok, text}.
+func use() -> Dictionary:
+	return leave() if space != "world" else enter()
+
+
+## Climbs from where the heir stands: `dir` -1 up (the cell must be stairs and the one above something to stand on), +1 down
+## (the cell below must be stairs). The build level follows the heir. {ok, why}.
+func climb(dir: int) -> Dictionary:
+	if space != "world":
+		return {"ok": false, "why": _text("indoors")}
+	var ground := GamePath.world_ground(d)
+	var mover: Dictionary = GamePath.data()["movers"]["walker"]
+	var here := Vector3i(heir.x, heir_y, heir.y)
+	if dir < 0:
+		if not GamePath._is_stairs(ground, here):
+			return {"ok": false, "why": _text("no_stairs")}
+		var up := Vector3i(heir.x, heir_y - 1, heir.y)
+		if heir_y - 1 < GameBuild.top_y() or not GamePath.passable(ground, up, mover):
+			return {"ok": false, "why": _text("stairs_blocked")}
+		heir_y -= 1
+	else:
+		var below := Vector3i(heir.x, heir_y + 1, heir.y)
+		if heir_y >= GameBuild.SURFACE or not GamePath._is_stairs(ground, below):
+			return {"ok": false, "why": _text("stairs_bottom")}
+		heir_y += 1
+	route = []
+	build_level = storey()
+	var line := _text("climbed_up", {"heir": d.heir.name, "n": storey()}) if dir < 0 else (_text("climbed_down", {"heir": d.heir.name}) if storey() == 0 else _text("climbed_part", {"heir": d.heir.name, "n": storey()}))
+	log.append({"kind": "climb", "text": line})
+	return {"ok": true, "why": "", "text": line}
+
+
+## If the floor the heir stands on has gone, they drop to the ground (to the nearest tile they can stand on, if a wall is there).
+func check_footing() -> void:
+	if heir_y == GameBuild.SURFACE:
+		return
+	var ground := GamePath.world_ground(d)
+	var mover: Dictionary = GamePath.data()["movers"]["walker"]
+	var cell := Vector3i(heir.x, heir_y, heir.y)
+	if GamePath.passable(ground, cell, mover) and not GamePath._built_kind(ground, cell).is_empty():
+		return
+	heir_y = GameBuild.SURFACE
+	build_level = 0
+	route = []
+	if not GamePath.passable(ground, Vector3i(heir.x, GameBuild.SURFACE, heir.y), mover):
+		for r in range(1, 5):
+			for dz in range(-r, r + 1):
+				for dx in range(-r, r + 1):
+					if maxi(absi(dx), absi(dz)) == r and GamePath.passable(ground, Vector3i(heir.x + dx, GameBuild.SURFACE, heir.y + dz), mover):
+						heir += Vector2i(dx, dz)
+						log.append({"kind": "climb", "text": _text("fell", {"heir": d.heir.name})})
+						refresh()
+						return
+	log.append({"kind": "climb", "text": _text("fell", {"heir": d.heir.name})})
+
+
 ## One tick of the open world: the creatures act, then the companions (told of the creatures near them), and their events
 ## go to the log.
 func step(ticks: int = 1) -> void:
 	for _i in ticks:
 		tick += 1
+		if space != "world":
+			continue   # the open world is outside: its creatures and companions wait
+		check_footing()
 		var night := GameDay.is_night(d)
 		var threats := _threats()
 		var cview := GameBehaviour.world_view(d, [{"x": heir_point().x, "z": heir_point().y}], night)
@@ -163,6 +313,10 @@ func step(ticks: int = 1) -> void:
 ## route when found and returns {ok, why, steps}; the heir then walks it one tile at a time with `walk_one`.
 func set_route(target: Vector2i) -> Dictionary:
 	route = []
+	if space != "world":
+		return {"ok": false, "why": _text("indoors"), "steps": 0}
+	if storey() > 0:
+		return {"ok": false, "why": _text("upstairs_route"), "steps": 0}
 	if target == heir:
 		return {"ok": true, "why": "", "steps": 0}
 	if not GameWorldGen.in_bounds(target.x, target.y):
@@ -226,12 +380,16 @@ func build_kinds() -> Array:
 
 ## Why a piece cannot go on the tile `dx, dz` from the heir (GameBuild.check), or "" when it can.
 func build_check(kind: String, dx: int, dz: int) -> String:
+	if space != "world":
+		return _text("indoors")
 	var t := heir + Vector2i(dx, dz)
 	return GameBuild.check(d, kind, t.x, build_y(), t.y)
 
 
 ## Takes the piece on the tile `dx, dz` from the heir down, with its refund (GameBuild.remove): {ok, text}.
 func remove_at(dx: int, dz: int) -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": _text("indoors")}
 	var t := heir + Vector2i(dx, dz)
 	var out := GameBuild.remove(d, t.x, build_y(), t.y)
 	if out["ok"]:
@@ -241,6 +399,10 @@ func remove_at(dx: int, dz: int) -> Dictionary:
 
 ## Digs the cell `depth` below the surface straight under the heir (`GameMine.dig`): {ok, why, ...}.
 func dig(depth: int) -> Dictionary:
+	if space != "world":
+		return {"ok": false, "why": _text("indoors"), "text": _text("indoors")}
+	if storey() > 0:
+		return {"ok": false, "why": _text("upstairs_dig"), "text": _text("upstairs_dig")}
 	var out := GameMine.dig(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
 	if out["ok"]:
 		log.append({"kind": "dig", "text": _text("dug", {"depth": depth})})
@@ -249,6 +411,8 @@ func dig(depth: int) -> Dictionary:
 
 ## Places a piece on the tile `dx, dz` from the heir at the surface (`GameBuild.place`): {ok, text}.
 func build(kind: String, dx: int, dz: int) -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": _text("indoors")}
 	var to := heir + Vector2i(dx, dz)
 	var out := GameBuild.place(d, kind, to.x, build_y(), to.y)
 	if out["ok"]:
@@ -260,8 +424,8 @@ func build(kind: String, dx: int, dz: int) -> Dictionary:
 ## are hunting them within `contact_join` tiles, up to `contact_max` in all. The creatures in the fight are taken out of the
 ## open world. Only while no fight is on and the heir is living; returns whether one began.
 func _contact() -> bool:
-	if d.battle != null or d.state != "life":
-		return false
+	if d.battle != null or d.state != "life" or storey() > 0 or space != "world":
+		return false   # nothing reaches the heir upstairs or indoors
 	var me := heir_point()
 	var first := -1
 	for i in creatures.size():
