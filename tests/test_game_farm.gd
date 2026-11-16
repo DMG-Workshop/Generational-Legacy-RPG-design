@@ -77,12 +77,12 @@ func _grown(d: GameDynasty, species: String, stage: String = "adult", mood: int 
 func test_data() -> void:
 	ok(GameFarm.validate().is_empty(), "farm.json is sound: %s" % str(GameFarm.validate()))
 	var farm := GameData.creatures.filter(func(c): return c.get("farm", false))
-	ok(farm.size() == 7 and farm.map(func(c): return str(c["id"])) == ["sheep", "cattle", "pig", "chicken", "goat", "goose", "horse"], "seven farm animals: sheep, cattle, pig, chicken, goat, goose, horse")
+	ok(farm.size() == 8 and farm.map(func(c): return str(c["id"])) == ["sheep", "cattle", "pig", "chicken", "goat", "goose", "horse", "bee"], "eight farm animals: sheep, cattle, pig, chicken, goat, goose, horse, bee")
 	for c in farm:
 		var id := str(c["id"])
 		ok(GameBirth.born(id) != "none" and GameBirth.young_name(id) != "", "%s is born and its young have a name" % id)
 		ok(SpriteArt.has_creature(id), "%s has art" % id)
-		ok(GameRanch.data()["size_of"].has(id) and GameBreeding.family_of(id) != "", "%s has a size and a family" % id)
+		ok(GameRanch.data()["size_of"].has(id) and (GameBreeding.family_of(id) != "" or GameBirth.is_hive(id)), "%s has a size and a family (a hive needs no family: it never pairs)" % id)
 	_with(func(x): x["market"]["skeleton"] = 5, func(): ok(not GameFarm.validate().is_empty(), "a market selling a creature that is no farm animal is found"))
 	_with(func(x): x["market"]["pig"] = 0, func(): ok(not GameFarm.validate().is_empty(), "a price of nothing is found"))
 	_with(func(x): x["market"].erase("sheep"), func(): ok(not GameFarm.validate().is_empty(), "a farm animal not sold is found"))
@@ -125,7 +125,7 @@ func test_pools() -> void:
 
 func test_market() -> void:
 	var d := dyn()
-	ok(GameFarm.market_species() == ["cattle", "chicken", "goat", "goose", "horse", "pig", "sheep"], "the market sells seven kinds, in a fixed order")
+	ok(GameFarm.market_species() == ["bee", "cattle", "chicken", "goat", "goose", "horse", "pig", "sheep"], "the market sells eight kinds, in a fixed order")
 	ok(GameFarm.price("sheep") == 40 and GameFarm.price("nonesuch") == 0, "sheep are forty gold")
 	ok(GameFarm.why_not_buy(d, "sheep") == "", "a house in a town may buy")
 	var gold := d.heir.gold
