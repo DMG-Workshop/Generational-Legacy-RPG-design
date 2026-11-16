@@ -113,7 +113,9 @@ func place_line() -> String:
 		return _text("inside_at", {"place": name, "room": room_name.to_lower()})
 	if storey() > 0:
 		return _text("upstairs_at", {"n": storey()})
-	return GameBuild.room_line(d, heir.x, heir.y)
+	var line := GameBuild.room_line(d, heir.x, heir.y)
+	var u := GameBuild.room_use(d, heir.x, heir.y)
+	return line if u.is_empty() else "%s %s" % [line, str(u["hint"])]
 
 
 ## Whether the heir can step onto a tile: a neighbour in the open world, dry and not blocked (a tree, a rock outcrop, a wall).
@@ -228,9 +230,23 @@ func leave() -> Dictionary:
 	return {"ok": true, "text": line}
 
 
-## The Use action: in by a door, or out by the entrance. {ok, text}.
+## The Use action: out by the entrance of an interior; on the open world, in by a door, else what the room the heir stands in
+## lets them do (a bedroom the family built: rest). {ok, text}.
 func use() -> Dictionary:
-	return leave() if space != "world" else enter()
+	if space != "world":
+		return leave()
+	if door_here() != "":
+		return enter()
+	var u := GameBuild.room_use(d, heir.x, heir.y) if storey() == 0 else {}
+	if u.is_empty():
+		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
+	match str(u["kind"]):
+		"rest":
+			var msgs := d.rest_for(float(u["years"]))
+			for m in msgs:
+				log.append({"kind": "rest", "text": str(m)})
+			return {"ok": true, "text": str(msgs[0]) if not msgs.is_empty() else ""}
+	return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 
 
 ## Climbs from where the heir stands: `dir` -1 up (the cell must be stairs and the one above something to stand on), +1 down

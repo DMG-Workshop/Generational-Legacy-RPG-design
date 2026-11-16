@@ -363,6 +363,17 @@ static func room_type(d: GameDynasty, room: Dictionary) -> Dictionary:
 	return {}
 
 
+## What a room lets the heir do, from its type's `use` (a bedroom: rest): {kind, years, hint, type}, or {} when the tile is in no
+## room or its room does nothing.
+static func room_use(d: GameDynasty, x: int, z: int) -> Dictionary:
+	var t := room_type(d, room_at(d, x, z))
+	if t.is_empty() or not t.has("use"):
+		return {}
+	var out: Dictionary = (t["use"] as Dictionary).duplicate()
+	out["type"] = str(t["id"])
+	return out
+
+
 ## "You are in a forge." for the room a tile is in, or "" outside any room.
 static func room_line(d: GameDynasty, x: int, z: int) -> String:
 	var r := room_at(d, x, z)
@@ -479,7 +490,16 @@ static func validate() -> Array:
 				bad.append("building.json: room type '%s' needs '%s', which is not furniture" % [t["id"], need])
 			elif int(t["needs"][need]) < 1:
 				bad.append("building.json: room type '%s' needs a non-positive count of '%s'" % [t["id"], need])
-	for key_id in ["unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
+	for t in dat.get("room_types", []):
+		if t.has("use"):
+			var u: Variant = t["use"]
+			if typeof(u) != TYPE_DICTIONARY or not (u as Dictionary).has("kind") or not (u as Dictionary).has("years") or not (u as Dictionary).has("hint"):
+				bad.append("building.json: room type '%s' use needs a kind, years and hint" % t["id"])
+			elif not str(u["kind"]) in ["rest"]:
+				bad.append("building.json: room type '%s' use kind '%s' is not one the game knows" % [t["id"], u["kind"]])
+			elif float(u["years"]) <= 0.0 or float(u["years"]) > 1.0:
+				bad.append("building.json: room type '%s' use years must be above 0 and at most 1" % t["id"])
+	for key_id in ["nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
 		if not dat["text"].has(key_id):
 			bad.append("building.json: text.%s is missing" % key_id)
 	return bad
