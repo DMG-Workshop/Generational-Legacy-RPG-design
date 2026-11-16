@@ -138,6 +138,9 @@ func _rebuild() -> void:
 			_build_temple()
 			_build_cures()
 			_build_wares("temple")
+		"store":
+			_build_potions()
+			_build_wares(tab)
 		_:
 			_build_wares(tab)
 	_build_side()
@@ -223,6 +226,17 @@ func _build_wares(service: String) -> void:
 		if not owned and h.gold < cost:
 			b.tooltip_text = "You need %s more gold." % GameText.num(cost - h.gold)
 		rows.add_child(_item_row(iid, "%sg" % GameText.num(cost), [b], "", Kit.ACCENT if owned else _afford(cost)))
+
+
+## The store sells healing potions too (the same `GameDynasty.buy_potion` as the life screen's Potion button, at the same price).
+func _build_potions() -> void:
+	var h := dynasty.heir
+	var price := dynasty.potion_price()
+	rows.add_child(_section("Potions"))
+	var b := Kit.button("Buy", func(): _act(dynasty.buy_potion()), Vector2(96, 34))
+	b.name = "BuyPotion"
+	b.disabled = h.gold < price
+	rows.add_child(_service_row("Healing potion", "%s holds %d." % [h.name, h.potions], "Heals in a fight", "%sg" % GameText.num(price), Kit.TEXT, "Drunk in a fight to restore health.", b, _afford(price)))
 
 
 func _build_temple() -> void:
