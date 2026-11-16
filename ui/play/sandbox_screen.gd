@@ -363,6 +363,7 @@ func _sync_tiles() -> void:
 	var centre := Vector2(sb.heir) + cam
 	var light := clampf(float(GameDay.look(d)["light"]), float(setting("dim_floor")), 1.0)
 	map.size = area
+	tile_view.set_level(sb.build_level)
 	tile_view.show_view(centre, area * 0.5 / cell + Vector2(1, 1))
 	tile_view.place(Vector2.ZERO, area, centre, cell, light)
 
@@ -380,13 +381,6 @@ func _paint(c: Control) -> void:
 	var night_alpha := (1.0 - float(look["light"])) * 0.5
 	if night_alpha > 0.0:
 		c.draw_rect(Rect2(origin, area), Color(float(tint[0]), float(tint[1]), float(tint[2]), night_alpha))
-	if sb.build_level > 0:
-		# The storey being built on: its pieces, over the ground's tiles (the tile view shows the ground floor only).
-		var half := area * 0.5 / cell
-		for z in range(floori(centre.y - half.y) - 1, ceili(centre.y + half.y) + 2):
-			for x in range(floori(centre.x - half.x) - 1, ceili(centre.x + half.x) + 2):
-				if GameBuild.kind_at(d, x, sb.build_y(), z) != "":
-					c.draw_rect(Rect2(origin + (Vector2(x, z) - centre) * cell + area * 0.5, Vector2(cell, cell)), _rgb(colors["upper"]))
 	for i in range(sb.route.size()):
 		var rp := origin + (Vector2(sb.route[i]) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 		c.draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
