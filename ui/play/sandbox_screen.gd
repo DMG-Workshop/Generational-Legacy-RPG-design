@@ -80,6 +80,8 @@ func _ready() -> void:
 	bar.add_child(Kit.button("Dig", func(): _dig(), Vector2(72, BAR - 12)))
 	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
+	bar.add_child(Kit.button("Up", func(): _climb(-1), Vector2(64, BAR - 12)))
+	bar.add_child(Kit.button("Down", func(): _climb(1), Vector2(72, BAR - 12)))
 	status = Kit.label("", 14, Kit.dim())
 	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status.clip_text = true
@@ -158,6 +160,10 @@ func _process(delta: float) -> void:
 	if inp["cancel"]:
 		app.show_state()
 		return
+	if inp["climb_up"]:
+		_climb(-1)
+	if inp["climb_down"]:
+		_climb(1)
 	if inp["dig"]:
 		_dig()
 	if inp["build"]:
@@ -215,6 +221,14 @@ func _tap(p: Vector2, area: Vector2) -> void:
 		else:
 			_walk_wait = 0.0
 	cam = Vector2.ZERO
+	_refresh_status()
+	queue_redraw()
+
+
+## Up or down the stairs the heir stands at (`GameSandbox.climb`); the line says why not.
+func _climb(dir: int) -> void:
+	var r := sb.climb(dir)
+	last_line = str(r["text"]) if r["ok"] else str(r["why"])
 	_refresh_status()
 	queue_redraw()
 
@@ -345,9 +359,13 @@ func _refresh_status() -> void:
 		var why := sb.build_check(build_kind, facing_dir.x, facing_dir.y)
 		var piece := str(GameBuild.pieces()[build_kind]["name"])
 		line = str(GameSandbox.data()["text"]["ready"]).format({"piece": piece}) if why == "" else why
-	var room := GameBuild.room_line(d, sb.heir.x, sb.heir.y)
-	if room != "" and mode != "build":
+	var room := sb.place_line()
+	if sb.storey() > 0:
+		line = room if line == "" else "%s %s" % [room, line]   # always say which storey the heir is on
+	elif room != "" and mode != "build":
 		line = room if line == "" else line
+	if level_button != null:
+		level_button.text = "Level: %s" % ("ground" if sb.build_level == 0 else str(sb.build_level))
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 

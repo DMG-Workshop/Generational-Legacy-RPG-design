@@ -142,7 +142,7 @@ static func camera_follow_seconds() -> float:
 
 
 ## What is asked for right now, from the input map: {move, look (both -1..1 each way, length at most 1), zoom (-1, 0 or
-## 1), dig, build, interact, cancel, menu (each true on the frame it is pressed)}.
+## 1), dig, build, interact, climb_up, climb_down, cancel, menu (each true on the frame it is pressed)}.
 static func read() -> Dictionary:
 	var move := move_vector(Input.get_action_strength("world_move_up"), Input.get_action_strength("world_move_down"),
 		Input.get_action_strength("world_move_left"), Input.get_action_strength("world_move_right"))
@@ -152,7 +152,8 @@ static func read() -> Dictionary:
 		"move": move, "look": look,
 		"zoom": int(Input.is_action_just_pressed("world_zoom_in")) - int(Input.is_action_just_pressed("world_zoom_out")),
 		"dig": Input.is_action_just_pressed("world_dig"), "build": Input.is_action_just_pressed("world_build"),
-		"interact": Input.is_action_just_pressed("world_interact"), "cancel": Input.is_action_just_pressed("world_cancel"),
+		"interact": Input.is_action_just_pressed("world_interact"),
+		"climb_up": Input.is_action_just_pressed("world_climb_up"), "climb_down": Input.is_action_just_pressed("world_climb_down"), "cancel": Input.is_action_just_pressed("world_cancel"),
 		"menu": Input.is_action_just_pressed("world_menu"),
 	}
 
@@ -218,7 +219,7 @@ static func validate() -> Array:
 		if not pad and not bool(a.get("pointer_only", false)):
 			bad.append("input.json: action '%s' cannot be reached from a gamepad (mark it pointer_only if that is meant)" % action)
 	for need in ["world_move_up", "world_move_down", "world_move_left", "world_move_right", "world_cam_up", "world_cam_down", "world_cam_left", "world_cam_right",
-			"world_zoom_in", "world_zoom_out", "world_dig", "world_build", "world_interact", "world_cancel", "world_menu"]:
+			"world_zoom_in", "world_zoom_out", "world_dig", "world_build", "world_interact", "world_climb_up", "world_climb_down", "world_cancel", "world_menu"]:
 		if not dat["actions"].has(need):
 			bad.append("input.json: the action '%s' is needed (world_input.gd reads it)" % need)
 	return bad
