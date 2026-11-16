@@ -34,6 +34,7 @@ func _run() -> void:
 	test_home_forge()
 	test_use()
 	await test_screen()
+	await test_panel()
 	print("forge craft tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -172,15 +173,45 @@ func test_screen() -> void:
 	ok(panel != null and panel.forge == "home", "and it is at the family's own forge")
 	var tick: int = scr.sb.tick
 	var at: Vector2i = scr.sb.heir
-	for i in 5:
+	for i in 60:
 		await process_frame
-	ok(scr.sb.tick == tick and scr.sb.heir == at, "while it is open the world waits")
+	ok(scr.sb.tick == tick and scr.sb.heir == at, "while it is open the world waits (60 frames, no tick)")
 	panel.queue_free()
 	await process_frame
 	await process_frame
 	ok(not scr._modal_open(), "closing it gives the map back")
-	for i in 40:
+	for i in 60:
 		await process_frame
-	ok(scr.sb.tick > tick, "and the world goes on")
+	ok(scr.sb.tick > tick, "and the world goes on (60 frames, ticks again)")
 	scr.queue_free()
 	app.queue_free()
+
+
+## The workshop panel itself: at a place with no town forge, the family's forge lets it make a piece and the town's does not.
+func test_panel() -> void:
+	var h := _forge()
+	var d: GameDynasty = h["d"]
+	d.world.location = "whisperwood"
+	ok(not d.world.has_service("forge"), "(somewhere with no town forge)")
+	var CraftPanel := load("res://ui/play/craft_panel.gd")
+	var made := {}
+	for forge in ["home", ""]:
+		var panel: Control = CraftPanel.new()
+		panel.dynasty = d
+		panel.on_change = func(): pass
+		panel.forge = forge
+		root.add_child(panel)
+		await process_frame
+		var button: Button = panel.find_child("MakeButton", true, false)
+		made[forge] = {"enabled": button != null and not button.disabled, "reason": panel.find_child("MakeReason", true, false) != null}
+		if forge == "home" and button != null and not button.disabled:
+			var pack := d.heir.inventory.size()
+			var gold := d.heir.gold
+			button.pressed.emit()
+			made["pack"] = d.heir.inventory.size() - pack
+			made["gold"] = gold - d.heir.gold
+		panel.queue_free()
+		await process_frame
+	ok(made["home"]["enabled"], "the panel at the family's forge can make a piece with no town forge")
+	ok(made.get("pack", 0) == 1 and made.get("gold", 0) > 0, "and pressing Make puts it in the pack and takes the fee")
+	ok(not made[""]["enabled"] and made[""]["reason"], "while at a town forge's rules (none here) it cannot, and says why")
