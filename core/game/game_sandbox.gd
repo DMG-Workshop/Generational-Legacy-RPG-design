@@ -423,6 +423,17 @@ func remove_at(dx: int, dz: int) -> Dictionary:
 	return out
 
 
+## Mends the piece on the tile `dx, dz` from the heir (GameRepair.repair): {ok, text}.
+func repair_at(dx: int, dz: int) -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": _text("indoors")}
+	var t := heir + Vector2i(dx, dz)
+	var out := GameRepair.repair(d, t.x, build_y(), t.y)
+	if out["ok"]:
+		log.append({"kind": "build", "text": str(out["text"])})
+	return out
+
+
 ## Digs the cell `depth` below the surface straight under the heir (`GameMine.dig`): {ok, why, ...}.
 func dig(depth: int) -> Dictionary:
 	if space != "world":
