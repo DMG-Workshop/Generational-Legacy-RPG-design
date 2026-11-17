@@ -71,9 +71,9 @@ static func ranch(d: GameDynasty) -> Dictionary:
 	return levels[clampi(GameHouse.level(d, GameHouse.RANCH), 0, levels.size() - 1)]
 
 
-## Places beyond the family's own that the Ranch's pens give.
+## Places beyond the family's own that the Ranch's pens give, and the kennels the family has built (GameBuild.kennel_places).
 static func extra_pens(d: GameDynasty) -> int:
-	return int(ranch(d)["pens"])
+	return int(ranch(d)["pens"]) + GameBuild.kennel_places(d)
 
 
 ## A Ranch factor that depends on a creature's stage: eggs have the hatchery's, the young the nursery's, the
