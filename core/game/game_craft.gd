@@ -236,7 +236,7 @@ static func quality(d: GameDynasty) -> int:
 	var r := RandomNumberGenerator.new()
 	r.seed = hash([d.seed_value, "craft", int(d.stores.get(str(setting("counter")), 0))])
 	var roll := r.randi_range(0, int(setting("quality_roll_max")))
-	return clampi(base + bonus + roll, int(setting("quality_floor")), GameLoot.QUALITY_MAX)
+	return clampi(base + bonus + roll + GameHouse.smithy_quality(d), int(setting("quality_floor")), GameLoot.QUALITY_MAX)
 
 
 ## The materials that can make a form (their tags meet its `needs`), sorted by tier then id.
@@ -297,7 +297,7 @@ static func plan(d: GameDynasty, form_id: String, material: String, chosen: Arra
 	if item.is_empty():
 		return fail.call("unknown_form")
 	var at_home := forge == "home"
-	var fee := maxi(1, int(round(float(item["price"]) * float(setting("fee_share")) * (float(setting("home_fee_mult")) if at_home else 1.0))))
+	var fee := maxi(1, int(round(float(item["price"]) * float(setting("fee_share")) * (float(setting("home_fee_mult")) if at_home else 1.0) * GameHouse.smithy_fee_mult(d))))
 	var service := str(setting("needs_service"))
 	var base := {"ok": true, "why": "", "id": id, "item": item, "units": units, "fee": fee, "quality": q, "weight": float(item["weight"])}
 	if not at_home and not d.world.has_service(service):
@@ -346,6 +346,7 @@ static func brew_plan(d: GameDynasty, id: String, forge: String = "") -> Diction
 	var fee := int(row["fee"])
 	if forge == "home":
 		fee = int(round(float(fee) * float(setting("home_fee_mult"))))
+	fee = int(round(float(fee) * GameHouse.smithy_fee_mult(d)))
 	var out := {"ok": true, "why": "", "name": str(row["name"]), "cost": row["cost"], "fee": fee, "makes": int(row["makes"])}
 	if forge != "home" and not d.world.has_service(str(setting("needs_service"))):
 		out["ok"] = false

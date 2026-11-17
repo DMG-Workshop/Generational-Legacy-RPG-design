@@ -364,7 +364,7 @@ func test_house() -> void:
 	var full := dyn()
 	for track in GameHouse.TRACKS:
 		full.house[track] = 3
-	ok(GameRaids.house_value(full) == 3 * (200 + 400 + 800) / 2, "a house built to the top is worth half of 3 x 1,400: %d" % GameRaids.house_value(full))
+	ok(GameRaids.house_value(full) == GameHouse.TRACKS.size() * (200 + 400 + 800) / 2, "a house built to the top is worth half of each track's 1,400: %d" % GameRaids.house_value(full))
 	ok(GameRaids.chance(full) > GameRaids.chance(hall), "the more built, the likelier a raid")
 	var both := dyn()
 	both.heir.gold = 0

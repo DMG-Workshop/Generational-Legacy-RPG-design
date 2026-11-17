@@ -44,6 +44,8 @@
   "house_max_level": 3,
   "house_hall_slots_per_level": 1,
   "house_yard_train_xp_per_level": 0.25,
+  "house_smithy_quality_per_level": 1,
+  "house_smithy_fee_cut_per_level": 0.1,
   "level_cap": 99999,
   "midlife_fraction": 0.5,
   "family_after_years": 3,

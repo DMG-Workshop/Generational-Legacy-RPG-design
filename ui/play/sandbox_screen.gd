@@ -82,6 +82,7 @@ func _ready() -> void:
 	add_child(bar)
 	bar.add_child(Kit.button("Back", func(): app.show_state(), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Dig", func(): _dig(), Vector2(72, BAR - 12)))
+	bar.add_child(Kit.button("Forage", func(): _forage(), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
 	bar.add_child(Kit.button("Use", func(): _use(), Vector2(64, BAR - 12)))
@@ -303,6 +304,15 @@ func _dig() -> void:
 		_save()
 	else:
 		last_line = str(r["why"])
+	_refresh_status()
+	queue_redraw()
+
+
+func _forage() -> void:
+	var r := sb.forage()
+	last_line = str(r["text"])
+	if r["ok"]:
+		_save()
 	_refresh_status()
 	queue_redraw()
 

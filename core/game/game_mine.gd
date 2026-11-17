@@ -226,6 +226,44 @@ static func can_dig(d: GameDynasty, site: String, x: int, y: int, z: int) -> Dic
 	return {"ok": true, "why": ""}
 
 
+## Extra ore a dig strikes from the family's picks: one for every `tool_levels_per_ore` levels of the Smithy (0 below that).
+static func tool_bonus(d: GameDynasty) -> int:
+	return GameHouse.level(d, GameHouse.SMITHY) / int(setting("tool_levels_per_ore"))
+
+
+## The chance the roof gives way at a cell just dug: the stage of the region's strain sets a base (`hazard` in `stages`), the depth
+## below `hazard_from_depth` adds `hazard_per_depth` a cell, capped at `hazard_max`. 0 on the surface and in a quiet shaft.
+static func hazard_chance(d: GameDynasty, site: String, x: int, y: int, z: int) -> float:
+	var base := float(stage_of(strain_at(d, site, x, z)).get("hazard", 0.0))
+	if base <= 0.0:
+		return 0.0
+	var deep := maxf(0.0, float(y - int(setting("hazard_from_depth")))) * float(setting("hazard_per_depth"))
+	return minf(float(setting("hazard_max")), base + deep)
+
+
+## The roof over a cell just dug may fall: rolled on dice keyed on the seed, the site and the cell (never the dynasty's). A
+## timber prop (`prop_cost` of `prop_material` from the stores) takes the weight if the family has it; otherwise a cave-in costs the
+## heir `hazard_hp_pct` of their health, never killing them (they are left with at least 1). Returns {hit, propped, damage, text}.
+static func hazard(d: GameDynasty, site: String, x: int, y: int, z: int) -> Dictionary:
+	var none := {"hit": false, "propped": false, "damage": 0, "text": ""}
+	var chance := hazard_chance(d, site, x, y, z)
+	if chance <= 0.0 or d.heir == null:
+		return none
+	var r := RandomNumberGenerator.new()
+	r.seed = hash([d.seed_value, "hazard", site, x, y, z])
+	if r.randf() >= chance:
+		return none
+	var mat := str(setting("prop_material"))
+	if GameCraft.have(d, mat) >= int(setting("prop_cost")):
+		GameCraft.add_material(d, mat, -int(setting("prop_cost")))
+		return {"hit": true, "propped": true, "damage": 0, "text": text("propped")}
+	var dmg := mini(maxi(1, int(round(float(d.heir.max_hp()) * float(setting("hazard_hp_pct"))))), maxi(0, d.heir.hp - 1))
+	d.heir.hp -= dmg
+	if dmg <= 0:
+		return {"hit": true, "propped": false, "damage": 0, "text": text("unharmed", {"h": d.heir.name})}
+	return {"hit": true, "propped": false, "damage": dmg, "text": text("cave_in", {"h": d.heir.name, "n": dmg})}
+
+
 ## Digs one cell. Returns {ok, why, layer, ore, qty, effort, strain, stage, stage_changed, gateway, lines}. The ore goes into
 ## the family's stores. `strength` is the digger's Strength (the heir's by default).
 static func dig(d: GameDynasty, site: String, x: int, y: int, z: int, strength: float = -1.0) -> Dictionary:
@@ -240,7 +278,7 @@ static func dig(d: GameDynasty, site: String, x: int, y: int, z: int, strength: 
 	var qty := 0
 	if ore != "":
 		var span := int(setting("yield_max")) - int(setting("yield_min")) + 1
-		qty = int(setting("yield_min")) + int(_unit(d, site, x, y, z, "qty") * float(span))
+		qty = int(setting("yield_min")) + int(_unit(d, site, x, y, z, "qty") * float(span)) + tool_bonus(d)
 		GameCraft.add_material(d, ore, qty)
 	_mark(st, x, y, z)
 	var key := region_key(x, z)
@@ -334,11 +372,18 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["max_depth", "block", "region", "base_strain", "strain_per_depth", "strain_from_depth", "effort_per_strength", "yield_min", "yield_max", "depth_per_age", "gateway_stage"]:
+	for k in ["max_depth", "block", "region", "base_strain", "strain_per_depth", "strain_from_depth", "effort_per_strength", "yield_min", "yield_max", "depth_per_age", "gateway_stage", "tool_levels_per_ore", "hazard_from_depth", "hazard_per_depth", "hazard_max", "hazard_hp_pct", "prop_material", "prop_cost"]:
 		if not s.has(k):
 			bad.append("mining.json: settings.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
+	if int(s["tool_levels_per_ore"]) < 1 or int(s["prop_cost"]) < 1 or not GameMaterials.has(str(s["prop_material"])):
+		bad.append("mining.json: tool_levels_per_ore and prop_cost must be at least 1 and prop_material a material")
+	if float(s["hazard_max"]) < 0.0 or float(s["hazard_max"]) > 1.0 or float(s["hazard_hp_pct"]) < 0.0 or float(s["hazard_hp_pct"]) > 0.5 or float(s["hazard_per_depth"]) < 0.0:
+		bad.append("mining.json: hazard_max must be 0 to 1, hazard_hp_pct 0 to 0.5 and hazard_per_depth 0 or more")
+	for st in dat["stages"]:
+		if float(st.get("hazard", 0.0)) < 0.0 or float(st.get("hazard", 0.0)) > 1.0:
+			bad.append("mining.json: stage '%s' has a hazard outside 0 to 1" % st.get("id", "?"))
 	if int(s["max_depth"]) < 1 or int(s["block"]) < 4 or int(s["region"]) < 1 or int(s["depth_per_age"]) < 1:
 		bad.append("mining.json: max_depth, region and depth_per_age must be positive and block at least 4")
 	if int(s["yield_min"]) < 1 or int(s["yield_max"]) < int(s["yield_min"]):
@@ -390,7 +435,7 @@ static func validate() -> Array:
 		if bool(layer_at(y)["ore"]) and not dat["ores"].any(func(o): return y >= int(o["from"]) and y <= int(o["to"])):
 			bad.append("mining.json: no ore can form at depth %d" % y)
 			break
-	for k in ["dug", "ore", "stage", "gateway", "too_deep", "above", "already", "closed"]:
+	for k in ["dug", "ore", "stage", "gateway", "too_deep", "above", "already", "closed", "cave_in", "propped", "unharmed"]:
 		if not dat["text"].has(k):
 			bad.append("mining.json: text.%s is missing" % k)
 	return bad

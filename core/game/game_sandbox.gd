@@ -472,6 +472,18 @@ func repair_at(dx: int, dz: int) -> Dictionary:
 	return out
 
 
+## Forages the nodes beside the heir (GameForage): {ok, text}. Not indoors or upstairs.
+func forage() -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": GameForage.text("indoors")}
+	if storey() > 0:
+		return {"ok": false, "text": GameForage.text("upstairs")}
+	var out := GameForage.forage(d, heir.x, heir.y)
+	if out["ok"]:
+		log.append({"kind": "forage", "text": str(out["text"])})
+	return out
+
+
 ## Digs the cell `depth` below the surface straight under the heir (`GameMine.dig`): {ok, why, ...}.
 func dig(depth: int) -> Dictionary:
 	if space != "world":
@@ -481,6 +493,10 @@ func dig(depth: int) -> Dictionary:
 	var out := GameMine.dig(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
 	if out["ok"]:
 		log.append({"kind": "dig", "text": _text("dug", {"depth": depth})})
+		var h := GameMine.hazard(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
+		out["hazard"] = h
+		if bool(h["hit"]):
+			log.append({"kind": "hazard", "text": str(h["text"])})
 	return out
 
 
