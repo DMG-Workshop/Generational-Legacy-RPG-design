@@ -84,9 +84,9 @@ func test_data() -> void:
 	ok(GameBreeding.validate().is_empty(), "the data is put back")
 	var in_family := 0
 	for c in GameData.creatures:
-		if GameBirth.born(str(c["id"])) != "none" and GameBreeding.family_of(str(c["id"])) != "":
+		if GameBirth.can_breed(str(c["id"])) and GameBreeding.family_of(str(c["id"])) != "":
 			in_family += 1
-	var born := GameData.creatures.filter(func(c): return GameBirth.born(str(c["id"])) != "none").size()
+	var born := GameData.creatures.filter(func(c): return GameBirth.can_breed(str(c["id"]))).size()   # a hive is born but never pairs, so it needs no family
 	ok(in_family == born and born == 25, "every born creature is in a family (%d of %d)" % [in_family, born])
 
 

@@ -55,6 +55,36 @@ static func total_bonus(d: GameDynasty) -> float:
 	return float(n) * float(GameData.bal("heirloom_bonus")) + float(levels) * float(setting("level_bonus"))
 
 
+## One effect of one heirloom: its `effects` value for the key, grown by `effect_per_level` for each level it has been reworked.
+static func effect_of(h: Variant, key: String) -> float:
+	if typeof(h) != TYPE_DICTIONARY:
+		return 0.0
+	var row: Dictionary = data().get("effects", {}).get(str(h.get("name", "")), {})
+	if not row.has(key):
+		return 0.0
+	return float(row[key]) * (1.0 + float(level(h)) * float(setting("effect_per_level")))
+
+
+## What the house's heirlooms add for a key ("hunt_gold", "hunt_xp", "persuasion", "raid_cut"): the first `heirloom_max` count, as the
+## power does. 0.0 with none, so every number they touch is exactly what it was.
+static func effect(d: GameDynasty, key: String) -> float:
+	var total := 0.0
+	for i in mini(d.heirlooms.size(), int(GameData.bal("heirloom_max"))):
+		total += effect_of(d.heirlooms[i], key)
+	return total
+
+
+## "+4% gold from hunts" for what one heirloom gives, or "" when it gives nothing but power.
+static func effect_text(h: Variant) -> String:
+	var parts: Array = []
+	var names: Dictionary = data().get("effect_names", {})
+	for key in names:
+		var v := effect_of(h, key)
+		if v > 0.0:
+			parts.append(text("effect_line", {"pct": _pct(v), "what": str(names[key])}))
+	return " ".join(parts)
+
+
 ## What the next level of an heirloom costs this heir, or -1 at the top.
 static func cost(d: GameDynasty, index: int) -> int:
 	if index < 0 or index >= d.heirlooms.size():
@@ -117,6 +147,7 @@ static func describe(d: GameDynasty, index: int) -> Dictionary:
 		"line": text("line", {"name": str(h.get("name", "")), "level": level_name(lv), "bonus": _pct(bonus_of(h)),
 			"boss": str(h.get("boss", "")), "gen": GameText.num(int(h.get("gen", 1)))}),
 		"worked": text("worked", {"smiths": ", ".join(smiths)}) if not smiths.is_empty() else "",
+		"effect": effect_text(h),
 		"cost": cost(d, index), "why_not": why_not(d, index),
 	}
 
@@ -183,7 +214,26 @@ static func validate() -> Array:
 	var top := float(int(GameData.bal("heirloom_max"))) * (float(GameData.bal("heirloom_bonus")) + float(max_level()) * float(setting("level_bonus")))
 	if top > 1.0:
 		bad.append("heirlooms: a full hall of finished heirlooms would more than double an heir's power (%.2f)" % top)
-	for k in ["none", "not_alive", "max", "this_heir", "service", "gold", "done", "line", "worked"]:
+	var fx: Dictionary = dat.get("effects", {})
+	var names: Dictionary = dat.get("effect_names", {})
+	if float(setting("effect_per_level")) < 0.0 or float(setting("effect_per_level")) > 1.0:
+		bad.append("heirlooms: effect_per_level must be 0 to 1")
+	for hname in fx:
+		var held := false
+		for c in GameData.creatures:
+			if str(c.get("heirloom", "")) == str(hname):
+				held = true
+		if not held:
+			bad.append("heirlooms: effects names '%s', which no legend leaves" % hname)
+		for k in fx[hname]:
+			if not names.has(k):
+				bad.append("heirlooms: '%s' gives '%s', which nothing reads" % [hname, k])
+			elif float(fx[hname][k]) <= 0.0 or float(fx[hname][k]) * (1.0 + float(max_level()) * float(setting("effect_per_level"))) > 0.25:
+				bad.append("heirlooms: '%s' %s must be above 0 and, fully worked, at most 25%%" % [hname, k])
+	for c in GameData.creatures:
+		if str(c.get("heirloom", "")) != "" and not fx.has(str(c["heirloom"])):
+			bad.append("heirlooms: '%s' has no effects entry" % c["heirloom"])
+	for k in ["none", "not_alive", "max", "this_heir", "service", "gold", "done", "line", "worked", "effect_line"]:
 		if str(dat["text"].get(k, "")) == "":
 			bad.append("heirlooms: the text '%s' is missing" % k)
 	return bad

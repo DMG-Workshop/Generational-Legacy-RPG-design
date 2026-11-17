@@ -669,6 +669,8 @@ func finish_battle() -> Array:
 			var xp := 0
 			var gold := 0
 			var quest_msgs: Array = []
+			var heirloom_gold := GameHeirlooms.effect(self, "hunt_gold")   # what the house held before this fight: a legend's own heirloom helps from the next
+			var heirloom_xp := GameHeirlooms.effect(self, "hunt_xp")
 			for e in b.enemies:
 				xp += int(e["xp"])
 				gold += int(e["gold"])
@@ -685,9 +687,10 @@ func finish_battle() -> Array:
 						msgs.append(GameMessages.text("life", "heirloom_claimed", {"heirloom": e["heirloom"], "pct": int(int(float(GameData.bal("heirloom_bonus")) * 100.0))}))
 					_add_echo("slayer", e["id"], GameMessages.text("life", "echo_slew", {"name": heir.name, "foe": e["name"]}), 0.25)
 					msgs.append(GameMessages.text("life", "legend_slain", {"name": heir.name, "foe": e["name"]}))
-			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory")) * GameWorldEvents.mult(self, "hunt_gold_mult")))
-			if GameWorldEvents.mult(self, "hunt_xp_mult") != 1.0:
-				xp = int(round(float(xp) * GameWorldEvents.mult(self, "hunt_xp_mult")))
+			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory")) * GameWorldEvents.mult(self, "hunt_gold_mult") * (1.0 + heirloom_gold)))
+			var xp_mult := GameWorldEvents.mult(self, "hunt_xp_mult") * (1.0 + heirloom_xp)
+			if xp_mult != 1.0:
+				xp = int(round(float(xp) * xp_mult))
 			heir.gold += gold
 			heir.battles_won += 1
 			# A win that left the heir barely scratched adds to the clean run; a costly one ends it.

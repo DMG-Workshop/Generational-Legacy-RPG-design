@@ -80,9 +80,9 @@ static func chance(d: GameDynasty) -> float:
 	if not has_target(d):
 		return 0.0
 	if d.roster.is_empty() and house_value(d) <= 0:
-		return float(setting("plain_chance")) * (1.0 - deterrence(d)) * GameFactions.raid_mult(d)
+		return float(setting("plain_chance")) * (1.0 - deterrence(d)) * GameFactions.raid_mult(d) * (1.0 - GameHeirlooms.effect(d, "raid_cut"))
 	var c := float(setting("base_chance")) + float(setting("per_stock_gold")) * float(valuables(d))
-	return clampf(c, 0.0, float(setting("max_chance"))) * (1.0 - deterrence(d)) * GameFactions.raid_mult(d)
+	return clampf(c, 0.0, float(setting("max_chance"))) * (1.0 - deterrence(d)) * GameFactions.raid_mult(d) * (1.0 - GameHeirlooms.effect(d, "raid_cut"))
 
 
 ## The chance the guards beat a raid off outright when the heir trusts them: 0 with no guards.
