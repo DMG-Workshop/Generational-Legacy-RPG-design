@@ -36,16 +36,33 @@ static func kinds() -> Array:
 	out.append("dug")   # a shaft dug at the first depth, also in `things`
 	out.append("person")   # someone standing in an interior (GamePeople)
 	out.append("exit")   # an interior's way out (its floor, doors and walls use the floor, door and wall colours)
+	out.append("deep")   # water over a bed well under the sea level (GameRelief.kind)
+	out.append("snow")   # the high peaks
 	return out
 
 
-## The kind a tile is drawn as: the piece built on it, else water, else its biome.
+## The kind a tile is drawn as: the piece built on it, else deep or shallow water, snow on the high peaks, or its biome
+## (GameRelief.kind).
 static func kind_for(tile: Dictionary, built: String) -> String:
 	if built != "":
 		return built
-	if bool(tile.get("water", false)):
-		return "water"
-	return str(tile.get("biome", "plains"))
+	return GameRelief.kind(tile)
+
+
+## The alternative tile a brightness step is drawn with: 0 is the colour as it is, then +1, -1, +2, -2 and so on, so a tile
+## set in without an alternative is never shaded by mistake.
+static func alt_for(step: int) -> int:
+	if step == 0:
+		return 0
+	return absi(step) * 2 - (1 if step > 0 else 0)
+
+
+## The alternative a tile is set with: the light step of bare ground (land only; water, anything built and anything that is
+## not the open world's ground are not shaded).
+func _alt_at(x: int, z: int, built: String, water: bool) -> int:
+	if built != "" or water or interior_id != "":
+		return 0
+	return alt_for(GameRelief.step_at(d, x, z))
 
 
 ## The chunk a tile is in (floored, so negative tiles work).
@@ -82,8 +99,16 @@ static func make_tileset() -> TileSet:
 	var src := TileSetAtlasSource.new()
 	src.texture = ImageTexture.create_from_image(img)
 	src.texture_region_size = Vector2i(px, px)
+	var steps := int(GameRelief.setting("steps"))
 	for i in all.size():
 		src.create_tile(Vector2i(i, 0))
+		for step in range(-steps, steps + 1):
+			if step == 0:
+				continue
+			var alt := alt_for(step)
+			src.create_alternative_tile(Vector2i(i, 0), alt)
+			var m := GameRelief.light(step)
+			src.get_tile_data(Vector2i(i, 0), alt).modulate = Color(m, m, m)
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(px, px)
 	ts.add_source(src, 0)
@@ -204,7 +229,7 @@ func _fill(c: Vector2i) -> void:
 				continue
 			var tile := GameWorldGen.tile(d, x, z)   # once for the ground and what stands on it
 			var built := GameBuild.kind_at(d, x, GameBuild.SURFACE, z)
-			layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind_for(tile, built)), 0))
+			layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind_for(tile, built)), 0), _alt_at(x, z, built, bool(tile["water"])))
 			var thing := _thing_from(tile, built, x, z)
 			if thing != "":
 				over.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(thing), 0))
@@ -268,7 +293,9 @@ func refresh_cell(x: int, z: int) -> void:
 	if here == "":
 		(layers[c] as TileMapLayer).erase_cell(local)
 	else:
-		(layers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(here), 0))
+		var wet := interior_id == "" and bool(GameWorldGen.tile(d, x, z)["water"])
+		var built_here := GameBuild.kind_at(d, x, GameBuild.SURFACE, z) if interior_id == "" else "interior"
+		(layers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(here), 0), _alt_at(x, z, built_here, wet))
 	if things.has(c):
 		var thing := _thing_at(x, z)
 		if thing == "":

@@ -15,6 +15,9 @@ const MINE_SITE := "world"
 
 static var _cache: Dictionary = {}
 static var _anchors: Array = []
+static var _surf: Dictionary = {}   # tile key -> [biome, height] (see _surface)
+static var _surf_seed := -1
+const SURFACE_KEEP := 150000
 
 
 static func data() -> Dictionary:
@@ -137,9 +140,17 @@ static func blend(seed_value: int, x: float, z: float) -> Dictionary:
 	return {"biome": str(ranked[0][1]["biome"]), "base": base / wsum, "amp": amp / wsum}
 
 
-## The surface height of a tile: the blended base plus fractal noise, flattened near a town or dungeon and pulled under the
-## sea at the edge of the world.
-static func height_at(seed_value: int, x: int, z: int) -> int:
+## The biome and surface height of a tile, worked out once: [biome, height]. A view asks for a tile and its neighbours
+## (relief is the difference between them), so each tile is kept for the next ask. Kept for one seed at a time and let go when
+## it grows past SURFACE_KEEP; it holds nothing the seed and the tile do not give, so a cleared cache changes nothing.
+static func _surface(seed_value: int, x: int, z: int) -> Array:
+	if seed_value != _surf_seed or _surf.size() > SURFACE_KEEP:
+		_surf.clear()
+		_surf_seed = seed_value
+	var key := x * 2097152 + z
+	var hit: Variant = _surf.get(key)
+	if hit != null:
+		return hit
 	var fx := float(x)
 	var fz := float(z)
 	var land := blend(seed_value, fx, fz)
@@ -156,7 +167,15 @@ static func height_at(seed_value: int, x: int, z: int) -> int:
 	var shore := int(setting("shore"))
 	if edge < shore:
 		h = lerpf(float(setting("sea_level")) - 6.0, h, float(edge) / float(shore))
-	return clampi(int(round(h)), 0, int(setting("max_height")))
+	var out: Array = [str(land["biome"]), clampi(int(round(h)), 0, int(setting("max_height")))]
+	_surf[key] = out
+	return out
+
+
+## The surface height of a tile: the blended base plus fractal noise, flattened near a town or dungeon and pulled under the
+## sea at the edge of the world.
+static func height_at(seed_value: int, x: int, z: int) -> int:
+	return int(_surface(seed_value, x, z)[1])
 
 
 static func in_bounds(x: int, z: int) -> bool:
@@ -212,14 +231,14 @@ static func node_at(d: GameDynasty, x: int, z: int, biome: String, water: bool) 
 static func tile(d: GameDynasty, x: int, z: int) -> Dictionary:
 	if not in_bounds(x, z):
 		return {"x": x, "z": z, "biome": "ocean", "height": int(setting("sea_level")) - 8, "water": true, "node": {}, "place": ""}
-	var land := blend(d.seed_value, float(x), float(z))
-	var h := height_at(d.seed_value, x, z)
+	var here := _surface(d.seed_value, x, z)
+	var h := int(here[1])
 	var water := h < int(setting("sea_level"))
 	var place := ""
 	for a in anchors():
 		if x == int(a["x"]) and z == int(a["z"]):
 			place = str(a["id"])
-	return {"x": x, "z": z, "biome": str(land["biome"]), "height": h, "water": water, "node": node_at(d, x, z, str(land["biome"]), water), "place": place}
+	return {"x": x, "z": z, "biome": str(here[0]), "height": h, "water": water, "node": node_at(d, x, z, str(here[0]), water), "place": place}
 
 
 ## A square of tiles: {cx, cz, size, tiles (rows of z, each a row of x), summary {biomes, nodes, water}}.
