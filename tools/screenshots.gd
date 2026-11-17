@@ -45,6 +45,8 @@ const SHOTS := [
 	["event", DESKTOP, false, "event"],
 	["battle_town", DESKTOP, false, "battle:kingshold"],
 	["battle_swamp", DESKTOP, false, "battle:mirefen"],
+	["town", DESKTOP, false, "town"],
+	["river", DESKTOP, false, "river"],
 	["phone_life", PHONE, true, "life"],
 	["phone_battle", PHONE, true, "battle:kingshold"],
 ]
@@ -207,6 +209,8 @@ func _screen(what: String) -> void:
 	app.show_state()
 	await _frames(3)
 	match what:
+		"town", "river":
+			await _open_world(what)
 		"life":
 			pass
 		"menu":
@@ -302,3 +306,26 @@ func _select_tab(n: Node, name: String) -> void:
 		return
 	for c in n.get_children():
 		_select_tab(c, name)
+
+
+## The open world with the party in it: the home town with its buildings and two creatures near, or a river with its fords.
+func _open_world(what: String) -> void:
+	var town := what == "town"
+	var spot := Vector2i(160, 290) if town else Vector2i(143, 206)
+	d.world.visit("hearthmere")
+	app.show_sandbox()
+	await _frames(3)
+	var scr: Control = app.current
+	scr.set_process(false)   # nothing moves: the picture is the same every time
+	d.world_seconds = 0.0   # (the few frames above ran the world clock a little: the status line shows the time)
+	d.clock_carry = 0.0
+	scr.sb.heir = spot
+	scr.sb.creatures.clear()
+	scr.sb.companions = GameCompanions.agents_for(d, float(spot.x) + 0.5, float(spot.y) + 0.5)
+	if town:
+		scr.sb.creatures.append(GameBehaviour.new_agent(900, "wolf", float(spot.x) - 5.5, float(spot.y) + 2.5))
+		scr.sb.creatures.append(GameBehaviour.new_agent(901, "slime", float(spot.x) + 7.5, float(spot.y) - 3.5))
+	scr.zoom = 1.6 if town else 0.75
+	scr.cam = Vector2.ZERO
+	scr._process(0.0)
+	scr.queue_redraw()

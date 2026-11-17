@@ -34,6 +34,7 @@ func _sandbox(seed_value: int = 7) -> GameSandbox:
 	var d := GameDynasty.new_game(seed_value, "Tess", "warrior", "faetouched", "human")
 	d.pending_event = {}
 	var s := GameSandbox.start(d)
+	s.heir = Vector2i(int(GameBuild.base()["x"]), int(GameBuild.base()["z"]))   # open ground on the family's plot (the town is full of buildings)
 	s.creatures.clear()
 	return s
 
@@ -109,6 +110,7 @@ func test_other_ends() -> void:
 	_wolf(u, 0.5)
 	u._contact()
 	var keep := u.d.sandbox_escape.duplicate()
+	u.remember()   # (the heir stands on the family's plot, not at the town's door: a visit starts where they last stood)
 	var during := GameSandbox.start(u.d)
 	ok(during.heir == u.heir and u.d.sandbox_escape == keep, "while the fight is still on nothing is used")
 

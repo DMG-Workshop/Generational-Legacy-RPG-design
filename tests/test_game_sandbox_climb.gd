@@ -128,7 +128,11 @@ func test_footing() -> void:
 	ok(s.heir_y == S and s.storey() == 0 and s.build_level == 0, "if the floor goes the heir drops to the ground")
 	ok(s.heir != Vector2i(x + 1, z), "but not into the wall that held it up: they are put on the nearest free tile")
 	ok(GamePath.passable(GamePath.world_ground(d), Vector3i(s.heir.x, S, s.heir.y), {"water": false, "ignore_blocks": false}), "which they can stand on")
-	ok(s.log.back()["text"].contains("floor gave way"), "and the log says so: %s" % s.log.back()["text"])
+	var said := false
+	for e in s.log.slice(maxi(0, s.log.size() - 6)):   # (a creature may come along in the same step: the line is among the last few)
+		if str(e["text"]).contains("floor gave way"):
+			said = true
+	ok(said, "and the log says so: %s" % s.log.back()["text"])
 	s.step()
 	ok(s.heir_y == S, "and stays down")
 

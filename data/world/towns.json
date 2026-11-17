@@ -1,0 +1,5 @@
+{
+  "note": "What stands in a town (core/game/game_town.gd, drawn by ui/play/building_art.gd, checked by tools/check_data.gd). A building is a body of `w` by `h` tiles that blocks a walker like a tree or a rock does; the door of a service building is the tile in front of its bottom middle, which is the door tile in spaces.json (the heir stands on it and uses it), so each service (forge, temple, store, tavern, board, black market) has a building behind its door and the home town has the family house behind its own. `houses` are plain houses at fixed offsets (top left tile, from the town's anchor) that every town has, only for the look of a town: nothing is inside them. All of it lies within `max_reach` tiles of the anchor (the town's cleared ground is 9) and leaves the anchor and every door free; the validator checks. Nothing here draws a die: a building's look (`styles`) is picked from the place's name.",
+  "settings": {"w": 3, "h": 2, "max_reach": 8.6, "styles": 4},
+  "houses": [[-7, 0], [-1, 5], [5, -1], [-8, -3], [-5, 5]]
+}
