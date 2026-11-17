@@ -92,13 +92,16 @@ static func check(d: GameDynasty, kind: String, x: int, y: int, z: int) -> Strin
 		return text("unknown", {"kind": kind})
 	var p: Dictionary = pieces()[kind]
 	var piece := str(p["name"]).to_lower()
-	if y < top_y() or y > int(GameMine.setting("max_depth")):
+	var is_roof := bool(p.get("roof", false))
+	if y < (top_y() - 1 if is_roof else top_y()) or y > int(GameMine.setting("max_depth")):
 		return text("out_of_range")
+	if is_roof and y >= SURFACE:
+		return text("roof_low")
 	if not GameWorldGen.in_bounds(x, z):
 		return text("off_map")
 	if not in_claim(d, x, z):
 		return text("outside_claim", {"radius": int(claim_radius(d)), "place": str(base()["name"])})
-	if d.built.has(key(x, y, z)):
+	if d.built.has(key(x, y, z)) and not (bool(p.get("inside", false)) and y < SURFACE and kind_at(d, x, y, z) == "floor"):
 		return text("occupied")
 	if bool(p.get("stairs", false)):
 		if y > SURFACE:
@@ -129,7 +132,7 @@ static func check(d: GameDynasty, kind: String, x: int, y: int, z: int) -> Strin
 		return text("undug")
 	if bool(p["needs_frame"]) and not _framed(d, x, y, z, ""):
 		return text("needs_frame")
-	if bool(p.get("inside", false)) and (y != SURFACE or room_at(d, x, z).is_empty()):
+	if bool(p.get("inside", false)) and room_at(d, x, z, y).is_empty():
 		return text("needs_room", {"piece": piece})
 	return _cost_problem(d, p)
 
@@ -258,6 +261,7 @@ static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 					return {"ok": false, "text": text("bears")}
 			d.built[k] = kind
 	d.built.erase(k)
+	d.damage.erase(k)
 	var back: Array = []
 	for m in p["cost"]:
 		var n := int(floor(float(p["cost"][m]) * float(p["refund"])))
@@ -268,10 +272,40 @@ static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 	if gold > 0:
 		d.heir.gold += gold
 		back.append(GameMessages.text("life", "gold_plain", {"n": int(gold)}))
+	if bool(p.get("inside", false)) and y < SURFACE:
+		d.built[k] = "floor"   # furniture stood in place of the storey's floor; the floor is still there
 	var piece := str(p["name"]).to_lower()
 	if back.is_empty():
 		return {"ok": true, "text": text("removed", {"piece": piece})}
 	return {"ok": true, "text": text("removed_back", {"piece": piece, "back": ", ".join(back)})}
+
+
+## Lets fall every storey piece (and door) left with nothing to hold it, again and again until what stands is held. Returns how
+## many fell. Damage on them goes too.
+static func collapse(d: GameDynasty) -> int:
+	var n := 0
+	var again := true
+	while again:
+		again = false
+		var set: Variant = null
+		for k in d.built.keys():
+			var c: Variant = parse(str(k))
+			if c == null:
+				continue
+			var fall := false
+			if (c as Vector3i).y < SURFACE:
+				if set == null:
+					set = _room_set(d)
+				fall = not supported(d, c.x, c.y, c.z, set)
+			if not fall and str(d.built[k]) == "door" and not _framed(d, c.x, c.y, c.z, ""):
+				fall = true
+			if fall:
+				d.built.erase(k)
+				d.damage.erase(k)
+				n += 1
+				again = true
+				set = null
+	return n
 
 
 # ---------------------------------------------------------------- rooms
@@ -279,10 +313,16 @@ static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 ## The rooms on the surface: regions shut in by walls and doors, no bigger than `max_room_area`, with no open water in them.
 ## Each is {cells: [Vector2i] sorted, area, doors: [Vector2i] sorted, sealed: true when it has no door}.
 static func rooms(d: GameDynasty) -> Array:
+	return rooms_on(d, SURFACE)
+
+
+## The rooms on one layer: the surface (above) or a storey. On a storey a room is a region shut in by walls and doors whose every
+## cell holds a floor, furniture or stairs (and so is held up). Each has `y`, and `roofed`: a `roof_covers` piece over every cell.
+static func rooms_on(d: GameDynasty, y: int) -> Array:
 	var cells := {}
 	for k in d.built:
 		var c: Variant = parse(str(k))
-		if c != null and (c as Vector3i).y == SURFACE:
+		if c != null and (c as Vector3i).y == y:
 			cells[Vector2i(c.x, c.z)] = str(d.built[k])
 	var out: Array = []
 	if cells.is_empty():
@@ -295,6 +335,7 @@ static func rooms(d: GameDynasty) -> Array:
 	lo -= Vector2i(1, 1)
 	hi += Vector2i(1, 1)
 	var surf: Callable = GamePath.world_ground(d)["surface"]
+	var upper := y < SURFACE
 	var seen := {}
 	for x in range(lo.x, hi.x + 1):
 		for z in range(lo.y, hi.y + 1):
@@ -312,9 +353,13 @@ static func rooms(d: GameDynasty) -> Array:
 				region.append(c)
 				if c.x == lo.x or c.y == lo.y or c.x == hi.x or c.y == hi.y:
 					open = true
-				var info: Dictionary = surf.call(c.x, c.y)
-				if not info.is_empty() and bool(info["water"]) and not cells.has(c):
-					wet = true
+				if upper:
+					if not _floored(str(cells.get(c, ""))):
+						open = true
+				else:
+					var info: Dictionary = surf.call(c.x, c.y)
+					if not info.is_empty() and bool(info["water"]) and not cells.has(c):
+						wet = true
 				for dir in DIRS4:
 					var n: Vector2i = c + dir
 					if n.x < lo.x or n.y < lo.y or n.x > hi.x or n.y > hi.y:
@@ -330,13 +375,34 @@ static func rooms(d: GameDynasty) -> Array:
 			region.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x or (a.x == b.x and a.y < b.y))
 			var door_list: Array = doors.keys()
 			door_list.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x or (a.x == b.x and a.y < b.y))
-			out.append({"cells": region, "area": region.size(), "doors": door_list, "sealed": door_list.is_empty()})
+			var roofed := true
+			for c in region:
+				if not kind_at(d, c.x, y - 1, c.y) in setting("roof_covers") or d.damage.has(key(c.x, y - 1, c.y)):
+					roofed = false
+					break
+			out.append({"cells": region, "area": region.size(), "doors": door_list, "sealed": door_list.is_empty(), "y": y, "roofed": roofed})
+	return out
+
+
+## Whether a storey cell holding `kind` has something to stand on: a floor, stairs or furniture.
+static func _floored(kind: String) -> bool:
+	if kind == "":
+		return false
+	var p: Dictionary = pieces().get(kind, {})
+	return kind in ["floor", "stairs"] or bool(p.get("inside", false))
+
+
+## Every room: the ground's, then each storey's.
+static func rooms_all(d: GameDynasty) -> Array:
+	var out: Array = rooms_on(d, SURFACE)
+	for y in range(SURFACE - 1, top_y() - 1, -1):
+		out.append_array(rooms_on(d, y))
 	return out
 
 
 ## The room a surface tile is in, or {}.
-static func room_at(d: GameDynasty, x: int, z: int) -> Dictionary:
-	for r in rooms(d):
+static func room_at(d: GameDynasty, x: int, z: int, y: int = SURFACE) -> Dictionary:
+	for r in rooms_on(d, y):
 		if (r["cells"] as Array).has(Vector2i(x, z)):
 			return r
 	return {}
@@ -348,7 +414,7 @@ static func room_type(d: GameDynasty, room: Dictionary) -> Dictionary:
 		return {}
 	var have := {}
 	for c in room["cells"]:
-		var kind := str(d.built.get(key(c.x, SURFACE, c.y), ""))
+		var kind := str(d.built.get(key(c.x, int(room.get("y", SURFACE)), c.y), ""))
 		if kind != "":
 			have[kind] = int(have.get(kind, 0)) + 1
 	for t in data().get("room_types", []):
@@ -365,8 +431,8 @@ static func room_type(d: GameDynasty, room: Dictionary) -> Dictionary:
 
 ## What a room lets the heir do, from its type's `use` (a bedroom: rest): {kind, years, hint, type}, or {} when the tile is in no
 ## room or its room does nothing.
-static func room_use(d: GameDynasty, x: int, z: int) -> Dictionary:
-	var t := room_type(d, room_at(d, x, z))
+static func room_use(d: GameDynasty, x: int, z: int, y: int = SURFACE) -> Dictionary:
+	var t := room_type(d, room_at(d, x, z, y))
 	if t.is_empty() or not t.has("use"):
 		return {}
 	var out: Dictionary = (t["use"] as Dictionary).duplicate()
@@ -386,25 +452,26 @@ static func kennel_places(d: GameDynasty) -> int:
 	if per <= 0:
 		return 0
 	var n := 0
-	for r in rooms(d):
+	for r in rooms_all(d):
 		if str(room_type(d, r).get("id", "")) == "kennel":
 			n += 1
 	return mini(n, int(setting("max_kennels"))) * per
 
 
 ## "You are in a forge." for the room a tile is in, or "" outside any room.
-static func room_line(d: GameDynasty, x: int, z: int) -> String:
-	var r := room_at(d, x, z)
+static func room_line(d: GameDynasty, x: int, z: int, y: int = SURFACE) -> String:
+	var r := room_at(d, x, z, y)
 	if r.is_empty():
 		return ""
+	var roofed := bool(r["roofed"])
 	var t := room_type(d, r)
 	if t.is_empty():
-		return text("in_plain_room")
-	return text("in_room", {"room": str(t["phrase"])})
+		return text("in_plain_room_roofed" if roofed else "in_plain_room")
+	return text("in_room_roofed" if roofed else "in_room", {"room": str(t["phrase"])})
 
 
 static func describe(d: GameDynasty) -> String:
-	return text("summary", {"pieces": count(d), "rooms": rooms(d).size()})
+	return text("summary", {"pieces": count(d), "rooms": rooms_all(d).size()})
 
 
 # ---------------------------------------------------------------- saving
@@ -448,19 +515,23 @@ static func validate() -> Array:
 		bad.append("building.json: the base should be a town (the family's home), not a %s" % home["type"])
 	if float(s["base_radius"]) < 3.0 or float(s["radius_per_house_level"]) < 0.0:
 		bad.append("building.json: base_radius must be at least 3 and radius_per_house_level 0 or more")
-	for k in ["max_storeys", "ground_bearers", "upper_bearers"]:
+	for k in ["max_storeys", "ground_bearers", "upper_bearers", "roof_covers"]:
 		if not s.has(k):
 			bad.append("building.json: settings.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
 	if int(s["max_storeys"]) < 0 or int(s["max_storeys"]) > 8:
 		bad.append("building.json: max_storeys must be 0 to 8")
-	for list_key in ["ground_bearers", "upper_bearers"]:
+	for list_key in ["ground_bearers", "upper_bearers", "roof_covers"]:
 		for b in s[list_key]:
 			if not dat["pieces"].has(b):
 				bad.append("building.json: %s names '%s', which is not a piece" % [list_key, b])
+	bad.append_array(GameRepair.validate())
 	if int(s["max_span"]) < 1 or int(s["max_room_area"]) < 1:
 		bad.append("building.json: max_span and max_room_area must be at least 1")
+	for b in s["upper_bearers"] + s["ground_bearers"]:
+		if dat["pieces"].has(b) and bool(dat["pieces"][b].get("roof", false)):
+			bad.append("building.json: a roof (%s) cannot bear a storey" % b)
 	var kinds: Dictionary = GamePath.data()["built"]
 	for kind in kinds:
 		if not dat["pieces"].has(kind):
@@ -522,7 +593,7 @@ static func validate() -> Array:
 	for t in dat.get("room_types", []):
 		if t.has("places") and int(t["places"]) < 1:
 			bad.append("building.json: room type '%s' places must be at least 1" % t["id"])
-	for key_id in ["kennel_holds", "forge_lit", "nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
+	for key_id in ["kennel_holds", "forge_lit", "nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "roof_low", "in_room", "in_room_roofed", "in_plain_room", "in_plain_room_roofed", "undamaged", "repaired", "repair_missing", "repair_gold", "damaged_piece", "ruined", "collapsed", "vandals_hit", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
 		if not dat["text"].has(key_id):
 			bad.append("building.json: text.%s is missing" % key_id)
 	return bad

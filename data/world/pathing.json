@@ -28,6 +28,7 @@
     "anvil": {"solid": true, "cost": 1.0},
     "hearth": {"solid": true, "cost": 1.0},
     "trough": {"solid": true, "cost": 1.0},
+    "roof": {"solid": true, "cost": 1.0},
     "stairs": {"solid": false, "cost": 1.2, "stairs": true}
   }
 }

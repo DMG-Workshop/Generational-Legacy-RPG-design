@@ -103,7 +103,7 @@ func show_view(centre: Vector2, half: Vector2) -> void:
 ## Shows a storey (0 is the ground). Above the ground, the ground tiles are dimmed by `below_shade` and the pieces built at that
 ## storey are drawn over them; going back to 0 puts the ground back and lets the storey's tiles go.
 func set_level(n: int) -> void:
-	var top := int(GameBuild.setting("max_storeys"))
+	var top := int(GameBuild.setting("max_storeys")) + 1   # one more for the roofs over the top storey
 	n = clampi(n, 0, 0 if interior_id != "" else top)   # an interior has one floor
 	if n == level:
 		return
