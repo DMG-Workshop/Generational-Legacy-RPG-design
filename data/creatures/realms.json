@@ -1,5 +1,5 @@
 {
-  "note": "Creatures of the realms (roadmap item 58; core/game/game_realms.gd, checked by tools/check_data.gd). Every creature belongs to a realm: `of` names the ones that are not of the home realm (`settings.home`), and a creature that is not listed is of home. A creature of another realm is rarer at home and sells for `foreign_value_mult` there. THE WORLDS ARE JOINED BY GATES: each realm but home has a gate, open once its flag `gate_<realm>` is set (`settings.gate_prefix`; `GameRealms.open_gate`, which the Standing Stones event opens for the Verdant Court). A kept creature is taken to a realm (`move`) only through the open gates of the realms it leaves and enters; there it is unsettled (`unsettled`: it costs more to keep, sours faster, works and breeds less) until it has lived there `adapt_years` of that realm, unless that realm is one of its own; home never needs adapting to. Young of parents of two different realms carry both (`realms`) and take the mark of each world (`marks`, at most `max_marks`), and only while both gates are open. A mark changes the same numbers a trait does. The mark of an unstable realm (the Void, the Dreaming) is unstable: each year it is awake with `awake_chance`, rolled on dice keyed on the dynasty seed, the year, the creature and the mark, never the dynasty's; while dormant it does nothing. The Verdant Court's creatures are the thornhound, the moss stag and the glimmer moth. Not built: gates to any other realm (their flags are read but nothing opens them), a screen that takes a creature across, and a pen that keeps time at the pace of its realm.",
+  "note": "Creatures of the realms (roadmap item 58; core/game/game_realms.gd, checked by tools/check_data.gd). Every creature belongs to a realm: `of` names the ones that are not of the home realm (`settings.home`), and a creature that is not listed is of home. A creature of another realm is rarer at home and sells for `foreign_value_mult` there. THE WORLDS ARE JOINED BY GATES: each realm but home has a gate, open once its flag `gate_<realm>` is set (`settings.gate_prefix`; `GameRealms.open_gate`, which the Standing Stones event opens for the Verdant Court). A kept creature is taken to a realm (`move`) only through the open gates of the realms it leaves and enters; there it is unsettled (`unsettled`: it costs more to keep, sours faster, works and breeds less) until it has lived there `adapt_years` of that realm, unless that realm is one of its own; home never needs adapting to. Young of parents of two different realms carry both (`realms`) and take the mark of each world (`marks`, at most `max_marks`), and only while both gates are open. A mark changes the same numbers a trait does. The mark of an unstable realm (the Void, the Dreaming) is unstable: each year it is awake with `awake_chance`, rolled on dice keyed on the dynasty seed, the year, the creature and the mark, never the dynasty's; while dormant it does nothing. The Verdant Court's creatures are the thornhound, the moss stag and the glimmer moth. TIME: each realm has a `flow` (its years for each year at home: 1 at home, 0.5 in the Verdant Court and the Dreaming, 0.25 in the Void, 1.5 in the Elemental Planes); a creature kept in a realm ages, costs keep, works and adapts by that realm's years, so a pen there lives at its realm's pace. Not built: gates to any other realm (their flags are read but nothing opens them), a screen that takes a creature across, and a screen that shows a creature's realm or its flow.",
   "settings": {
     "home": "material",
     "linked": true,
@@ -10,14 +10,14 @@
   },
   "unsettled": {"keep_mult": 1.5, "mood_loss_mult": 1.5, "fertility_mult": 0.5, "work_mult": 0.5},
   "realms": {
-    "material": {"name": "the Material Realm", "stable": true, "adapt_years": 0, "mark": ""},
-    "verdant": {"name": "the Verdant Court", "stable": true, "adapt_years": 2, "mark": "glamoured"},
-    "hollow": {"name": "the Hollow Below", "stable": true, "adapt_years": 4, "mark": "grave_cold"},
-    "dragon_isles": {"name": "the Dragon Isles", "stable": true, "adapt_years": 3, "mark": "sky_born"},
-    "elemental": {"name": "the Elemental Planes", "stable": true, "adapt_years": 4, "mark": "ember_hearted"},
-    "clockwork": {"name": "the Clockwork Expanse", "stable": true, "adapt_years": 2, "mark": "geared"},
-    "dream": {"name": "the Dreaming", "stable": false, "adapt_years": 3, "mark": "dream_touched"},
-    "void": {"name": "the Void", "stable": false, "adapt_years": 5, "mark": "void_marked"}
+    "material": {"name": "the Material Realm", "flow": 1.0, "stable": true, "adapt_years": 0, "mark": ""},
+    "verdant": {"name": "the Verdant Court", "flow": 0.5, "stable": true, "adapt_years": 2, "mark": "glamoured"},
+    "hollow": {"name": "the Hollow Below", "flow": 0.75, "stable": true, "adapt_years": 4, "mark": "grave_cold"},
+    "dragon_isles": {"name": "the Dragon Isles", "flow": 1.0, "stable": true, "adapt_years": 3, "mark": "sky_born"},
+    "elemental": {"name": "the Elemental Planes", "flow": 1.5, "stable": true, "adapt_years": 4, "mark": "ember_hearted"},
+    "clockwork": {"name": "the Clockwork Expanse", "flow": 1.25, "stable": true, "adapt_years": 2, "mark": "geared"},
+    "dream": {"name": "the Dreaming", "flow": 0.5, "stable": false, "adapt_years": 3, "mark": "dream_touched"},
+    "void": {"name": "the Void", "flow": 0.25, "stable": false, "adapt_years": 5, "mark": "void_marked"}
   },
   "of": {
     "wraith": "hollow", "skeleton": "hollow", "lich_acolyte": "hollow", "ghoul": "hollow", "hollow_king": "hollow",

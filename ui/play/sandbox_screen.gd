@@ -13,6 +13,7 @@ const CraftPanel := preload("res://ui/play/craft_panel.gd")
 const ShopPanel := preload("res://ui/play/shop_panel.gd")
 const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
+const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
 const BAR := 56.0
 
 var app: Node
@@ -85,6 +86,7 @@ func _ready() -> void:
 	bar.add_child(Kit.button("Forage", func(): _forage(), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
+	bar.add_child(Kit.button("Map", func(): _open_world_map(), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Use", func(): _use(), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Up", func(): _climb(-1), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Down", func(): _climb(1), Vector2(72, BAR - 12)))
@@ -269,6 +271,15 @@ func _open_service(kind: String, tab: String) -> void:
 	panel.dynasty = app.dynasty
 	panel.on_change = func(): _refresh_status()
 	panel.set_meta("modal", true)
+	add_child(panel)
+
+
+## The world map over the open world (GameWorldMap): the world waits while it is open.
+func _open_world_map() -> void:
+	var panel: Control = WorldMapPanel.new()
+	panel.dynasty = app.dynasty
+	if sb.space == "world":
+		panel.heir_tile = sb.heir
 	add_child(panel)
 
 

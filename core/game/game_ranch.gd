@@ -120,7 +120,7 @@ static func yearly_work(d: GameDynasty) -> Dictionary:
 		var share := work_share(e)
 		if w.is_empty() or share <= 0.0 or str(w["kind"]) == "guard":
 			continue
-		var g := float(w["gold"]) * share * GameBreeding.trait_mult(e, "work_mult") * GameFarm.yield_mult(d, e)
+		var g := float(w["gold"]) * share * GameBreeding.trait_mult(e, "work_mult") * GameFarm.yield_mult(d, e) * GameRealms.flow(e)   # a pen in a realm works at its realm's pace
 		by_kind[str(w["kind"])] = float(by_kind.get(str(w["kind"]), 0.0)) + g
 		total += g
 	return {"gold": total, "kinds": by_kind}
@@ -198,7 +198,7 @@ static func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 		msgs.append(said)
 	var due := 0.0
 	for e in d.roster:
-		due += yearly_keep(e, d) * years
+		due += yearly_keep(e, d) * years * GameRealms.flow(e)
 	var cost := int(ceil(due))
 	var paid := mini(cost, maxi(0, d.heir.gold))
 	d.heir.gold -= paid
@@ -208,8 +208,9 @@ static func on_years(d: GameDynasty, years: float, msgs: Array) -> void:
 	var top := int(setting("mood_max"))
 	var kept: Array = []
 	for e in d.roster:
-		var felt := gain - loss * ranch_factor(d, e, "mood_loss") * GameBreeding.trait_mult(e, "mood_loss_mult")   # the hatchery and nursery soften neglect
-		for line in _live_years(d, e, years, felt, top):
+		var pace := GameRealms.flow(e)   # the creature's own years pass at its realm's pace; at home that is exactly 1
+		var felt := (gain - loss * ranch_factor(d, e, "mood_loss") * GameBreeding.trait_mult(e, "mood_loss_mult")) * pace   # the hatchery and nursery soften neglect
+		for line in _live_years(d, e, years * pace, felt, top):
 			d._say(line)
 			msgs.append(line)
 		if not e.get("gone", false):

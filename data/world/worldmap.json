@@ -1,0 +1,11 @@
+{
+  "note": "The world map view (roadmap follow-up; core/game/game_world_map.gd, drawn by ui/play/world_map_panel.gd, checked by tools/check_data.gd). The open world as one picture: the world is sampled every `step` tiles (the middle tile of each cell, its biome and whether it is under water, as GameWorldGen gives them, so the map is always the world the dynasty's seed makes) and each cell is drawn in the tile view's colour for that kind. Over it go a marker for every place on the map (a town, a dungeon or the wilds; one the family has not visited is drawn as unknown, with no name), where the family is now (the text game's place), and where the heir stands. Pure: nothing is saved and no dice are drawn.",
+  "settings": {"step": 8, "marker_px": 6, "heir_px": 5},
+  "text": {
+    "unknown": "an unvisited place",
+    "here": "The family is at {place}.",
+    "heir": "{heir} stands at {x}, {z}.",
+    "title": "The world",
+    "legend": "Towns and places the family has been to are named; the rest are marked but not known."
+  }
+}
