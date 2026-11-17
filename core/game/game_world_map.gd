@@ -42,9 +42,10 @@ static func cell_of(x: int, z: int) -> Vector2i:
 ## The kind of one cell: "water" or the biome at its middle tile.
 static func kind_at(d: GameDynasty, cx: int, cz: int) -> String:
 	var t := tile_of(cx, cz)
-	if GameWorldGen.height_at(d.seed_value, t.x, t.y) < int(GameWorldGen.setting("sea_level")):
-		return "water"
-	return str(GameWorldGen.blend(d.seed_value, float(t.x), float(t.y))["biome"])
+	var body := GameWorldGen.body_at(d.seed_value, t.x, t.y)
+	if body == "sea" or body == "lake":
+		return "water"   # (a river is narrower than a cell: the map leaves it out)
+	return GameWorldGen.biome_at(d.seed_value, t.x, t.y)
 
 
 ## The whole grid, rows of z each a row of x.

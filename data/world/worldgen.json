@@ -18,7 +18,15 @@
     "clump_min": 0.0,
     "clump_max": 2.2,
     "outcrop_depths": [12, 14, 16, 18, 20, 22],
-    "anchor_radius": {"town": 9, "dungeon": 4, "wilds": 0}
+    "anchor_radius": {"town": 9, "dungeon": 4, "wilds": 0},
+    "water": {
+      "clear_inner": 5, "clear_outer": 14,
+      "wet_scale": 220.0, "wet_from": 0.38, "wet_to": 0.55,
+      "river_scale": 130.0, "river_octaves": 3, "river_width": 0.042, "river_fade_from": 62, "river_fade_to": 88,
+      "valley_width": 0.2, "valley_depth": 4,
+      "lake_scale": 55.0, "lake_octaves": 2, "lake_threshold": 0.66, "lake_band": 0.24, "lake_depth": 9, "lake_land_max": 58, "lake_water_at": 0.3,
+      "ford_scale": 9.0, "ford_threshold": 0.68, "road_width": 1.8
+    }
   },
   "surface_of": {
     "plains": "plains", "road": "plains", "crypt": "plains", "ruins": "plains", "forest": "forest", "fae": "forest",
