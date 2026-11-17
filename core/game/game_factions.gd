@@ -248,6 +248,29 @@ static func town_mult(d: GameDynasty, key: String) -> float:
 	return float(fx.get(key, 1.0))
 
 
+## What the heir's standing with the faction of the town that posted a quest does to its rewards: `key` "gold" or "xp". The
+## faction is the one that keeps the quest's `giver` town (`towns`); 1.0 for a giver with none, an unknown rank or no living heir,
+## so a quiet house is paid exactly as before.
+static func quest_mult(d: GameDynasty, q: Dictionary, key: String) -> float:
+	if d == null or d.heir == null or d.state != "life":
+		return 1.0
+	var f := str(data().get("towns", {}).get(str(q.get("giver", "")), ""))
+	if f == "":
+		return 1.0
+	return float(data().get("quest_effects", {}).get(rank(d, f), {}).get(key, 1.0))
+
+
+## What the heir's standing with the Thieves' Guild (`raid_effects`) does to the chance of a raid on the house: more when the
+## Guild holds the house in contempt, less when it is honoured. 1.0 with no living heir.
+static func raid_mult(d: GameDynasty) -> float:
+	if d == null or d.heir == null or d.state != "life":
+		return 1.0
+	var fx: Dictionary = data().get("raid_effects", {})
+	if fx.is_empty():
+		return 1.0
+	return float(fx["chance"].get(rank(d, str(fx["faction"])), 1.0))
+
+
 static func _cap(s: String) -> String:
 	return s.substr(0, 1).to_upper() + s.substr(1)
 
@@ -373,6 +396,27 @@ static func validate() -> Array:
 				bad.append("town effects: '%s' changes '%s', which nothing reads" % [r, k])
 			elif typeof(fx[r][k]) not in [TYPE_INT, TYPE_FLOAT] or float(fx[r][k]) < 0.5 or float(fx[r][k]) > 2.0:
 				bad.append("town effects: %s %s must be between 0.5 and 2" % [r, k])
+	var qfx: Dictionary = dat.get("quest_effects", {})
+	for r in rank_ids:
+		if not qfx.has(r):
+			bad.append("quest effects: rank '%s' has none" % r)
+	for r in qfx:
+		if r not in rank_ids:
+			bad.append("quest effects: '%s' is not a rank" % r)
+		for k in qfx[r]:
+			if k not in ["gold", "xp"]:
+				bad.append("quest effects: '%s' changes '%s', which nothing reads" % [r, k])
+			elif typeof(qfx[r][k]) not in [TYPE_INT, TYPE_FLOAT] or float(qfx[r][k]) < 0.5 or float(qfx[r][k]) > 2.0:
+				bad.append("quest effects: %s %s must be between 0.5 and 2" % [r, k])
+	var rfx: Dictionary = dat.get("raid_effects", {})
+	if not rfx.is_empty():
+		if not has(str(rfx.get("faction", ""))):
+			bad.append("raid effects: '%s' is not a faction" % rfx.get("faction", ""))
+		for r in rank_ids:
+			if not rfx.get("chance", {}).has(r):
+				bad.append("raid effects: rank '%s' has none" % r)
+			elif float(rfx["chance"][r]) < 0.25 or float(rfx["chance"][r]) > 2.0:
+				bad.append("raid effects: %s must be between 0.25 and 2" % r)
 	for k in ["standing", "remembers", "nothing", "gift", "gift_gold", "gift_potions", "gift_xp", "no_faction", "not_alive", "low", "taken", "not_town"]:
 		if str(dat["text"].get(k, "")) == "":
 			bad.append("factions: the text '%s' is missing" % k)

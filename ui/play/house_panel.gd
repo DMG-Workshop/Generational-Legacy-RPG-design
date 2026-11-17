@@ -99,6 +99,9 @@ static func _effect(track: String, lv: int) -> String:
 		return "%d extra companion place%s." % [places, "" if places == 1 else "s"]
 	if track == GameHouse.RANCH:
 		return str(GameRanch.data()["ranch"]["levels"][clampi(lv, 0, GameHouse.max_level())]["about"])
+	if track == GameHouse.SMITHY:
+		var cut := int(round(float(lv) * float(GameData.bal("house_smithy_fee_cut_per_level")) * 100.0))
+		return "Made pieces are %d better, and the forge's fee is %d%% less." % [lv * int(GameData.bal("house_smithy_quality_per_level")), cut]
 	var pct := int(round(float(lv) * float(GameData.bal("house_yard_train_xp_per_level")) * 100.0))
 	return "Training gives %d%% more XP." % pct
 

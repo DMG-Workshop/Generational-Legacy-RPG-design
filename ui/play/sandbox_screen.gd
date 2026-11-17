@@ -9,6 +9,11 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchControls := preload("res://ui/play/touch_controls.gd")
+const CraftPanel := preload("res://ui/play/craft_panel.gd")
+const ShopPanel := preload("res://ui/play/shop_panel.gd")
+const TavernPanel := preload("res://ui/play/tavern_panel.gd")
+const BoardPanel := preload("res://ui/play/board_panel.gd")
+const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
 const BAR := 56.0
 
 var app: Node
@@ -78,8 +83,10 @@ func _ready() -> void:
 	add_child(bar)
 	bar.add_child(Kit.button("Back", func(): app.show_state(), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Dig", func(): _dig(), Vector2(72, BAR - 12)))
+	bar.add_child(Kit.button("Forage", func(): _forage(), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
+	bar.add_child(Kit.button("Map", func(): _open_world_map(), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Use", func(): _use(), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Up", func(): _climb(-1), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Down", func(): _climb(1), Vector2(72, BAR - 12)))
@@ -101,6 +108,7 @@ func _ready() -> void:
 	_next_level(false)
 	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
 	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
+	build_bar.add_child(Kit.button("Repair", func(): _repair(), Vector2(88, BAR - 12)))
 	build_bar.visible = false
 	# The orders panel: each companion in the party with the order they hold; a tap moves it to the next.
 	orders_panel = VBoxContainer.new()
@@ -121,6 +129,8 @@ func _process(delta: float) -> void:
 	if d.battle != null or d.state != "life":
 		app.show_state()   # the clock (or the heir) has handed the screen over: a fight, a succession, the end
 		return
+	if _modal_open():
+		return   # the workshop is open: the world waits
 	var inp := WorldInput.read()
 	if int(inp["zoom"]) != 0:
 		zoom = WorldInput.zoom_after(zoom, int(inp["zoom"]))
@@ -147,6 +157,13 @@ func _process(delta: float) -> void:
 		stepped = true
 	if stepped:
 		cam = Vector2.ZERO   # the view follows the heir while they walk
+	if not sb.dirty.is_empty():
+		for c in sb.dirty:
+			tile_view.refresh_cell(int(c.x), int(c.y))   # a node gathered, a shaft dug: its tile looks different
+		sb.dirty.clear()
+	if sb.arrived != "":
+		last_line = str(sb.log[sb.log.size() - 1]["text"])   # walked into a place: say so
+		sb.arrived = ""
 	_tick_wait -= delta
 	while _tick_wait <= 0.0:
 		sb.step(1)
@@ -228,11 +245,61 @@ func _tap(p: Vector2, area: Vector2) -> void:
 	queue_redraw()
 
 
+## The workshop over the map, at the family's forge: while it is open the world waits and the keys do nothing here.
+func _open_workshop(forge: String) -> void:
+	var panel: Control = CraftPanel.new()
+	panel.dynasty = app.dynasty
+	panel.on_change = func(): _refresh_status()
+	panel.forge = forge
+	add_child(panel)
+
+
+## A town's service over the map, from the person who runs it (GamePeople): shop (on its tab), tavern or notice board. The world
+## waits while it is open.
+func _open_service(kind: String, tab: String) -> void:
+	var panel: Control
+	match kind:
+		"shop":
+			panel = ShopPanel.new()
+			panel.start_tab = tab
+		"tavern":
+			panel = TavernPanel.new()
+		"board":
+			panel = BoardPanel.new()
+		_:
+			return
+	panel.dynasty = app.dynasty
+	panel.on_change = func(): _refresh_status()
+	panel.set_meta("modal", true)
+	add_child(panel)
+
+
+## The world map over the open world (GameWorldMap): the world waits while it is open.
+func _open_world_map() -> void:
+	var panel: Control = WorldMapPanel.new()
+	panel.dynasty = app.dynasty
+	if sb.space == "world":
+		panel.heir_tile = sb.heir
+	add_child(panel)
+
+
+## Whether a modal panel (the workshop) is open over the map.
+func _modal_open() -> bool:
+	for c in get_children():
+		if c.has_meta("modal") and not c.is_queued_for_deletion():
+			return true
+	return false
+
+
 ## The Use action: in by the door the heir stands at, or out by the entrance of the interior they are in.
 func _use() -> void:
 	var r := sb.use()
 	last_line = str(r["text"])
 	cam = Vector2.ZERO
+	if str(r.get("open", "")) == "workshop":
+		_open_workshop(str(r.get("forge", "")))
+	elif str(r.get("open", "")) in ["shop", "tavern", "board"]:
+		_open_service(str(r["open"]), str(r.get("tab", "")))
 	_refresh_status()
 	queue_redraw()
 
@@ -256,8 +323,27 @@ func _dig() -> void:
 	queue_redraw()
 
 
+func _forage() -> void:
+	var r := sb.forage()
+	last_line = str(r["text"])
+	if r["ok"]:
+		_save()
+	_refresh_status()
+	queue_redraw()
+
+
 func _build() -> void:
 	var r := sb.build(build_kind, facing_dir.x, facing_dir.y)
+	last_line = str(r["text"])
+	if r["ok"]:
+		tile_view.refresh_cell(sb.heir.x + facing_dir.x, sb.heir.y + facing_dir.y)
+		_save()
+	_refresh_status()
+	queue_redraw()
+
+
+func _repair() -> void:
+	var r := sb.repair_at(facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
 	if r["ok"]:
 		tile_view.refresh_cell(sb.heir.x + facing_dir.x, sb.heir.y + facing_dir.y)
@@ -286,7 +372,7 @@ func _next_piece() -> void:
 func _next_level(step: bool = true) -> void:
 	if step:
 		sb.cycle_level()
-	level_button.text = "Level: %s" % ("ground" if sb.build_level == 0 else str(sb.build_level))
+	level_button.text = "Level: %s" % sb.level_name()
 	_refresh_status()
 	queue_redraw()
 
@@ -377,7 +463,7 @@ func _refresh_status() -> void:
 	elif room != "" and mode != "build":
 		line = room if line == "" else line
 	if level_button != null:
-		level_button.text = "Level: %s" % ("ground" if sb.build_level == 0 else str(sb.build_level))
+		level_button.text = "Level: %s" % sb.level_name()
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 

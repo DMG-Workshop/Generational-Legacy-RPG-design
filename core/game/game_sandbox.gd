@@ -103,6 +103,9 @@ func storey() -> int:
 func place_line() -> String:
 	if space != "world":
 		var name := str(GameSpaces.space(space).get("name", space))
+		var who := GamePeople.near(space, heir.x, heir.y)
+		if not who.is_empty() and heir != GameInterior.entry():
+			return GamePeople.text("near", {"name": str(who["name"])})
 		var room := GameInterior.room_at(space, heir.x, heir.y)
 		if room == "":
 			return _text("inside_in", {"place": name})
@@ -111,10 +114,10 @@ func place_line() -> String:
 			if str(r["id"]) == room:
 				room_name = str(r["name"])
 		return _text("inside_at", {"place": name, "room": room_name.to_lower()})
+	var line := GameBuild.room_line(d, heir.x, heir.y, heir_y)
 	if storey() > 0:
-		return _text("upstairs_at", {"n": storey()})
-	var line := GameBuild.room_line(d, heir.x, heir.y)
-	var u := GameBuild.room_use(d, heir.x, heir.y)
+		line = _text("upstairs_at", {"n": storey()}) if line == "" else "%s %s" % [_text("upstairs_at", {"n": storey()}), line]
+	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	return line if u.is_empty() else "%s %s" % [line, str(u["hint"])]
 
 
@@ -150,8 +153,37 @@ func move(dx: int, dz: int) -> Dictionary:
 	if not c["ok"]:
 		return c
 	heir += Vector2i(dx, dz)
+	_arrive()
 	refresh()
 	return {"ok": true, "why": ""}
+
+
+## Walking into a place's ground (a town or the wilds round an anchor) is arriving there: the family's place becomes it, as a
+## journey on the map would make it, but with no years spent (the open world has its own clock), no arrival event and no dice.
+## The place is marked visited and its quests told. Leaving it for open ground changes nothing: the family is still at the last
+## place walked into. Only on the ground of the open world.
+func _arrive() -> void:
+	if space != "world" or heir_y != GameBuild.SURFACE:
+		return
+	var place := str(GameSpaces.space(GameSpaces.at_tile(heir.x, heir.y)).get("place", ""))
+	if place == "" or place == str(d.world.location) or GameWorld.place(place).is_empty():
+		return
+	var dest: Dictionary = GameWorld.place(place)
+	var first: bool = place not in d.world.visited
+	d.world.visit(place)
+	var line := _text("arrived", {"heir": d.heir.name, "place": str(dest["name"])})
+	log.append({"kind": "arrive", "text": line})
+	if first:
+		log.append({"kind": "arrive", "text": GameMessages.text("life", "no_one_walked", {"house": d.dynasty_name, "dest": dest["name"], "description": dest.get("description", "")})})
+	var msgs: Array = []
+	d.quests.on_arrive(d, place, msgs)
+	for m in msgs:
+		log.append({"kind": "arrive", "text": str(m)})
+	arrived = place
+
+
+## The place the heir has just walked into, until the screen has said so (runtime only).
+var arrived := ""
 
 
 ## Spawns the creatures the world has in the square round the heir and lets go of those far behind.
@@ -234,13 +266,24 @@ func leave() -> Dictionary:
 ## lets them do (a bedroom the family built: rest). {ok, text}.
 func use() -> Dictionary:
 	if space != "world":
+		if heir != GameInterior.entry():
+			var p := GamePeople.near(space, heir.x, heir.y)
+			if not p.is_empty():
+				var t := GamePeople.talk(d, space, p)
+				log.append({"kind": "talk", "text": str(t["text"])})
+				return t
 		return leave()
 	if door_here() != "":
 		return enter()
-	var u := GameBuild.room_use(d, heir.x, heir.y) if storey() == 0 else {}
+	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty():
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
+		"keep":
+			return {"ok": true, "text": GameBuild.text("kennel_holds", {"places": GameBuild.kennel_places(d), "kept": d.roster.size(), "cap": GameRoster.cap(d)})}
+		"craft":
+			# The screen opens the workshop for it (GameCraft with forge "home"); nothing changes here.
+			return {"ok": true, "text": GameBuild.text("forge_lit"), "open": "workshop", "forge": "home"}
 		"rest":
 			var msgs := d.rest_for(float(u["years"]))
 			for m in msgs:
@@ -315,14 +358,30 @@ func step(ticks: int = 1) -> void:
 		if _contact():
 			return
 		companions = GameCompanions.reconcile(d, companions, heir_point().x, heir_point().y)
-		var router := GamePath.router(GamePath.world_ground(d))
+		GamePath.sync(path_cache, d)
+		var router := GamePath.cached_router(GamePath.world_ground(d), path_cache)
 		var out := GameCompanions.step_all(d, companions, GameCompanions.view(d, heir_point().x, heir_point().y, threats, router), tick)
 		companions = out["agents"]
 		for e in out["events"]:
 			log.append({"kind": "companion", "text": GameCompanions.event_text(e)})
+			if str(e.get("type", "")) == "gathered":
+				dirty.append(Vector2i(int(e["x"]), int(e["z"])))
 		var keep_lines := int(setting("log_lines"))
 		if log.size() > keep_lines:
 			log = log.slice(log.size() - keep_lines)
+
+
+## Tiles whose look has changed since the screen last drew them (a node gathered, a shaft dug), for it to redraw (runtime only).
+var dirty: Array = []
+
+
+## The companions' step cache (runtime only): their routes are found once for each (from, to) while the ground holds.
+var path_cache := GamePath.new_cache()
+
+
+## The cache's line for a pathing readout.
+func path_line() -> String:
+	return GamePath.cache_line(path_cache)
 
 
 ## Plans a walk from the heir to a tile of the open world over the ground as it is now (GamePath, a walker). Sets the
@@ -383,9 +442,16 @@ func build_y() -> int:
 	return GameBuild.SURFACE - build_level
 
 
+## The build level as the Level button says it: "ground", the storey's number, or "roof" for the layer over the top storey.
+func level_name() -> String:
+	if build_level == 0:
+		return "ground"
+	return "roof" if build_level > int(GameBuild.setting("max_storeys")) else str(build_level)
+
+
 ## Steps the build level up a storey, and back to the ground after the top one.
 func cycle_level() -> int:
-	build_level = (build_level + 1) % (int(GameBuild.setting("max_storeys")) + 1)
+	build_level = (build_level + 1) % (int(GameBuild.setting("max_storeys")) + 2)   # the last step is the roof layer
 	return build_level
 
 
@@ -413,6 +479,30 @@ func remove_at(dx: int, dz: int) -> Dictionary:
 	return out
 
 
+## Mends the piece on the tile `dx, dz` from the heir (GameRepair.repair): {ok, text}.
+func repair_at(dx: int, dz: int) -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": _text("indoors")}
+	var t := heir + Vector2i(dx, dz)
+	var out := GameRepair.repair(d, t.x, build_y(), t.y)
+	if out["ok"]:
+		log.append({"kind": "build", "text": str(out["text"])})
+	return out
+
+
+## Forages the nodes beside the heir (GameForage): {ok, text}. Not indoors or upstairs.
+func forage() -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": GameForage.text("indoors")}
+	if storey() > 0:
+		return {"ok": false, "text": GameForage.text("upstairs")}
+	var out := GameForage.forage(d, heir.x, heir.y)
+	if out["ok"]:
+		log.append({"kind": "forage", "text": str(out["text"])})
+		dirty.append(Vector2i(int(out["x"]), int(out["z"])))
+	return out
+
+
 ## Digs the cell `depth` below the surface straight under the heir (`GameMine.dig`): {ok, why, ...}.
 func dig(depth: int) -> Dictionary:
 	if space != "world":
@@ -422,6 +512,11 @@ func dig(depth: int) -> Dictionary:
 	var out := GameMine.dig(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
 	if out["ok"]:
 		log.append({"kind": "dig", "text": _text("dug", {"depth": depth})})
+		dirty.append(heir)
+		var h := GameMine.hazard(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
+		out["hazard"] = h
+		if bool(h["hit"]):
+			log.append({"kind": "hazard", "text": str(h["text"])})
 	return out
 
 

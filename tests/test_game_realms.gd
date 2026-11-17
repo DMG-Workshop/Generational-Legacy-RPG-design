@@ -187,10 +187,10 @@ func test_settling() -> void:
 		GameRealms.open_gate(d, "hollow")
 		GameRealms.move(d, int(w["id"]), "verdant")
 		var msgs: Array = []
-		GameRealms.on_years(d, 1.0, msgs, 1.0)
-		ok(w["adapt"] == 1.0 and GameRealms.adapt_left(w) == 1.0 and msgs.is_empty(), "a year in the Court is a year adapted")
-		GameRealms.on_years(d, 1.0, msgs, 2.0)
-		ok(GameRealms.settled(w) and w["settled"] == ["verdant"] and not w.has("adapt") and msgs == ["Grey has settled in the Verdant Court."], "after two it has settled: %s" % str(msgs))
+		GameRealms.on_years(d, 2.0, msgs, 2.0)
+		ok(w["adapt"] == 1.0 and GameRealms.adapt_left(w) == 1.0 and msgs.is_empty(), "two years at home are a year in the Court (its time runs at half pace), a year adapted")
+		GameRealms.on_years(d, 2.0, msgs, 4.0)
+		ok(GameRealms.settled(w) and w["settled"] == ["verdant"] and not w.has("adapt") and msgs == ["Grey has settled in the Verdant Court."], "after two of its years it has settled: %s" % str(msgs))
 		ok(GameRealms.mult(w, "keep_mult") == 1.0, "and costs what it did")
 		GameRealms.move(d, int(w["id"]), "material")
 		GameRealms.move(d, int(w["id"]), "verdant")
@@ -199,6 +199,8 @@ func test_settling() -> void:
 		ok(not GameRealms.settled(w) and GameRealms.adapt_left(w) == 4.0, "another realm must be adapted to afresh")
 		# through the world clock
 		d.pass_time(4.0)
+		ok(not "hollow" in w.get("settled", []) and absf(float(w["adapt"]) - 3.0) < 0.0001, "four years at home are three in the Hollow Below (its time runs at three quarters): %s" % str(w.get("adapt")))
+		d.pass_time(2.0)
 		ok("hollow" in w.get("settled", []), "pass_time reaches adapting through the ranch"))
 	var x := dyn(11)
 	var y := dyn(11)

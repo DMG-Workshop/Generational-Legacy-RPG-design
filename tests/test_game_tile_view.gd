@@ -183,7 +183,7 @@ func test_levels() -> void:
 	v.set_level(2)
 	ok((v.uppers[c] as TileMapLayer).get_cell_source_id(local) == -1, "storey 2 has none of storey 1's pieces")
 	v.set_level(99)
-	ok(v.level == int(GameBuild.setting("max_storeys")), "a storey above the top is the top")
+	ok(v.level == int(GameBuild.setting("max_storeys")) + 1, "a level above the top is the roof layer over the top storey")
 	v.set_level(0)
 	ok(v.uppers.is_empty() and (v.layers[c] as TileMapLayer).modulate == Color(1, 1, 1), "back on the ground the layers go and the ground is bright")
 	v.set_level(1)

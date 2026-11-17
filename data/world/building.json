@@ -1,5 +1,5 @@
 {
-  "note": "Building and placement rules (roadmap item 50; core/game/game_build.gd, checked by tools/check_data.gd). The family house is the first base: a family may build only inside a claim round the home town (`base_place`), which grows with every level bought in the house (`radius_per_house_level`). A piece (`pieces`, the same four kinds GamePath walks: wall, floor, road, door) goes in one cell of the surface (layer y = -1) or of dug ground (y = 0 and down) and is paid for in the family's stores (`cost`, materials) and the heir's gold. Rules: a cell holds one piece; nothing is built on a tree or rock outcrop; a piece needs level ground (`max_slope`: the biggest step in height to a dry neighbour); only a floor or road may go over water and only as a bridge that reaches land within `max_span` tiles; a door needs a wall on each of two opposite sides (`needs_frame`) and the wall cannot be taken away while it hangs; underground a piece goes only into a cell that has been dug. A room is a region closed by walls (and doors) that is no bigger than `max_room_area`. Taking a piece down gives back `refund` of its cost. Furniture (a piece marked `inside`: bed, anvil, hearth, trough) can only be built in a room and is solid (pathing.json). `room_types` names a room by what stands in it: the first type whose `needs` (a count of each piece) and `min_area` the room meets wins, so list the most demanding first; a room that meets none is just a room. Storeys: a piece may stand above the ground, at layer y = -1 - n for n up to `max_storeys`; it needs support below it (`ground_bearers` on the ground floor: a wall or stairs, or any tile of a room; `upper_bearers` higher up), and a piece that holds another up cannot be taken down. Stairs (`stairs: true`) join a cell to the one above it (GamePath), go only on or above the ground and not on the top storey. Nothing here is random, and the autopilot never builds.",
+  "note": "Building and placement rules (roadmap item 50; core/game/game_build.gd, checked by tools/check_data.gd). The family house is the first base: a family may build only inside a claim round the home town (`base_place`), which grows with every level bought in the house (`radius_per_house_level`). A piece (`pieces`, the same four kinds GamePath walks: wall, floor, road, door) goes in one cell of the surface (layer y = -1) or of dug ground (y = 0 and down) and is paid for in the family's stores (`cost`, materials) and the heir's gold. Rules: a cell holds one piece; nothing is built on a tree or rock outcrop; a piece needs level ground (`max_slope`: the biggest step in height to a dry neighbour); only a floor or road may go over water and only as a bridge that reaches land within `max_span` tiles; a door needs a wall on each of two opposite sides (`needs_frame`) and the wall cannot be taken away while it hangs; underground a piece goes only into a cell that has been dug. A room is a region closed by walls (and doors) that is no bigger than `max_room_area`. Taking a piece down gives back `refund` of its cost. Furniture (a piece marked `inside`: bed, anvil, hearth, trough) can only be built in a room and is solid (pathing.json). `room_types` names a room by what stands in it: the first type whose `needs` (a count of each piece) and `min_area` the room meets wins, so list the most demanding first; a room that meets none is just a room. Storeys: a piece may stand above the ground, at layer y = -1 - n for n up to `max_storeys`; it needs support below it (`ground_bearers` on the ground floor: a wall or stairs, or any tile of a room; `upper_bearers` higher up), and a piece that holds another up cannot be taken down. Stairs (`stairs: true`) join a cell to the one above it (GamePath), go only on or above the ground and not on the top storey. A roof (`roof: true`) caps a room: it goes on a storey (one layer higher than the top storey is allowed, for the roof of the top floor), is supported like any storey piece, bears nothing and cannot be walked on. A room can also stand above the ground: a region on a storey shut in by walls and doors whose every cell has a floor (or furniture or stairs) and is held up; furniture goes on that floor in place of it. A room is `roofed` when every cell has a `roof_covers` piece above it. Damage (`repair`): a piece can be damaged (`GameDynasty.damage`, a level for each piece) up to `max_damage`, at which it is wrecked and removed (and what rested on it falls); a damaged roof no longer covers its room; mending costs `repair_share` of the piece's cost for each level, and gold at least `repair_gold_min` for a piece with no gold cost. Vandals (a raid) hit `vandal_hits` pieces; a built piece adds `built_piece_value` gold to what a raider sees. Nothing here is random, and the autopilot never builds.",
   "settings": {
     "base_place": "hearthmere",
     "base_radius": 12,
@@ -7,8 +7,10 @@
     "max_span": 3,
     "max_room_area": 80,
     "max_storeys": 2,
+    "max_kennels": 3,
     "ground_bearers": ["wall", "stairs"],
-    "upper_bearers": ["wall", "floor", "stairs"]
+    "upper_bearers": ["wall", "floor", "stairs"],
+    "roof_covers": ["roof", "floor"]
   },
   "pieces": {
     "wall": {"name": "Wall", "cost": {"oak": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false},
@@ -19,11 +21,13 @@
     "bed": {"name": "Bed", "cost": {"oak": 2, "linen": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
     "anvil": {"name": "Anvil", "cost": {"iron": 4}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
     "hearth": {"name": "Hearth", "cost": {"copper": 2, "iron": 1}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true},
+    "roof": {"name": "Roof", "cost": {"oak": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "roof": true},
     "trough": {"name": "Trough", "cost": {"oak": 2}, "gold": 0, "refund": 0.5, "max_slope": 1, "over_water": false, "needs_frame": false, "inside": true}
   },
+  "repair": {"max_damage": 2, "repair_share": 0.5, "repair_gold_min": 1, "vandal_hits": 2, "built_piece_value": 4},
   "room_types": [
-    {"id": "forge", "name": "Forge", "phrase": "a forge", "needs": {"anvil": 1, "hearth": 1}, "min_area": 4},
-    {"id": "kennel", "name": "Kennel", "phrase": "a kennel", "needs": {"trough": 1}, "min_area": 6},
+    {"id": "forge", "name": "Forge", "phrase": "a forge", "needs": {"anvil": 1, "hearth": 1}, "min_area": 4, "use": {"kind": "craft", "hint": "Use to work at the forge."}},
+    {"id": "kennel", "name": "Kennel", "phrase": "a kennel", "needs": {"trough": 1}, "min_area": 6, "places": 2, "use": {"kind": "keep", "hint": "Use to see who is kept."}},
     {"id": "bedroom", "name": "Bedroom", "phrase": "a bedroom", "needs": {"bed": 1}, "min_area": 4, "use": {"kind": "rest", "years": 0.25, "hint": "Use to rest."}}
   ],
   "text": {
@@ -47,12 +51,25 @@
     "removed": "Took down a {piece}.",
     "removed_back": "Took down a {piece} and saved {back}.",
     "needs_room": "A {piece} has to stand inside a room: a space shut in by walls and doors.",
+    "roof_low": "A roof goes on top of a storey, not on the ground or under it.",
     "needs_support": "Nothing holds that up: a storey rests on a wall, stairs or floor below it, or on a room.",
     "stairs_ground": "Stairs go up from the ground, not down into the earth.",
     "stairs_top": "That is the top storey: there is nothing above it to climb to.",
+    "kennel_holds": "The kennels give {places} places. The family keeps {kept} of {cap}.",
+    "forge_lit": "The family's forge is lit.",
     "nothing_to_use": "There is nothing to use here.",
     "in_room": "You are in {room}.",
+    "in_room_roofed": "You are in {room}, under a roof.",
+    "in_plain_room_roofed": "You are in a room, under a roof.",
     "in_plain_room": "You are in a room.",
+    "undamaged": "That is not damaged.",
+    "repaired": "Mended a {piece}.",
+    "repair_missing": "Not enough {material} to mend it ({need} needed, {have} held).",
+    "repair_gold": "Not enough gold to mend it ({need} needed).",
+    "damaged_piece": "The {piece} is damaged.",
+    "ruined": "The {piece} is wrecked and falls.",
+    "collapsed": "{n} more fell with it.",
+    "vandals_hit": "The vandals batter the family's building: {what}.",
     "summary": "{pieces} pieces built, {rooms} rooms."
   }
 }

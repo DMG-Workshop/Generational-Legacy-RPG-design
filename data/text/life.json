@@ -278,6 +278,7 @@
 		"track_hall": "House Hall",
 		"track_yard": "Training Yard",
 		"track_ranch": "Ranch",
+    "track_smithy": "Smithy",
 		"gains_points": "{name} {list} ({points} to spend).",
 		"readies": "{name} readies {feat}.",
 		"sets_aside": "{name} sets {feat} aside.",

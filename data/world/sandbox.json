@@ -32,7 +32,7 @@
     "stick_knob": [0.98, 0.9, 0.55]
   },
   "tiles": {
-    "note": "The open world drawn as tile chunks (ui/play/tile_view.gd). px is a tile's size in the atlas, chunk the tiles to a TileMapLayer, keep the chunks kept beyond the view. Each kind (a biome, water, a built piece) has a colour; a stand-in for sprite art, which replaces the atlas and nothing else.",
+    "note": "The open world drawn as tile chunks (ui/play/tile_view.gd). px is a tile's size in the atlas, chunk the tiles to a TileMapLayer, keep the chunks kept beyond the view. Each kind (a biome, water, a built piece) has a colour; a stand-in for sprite art, which replaces the atlas and nothing else. Trees, herb patches, bone piles and outcrops (GameWorldGen's nodes) and dug shafts are drawn over the ground in a layer of their own, from `glyphs` (8 by 8 pixel rows, a palette of [r, g, b] or [r, g, b, a], '.' clear); a node that has been gathered is not drawn until it regrows.",
     "px": 16,
     "chunk": 16,
     "keep": 1,
@@ -53,11 +53,27 @@
       "road": [0.55, 0.52, 0.46],
       "door": [0.50, 0.30, 0.16],
       "stairs": [0.70, 0.58, 0.40],
+      "roof": [0.52, 0.22, 0.18],
       "bed": [0.64, 0.30, 0.34],
       "anvil": [0.32, 0.34, 0.40],
       "hearth": [0.80, 0.42, 0.16],
       "trough": [0.36, 0.44, 0.52],
-      "exit": [0.85, 0.75, 0.35]
+      "exit": [0.85, 0.75, 0.35],
+      "person": [0.78, 0.36, 0.52],
+      "oak_tree": [0.16, 0.36, 0.14],
+      "yew_tree": [0.1, 0.28, 0.2],
+      "herb_patch": [0.3, 0.6, 0.3],
+      "bone_pile": [0.85, 0.83, 0.76],
+      "outcrop": [0.5, 0.5, 0.52],
+      "dug": [0.2, 0.14, 0.1]
+    },
+    "glyphs": {
+      "oak_tree": {"rows": ["..gggg..", ".gGGGGg.", "gGGGGGGg", "gGGGGGGg", ".gGGGGg.", "...tt...", "...tt...", "..tttt.."], "palette": {"g": [0.08, 0.24, 0.08], "G": [0.18, 0.48, 0.16], "t": [0.4, 0.26, 0.12]}},
+      "yew_tree": {"rows": ["...gg...", "..gGGg..", "..gGGg..", ".gGGGGg.", ".gGGGGg.", "gGGGGGGg", "...tt...", "...tt..."], "palette": {"g": [0.05, 0.2, 0.16], "G": [0.12, 0.36, 0.26], "t": [0.34, 0.22, 0.12]}},
+      "herb_patch": {"rows": ["........", "..p..p..", ".pgp.gp.", "..g..g..", "p.g.pg.p", "gg.gg.gg", ".g.g..g.", "........"], "palette": {"g": [0.2, 0.62, 0.22], "p": [0.86, 0.5, 0.7]}},
+      "bone_pile": {"rows": ["........", "........", "..w...w.", ".wWw.wWw", "wWWWwWWw", ".wWWWWw.", "..wwww..", "........"], "palette": {"w": [0.7, 0.68, 0.6], "W": [0.92, 0.9, 0.84]}},
+      "outcrop": {"rows": ["........", "...rr...", "..rRRr..", ".rRRRRr.", "rRRRrRRr", "rRRRRRRr", ".rrrrrr.", "........"], "palette": {"r": [0.34, 0.34, 0.36], "R": [0.58, 0.58, 0.6]}},
+      "dug": {"rows": ["........", ".dddddd.", "dDDDDDDd", "dDDDDDDd", "dDDDDDDd", "dDDDDDDd", ".dddddd.", "........"], "palette": {"d": [0.16, 0.1, 0.06, 0.8], "D": [0.07, 0.04, 0.02, 0.85]}}
     }
   },
   "text": {
@@ -78,6 +94,7 @@
     "climbed_part": "{heir} comes down to storey {n}.",
     "upstairs_route": "Routes are for the ground: walk up here with the stick.",
     "upstairs_dig": "The family can only dig from the ground.",
+    "arrived": "{heir} walks into {place}.",
     "upstairs_at": "Upstairs, storey {n}.",
     "fell": "The floor gave way and {heir} dropped to the ground.",
     "no_door": "There is no door here to go in by.",

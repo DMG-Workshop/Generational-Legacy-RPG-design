@@ -56,13 +56,13 @@ func test_data() -> void:
 	var count := {"egg": 0, "live": 0, "none": 0}
 	for c in GameData.creatures:
 		count[str(c["born"])] += 1
-	ok(count["egg"] == 11 and count["live"] == 14 and count["none"] == 14, "39 creatures: 11 lay eggs (9 wild, the chicken and the goose), 14 bear live young (9 wild, sheep, cattle, pig, goat, horse) and 14 are not born (%s)" % str(count))
+	ok(count["egg"] == 11 and count["live"] == 15 and count["none"] == 14, "40 creatures: 11 lay eggs (9 wild, the chicken and the goose), 15 bear live young (9 wild, sheep, cattle, pig, goat, horse, and the beehive's swarm) and 14 are not born (%s)" % str(count))
 	for c in GameData.creatures:
 		var id := str(c["id"])
 		if c["born"] == "none":
 			ok(not c.has("young") and not GameBirth.can_breed(id), "%s is not born, has no young and cannot be bred" % id)
 		else:
-			ok(str(c.get("young", "")) != "" and GameBirth.can_breed(id), "%s is born and its young have a name (%s)" % [id, c.get("young", "")])
+			ok(str(c.get("young", "")) != "" and (GameBirth.can_breed(id) or GameBirth.is_hive(id)), "%s is born and its young have a name (%s)" % [id, c.get("young", "")])
 	ok(str(GameData.breeding["settings"]["mixed_birth_rule"]) == "mother", "the rule in the data is the mother's way")
 	ok(GameData.breeding["recipes"] is Array, "and there is a list of recipes (empty until the ranch brings its hybrids)")
 	# the undead, the constructs, the fiends and the people-like foes are not ranched
@@ -172,8 +172,8 @@ func test_every_pair() -> void:
 			if GameBirth.young_of(str(a), str(b)) == "" and m != "":
 				bad += 1
 	ok(bad == 0, "of all %d pairings, those that can have young give egg or live, the rest none, mixed ones follow the mother, and all have young to name (%d wrong)" % [ids.size() * ids.size(), bad])
-	var layers := GameData.creatures.filter(func(c): return GameBirth.born(str(c["id"])) == "egg").size()
-	var bearers := GameData.creatures.filter(func(c): return GameBirth.born(str(c["id"])) == "live").size()
+	var layers := GameData.creatures.filter(func(c): return GameBirth.born(str(c["id"])) == "egg" and GameBirth.can_breed(str(c["id"]))).size()
+	var bearers := GameData.creatures.filter(func(c): return GameBirth.born(str(c["id"])) == "live" and GameBirth.can_breed(str(c["id"]))).size()
 	var breedable := layers + bearers
 	ok(cross == 2 * layers * bearers, "there are %d mixed pairings (%d egg-layers x %d live-bearers, either way round)" % [cross, layers, bearers])
 	ok(int(counts[""]) == ids.size() * ids.size() - breedable * breedable, "and %d pairings that cannot breed, the %d breedable creatures making %d" % [counts[""], breedable, breedable * breedable])

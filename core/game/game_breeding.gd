@@ -56,6 +56,8 @@ static func trait_mult(e: Dictionary, key: String) -> float:
 
 ## Whether this creature could have young now (the flag only says it is meant to).
 static func able(e: Dictionary) -> bool:
+	if not GameBirth.can_breed(str(e.get("species", ""))):
+		return false   # a hive is born but never pairs, whatever its flag says
 	if not e.get("breeding", false) or e.get("sterile", false) or float(e.get("cooldown", 0.0)) > 0.0:
 		return false
 	if int(e.get("mood", 0)) < int(setting("min_mood")):

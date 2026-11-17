@@ -33,6 +33,7 @@ var killer_id: String = ""
 var total_hunts: int = 0
 var roster: Array = []          # eggs and young the family keeps (see GameRoster); saved only when not empty
 var mine: Dictionary = {}       # the ground dug at each site, its strain and its gateways (see GameMine); saved only when not empty
+var damage: Dictionary = {}     # damaged built pieces, {"x,y,z": level} (see GameRepair); saved only when not empty
 var built: Dictionary = {}      # the pieces the family has built, {"x,y,z": kind} (see GameBuild); saved only when not empty
 var sandbox_at: Dictionary = {} # where the heir last stood in the open world, {x, z, gen, place} (see GameSandbox); saved only when set
 var gathered: Dictionary = {}   # nodes companions have gathered, {"x,z": world year} (see GameCompanions); saved only when not empty
@@ -689,6 +690,8 @@ func finish_battle() -> Array:
 			var xp := 0
 			var gold := 0
 			var quest_msgs: Array = []
+			var heirloom_gold := GameHeirlooms.effect(self, "hunt_gold")   # what the house held before this fight: a legend's own heirloom helps from the next
+			var heirloom_xp := GameHeirlooms.effect(self, "hunt_xp")
 			for e in b.enemies:
 				xp += int(e["xp"])
 				gold += int(e["gold"])
@@ -705,9 +708,10 @@ func finish_battle() -> Array:
 						msgs.append(GameMessages.text("life", "heirloom_claimed", {"heirloom": e["heirloom"], "pct": int(int(float(GameData.bal("heirloom_bonus")) * 100.0))}))
 					_add_echo("slayer", e["id"], GameMessages.text("life", "echo_slew", {"name": heir.name, "foe": e["name"]}), 0.25)
 					msgs.append(GameMessages.text("life", "legend_slain", {"name": heir.name, "foe": e["name"]}))
-			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory")) * GameWorldEvents.mult(self, "hunt_gold_mult")))
-			if GameWorldEvents.mult(self, "hunt_xp_mult") != 1.0:
-				xp = int(round(float(xp) * GameWorldEvents.mult(self, "hunt_xp_mult")))
+			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory")) * GameWorldEvents.mult(self, "hunt_gold_mult") * (1.0 + heirloom_gold)))
+			var xp_mult := GameWorldEvents.mult(self, "hunt_xp_mult") * (1.0 + heirloom_xp)
+			if xp_mult != 1.0:
+				xp = int(round(float(xp) * xp_mult))
 			heir.gold += gold
 			heir.battles_won += 1
 			# A win that left the heir barely scratched adds to the clean run; a costly one ends it.
@@ -1023,6 +1027,8 @@ func to_dict() -> Dictionary:
 		out["mine"] = mine
 	if not built.is_empty():   # and only once something is built
 		out["built"] = built
+	if not damage.is_empty():   # and only once something is damaged
+		out["damage"] = damage
 	if not gathered.is_empty():   # and only once a companion has gathered
 		out["gathered"] = gathered
 	if not sandbox_at.is_empty():   # and only once the heir has walked the open world
@@ -1084,6 +1090,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.stores = GameCraft.load_stores(d.get("stores", {}))
 	g.mine = GameMine.load_state(d.get("mine", {}))
 	g.built = GameBuild.load_state(d.get("built", {}))
+	g.damage = GameRepair.load_state(d.get("damage", {}), g.built)
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.sandbox_at = GameSandbox.load_at(d.get("sandbox_at", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))

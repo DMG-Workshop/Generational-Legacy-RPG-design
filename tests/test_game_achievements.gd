@@ -110,7 +110,7 @@ func test_counts() -> void:
 	ok(GameAchievements.count(d, "nonsense") == 0.0, "an unknown count is 0")
 	d.stores = {"crafted": "lots"}
 	ok(GameAchievements.count(d, "crafted") == 0.0, "a damaged count is 0")
-	ok(GameAchievements.goal(GameAchievements.def("house_full")) == float(GameHouse.max_level() * 3), "the whole house is every level of every track")
+	ok(GameAchievements.goal(GameAchievements.def("house_full")) == float(GameHouse.max_level() * GameHouse.TRACKS.size()), "the whole house is every level of every track")
 
 
 func test_reaching() -> void:
@@ -138,7 +138,7 @@ func test_reaching() -> void:
 	m.gen = 80
 	m.world.year = 1200.0
 	m.heir.gold = 2000000
-	m.house = {"hall": 3, "yard": 3, "ranch": 3}
+	m.house = {"hall": 3, "yard": 3, "ranch": 3, "smithy": 3}
 	m.heirlooms = [1, 2, 3, 4, 5]
 	m.stores = {"crafted": 30}
 	var first := GameAchievements.update(m)
@@ -149,7 +149,7 @@ func test_reaching() -> void:
 	all.gen = 2300
 	all.world.year = 2000.0
 	all.heir.gold = 2000000
-	all.house = {"hall": 3, "yard": 3, "ranch": 3}
+	all.house = {"hall": 3, "yard": 3, "ranch": 3, "smithy": 3}
 	all.heirlooms = [1, 2, 3, 4, 5]
 	all.stores = {"crafted": 30}
 	for c in GameData.creatures:

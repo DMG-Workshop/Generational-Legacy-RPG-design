@@ -77,7 +77,7 @@ func _dist(a: Dictionary, x: float, z: float) -> float:
 
 func test_data() -> void:
 	ok(GameBehaviour.validate().is_empty(), "the data is sound: %s" % str(GameBehaviour.validate()))
-	ok(GameBehaviour.data()["creatures"].size() == GameData.creatures.size() and GameData.creatures.size() == 39, "every one of the 39 creatures has its tags")
+	ok(GameBehaviour.data()["creatures"].size() == GameData.creatures.size() and GameData.creatures.size() == 40, "every one of the 40 creatures has its tags")
 	var saved: Dictionary = GameBehaviour.data().duplicate(true)
 	GameBehaviour.data()["creatures"]["wolf"] = ["no_such_tag"]
 	_reset(GameBehaviour.data())
