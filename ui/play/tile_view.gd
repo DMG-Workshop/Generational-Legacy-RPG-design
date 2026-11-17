@@ -38,6 +38,7 @@ static func kinds() -> Array:
 	out.append("exit")   # an interior's way out (its floor, doors and walls use the floor, door and wall colours)
 	out.append("deep")   # water over a bed well under the sea level (GameRelief.kind)
 	out.append("snow")   # the high peaks
+	out.append("ford")   # the shallows across a river (GameRelief.kind), walked
 	return out
 
 

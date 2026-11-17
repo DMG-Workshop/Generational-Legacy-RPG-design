@@ -78,6 +78,11 @@ func test_kinds() -> void:
 	ok(GameRelief.kind({"water": true, "height": sea - deep, "biome": "plains"}) == "deep", "and a bed `deep_depth` under is deep")
 	ok(GameRelief.kind({"water": true, "height": sea - deep + 1, "biome": "ocean"}) == "water", "one less is still shallow")
 	ok(GameRelief.kind({"water": true, "biome": "ocean"}) == "water", "water of no known height is shallow")
+	var lake_deep := int(GameRelief.setting("lake_deep"))
+	ok(GameRelief.kind({"water": true, "body": "lake", "depth": lake_deep, "height": sea + 20, "biome": "hills"}) == "deep", "the middle of a lake is deep, even high in the hills")
+	ok(GameRelief.kind({"water": true, "body": "lake", "depth": lake_deep - 1, "height": sea + 20, "biome": "hills"}) == "water", "and one less is shallow")
+	ok(GameRelief.kind({"water": true, "body": "river", "depth": lake_deep + 5, "height": sea + 20, "biome": "hills"}) == "water", "a river is shallow whatever its depth field says")
+	ok(GameRelief.kind({"water": false, "body": "ford", "height": sea + 2, "biome": "plains"}) == "ford", "the shallows of a river are a ford")
 	var line := int(GameRelief.setting("snow_line"))
 	ok(GameRelief.kind({"water": false, "height": line, "biome": "mountains"}) == "snow", "mountain ground at the snow line is snow")
 	ok(GameRelief.kind({"water": false, "height": line - 1, "biome": "mountains"}) == "mountains", "and one under it is bare rock")
@@ -244,7 +249,7 @@ func test_data() -> void:
 	ok(GameRelief.validate().is_empty(), "the relief data is sound: %s" % str(GameRelief.validate()))
 	var s: Dictionary = GameRelief.data()["settings"]
 	var keep: Variant
-	for case in [["steps", 0], ["steps", 9], ["step_gain", 0.0], ["step_gain", 0.3], ["alt_span", 0.0], ["alt_mid", 1.5], ["deep_depth", 0], ["snow_line", 5], ["snow_line", 999]]:
+	for case in [["steps", 0], ["steps", 9], ["step_gain", 0.0], ["step_gain", 0.3], ["alt_span", 0.0], ["alt_mid", 1.5], ["deep_depth", 0], ["lake_deep", 0], ["snow_line", 5], ["snow_line", 999]]:
 		keep = s[case[0]]
 		s[case[0]] = case[1]
 		ok(not GameRelief.validate().is_empty(), "%s of %s is refused" % [case[0], str(case[1])])
