@@ -37,9 +37,17 @@ static func start(dyn: GameDynasty) -> GameSandbox:
 	var back := s._remembered()
 	if back != Vector2i(-1, -1):
 		t = back
+	var got_away := false
+	if not dyn.sandbox_escape.is_empty() and dyn.battle == null:
+		# A fight the heir fled from: they come back to the open world clear of it, not beside the creature.
+		t = Vector2i(int(dyn.sandbox_escape["x"]), int(dyn.sandbox_escape["z"]))
+		dyn.sandbox_escape = {}
+		got_away = true
 	s.heir = t
 	s.companions = GameCompanions.agents_for(dyn, float(t.x) + 0.5, float(t.y) + 0.5)
 	s.refresh()
+	if got_away:
+		s.log.append({"kind": "fight", "text": s._text("escaped", {"heir": dyn.heir.name})})
 	return s
 
 
@@ -303,10 +311,47 @@ func step(ticks: int = 1) -> void:
 		var out := GameCompanions.step_all(d, companions, GameCompanions.view(d, heir_point().x, heir_point().y, threats, router), tick)
 		companions = out["agents"]
 		for e in out["events"]:
+			if str(e["type"]) == "engage":
+				_guard_fights(e)
+				continue
 			log.append({"kind": "companion", "text": GameCompanions.event_text(e)})
 		var keep_lines := int(setting("log_lines"))
 		if log.size() > keep_lines:
 			log = log.slice(log.size() - keep_lines)
+
+
+## A guard is at the creature it went out to meet (`engage`): they fight (GameCompanions.duel). A win drives the creature out of
+## the world (the next `refresh` may bring another of its place back) and the family gets a share of its gold; a loss leaves the
+## guard hurt and resting at their post (`rest_until`) and the creature where it is; a guard too hurt to fight says so and rests.
+func _guard_fights(e: Dictionary) -> void:
+	var at := Vector2(float(e["x"]), float(e["z"]))
+	var hit := -1
+	var best := INF
+	for i in creatures.size():
+		var a: Dictionary = creatures[i]
+		var dist := Vector2(float(a["x"]), float(a["z"])).distance_to(at)
+		if dist < best and dist <= 1.0:
+			best = dist
+			hit = i
+	if hit < 0:
+		return
+	var id := str(e["id"])
+	var r := GameCompanions.duel(d, id, str(creatures[hit]["id"]), tick)
+	if r.is_empty():
+		return
+	var name := str(d.party.member(id).get("name", id))
+	var foe := str(r["foe"]).to_lower()
+	for c in companions:
+		if str(c["id"]) == id and (not bool(r["won"])):
+			c["rest_until"] = tick + int(GameCompanions.setting("guard_rest_ticks"))
+	if bool(r["refused"]):
+		log.append({"kind": "guard", "text": GameCompanions.text("guard_too_hurt", {"name": name, "foe": foe})})
+	elif bool(r["won"]):
+		creatures.remove_at(hit)
+		var key := "guard_won_gold" if int(r["gold"]) > 0 else "guard_won"
+		log.append({"kind": "guard", "text": GameCompanions.text(key, {"name": name, "foe": foe, "gold": int(r["gold"])})})
+	else:
+		log.append({"kind": "guard", "text": GameCompanions.text("guard_hurt", {"name": name, "foe": foe})})
 
 
 ## Plans a walk from the heir to a tile of the open world over the ground as it is now (GamePath, a walker). Sets the
@@ -447,11 +492,41 @@ func _contact() -> bool:
 	var fight := d.start_encounter(ids)
 	if fight == null:
 		return false
+	var away := _escape_tile(Vector2(float(creatures[first]["x"]), float(creatures[first]["z"])))
+	d.sandbox_escape = {"x": away.x, "z": away.y}
 	for a in gone:
 		creatures.erase(a)
 	var names: Array = fight.enemies.map(func(e): return str(e["name"]))
 	log.append({"kind": "fight", "text": _text("contact", {"foes": GameMessages.text("life", "list_comma").join(names), "heir": d.heir.name})})
 	return true
+
+
+## The tile `escape_tiles` away from the heir on the side opposite `from` (a creature's point), stopping at the last tile on the
+## way that can be stood on; the heir's own tile when there is none.
+func _escape_tile(from: Vector2) -> Vector2i:
+	var dir := heir_point() - from
+	dir = dir.normalized() if dir.length() > 0.001 else Vector2(0, 1)
+	var ground := GamePath.world_ground(d)
+	var mover: Dictionary = GamePath.data()["movers"]["walker"]
+	var best := heir
+	for i in range(1, int(setting("escape_tiles")) + 1):
+		var t := Vector2i(floori(heir_point().x + dir.x * float(i)), floori(heir_point().y + dir.y * float(i)))
+		if not GameWorldGen.in_bounds(t.x, t.y) or not GamePath.passable(ground, Vector3i(t.x, GameBuild.SURFACE, t.y), mover):
+			break
+		best = t
+	return best
+
+
+## After a fight on the map is over: if it was fled from, the heir gets clear of it now (the record `_contact` made), else
+## nothing changes. The creatures that fought are put back by the next `refresh`.
+func after_fight() -> void:
+	if d.battle != null or d.sandbox_escape.is_empty():
+		return
+	heir = Vector2i(int(d.sandbox_escape["x"]), int(d.sandbox_escape["z"]))
+	d.sandbox_escape = {}
+	route = []
+	refresh()
+	log.append({"kind": "fight", "text": _text("escaped", {"heir": d.heir.name})})
 
 
 ## The creatures within THREAT_NEAR tiles of the heir, as {x, z} points (the companions' threats).
