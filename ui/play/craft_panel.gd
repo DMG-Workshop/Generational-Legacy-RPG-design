@@ -9,6 +9,7 @@ const WIDE := 760.0
 
 var dynasty: GameDynasty
 var on_change: Callable
+var forge := ""   # "" at a town's forge, "home" at the family's own (GameCraft.plan)
 var form_id: String = "sword"
 var mat_id: String = ""
 var picks: Array = ["", "", ""]   # an essence (an affix id) for each slot, "" for none
@@ -49,7 +50,10 @@ func _build() -> void:
 		c.queue_free()
 	var d := dynasty
 	_body.add_child(_wrap("In the stores: %s." % GameCraft.describe(d)))
-	_body.add_child(_wrap("Gold: %s. %s" % [GameText.num(d.heir.gold), "There is a forge here." if d.world.has_service("forge") else GameCraft.text("no_forge")]))
+	var forge_line := "There is a forge here." if d.world.has_service("forge") else GameCraft.text("no_forge")
+	if forge == "home":
+		forge_line = "This is the family's own forge: the fee is %d%% of a town forge's." % int(round(float(GameCraft.setting("home_fee_mult")) * 100.0))
+	_body.add_child(_wrap("Gold: %s. %s" % [GameText.num(d.heir.gold), forge_line]))
 	note = _wrap("", 15, Kit.TEXT)
 	_body.add_child(note)
 	_build_make()
@@ -124,7 +128,7 @@ func _build_make() -> void:
 		pick.item_selected.connect(func(i: int): picks[s] = str(pick.get_item_metadata(i)) if i > 0 else ""; _build())
 		_body.add_child(_pair("Essence %d" % (s + 1), pick))
 	var chosen: Array = picks.filter(func(x): return x != "")
-	var p := GameCraft.plan(dynasty, form_id, mat_id, chosen)
+	var p := GameCraft.plan(dynasty, form_id, mat_id, chosen, forge)
 	_body.add_child(_wrap(_preview(p), 15, Kit.TEXT))
 	var make := Kit.button("Make it", func(): _make(chosen), Vector2(_column, 48))
 	make.name = "MakeButton"
@@ -156,7 +160,7 @@ func _preview(p: Dictionary) -> String:
 
 
 func _make(chosen: Array) -> void:
-	_say(GameCraft.craft(dynasty, form_id, mat_id, chosen))
+	_say(GameCraft.craft(dynasty, form_id, mat_id, chosen, forge))
 	picks = ["", "", ""]
 
 

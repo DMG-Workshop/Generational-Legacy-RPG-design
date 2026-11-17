@@ -4,6 +4,7 @@
     "needs_service": "forge",
     "units_per_weight": 0.6,
     "fee_share": 0.15,
+    "home_fee_mult": 0.5,
     "salvage_share": 0.5,
     "max_essences": 3,
     "rarity_by_essences": {

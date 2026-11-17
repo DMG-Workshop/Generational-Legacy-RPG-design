@@ -493,13 +493,13 @@ static func validate() -> Array:
 	for t in dat.get("room_types", []):
 		if t.has("use"):
 			var u: Variant = t["use"]
-			if typeof(u) != TYPE_DICTIONARY or not (u as Dictionary).has("kind") or not (u as Dictionary).has("years") or not (u as Dictionary).has("hint"):
-				bad.append("building.json: room type '%s' use needs a kind, years and hint" % t["id"])
-			elif not str(u["kind"]) in ["rest"]:
+			if typeof(u) != TYPE_DICTIONARY or not (u as Dictionary).has("kind") or not (u as Dictionary).has("hint"):
+				bad.append("building.json: room type '%s' use needs a kind and a hint" % t["id"])
+			elif not str(u["kind"]) in ["rest", "craft"]:
 				bad.append("building.json: room type '%s' use kind '%s' is not one the game knows" % [t["id"], u["kind"]])
-			elif float(u["years"]) <= 0.0 or float(u["years"]) > 1.0:
-				bad.append("building.json: room type '%s' use years must be above 0 and at most 1" % t["id"])
-	for key_id in ["nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
+			elif str(u["kind"]) == "rest" and (not (u as Dictionary).has("years") or float(u["years"]) <= 0.0 or float(u["years"]) > 1.0):
+				bad.append("building.json: room type '%s' rests for years above 0 and at most 1" % t["id"])
+	for key_id in ["forge_lit", "nothing_to_use", "unknown", "out_of_range", "off_map", "outside_claim", "occupied", "water", "span", "in_the_way", "slope", "undug", "needs_frame", "needs_room", "needs_support", "stairs_ground", "stairs_top", "in_room", "in_plain_room", "missing", "gold", "placed", "nothing", "hangs", "bears", "removed", "removed_back", "summary"]:
 		if not dat["text"].has(key_id):
 			bad.append("building.json: text.%s is missing" % key_id)
 	return bad

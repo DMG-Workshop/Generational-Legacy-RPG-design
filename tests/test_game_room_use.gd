@@ -81,7 +81,7 @@ func test_room_use() -> void:
 	ok(GameBuild.room_use(d, x - 5, z - 5).is_empty(), "open ground does nothing")
 	GameBuild.place(d, "anvil", x + 2, S, z + 1)
 	GameBuild.place(d, "hearth", x + 3, S, z + 1)
-	ok(GameBuild.room_use(d, x + 2, z + 2).is_empty(), "the same room as a forge does nothing (the first type that fits wins)")
+	ok(GameBuild.room_use(d, x + 2, z + 2).get("kind", "") == "craft", "the same room as a forge crafts instead (the first type that fits wins)")
 	var h2 := _house()
 	GameBuild.place(h2["d"], "trough", h2["x"] + 1, S, h2["z"] + 1)
 	ok(GameBuild.room_use(h2["d"], h2["x"] + 2, h2["z"] + 2).is_empty(), "a kennel does nothing yet")

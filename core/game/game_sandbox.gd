@@ -241,6 +241,9 @@ func use() -> Dictionary:
 	if u.is_empty():
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
+		"craft":
+			# The screen opens the workshop for it (GameCraft with forge "home"); nothing changes here.
+			return {"ok": true, "text": GameBuild.text("forge_lit"), "open": "workshop", "forge": "home"}
 		"rest":
 			var msgs := d.rest_for(float(u["years"]))
 			for m in msgs:
