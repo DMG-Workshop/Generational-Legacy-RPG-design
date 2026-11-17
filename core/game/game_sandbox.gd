@@ -312,6 +312,8 @@ func step(ticks: int = 1) -> void:
 		var threats := _threats()
 		var cview := GameBehaviour.world_view(d, [{"x": heir_point().x, "z": heir_point().y}], night)
 		creatures = GameBehaviour.step_all(creatures, cview, d.seed_value, tick)
+		if _contact():
+			return
 		companions = GameCompanions.reconcile(d, companions, heir_point().x, heir_point().y)
 		var router := GamePath.router(GamePath.world_ground(d))
 		var out := GameCompanions.step_all(d, companions, GameCompanions.view(d, heir_point().x, heir_point().y, threats, router), tick)
@@ -432,6 +434,40 @@ func build(kind: String, dx: int, dz: int) -> Dictionary:
 	if out["ok"]:
 		log.append({"kind": "build", "text": str(out["text"])})
 	return out
+
+
+## A creature that is hunting the heir and has reached them starts a fight (GameDynasty.start_encounter), with any others that
+## are hunting them within `contact_join` tiles, up to `contact_max` in all. The creatures in the fight are taken out of the
+## open world. Only while no fight is on and the heir is living; returns whether one began.
+func _contact() -> bool:
+	if d.battle != null or d.state != "life" or storey() > 0 or space != "world":
+		return false   # nothing reaches the heir upstairs or indoors
+	var me := heir_point()
+	var first := -1
+	for i in creatures.size():
+		var a: Dictionary = creatures[i]
+		if str(a["mode"]) == "chase" and Vector2(float(a["x"]), float(a["z"])).distance_to(me) <= float(setting("contact_range")):
+			first = i
+			break
+	if first < 0:
+		return false
+	var ids: Array = []
+	var gone: Array = []
+	for i in creatures.size():
+		var a: Dictionary = creatures[i]
+		if ids.size() >= int(setting("contact_max")):
+			break
+		if i == first or (str(a["mode"]) == "chase" and Vector2(float(a["x"]), float(a["z"])).distance_to(me) <= float(setting("contact_join"))):
+			ids.append(str(a["id"]))
+			gone.append(a)
+	var fight := d.start_encounter(ids)
+	if fight == null:
+		return false
+	for a in gone:
+		creatures.erase(a)
+	var names: Array = fight.enemies.map(func(e): return str(e["name"]))
+	log.append({"kind": "fight", "text": _text("contact", {"foes": GameMessages.text("life", "list_comma").join(names), "heir": d.heir.name})})
+	return true
 
 
 ## The creatures within THREAT_NEAR tiles of the heir, as {x, z} points (the companions' threats).
