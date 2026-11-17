@@ -127,18 +127,34 @@ func show_title() -> void:
 	sound.music(Sound.track_for(null))
 
 
-func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "", p_hard: Dictionary = {}) -> void:
+func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "", p_hard: Dictionary = {}, open_world: bool = false) -> void:
 	dynasty = GameDynasty.new_game(p_seed, p_name, class_id, bloodline, race_id, p_sex, p_subclass, p_hard)
 	dynasty.save_to_disk()
 	show_state()
+	if open_world:
+		_open_world_first()
 
 
-func continue_game() -> void:
+func continue_game(open_world: bool = false) -> void:
 	var d := GameDynasty.load_from_disk()
 	if d == null:
 		return
 	dynasty = d
 	show_state()
+	if open_world:
+		_open_world_first()
+
+
+## Opens the 2D open world over the life, for a house that is in its life (not mid-fight, between heirs or at the saga's end: those
+## screens come first). The title's New game and Continue ask for it when the menu's Start in says the open world.
+func _open_world_first() -> void:
+	if dynasty != null and dynasty.battle == null and dynasty.state == "life":
+		show_sandbox()
+
+
+## The menu's Start in: whether New game and Continue open the open world or the life screen.
+func set_open_world_first(on: bool) -> void:
+	UiSettings.set_open_world_first(on)
 
 
 ## The open world (roadmap items 39 and 51): the sandbox screen over the life. Back returns to the state's screen.

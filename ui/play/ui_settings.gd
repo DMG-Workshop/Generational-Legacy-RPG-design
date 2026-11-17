@@ -105,6 +105,16 @@ static func set_tutorial(on: bool) -> void:
 	store("tutorial", "on" if on else "off")
 
 
+## Whether New game and Continue open the 2D open world at once (the map), rather than the life screen's text and buttons.
+## On unless the player has chosen the life screen in the menu; either way "Walk the world" and Back go between them.
+static func open_world_first() -> bool:
+	return str(stored("start_in", "world")) != "life"
+
+
+static func set_open_world_first(on: bool) -> void:
+	store("start_in", "world" if on else "life")
+
+
 ## Whether the game keeps a log of its errors in memory for an error report (GameErrorLog). Off until the player
 ## switches it on in the menu: nothing about a session is remembered unless they ask.
 static func error_log_on() -> bool:

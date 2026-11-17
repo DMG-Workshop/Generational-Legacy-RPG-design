@@ -164,7 +164,7 @@ func _ready() -> void:
 	var begin := Kit.button("Begin Dynasty", _start, Vector2(0, 48))
 	begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons.add_child(begin)
-	cont = Kit.button("Continue" if narrow else "Continue Saved Dynasty", func(): app.continue_game(), Vector2(300 if not narrow else 160, 48))
+	cont = Kit.button("Continue" if narrow else "Continue Saved Dynasty", func(): app.continue_game(UiSettings.open_world_first()), Vector2(300 if not narrow else 160, 48))
 	buttons.add_child(cont)
 	buttons.add_child(Kit.button("Settings", func(): app.open_menu(), Vector2(130, 48)))
 	if not UiSettings.is_mobile():   # phones leave an app from the system, not from a button
@@ -364,7 +364,7 @@ func _start() -> void:
 func _begin() -> void:
 	var s := seed_edit.text.strip_edges()
 	var seed_value: int = int(s) if s.is_valid_int() else int(Time.get_unix_time_from_system()) % 1000000
-	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected], GameSex.SEXES[sex_pick.selected], subclass_ids[subclass_pick.selected], hard_opts)
+	app.new_game(name_edit.text.strip_edges(), class_ids[class_pick.selected], bloodline_ids[bloodline_pick.selected], seed_value, race_ids[race_pick.selected], GameSex.SEXES[sex_pick.selected], subclass_ids[subclass_pick.selected], hard_opts, UiSettings.open_world_first())
 
 
 ## The founder's hard-mode choices: a small panel over the title; the button says what is chosen.

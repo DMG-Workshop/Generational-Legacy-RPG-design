@@ -143,6 +143,15 @@ func _ready() -> void:
 	var swhy := Kit.label(str(stext["about"]), 14, Kit.dim())
 	swhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(swhy)
+	v.add_child(Kit.label("Start in", 17, Kit.ACCENT))
+	var wrow := HBoxContainer.new()
+	wrow.add_theme_constant_override("separation", 8)
+	v.add_child(wrow)
+	_choice(wrow, "Open world", UiSettings.open_world_first(), func(): app.set_open_world_first(true))
+	_choice(wrow, "Life screen", not UiSettings.open_world_first(), func(): app.set_open_world_first(false))
+	var wwhy := Kit.label("What New game and Continue open first: the 2D map, or the life screen with its buttons. Walk the world and Back go between them.", 14, Kit.dim())
+	wwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(wwhy)
 	v.add_child(Kit.label("Problems", 17, Kit.ACCENT))
 	var erow := HBoxContainer.new()
 	erow.add_theme_constant_override("separation", 8)
