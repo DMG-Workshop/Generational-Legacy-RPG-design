@@ -14,6 +14,8 @@ const ShopPanel := preload("res://ui/play/shop_panel.gd")
 const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
+const BattleView := preload("res://ui/play/battle_view.gd")
+const MapFight := preload("res://ui/play/map_fight.gd")
 const BAR := 56.0
 
 var app: Node
@@ -31,6 +33,7 @@ var status: Label
 var map: Control          # clips the tile view to the map area, under the bar and the overlay
 var tile_view: TileView   # the ground, as tile chunks
 var overlay: Control      # the route, creatures, heir, ghost and stick, over the tiles
+var _fight: Control = null   # the battle screen, hosted over the map while a creature's fight is on
 var piece_button: Button
 var level_button: Button
 var last_line := ""
@@ -126,8 +129,13 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var d: GameDynasty = app.dynasty
-	if d.battle != null or d.state != "life":
-		app.show_state()   # the clock (or the heir) has handed the screen over: a fight, a succession, the end
+	if _fight != null:
+		return   # a fight is on over the map: it ends in _fight_over, even if the heir falls in it
+	if d.state != "life":
+		app.show_state()   # the clock (or the heir) has handed the screen over: a succession, the end
+		return
+	if d.battle != null:
+		_open_fight()   # a creature has caught the heir: the fight is played over the map, which stays where it is
 		return
 	if _modal_open():
 		return   # the workshop is open: the world waits
@@ -289,6 +297,37 @@ func _modal_open() -> bool:
 		if c.has_meta("modal") and not c.is_queued_for_deletion():
 			return true
 	return false
+
+
+## Plays the fight over the map: the battle screen runs under a stand-in app (MapFight) whose "done" gives the map back.
+func _open_fight() -> void:
+	var host := MapFight.new()
+	host.dynasty = app.dynasty
+	host.app = app
+	host.sound = app.sound if "sound" in app else null
+	host.on_done = _fight_over
+	var bv: Control = BattleView.new()
+	bv.app = host
+	host.current = bv
+	_fight = bv
+	add_child(host)
+	bv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(bv)
+
+
+## The fight is over: the battle screen goes, the heir gets clear if they fled, and the map goes on (or the life's next screen
+## comes, if the heir fell or the line ended).
+func _fight_over() -> void:
+	if app.dynasty.battle != null:
+		return   # not over yet
+	if _fight != null:
+		var host: Node = _fight.app
+		_fight.queue_free()
+		_fight = null
+		host.queue_free()
+	sb.after_fight()
+	_refresh_status()
+	queue_redraw()   # (a heir who fell or a line that ended is handed on by the next _process)
 
 
 ## The Use action: in by the door the heir stands at, or out by the entrance of the interior they are in.

@@ -6,14 +6,15 @@
 ## moving them by the router and ground rules creatures use (GameBehaviour, GamePath). Gathering takes a node's material
 ## (shared by the companion's class, data/companions/world.json `classes`) into `GameDynasty.stores` and marks the node
 ## in `GameDynasty.gathered` (saved only when not empty) until `regrow_years` of the world's calendar have passed.
-## Guards do not fight: one that sees a threat near its post goes out to meet it and says so (an `alert` event).
+## A guard that sees a threat near its post goes out to meet it and says so (an `alert` event); at the threat it fights it
+## (an `engage` event, settled by `duel`: a win drives the creature off, a loss leaves the guard hurt and resting for a while).
 ## Nothing here is random, and the autopilot (which never steps companions or gives orders) is unaffected.
 class_name GameCompanions
 extends RefCounted
 
 const PATH := "res://data/companions/world.json"
 const FOLLOW := "follow"
-const ORDERS := ["follow", "stay", "gather", "guard"]
+const ORDERS := ["follow", "stay", "gather", "guard", "watch"]
 const GOLDEN := 2.399963   # radians: spreads followers round the heir
 
 static var _cache: Dictionary = {}
@@ -114,7 +115,7 @@ static func load_gathered(v: Variant) -> Dictionary:
 ## A companion in the open world: where they are, their post (where they stand when given an order) and what they are doing.
 static func new_agent(uid: int, id: String, x: float, z: float) -> Dictionary:
 	return {"uid": uid, "id": id, "x": x, "z": z, "post_x": x, "post_z": z, "order": FOLLOW, "mode": "hold", "plan": [], "target": {},
-		"work": 0, "scanned": -1000000, "alerted": false}
+		"work": 0, "scanned": -1000000, "alerted": false, "rest_until": 0, "load": {}, "haul": false}
 
 
 static func _pos(a: Dictionary) -> Vector2:
@@ -158,6 +159,7 @@ static func reconcile(d: GameDynasty, agents: Array, hx: float, hz: float) -> Ar
 ## companions keep off water) and, if given, a router (GamePath.router) to get round walls and water.
 static func view(d: GameDynasty, hx: float, hz: float, threats: Array = [], router: Variant = null) -> Dictionary:
 	var v := GameBehaviour.world_view(d, threats, false)
+	v["night"] = GameDay.is_night(d)   # (the creatures' view above is told it is day: it only seeds their sight, which the sandbox's own view sets)
 	v["heir"] = {"x": hx, "z": hz}
 	v["threats"] = threats
 	if router is Callable:
@@ -175,9 +177,50 @@ static func event_text(e: Dictionary) -> String:
 			return text("alert", {"name": name})
 		"regrouped":
 			return text("regrouped", {"name": name})
+		"delivered":
+			return text("delivered", {"name": name, "what": str(e["what"])})
+		"engage":
+			return ""   # told by what the fight comes to (guard_won, guard_hurt), not on its own
 		"nothing":
 			return text("nothing", {"name": name})
 	return ""
+
+
+# ---------------------------------------------------------------- a guard's fight
+
+## A guard meets a threat: the companion (as a fighter, at their own level and hp) fights one foe of that creature at
+## `guard_foe_level_mult` times their level, played to the end by GameTactics on dice of their own (keyed on the seed, the
+## companion, the creature and the tick, so the dynasty's dice are not touched). A win drives the creature off and brings the
+## family `guard_gold_share` of its gold; a loss leaves the guard hurt (never dead: 1 hp at least). A guard hurt below
+## `guard_min_hp_frac` of their health will not take it on (`refused`). Their hp is kept on the party member. Returns {} when
+## there is no such companion or creature, else {ok, won, refused, foe, gold, hp_before, hp_after}.
+static func duel(d: GameDynasty, id: String, creature_id: String, tick: int) -> Dictionary:
+	var m := d.party.member(id)
+	if m.is_empty():
+		return {}
+	var foe := d.foe_for(creature_id, maxi(1, int(round(float(m["level"]) * float(setting("guard_foe_level_mult"))))))
+	if foe.is_empty():
+		return {}
+	var body := d.party._body(d, m)
+	body.hp = clampi(int(m["hp"]), 1, body.max_hp())
+	var out := {"ok": true, "won": false, "refused": false, "foe": str(foe["name"]), "gold": 0, "hp_before": body.hp, "hp_after": body.hp}
+	if float(body.hp) < float(body.max_hp()) * float(setting("guard_min_hp_frac")):
+		out["refused"] = true
+		return out
+	var r := RandomNumberGenerator.new()
+	r.seed = hash([d.seed_value, "guard", id, creature_id, tick])
+	var b := GameBattle.new(body, [foe], r)
+	var guard := 0
+	while not b.is_over() and guard < 300:
+		guard += 1
+		GameTactics.auto_turn(b)
+	out["won"] = b.result == "victory"
+	m["hp"] = maxi(1, body.hp)
+	out["hp_after"] = int(m["hp"])
+	if out["won"]:
+		out["gold"] = int(round(float(foe["gold"]) * float(setting("guard_gold_share"))))
+		d.heir.gold += int(out["gold"])
+	return out
 
 
 # ---------------------------------------------------------------- the step
@@ -195,6 +238,8 @@ static func step_all(d: GameDynasty, agents: Array, view: Dictionary, tick: int)
 		var a: Dictionary = (agents[i] as Dictionary).duplicate(true)
 		var order := order_of(d, str(a["id"]))
 		if order != str(a["order"]):   # a new order: forget the old work and take the place they stand as their post
+			_deposit(d, a, events)   # what they carry goes to the stores, not lost
+			a["haul"] = false
 			a["order"] = order
 			a["plan"] = []
 			a["target"] = {}
@@ -208,7 +253,12 @@ static func step_all(d: GameDynasty, agents: Array, view: Dictionary, tick: int)
 			"stay":
 				_stay(a, view)
 			"guard":
-				_guard(a, view, events)
+				_guard(a, view, events, tick)
+			"watch":
+				if bool(view.get("night", false)):
+					_guard(a, view, events, tick, float(setting("watch_reach_mult")))   # a guard that sees further in the dark
+				else:
+					_stay(a, view)   # by day the watch rests at its post
 			"gather":
 				_gather(d, a, view, tick, claimed, events)
 			_:
@@ -262,9 +312,18 @@ static func _stay(a: Dictionary, view: Dictionary) -> void:
 		a["mode"] = "hold"
 
 
-static func _guard(a: Dictionary, view: Dictionary, events: Array) -> void:
+static func _guard(a: Dictionary, view: Dictionary, events: Array, tick: int = 0, reach_mult: float = 1.0) -> void:
 	var post := _post(a)
-	var reach := float(setting("guard_radius")) * class_mult(str(a["id"]), "guard")
+	if tick < int(a.get("rest_until", 0)):
+		# hurt in a fight: back to the post and out of it until rested
+		a["alerted"] = false
+		if _pos(a).distance_to(post) > 0.75:
+			a["mode"] = "return"
+			_go(a, post, view)
+		else:
+			a["mode"] = "hold"
+		return
+	var reach := float(setting("guard_radius")) * class_mult(str(a["id"]), "guard") * reach_mult
 	var best := Vector2.ZERO
 	var best_d := INF
 	for t in view.get("threats", []):
@@ -286,6 +345,8 @@ static func _guard(a: Dictionary, view: Dictionary, events: Array) -> void:
 				var held := post + (moved - post).normalized() * reach
 				a["x"] = held.x
 				a["z"] = held.y
+		else:
+			events.append({"type": "engage", "id": a["id"], "x": best.x, "z": best.y})   # at the threat: the sandbox settles the fight (duel)
 		return
 	a["alerted"] = false
 	if _pos(a).distance_to(post) > 0.75:
@@ -322,6 +383,9 @@ static func scan(d: GameDynasty, post: Vector2, claimed: Dictionary = {}) -> Arr
 static func _gather(d: GameDynasty, a: Dictionary, view: Dictionary, tick: int, claimed: Dictionary, events: Array) -> void:
 	var pos := _pos(a)
 	var post := _post(a)
+	if bool(a.get("haul", false)):
+		_haul(d, a, view, events)
+		return
 	var target: Dictionary = a["target"]
 	if not target.is_empty():
 		var tx := int(target["x"])
@@ -343,7 +407,11 @@ static func _gather(d: GameDynasty, a: Dictionary, view: Dictionary, tick: int, 
 			if int(a["work"]) > 0:
 				return
 			var n := maxi(1, int(round(float(target["amount"]) * class_mult(str(a["id"]), "gather"))))
-			GameCraft.add_material(d, str(target["material"]), n)
+			var load: Dictionary = a["load"]
+			load[str(target["material"])] = int(load.get(str(target["material"]), 0)) + n   # carried, not yet in the stores
+			a["load"] = load
+			if _load_n(a) >= int(setting("carry_capacity")):
+				a["haul"] = true
 			d.gathered[node_key(tx, tz)] = float(d.world.year)
 			events.append({"type": "gathered", "id": a["id"], "material": target["material"], "n": n, "x": tx, "z": tz})
 			a["target"] = {}
@@ -369,10 +437,48 @@ static func _gather(d: GameDynasty, a: Dictionary, view: Dictionary, tick: int, 
 			if a["mode"] != "idle":
 				events.append({"type": "nothing", "id": a["id"]})
 			a["mode"] = "idle"
+			if _load_n(a) > 0:
+				a["haul"] = true   # nothing left to gather: take what they have to the heir
 		return
 	if _pos(a).distance_to(post) > float(setting("stay_radius")):
 		_go(a, post, view)
 	a["mode"] = "idle"
+
+
+## How many units a companion carries.
+static func _load_n(a: Dictionary) -> int:
+	var n := 0
+	for m in a.get("load", {}):
+		n += int(a["load"][m])
+	return n
+
+
+## Puts what a companion carries into the family's stores and tells the caller (a `delivered` event).
+static func _deposit(d: GameDynasty, a: Dictionary, events: Array) -> void:
+	if _load_n(a) <= 0:
+		return
+	var parts: Array = []
+	for m in (a["load"] as Dictionary).keys():
+		var n := int(a["load"][m])
+		GameCraft.add_material(d, str(m), n)
+		parts.append("%d %s" % [n, GameMaterials.name_of(str(m)).to_lower()])
+	events.append({"type": "delivered", "id": a["id"], "what": ", ".join(parts)})
+	a["load"] = {}
+
+
+## Takes the load to the heir (the stores go where the heir is): walks to them and hands it over within `deliver_reach`, then
+## goes back to work. With no heir in the view it is handed over where they stand.
+static func _haul(d: GameDynasty, a: Dictionary, view: Dictionary, events: Array) -> void:
+	var heir: Dictionary = view.get("heir", {})
+	if heir.is_empty() or _pos(a).distance_to(Vector2(float(heir["x"]), float(heir["z"]))) <= float(setting("deliver_reach")):
+		_deposit(d, a, events)
+		a["haul"] = false
+		a["mode"] = "idle"
+		a["plan"] = []
+		a["scanned"] = -1000000   # look again for the next thing to gather
+		return
+	a["mode"] = "haul"
+	_go(a, Vector2(float(heir["x"]), float(heir["z"])), view)
 
 
 # ---------------------------------------------------------------- the data
@@ -386,7 +492,7 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["speed", "follow_min", "follow_max", "follow_catchup", "stay_radius", "gather_radius", "gather_reach", "gather_ticks", "rescan_ticks", "plan_size", "regrow_years", "guard_radius", "guard_engage"]:
+	for k in ["speed", "follow_min", "follow_max", "follow_catchup", "stay_radius", "gather_radius", "gather_reach", "gather_ticks", "rescan_ticks", "plan_size", "regrow_years", "guard_radius", "guard_engage", "guard_foe_level_mult", "guard_gold_share", "guard_rest_ticks", "guard_min_hp_frac", "carry_capacity", "deliver_reach", "watch_reach_mult"]:
 		if not s.has(k):
 			bad.append("companions/world.json: settings.%s is missing" % k)
 	if not bad.is_empty():
@@ -396,6 +502,10 @@ static func validate() -> Array:
 			bad.append("companions/world.json: settings.%s must be above 0" % k)
 	if float(s["follow_min"]) >= float(s["follow_max"]) or float(s["follow_max"]) >= float(s["follow_catchup"]):
 		bad.append("companions/world.json: follow_min < follow_max < follow_catchup is needed, or followers would never settle or never catch up")
+	if float(s["guard_gold_share"]) > 1.0 or float(s["guard_min_hp_frac"]) > 1.0:
+		bad.append("companions/world.json: guard_gold_share and guard_min_hp_frac are shares: at most 1")
+	if int(s["carry_capacity"]) < 1 or float(s["watch_reach_mult"]) < 1.0:
+		bad.append("companions/world.json: carry_capacity must be at least 1 and watch_reach_mult at least 1 (a watch sees no less far than a guard)")
 	if float(s["gather_reach"]) >= float(s["gather_radius"]):
 		bad.append("companions/world.json: gather_reach must be under gather_radius")
 	if int(s["gather_ticks"]) < 1 or int(s["plan_size"]) < 1 or int(s["rescan_ticks"]) < 1:
