@@ -103,6 +103,9 @@ func storey() -> int:
 func place_line() -> String:
 	if space != "world":
 		var name := str(GameSpaces.space(space).get("name", space))
+		var who := GamePeople.near(space, heir.x, heir.y)
+		if not who.is_empty() and heir != GameInterior.entry():
+			return GamePeople.text("near", {"name": str(who["name"])})
 		var room := GameInterior.room_at(space, heir.x, heir.y)
 		if room == "":
 			return _text("inside_in", {"place": name})
@@ -234,6 +237,12 @@ func leave() -> Dictionary:
 ## lets them do (a bedroom the family built: rest). {ok, text}.
 func use() -> Dictionary:
 	if space != "world":
+		if heir != GameInterior.entry():
+			var p := GamePeople.near(space, heir.x, heir.y)
+			if not p.is_empty():
+				var t := GamePeople.talk(d, space, p)
+				log.append({"kind": "talk", "text": str(t["text"])})
+				return t
 		return leave()
 	if door_here() != "":
 		return enter()

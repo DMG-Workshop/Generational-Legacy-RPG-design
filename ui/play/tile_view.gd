@@ -28,6 +28,7 @@ static func kinds() -> Array:
 	out.append("water")
 	for id in GameBuild.pieces():
 		out.append(id)
+	out.append("person")   # someone standing in an interior (GamePeople)
 	out.append("exit")   # an interior's way out (its floor, doors and walls use the floor, door and wall colours)
 	return out
 
