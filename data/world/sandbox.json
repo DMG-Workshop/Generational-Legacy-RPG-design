@@ -76,6 +76,7 @@
     "climbed_part": "{heir} comes down to storey {n}.",
     "upstairs_route": "Routes are for the ground: walk up here with the stick.",
     "upstairs_dig": "The family can only dig from the ground.",
+    "arrived": "{heir} walks into {place}.",
     "upstairs_at": "Upstairs, storey {n}.",
     "fell": "The floor gave way and {heir} dropped to the ground.",
     "no_door": "There is no door here to go in by.",
