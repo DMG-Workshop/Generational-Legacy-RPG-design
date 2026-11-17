@@ -39,9 +39,11 @@ static func text(key: String, vals: Dictionary = {}) -> String:
 
 # ---------------------------------------------------------------- the base
 
-## The home town's anchor in the generated world.
+## The family's ground to build on: the homestead plot beside the home town (GameWorldGen.plots; the town's own ground is taken by
+## its buildings), or the town's anchor where there is no plot.
 static func base() -> Dictionary:
-	return GameWorldGen.anchor(str(setting("base_place")))
+	var plot := GameWorldGen.plot(str(setting("base_place")))
+	return plot if not plot.is_empty() else GameWorldGen.anchor(str(setting("base_place")))
 
 
 ## How far from the home town the family may build: the base radius and more for each level bought in the house.

@@ -6,6 +6,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchControls := preload("res://ui/play/touch_controls.gd")
@@ -32,7 +33,10 @@ var actions: VBoxContainer           # Dig and Place under the thumb, shown only
 var status: Label
 var map: Control          # clips the tile view to the map area, under the bar and the overlay
 var tile_view: TileView   # the ground, as tile chunks
-var overlay: Control      # the route, creatures, heir, ghost and stick, over the tiles
+var overlay: Control      # the route, buildings, creatures, heir, ghost and stick, over the tiles
+var _figures := {}        # companion id and level -> their figure's texture (SpriteArt)
+var _last_x := {}         # creature or companion -> where it was drawn last (the look only)
+var _east := {}           # creature or companion -> whether it last moved east
 var _fight: Control = null   # the battle screen, hosted over the map while a creature's fight is on
 var piece_button: Button
 var level_button: Button
@@ -77,6 +81,7 @@ func _ready() -> void:
 	overlay = Overlay.new()
 	overlay.screen = self
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST   # pixel art stays crisp
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
 	var bar := HBoxContainer.new()
@@ -546,24 +551,110 @@ func _paint(c: Control) -> void:
 	for i in range(sb.route.size() if outdoors else 0):
 		var rp := origin + (Vector2(sb.route[i]) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 		c.draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
-	for a in (sb.creatures if outdoors else []):
-		var cp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
-		c.draw_circle(cp, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
-	for a in (sb.companions if outdoors else []):
-		var kp := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
-		c.draw_circle(kp, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
+	if outdoors:
+		_paint_standing(c, origin, area, centre, cell, colors, float(look["light"]))
+	else:
+		var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
+		c.draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 	if mode == "build" and outdoors:
 		var gp := origin + (Vector2(sb.heir + facing_dir) - centre) * cell + area * 0.5
 		var legal := sb.build_check(build_kind, facing_dir.x, facing_dir.y) == ""
 		var gc := Color(0.3, 0.9, 0.4, 0.9) if legal else Color(0.95, 0.3, 0.3, 0.9)
 		c.draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
-	var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
-	c.draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 	if fingers.steering():
 		var base := _rgb(colors["stick_base"])
 		var radius := WorldInput.setting("touch_stick_radius_px")
 		c.draw_arc(origin + fingers.origin, radius, 0.0, TAU, 40, Color(base, 0.5), 3.0)
 		c.draw_circle(origin + fingers.knob(), radius * 0.35, Color(_rgb(colors["stick_knob"]), 0.7))
+
+
+## What stands on the open world's ground, drawn back to front (the ones further north first, so the ones in front cover them): the
+## town buildings, the creatures, the companions and the heir, each as its sprite (a circle where there is none), dimmed at night.
+func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2, cell: float, colors: Dictionary, light: float) -> void:
+	var d: GameDynasty = app.dynasty
+	var dim := Color.WHITE.darkened(float(setting("night_dim")) * (1.0 - light))
+	var half := area / (2.0 * cell) + Vector2(3, 3)
+	var view := Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0))
+	var items: Array = []   # [depth, kind, thing]
+	for b in GameTown.in_rect(view):
+		items.append([float(b["z"] + b["h"]), "building", b])
+	for a in sb.creatures:
+		items.append([float(a["z"]) + 0.5, "creature", a])
+	for a in sb.companions:
+		items.append([float(a["z"]) + 0.5, "companion", a])
+	items.append([float(sb.heir.y) + 1.0, "heir", null])
+	items.sort_custom(func(p, q): return p[0] < q[0])
+	for it in items:
+		match str(it[1]):
+			"building":
+				var b: Dictionary = it[2]
+				var at := origin + (Vector2(float(b["x"]), float(b["z"])) - centre) * cell + area * 0.5
+				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"])), Rect2(at, Vector2(float(b["w"]), float(b["h"])) * cell), false, dim)
+			"creature":
+				var a: Dictionary = it[2]
+				var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
+				var tex: Texture2D = SpriteArt.creature(str(a["id"]))
+				if tex == null:
+					c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
+				else:
+					var s := cell / 16.0 * float(setting("creature_pixel"))
+					var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
+					var h := w * float(tex.get_height()) / float(tex.get_width())
+					_stand(c, tex, p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell)   # the art faces left
+			"companion":
+				var a: Dictionary = it[2]
+				var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
+				var tex: Texture2D = _party_figure(str(a["id"]))
+				if tex == null:
+					c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
+				else:
+					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell)   # the art faces right
+			"heir":
+				var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
+				var tex: Texture2D = SpriteArt.figure(d.heir)
+				if tex == null:
+					c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+				else:
+					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell), facing_dir.x < 0, dim, cell)
+
+
+## Whether a creature or companion last moved to the east: it faces the way it last went (kept per key, for the look only).
+func _faces_right(key: String, x: float) -> bool:
+	var before: Variant = _last_x.get(key)
+	_last_x[key] = x
+	if before != null and absf(x - float(before)) > 0.001:
+		_east[key] = x > float(before)
+	return bool(_east.get(key, false))
+
+
+## A figure `figure_tiles` tall, whatever its pixels.
+func _figure_size(tex: Texture2D, cell: float) -> Vector2:
+	var h := cell * float(setting("figure_tiles"))
+	return Vector2(h * float(tex.get_width()) / float(tex.get_height()), h)
+
+
+## Draws a sprite standing with its feet at `feet`, on a shadow, turned the other way when `flip`.
+func _stand(c: Control, tex: Texture2D, feet: Vector2, box: Vector2, flip: bool, tint: Color, cell: float) -> void:
+	c.draw_set_transform(feet, 0.0, Vector2(1.0, 0.4))
+	c.draw_circle(Vector2.ZERO, box.x * 0.4, Color(0, 0, 0, float(setting("shadow_alpha"))))
+	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var at := feet - Vector2(box.x * 0.5, box.y - cell * 0.1)
+	if flip:
+		c.draw_texture_rect(tex, Rect2(at + Vector2(box.x, 0.0), Vector2(-box.x, box.y)), false, tint)
+	else:
+		c.draw_texture_rect(tex, Rect2(at, box), false, tint)
+
+
+## A companion's figure (their class in their race's colours), kept for as long as they stay the same level.
+func _party_figure(id: String) -> Texture2D:
+	var d: GameDynasty = app.dynasty
+	var m: Dictionary = d.party.member(id)
+	if m.is_empty():
+		return null
+	var key := "%s:%d" % [id, int(m.get("level", 0))]
+	if not _figures.has(key):
+		_figures[key] = SpriteArt.figure(d.party.unit(d, m))
+	return _figures[key]
 
 
 ## The control over the tiles: it only hands its drawing back to the screen.

@@ -128,6 +128,7 @@ func _hire(d: GameDynasty, id: String) -> void:
 func test_build_and_orders() -> void:
 	var d := _house()
 	var s := GameSandbox.start(d)
+	s.heir = Vector2i(int(GameBuild.base()["x"]), int(GameBuild.base()["z"]))   # the family builds on its plot
 	ok(s.build_kinds() == ["wall", "floor", "road", "door", "stairs", "bed", "anvil", "hearth", "roof", "trough"], "the pieces are the ones the data lists, in order")
 	for m in GameBuild.pieces()["wall"]["cost"]:
 		GameCraft.add_material(d, str(m), 200)

@@ -19,7 +19,12 @@
     "move_threshold": 0.2,
     "save_seconds": 60.0,
     "dim_floor": 0.35,
-    "action_button_px": 84.0
+    "action_button_px": 84.0,
+    "figure_tiles": 2.0,
+    "creature_pixel": 0.42,
+    "creature_max_tiles": 3.0,
+    "shadow_alpha": 0.3,
+    "night_dim": 0.45
   },
   "colors": {
     "water": [0.12, 0.27, 0.42],

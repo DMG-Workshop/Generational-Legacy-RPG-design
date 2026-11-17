@@ -16,6 +16,7 @@ const MINE_SITE := "world"
 static var _cache: Dictionary = {}
 static var _anchors: Array = []
 static var _roads: Array = []
+static var _zones: Array = []
 static var _surf: Dictionary = {}   # tile key -> [biome, height] (see _surface)
 static var _surf_seed := -1
 const SURFACE_KEEP := 150000
@@ -26,6 +27,7 @@ static func data() -> Dictionary:
 		_cache = GameData.load_json(PATH)
 		_anchors = []
 		_roads = []
+		_zones = []
 	return _cache
 
 
@@ -61,6 +63,36 @@ static func anchor(place_id: String) -> Dictionary:
 		if a["id"] == place_id:
 			return a
 	return {}
+
+
+## The plots: flat, dry, clear ground beside a place that is no place itself (`settings.plots`): the family's own to build on
+## (GameBuild.base), since a town's ground is taken by its buildings. Each is {id, type "plot", name, place (the town it is
+## beside), biome (that town's), x, z, radius}, treated as an anchor's ground by the land (flat, no water, no nodes).
+static func plots() -> Array:
+	anchors()
+	if _zones.is_empty() or _zones.size() == _anchors.size():
+		_zones = _anchors.duplicate()
+		for p in setting("plots"):
+			var near := anchor(str(p["near"]))
+			if near.is_empty():
+				continue
+			_zones.append({"id": str(p["id"]), "type": "plot", "name": "%s's homestead" % near["name"], "place": str(near["id"]), "biome": str(near["biome"]),
+				"x": float(near["x"]) + float(p["dx"]), "z": float(near["z"]) + float(p["dz"]), "radius": int(p["radius"])})
+	return _zones.slice(_anchors.size())
+
+
+## The plot beside a place, or {}.
+static func plot(place_id: String) -> Dictionary:
+	for p in plots():
+		if str(p["place"]) == place_id:
+			return p
+	return {}
+
+
+## Every piece of ground the land treats as an anchor's: the places and the plots.
+static func zones() -> Array:
+	plots()
+	return _zones
 
 
 ## The roads of the text game as straight lines between their two anchors: [ax, az, bx, bz] each, once for each pair (a road
@@ -142,7 +174,7 @@ static func _fbm(seed_value: int, tag: int, x: float, z: float, scale: float, oc
 static func nearest_anchor(x: float, z: float) -> Dictionary:
 	var best: Dictionary = {}
 	var best_d := 1e18
-	for a in anchors():
+	for a in zones():
 		var dist := Vector2(x - float(a["x"]), z - float(a["z"])).length()
 		if dist < best_d:
 			best_d = dist
@@ -382,6 +414,35 @@ static func chunk(d: GameDynasty, cx: int, cz: int) -> Dictionary:
 
 # ---------------------------------------------------------------- the data
 
+## Problems in settings.plots.
+static func _plot_problems(s: Dictionary) -> Array:
+	var bad: Array = []
+	if not s.has("plots") or typeof(s["plots"]) != TYPE_ARRAY:
+		return ["worldgen.json: settings.plots is missing"]
+	var ids := {}
+	for p in s["plots"]:
+		for k in ["id", "near", "dx", "dz", "radius"]:
+			if typeof(p) != TYPE_DICTIONARY or not p.has(k):
+				bad.append("worldgen.json: a plot needs id, near, dx, dz and radius")
+				return bad
+		if ids.has(str(p["id"])) or anchor(str(p["id"])) != {}:
+			bad.append("worldgen.json: the plot '%s' shares its id" % p["id"])
+		ids[str(p["id"])] = true
+		var near := anchor(str(p["near"]))
+		if near.is_empty():
+			bad.append("worldgen.json: the plot '%s' is beside '%s', which is not a place" % [p["id"], p["near"]])
+			continue
+		if int(p["radius"]) < 1:
+			bad.append("worldgen.json: the plot '%s' needs a radius of at least 1" % p["id"])
+		var at := Vector2(float(near["x"]) + float(p["dx"]), float(near["z"]) + float(p["dz"]))
+		if at.distance_to(Vector2(float(near["x"]), float(near["z"]))) < float(near["radius"]) + float(p["radius"]) + 1.0:
+			bad.append("worldgen.json: the plot '%s' overlaps the ground of %s" % [p["id"], p["near"]])
+		for a in anchors():
+			if str(a["id"]) != str(near["id"]) and at.distance_to(Vector2(float(a["x"]), float(a["z"]))) < float(a["radius"]) + float(p["radius"]) + 2.0:
+				bad.append("worldgen.json: the plot '%s' is too near %s" % [p["id"], a["id"]])
+	return bad
+
+
 ## Problems in settings.water (lakes, rivers and fords).
 static func _water_problems(s: Dictionary) -> Array:
 	var bad: Array = []
@@ -454,6 +515,7 @@ static func validate() -> Array:
 	if int(s["anchor_radius"].get("town", 0)) < 1:
 		bad.append("worldgen.json: a town needs a cleared radius")
 	bad.append_array(_water_problems(s))
+	bad.append_array(_plot_problems(s))
 	for y in s["outcrop_depths"]:
 		if int(y) < 0 or int(y) > int(GameMine.setting("max_depth")):
 			bad.append("worldgen.json: an outcrop depth is outside the mining ground")

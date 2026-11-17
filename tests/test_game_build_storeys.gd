@@ -148,6 +148,7 @@ func test_sandbox_level() -> void:
 	var d := _fresh()
 	d.world.location = "hearthmere"
 	var s := GameSandbox.start(d)
+	s.heir = Vector2i(int(GameBuild.base()["x"]), int(GameBuild.base()["z"]))   # the family builds on its plot, not in the town
 	ok(s.build_level == 0 and s.build_y() == S, "building starts on the ground")
 	ok(s.cycle_level() == 1 and s.build_y() == S - 1, "the level steps up a storey")
 	s.build_level = 0
