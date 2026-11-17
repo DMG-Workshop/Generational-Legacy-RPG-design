@@ -24,7 +24,7 @@
   "room_types": [
     {"id": "forge", "name": "Forge", "phrase": "a forge", "needs": {"anvil": 1, "hearth": 1}, "min_area": 4},
     {"id": "kennel", "name": "Kennel", "phrase": "a kennel", "needs": {"trough": 1}, "min_area": 6},
-    {"id": "bedroom", "name": "Bedroom", "phrase": "a bedroom", "needs": {"bed": 1}, "min_area": 4}
+    {"id": "bedroom", "name": "Bedroom", "phrase": "a bedroom", "needs": {"bed": 1}, "min_area": 4, "use": {"kind": "rest", "years": 0.25, "hint": "Use to rest."}}
   ],
   "text": {
     "unknown": "There is no such thing as a {kind} to build.",
@@ -50,6 +50,7 @@
     "needs_support": "Nothing holds that up: a storey rests on a wall, stairs or floor below it, or on a room.",
     "stairs_ground": "Stairs go up from the ground, not down into the earth.",
     "stairs_top": "That is the top storey: there is nothing above it to climb to.",
+    "nothing_to_use": "There is nothing to use here.",
     "in_room": "You are in {room}.",
     "in_plain_room": "You are in a room.",
     "summary": "{pieces} pieces built, {rooms} rooms."

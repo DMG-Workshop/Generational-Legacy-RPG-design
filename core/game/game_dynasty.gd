@@ -437,11 +437,17 @@ func buy_potion() -> String:
 
 
 func rest() -> Array:
+	return rest_for(float(years_for("rest")))
+
+
+## Rests for `years` (the text game's rest is a year): the heir is healed, the party rests, a sickness may be caught or
+## cured, and that much time passes. A bedroom the family built (GameBuild room types) rests for less.
+func rest_for(years: float) -> Array:
 	heir.full_heal()
 	party.rest(self)
 	var msgs: Array = [GameMessages.text("life", "rests", {"name": heir.name})]
 	GameDisease.on_rest(self, msgs)
-	msgs = _finish_time("rest", msgs)
+	msgs = _pass_years(years, msgs)
 	heir.downtime = state == "life"   # until the next action that takes time (see GameFeats)
 	return msgs
 
