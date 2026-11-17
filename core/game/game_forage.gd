@@ -44,7 +44,7 @@ static func forage(d: GameDynasty, x: int, z: int) -> Dictionary:
 	d.gathered[GameCompanions.node_key(int(node["x"]), int(node["z"]))] = float(d.world.year)
 	var line := text("foraged", {"heir": d.heir.name, "n": n, "material": GameMaterials.name_of(str(node["material"])).to_lower()})
 	d._say(line)
-	return {"ok": true, "text": line, "n": n, "material": str(node["material"])}
+	return {"ok": true, "text": line, "n": n, "material": str(node["material"]), "x": int(node["x"]), "z": int(node["z"])}
 
 
 static func validate() -> Array:

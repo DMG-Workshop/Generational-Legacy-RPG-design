@@ -16,6 +16,7 @@ var interior_id := ""     # the interior shown instead of the open world ("" sho
 var interior := {}        # its cells, "x,z" -> floor, door, exit or wall (GameInterior.cells); nothing is drawn elsewhere
 var level := 0            # the storey shown: 0 is the ground; above it the ground is dimmed and that storey's pieces are drawn over it
 var uppers := {}          # Vector2i chunk -> TileMapLayer of the shown storey's pieces (empty cells where nothing is built)
+var things := {}          # Vector2i chunk -> TileMapLayer of what stands on the ground: nodes (trees, herbs, bones, rock) and dug shafts
 
 
 static func settings() -> Dictionary:
@@ -28,6 +29,11 @@ static func kinds() -> Array:
 	out.append("water")
 	for id in GameBuild.pieces():
 		out.append(id)
+	var nodes: Array = GameWorldGen.data()["nodes"].keys()
+	nodes.sort()
+	for n in nodes:
+		out.append(n)   # what GameWorldGen puts on a tile: drawn over the ground in `things`
+	out.append("dug")   # a shaft dug at the first depth, also in `things`
 	out.append("person")   # someone standing in an interior (GamePeople)
 	out.append("exit")   # an interior's way out (its floor, doors and walls use the floor, door and wall colours)
 	return out
@@ -65,7 +71,11 @@ static func make_tileset() -> TileSet:
 	var all := kinds()
 	var img := Image.create(px * all.size(), px, false, Image.FORMAT_RGBA8)
 	var colors: Dictionary = settings()["colors"]
+	var glyphs: Dictionary = settings().get("glyphs", {})
 	for i in all.size():
+		if glyphs.has(all[i]):
+			_paint_glyph(img, i * px, px, glyphs[all[i]])   # a thing on the ground: clear but for its drawing
+			continue
 		var c := Color(float(colors[all[i]][0]), float(colors[all[i]][1]), float(colors[all[i]][2]))
 		img.fill_rect(Rect2i(i * px, 0, px, px), c.darkened(0.12))
 		img.fill_rect(Rect2i(i * px + 1, 1, px - 2, px - 2), c)
@@ -78,6 +88,22 @@ static func make_tileset() -> TileSet:
 	ts.tile_size = Vector2i(px, px)
 	ts.add_source(src, 0)
 	return ts
+
+
+## Paints an 8 by 8 glyph into the atlas at x0, each pixel a block of px / 8 (a '.' or a character with no colour stays clear).
+static func _paint_glyph(img: Image, x0: int, px: int, glyph: Dictionary) -> void:
+	var rows: Array = glyph["rows"]
+	var pal: Dictionary = glyph["palette"]
+	var block := maxi(1, px / 8)
+	for y in rows.size():
+		var row := str(rows[y])
+		for x in row.length():
+			var ch := row.substr(x, 1)
+			if not pal.has(ch):
+				continue
+			var c: Array = pal[ch]
+			var col := Color(float(c[0]), float(c[1]), float(c[2]), float(c[3]) if c.size() > 3 else 1.0)
+			img.fill_rect(Rect2i(x0 + x * block, y * block, block, block), col)
 
 
 func setup(dyn: GameDynasty) -> void:
@@ -99,6 +125,9 @@ func show_view(centre: Vector2, half: Vector2) -> void:
 			if uppers.has(c):
 				(uppers[c] as TileMapLayer).queue_free()
 				uppers.erase(c)
+			if things.has(c):
+				(things[c] as TileMapLayer).queue_free()
+				things.erase(c)
 
 
 ## Shows a storey (0 is the ground). Above the ground, the ground tiles are dimmed by `below_shade` and the pieces built at that
@@ -112,6 +141,8 @@ func set_level(n: int) -> void:
 	for c in uppers.keys():
 		(uppers[c] as TileMapLayer).queue_free()
 	uppers.clear()
+	for c in things:
+		(things[c] as TileMapLayer).visible = level == 0   # the ground's trees and shafts are not on a storey
 	var shade := float(settings()["below_shade"]) if level > 0 else 1.0
 	for c in layers:
 		(layers[c] as TileMapLayer).modulate = Color(shade, shade, shade)
@@ -133,6 +164,9 @@ func set_interior(id: String, cells: Dictionary) -> void:
 	for c in uppers.keys():
 		(uppers[c] as TileMapLayer).queue_free()
 	uppers.clear()
+	for c in things.keys():
+		(things[c] as TileMapLayer).queue_free()
+	things.clear()
 	level = 0   # an interior has one floor
 
 
@@ -151,13 +185,29 @@ func _fill(c: Vector2i) -> void:
 	layer.position = Vector2(c.x * n, c.y * n) * float(int(settings()["px"]))
 	add_child(layer)
 	var all := kinds()
+	var over: TileMapLayer = null
+	if interior_id == "":
+		over = TileMapLayer.new()
+		over.tile_set = tile_set
+		over.position = layer.position
+		over.visible = level == 0
+		add_child(over)
+		things[c] = over
 	for dz in n:
 		for dx in n:
 			var x := c.x * n + dx
 			var z := c.y * n + dz
-			var kind := _kind_at(x, z)
-			if kind != "":
-				layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind), 0))
+			if interior_id != "":
+				var ik := _kind_at(x, z)
+				if ik != "":
+					layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(ik), 0))
+				continue
+			var tile := GameWorldGen.tile(d, x, z)   # once for the ground and what stands on it
+			var built := GameBuild.kind_at(d, x, GameBuild.SURFACE, z)
+			layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind_for(tile, built)), 0))
+			var thing := _thing_from(tile, built, x, z)
+			if thing != "":
+				over.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(thing), 0))
 	layers[c] = layer
 	fills += 1
 	if level > 0:
@@ -182,6 +232,25 @@ func _fill_upper(c: Vector2i) -> void:
 	uppers[c] = layer
 
 
+## What stands on a tile: its node (a tree, herb patch, bone pile or outcrop) unless it has been gathered or something is built
+## there, else a shaft dug at the first depth, else nothing.
+func _thing_from(tile: Dictionary, built: String, x: int, z: int) -> String:
+	if built != "":
+		return ""
+	var node: Dictionary = tile.get("node", {})
+	if not node.is_empty() and not bool(tile.get("water", false)) and not GameCompanions.depleted(d, x, z):
+		return str(node["kind"])
+	if GameMine.is_dug(d, GameWorldGen.MINE_SITE, x, 0, z):
+		return "dug"
+	return ""
+
+
+func _thing_at(x: int, z: int) -> String:
+	if interior_id != "":
+		return ""
+	return _thing_from(GameWorldGen.tile(d, x, z), GameBuild.kind_at(d, x, GameBuild.SURFACE, z), x, z)
+
+
 func _kind_at(x: int, z: int) -> String:
 	if interior_id != "":
 		return str(interior.get("%d,%d" % [x, z], ""))   # nothing where the interior has no cell
@@ -200,6 +269,12 @@ func refresh_cell(x: int, z: int) -> void:
 		(layers[c] as TileMapLayer).erase_cell(local)
 	else:
 		(layers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(here), 0))
+	if things.has(c):
+		var thing := _thing_at(x, z)
+		if thing == "":
+			(things[c] as TileMapLayer).erase_cell(local)
+		else:
+			(things[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(thing), 0))
 	if level > 0 and uppers.has(c):
 		var kind := GameBuild.kind_at(d, x, GameBuild.SURFACE - level, z)
 		if kind == "":
@@ -220,6 +295,30 @@ static func validate() -> Array:
 		bad.append("sandbox.json: tiles px and chunk must be at least 4 and keep 0 or more")
 	if float(s["below_shade"]) <= 0.0 or float(s["below_shade"]) > 1.0:
 		bad.append("sandbox.json: tiles.below_shade must be above 0 and at most 1")
+	var glyphs: Dictionary = s.get("glyphs", {})
+	for k in glyphs:
+		if not kinds().has(k):
+			bad.append("sandbox.json: tiles.glyphs has '%s', which is not a kind" % k)
+			continue
+		var g: Dictionary = glyphs[k]
+		if not g.has("rows") or not g.has("palette") or typeof(g["rows"]) != TYPE_ARRAY or (g["rows"] as Array).size() != 8:
+			bad.append("sandbox.json: glyph '%s' needs 8 rows and a palette" % k)
+			continue
+		for row in g["rows"]:
+			if str(row).length() != 8:
+				bad.append("sandbox.json: glyph '%s' has a row that is not 8 wide" % k)
+			for ch in str(row):
+				if ch != "." and not g["palette"].has(ch):
+					bad.append("sandbox.json: glyph '%s' uses '%s', which its palette lacks" % [k, ch])
+		for ch in g["palette"]:
+			var col: Array = g["palette"][ch]
+			if col.size() < 3 or col.size() > 4:
+				bad.append("sandbox.json: glyph '%s' palette '%s' needs [r, g, b] or [r, g, b, a]" % [k, ch])
+	for nk in GameWorldGen.data()["nodes"]:
+		if not glyphs.has(nk):
+			bad.append("sandbox.json: the node '%s' has no glyph to be drawn with" % nk)
+	if not glyphs.has("dug"):
+		bad.append("sandbox.json: a dug shaft has no glyph")
 	for k in kinds():
 		if not s["colors"].has(k) or typeof(s["colors"][k]) != TYPE_ARRAY or (s["colors"][k] as Array).size() != 3:
 			bad.append("sandbox.json: tiles.colors has no [r, g, b] for '%s'" % k)

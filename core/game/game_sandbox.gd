@@ -362,9 +362,15 @@ func step(ticks: int = 1) -> void:
 		companions = out["agents"]
 		for e in out["events"]:
 			log.append({"kind": "companion", "text": GameCompanions.event_text(e)})
+			if str(e.get("type", "")) == "gathered":
+				dirty.append(Vector2i(int(e["x"]), int(e["z"])))
 		var keep_lines := int(setting("log_lines"))
 		if log.size() > keep_lines:
 			log = log.slice(log.size() - keep_lines)
+
+
+## Tiles whose look has changed since the screen last drew them (a node gathered, a shaft dug), for it to redraw (runtime only).
+var dirty: Array = []
 
 
 ## The companions' step cache (runtime only): their routes are found once for each (from, to) while the ground holds.
@@ -491,6 +497,7 @@ func forage() -> Dictionary:
 	var out := GameForage.forage(d, heir.x, heir.y)
 	if out["ok"]:
 		log.append({"kind": "forage", "text": str(out["text"])})
+		dirty.append(Vector2i(int(out["x"]), int(out["z"])))
 	return out
 
 
@@ -503,6 +510,7 @@ func dig(depth: int) -> Dictionary:
 	var out := GameMine.dig(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
 	if out["ok"]:
 		log.append({"kind": "dig", "text": _text("dug", {"depth": depth})})
+		dirty.append(heir)
 		var h := GameMine.hazard(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
 		out["hazard"] = h
 		if bool(h["hit"]):
