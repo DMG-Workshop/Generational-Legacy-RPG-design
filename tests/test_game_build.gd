@@ -206,11 +206,12 @@ func test_water() -> void:
 	GameBuild.data()["settings"]["base_place"] = "brinehaven"   # the home town of this test is on the coast: Hearthmere has no lake near it
 	GameBuild.data()["settings"]["max_span"] = 2
 	var lake := _scan(d, func(s: Callable, x: int, z: int) -> bool:
-		# a shore tile (dry, level enough) with three water tiles in a row east of it: x+1, x+2, x+3 are all water
+		# a shore tile (dry, level enough) with open water east of it: x+1 to x+6 are all water (six, so that it is a lake or the sea
+		# and not a narrow river whose far bank would be within a bridge's reach)
 		var info: Dictionary = s.call(x, z)
 		if info.is_empty() or info["water"]:
 			return false
-		for i in range(1, 4):
+		for i in range(1, 7):
 			var w: Dictionary = s.call(x + i, z)
 			if w.is_empty() or not w["water"]:
 				return false

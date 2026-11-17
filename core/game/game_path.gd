@@ -45,11 +45,11 @@ static func world_ground(d: GameDynasty, built: Variant = null, site: String = G
 			return memo[k]
 		var info: Dictionary = {}
 		if GameWorldGen.in_bounds(x, z):
-			var land := GameWorldGen.blend(d.seed_value, float(x), float(z))
+			var biome := GameWorldGen.biome_at(d.seed_value, x, z)
 			var h := GameWorldGen.height_at(d.seed_value, x, z)
-			var water := h < int(GameWorldGen.setting("sea_level"))
-			var node := GameWorldGen.node_at(d, x, z, str(land["biome"]), water)
-			info = {"h": h, "water": water, "biome": str(land["biome"]), "block": not node.is_empty() and bool(data()["node_blocks"].get(str(node["kind"]), false))}
+			var water := GameWorldGen.water_at(d.seed_value, x, z)   # sea, lake or river; a ford is shallow and walked
+			var node := GameWorldGen.node_at(d, x, z, biome, water)
+			info = {"h": h, "water": water, "biome": biome, "block": not node.is_empty() and bool(data()["node_blocks"].get(str(node["kind"]), false))}
 		memo[k] = info
 		return info
 	return {"surface": surface, "dug": func(x: int, y: int, z: int) -> bool: return GameMine.is_dug(d, site, x, y, z), "built": d.built if built == null else built, "max_depth": int(GameMine.setting("max_depth"))}

@@ -15,12 +15,17 @@ const MINE_SITE := "world"
 
 static var _cache: Dictionary = {}
 static var _anchors: Array = []
+static var _roads: Array = []
+static var _surf: Dictionary = {}   # tile key -> [biome, height] (see _surface)
+static var _surf_seed := -1
+const SURFACE_KEEP := 150000
 
 
 static func data() -> Dictionary:
 	if _cache.is_empty():
 		_cache = GameData.load_json(PATH)
 		_anchors = []
+		_roads = []
 	return _cache
 
 
@@ -56,6 +61,40 @@ static func anchor(place_id: String) -> Dictionary:
 		if a["id"] == place_id:
 			return a
 	return {}
+
+
+## The roads of the text game as straight lines between their two anchors: [ax, az, bx, bz] each, once for each pair (a road
+## listed from both ends is one). Water that a road crosses is shallow there (see `_water`), so no river or lake can cut one
+## place off from the rest.
+static func roads() -> Array:
+	GameData.load_all()
+	if _roads.is_empty():
+		var seen := {}
+		for l in GameData.world["locations"]:
+			for link in l.get("links", []):
+				var a := str(l["id"])
+				var b := str(link["to"])
+				var key := a + ">" + b if a < b else b + ">" + a
+				if seen.has(key):
+					continue
+				seen[key] = true
+				var pa := anchor(a)
+				var pb := anchor(b)
+				if not pa.is_empty() and not pb.is_empty():
+					_roads.append([float(pa["x"]), float(pa["z"]), float(pb["x"]), float(pb["z"])])
+	return _roads
+
+
+## How far a point is from the nearest road (a very large number with no roads).
+static func road_distance(x: float, z: float) -> float:
+	var best := 1e18
+	var p := Vector2(x, z)
+	for r in roads():
+		var a := Vector2(float(r[0]), float(r[1]))
+		var ab := Vector2(float(r[2]), float(r[3])) - a
+		var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+		best = minf(best, p.distance_to(a + ab * t))
+	return best
 
 
 # ---------------------------------------------------------------- noise
@@ -137,9 +176,19 @@ static func blend(seed_value: int, x: float, z: float) -> Dictionary:
 	return {"biome": str(ranked[0][1]["biome"]), "base": base / wsum, "amp": amp / wsum}
 
 
-## The surface height of a tile: the blended base plus fractal noise, flattened near a town or dungeon and pulled under the
-## sea at the edge of the world.
-static func height_at(seed_value: int, x: int, z: int) -> int:
+## The biome, surface height, body of water and (for a lake) how far its bed lies under its banks, of a tile, worked out once:
+## [biome, height, body, depth] (body: "" dry land, "sea",
+## "lake", "river", or "ford", a shallow crossing of a river that can be walked). A view asks for a tile and its neighbours
+## (relief is the difference between them), so each tile is kept for the next ask. Kept for one seed at a time and let go when
+## it grows past SURFACE_KEEP; it holds nothing the seed and the tile do not give, so a cleared cache changes nothing.
+static func _surface(seed_value: int, x: int, z: int) -> Array:
+	if seed_value != _surf_seed or _surf.size() > SURFACE_KEEP:
+		_surf.clear()
+		_surf_seed = seed_value
+	var key := x * 2097152 + z
+	var hit: Variant = _surf.get(key)
+	if hit != null:
+		return hit
 	var fx := float(x)
 	var fz := float(z)
 	var land := blend(seed_value, fx, fz)
@@ -156,7 +205,94 @@ static func height_at(seed_value: int, x: int, z: int) -> int:
 	var shore := int(setting("shore"))
 	if edge < shore:
 		h = lerpf(float(setting("sea_level")) - 6.0, h, float(edge) / float(shore))
-	return clampi(int(round(h)), 0, int(setting("max_height")))
+	var wet := _water(seed_value, x, z, h, near)
+	h = float(wet[0])
+	var body := str(wet[1])
+	var final := clampi(int(round(h)), 0, int(setting("max_height")))
+	if body == "" and final < int(setting("sea_level")):
+		body = "sea"
+	var out: Array = [str(land["biome"]), final, body, int(round(float(wet[2])))]
+	_surf[key] = out
+	return out
+
+
+## Lakes, rivers and fords on land of height `h` (before any water): [height, body]. Rivers follow the zero-crossings of a
+## large noise field (a ridge where it crosses 0.5), only where a second noise says the land is wet and thinning to nothing up
+## the heights (they start in the hills), with a valley carved along them; lakes fill the basins of a third noise on low
+## ground; a ford is a stretch of river a fourth noise leaves shallow, and wherever one of the text game's roads crosses a river
+## or a lake the water is shallow too (a causeway `road_width` either side), so no water cuts a road, and with the roads
+## joining every place the land stays joined. Nothing within a
+## town's or dungeon's reach of an anchor: its ground is dry and flat, and the anchors can all be reached. A valley is never
+## carved under the sea; only a river's channel and a lake go under.
+static func _water(seed_value: int, x: int, z: int, h: float, near: Dictionary) -> Array:   # [height, body, lake depth]
+	var w: Dictionary = setting("water")
+	var sea := float(setting("sea_level"))
+	if h < sea:
+		return [h, "", 0.0]
+	var a: Dictionary = near["anchor"]
+	var calm := smoothstep(float(w["clear_inner"]) + float(a["radius"]), float(w["clear_outer"]) + float(a["radius"]), float(near["dist"]))
+	if calm <= 0.0:
+		return [h, "", 0.0]
+	var fx := float(x)
+	var fz := float(z)
+	var out := h
+	var body := ""
+	var carved_lake := 0.0
+	var lowland := 1.0 - smoothstep(float(w["lake_land_max"]) - 12.0, float(w["lake_land_max"]), h)
+	if lowland > 0.0:
+		var basin := _fbm(seed_value, 61, fx, fz, float(w["lake_scale"]), int(w["lake_octaves"]))
+		var depth := smoothstep(float(w["lake_threshold"]), float(w["lake_threshold"]) + float(w["lake_band"]), basin) * lowland * calm
+		if depth > 0.0:
+			out -= float(w["lake_depth"]) * depth
+			carved_lake = float(w["lake_depth"]) * depth
+			if depth >= float(w["lake_water_at"]):
+				body = "lake"
+	if body != "lake":
+		out = maxf(out, sea)   # the rim of a lake slopes down to it but is never a pit under the sea (that would ring a low-lying place with sea)
+	var up := 1.0 - smoothstep(float(w["river_fade_from"]), float(w["river_fade_to"]), h)
+	if up > 0.0:
+		var wet := smoothstep(float(w["wet_from"]), float(w["wet_to"]), _fbm(seed_value, 53, fx, fz, float(w["wet_scale"]), 2))
+		var reach := wet * up * calm
+		if reach > 0.0:
+			var u := _fbm(seed_value, 51, fx, fz, float(w["river_scale"]), int(w["river_octaves"]))
+			var off := absf(u - 0.5) * 2.0
+			var valley := float(w["valley_width"]) * reach
+			if off < valley:
+				var t := 1.0 - off / valley
+				var carved := h - float(w["valley_depth"]) * t * t * (3.0 - 2.0 * t)
+				out = minf(out, maxf(carved, minf(h, sea)))
+				if body == "" and off < float(w["river_width"]) * reach:
+					body = "ford" if _fbm(seed_value, 67, fx, fz, float(w["ford_scale"]), 1) >= float(w["ford_threshold"]) else "river"
+	if (body == "river" or body == "lake") and road_distance(fx, fz) <= float(w["road_width"]):
+		body = "ford"   # a road crosses here: shallows to wade, a causeway
+	if body == "river" or body == "ford":
+		out = maxf(out, sea)   # a river's bed is never under the sea (a lake's can be); a ford is never a pit
+	return [out, body, carved_lake if body == "lake" else 0.0]
+
+
+## The surface height of a tile: the blended base plus fractal noise, flattened near a town or dungeon and pulled under the
+## sea at the edge of the world.
+static func height_at(seed_value: int, x: int, z: int) -> int:
+	return int(_surface(seed_value, x, z)[1])
+
+
+## The body of water on a tile: "" (dry land), "sea", "lake", "river" or "ford".
+static func body_at(seed_value: int, x: int, z: int) -> String:
+	return str(_surface(seed_value, x, z)[2])
+
+
+## Whether a tile is under water a walker cannot cross: sea, lake or river. A ford is shallow and can be walked.
+static func water_at(seed_value: int, x: int, z: int) -> bool:
+	return is_water(body_at(seed_value, x, z))
+
+
+static func is_water(body: String) -> bool:
+	return body == "sea" or body == "lake" or body == "river"
+
+
+## The biome of a tile.
+static func biome_at(seed_value: int, x: int, z: int) -> String:
+	return str(_surface(seed_value, x, z)[0])
 
 
 static func in_bounds(x: int, z: int) -> bool:
@@ -211,15 +347,16 @@ static func node_at(d: GameDynasty, x: int, z: int, biome: String, water: bool) 
 ## One tile of the world: {x, z, biome, height, water, node, place}. Outside the world is ocean.
 static func tile(d: GameDynasty, x: int, z: int) -> Dictionary:
 	if not in_bounds(x, z):
-		return {"x": x, "z": z, "biome": "ocean", "height": int(setting("sea_level")) - 8, "water": true, "node": {}, "place": ""}
-	var land := blend(d.seed_value, float(x), float(z))
-	var h := height_at(d.seed_value, x, z)
-	var water := h < int(setting("sea_level"))
+		return {"x": x, "z": z, "biome": "ocean", "height": int(setting("sea_level")) - 8, "water": true, "body": "sea", "depth": 8, "node": {}, "place": ""}
+	var here := _surface(d.seed_value, x, z)
+	var h := int(here[1])
+	var body := str(here[2])
+	var water := is_water(body)
 	var place := ""
 	for a in anchors():
 		if x == int(a["x"]) and z == int(a["z"]):
 			place = str(a["id"])
-	return {"x": x, "z": z, "biome": str(land["biome"]), "height": h, "water": water, "node": node_at(d, x, z, str(land["biome"]), water), "place": place}
+	return {"x": x, "z": z, "biome": str(here[0]), "height": h, "water": water, "body": body, "depth": int(here[3]), "node": node_at(d, x, z, str(here[0]), water), "place": place}
 
 
 ## A square of tiles: {cx, cz, size, tiles (rows of z, each a row of x), summary {biomes, nodes, water}}.
@@ -244,6 +381,48 @@ static func chunk(d: GameDynasty, cx: int, cz: int) -> Dictionary:
 
 
 # ---------------------------------------------------------------- the data
+
+## Problems in settings.water (lakes, rivers and fords).
+static func _water_problems(s: Dictionary) -> Array:
+	var bad: Array = []
+	if not s.has("water") or typeof(s["water"]) != TYPE_DICTIONARY:
+		return ["worldgen.json: settings.water is missing"]
+	var w: Dictionary = s["water"]
+	for k in ["clear_inner", "clear_outer", "wet_scale", "wet_from", "wet_to", "river_scale", "river_octaves", "river_width", "river_fade_from", "river_fade_to", "valley_width", "valley_depth", "lake_scale", "lake_octaves", "lake_threshold", "lake_band", "lake_depth", "lake_land_max", "lake_water_at", "ford_scale", "ford_threshold", "road_width"]:
+		if not w.has(k):
+			bad.append("worldgen.json: settings.water.%s is missing" % k)
+	if not bad.is_empty():
+		return bad
+	if float(w["clear_inner"]) < 1.0 or float(w["clear_outer"]) <= float(w["clear_inner"]):
+		bad.append("worldgen.json: water clear_inner must be at least 1 and clear_outer above it (an anchor's tile must stay dry)")
+	for k in ["wet_scale", "river_scale", "lake_scale", "ford_scale"]:
+		if float(w[k]) <= 0.0:
+			bad.append("worldgen.json: water %s must be above 0" % k)
+	for k in ["river_octaves", "lake_octaves"]:
+		if int(w[k]) < 1:
+			bad.append("worldgen.json: water %s must be at least 1" % k)
+	if float(w["wet_from"]) < 0.0 or float(w["wet_to"]) <= float(w["wet_from"]) or float(w["wet_to"]) > 1.0:
+		bad.append("worldgen.json: water wet_from and wet_to must run up within 0 to 1")
+	if float(w["river_width"]) <= 0.0 or float(w["river_width"]) >= 0.5:
+		bad.append("worldgen.json: water river_width must be above 0 and under 0.5")
+	if float(w["valley_width"]) < float(w["river_width"]) or float(w["valley_width"]) >= 1.0:
+		bad.append("worldgen.json: water valley_width must be at least river_width and under 1")
+	if float(w["valley_depth"]) < 0.0 or float(w["valley_depth"]) >= float(s["sea_level"]):
+		bad.append("worldgen.json: water valley_depth must be 0 or more and less than the sea level")
+	if float(w["river_fade_from"]) <= float(s["sea_level"]) or float(w["river_fade_to"]) <= float(w["river_fade_from"]):
+		bad.append("worldgen.json: water river_fade_from must be above the sea and river_fade_to above it")
+	if float(w["lake_threshold"]) <= 0.0 or float(w["lake_band"]) <= 0.0 or float(w["lake_threshold"]) + float(w["lake_band"]) > 1.0:
+		bad.append("worldgen.json: water lake_threshold and lake_band must be above 0 and together at most 1")
+	if float(w["lake_depth"]) <= 0.0 or float(w["lake_water_at"]) <= 0.0 or float(w["lake_water_at"]) > 1.0:
+		bad.append("worldgen.json: water lake_depth must be above 0 and lake_water_at within 0 to 1")
+	if float(w["lake_land_max"]) <= float(s["sea_level"]):
+		bad.append("worldgen.json: water lake_land_max must be above the sea level")
+	if float(w["road_width"]) < 1.0 or float(w["road_width"]) > 6.0:
+		bad.append("worldgen.json: water road_width must be 1 to 6 (a road's causeway must be wide enough to walk, with room for a diagonal)")
+	if float(w["ford_threshold"]) <= 0.0 or float(w["ford_threshold"]) >= 1.0:
+		bad.append("worldgen.json: water ford_threshold must be within 0 and 1 (a river with no fords cuts the land in two)")
+	return bad
+
 
 static func validate() -> Array:
 	var bad: Array = []
@@ -274,6 +453,7 @@ static func validate() -> Array:
 			bad.append("worldgen.json: anchor_radius.%s is missing or negative" % ty)
 	if int(s["anchor_radius"].get("town", 0)) < 1:
 		bad.append("worldgen.json: a town needs a cleared radius")
+	bad.append_array(_water_problems(s))
 	for y in s["outcrop_depths"]:
 		if int(y) < 0 or int(y) > int(GameMine.setting("max_depth")):
 			bad.append("worldgen.json: an outcrop depth is outside the mining ground")
