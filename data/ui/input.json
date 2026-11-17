@@ -1,6 +1,8 @@
 {
   "note": "Input for a world (roadmap item 39; ui/play/world_input.gd, checked by tools/check_data.gd). The open world's actions and what is bound to each: keys (Godot's key names), mouse buttons (left, right, middle, wheel_up, wheel_down), gamepad buttons and gamepad axes (an axis and the direction that counts, -1 or 1). `install` puts them in the engine's input map under these names, so a sandbox screen asks for `world_move_up` and never for a key. Every action must be reachable from the keyboard or mouse and from a gamepad (`pointer_only` marks the few a gamepad does without), and no key or button may do two things. Touch has no bindings: a finger moves with a stick drawn where it lands (`touch_stick_*`), taps the ground to act there (`tap_*`) and pinches to zoom (`pinch_*`); the numbers are here and the arithmetic in world_input.gd. A gamepad or the keyboard acts on the tile in front of the heir. `camera_follow_seconds` is how long the camera takes to catch the heir up, and is nothing with reduced motion on.",
   "settings": {
+    "max_keys": 3,
+    "reserved_keys": ["Escape"],
     "stick_deadzone": 0.25,
     "touch_stick_radius_px": 80,
     "touch_stick_deadzone": 0.15,
@@ -12,6 +14,15 @@
     "zoom_max": 3.0,
     "zoom_step": 0.25,
     "camera_follow_seconds": 0.2
+  },
+  "text": {
+    "no_action": "There is no such action.",
+    "bad_key": "That is not a key the game knows.",
+    "reserved": "{key} cannot be used: it is kept to cancel.",
+    "clash": "{key} is already {action}.",
+    "too_many": "An action holds no more than {n} keys.",
+    "set": "{action}: {keys}.",
+    "reset": "{action} is back to its own keys."
   },
   "actions": {
     "world_move_up": {"name": "Move up", "keys": ["W", "Up"], "pad_buttons": ["dpad_up"], "pad_axes": [["left_y", -1]]},
