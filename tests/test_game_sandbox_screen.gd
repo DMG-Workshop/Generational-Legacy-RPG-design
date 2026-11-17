@@ -145,15 +145,16 @@ func test_build_and_orders() -> void:
 				ok(s.build_check("wall", dx, dz) == "", "a tile with nothing on it can take a wall again")
 				placed = true
 	ok(placed, "a legal wall tile can be found beside the heir")
-	var orders := ["follow", "stay", "gather", "guard", "follow"]
+	var orders: Array = GameCompanions.ORDERS.duplicate()   # follow, stay, gather, guard, watch ... and round to follow again
+	orders.append("follow")
 	_hire(d, "bren_cask")
 	var s2 := GameSandbox.start(d)
 	var seen: Array = []
-	for i in 4:
+	for i in orders.size() - 1:
 		var r := s2.cycle_order("bren_cask")
 		ok(r["ok"], "a companion's order can be cycled")
 		seen.append(GameCompanions.order_of(d, "bren_cask"))
-	ok(seen == orders.slice(1), "the orders turn in turn: stay, gather, guard, follow")
+	ok(seen == orders.slice(1), "the orders turn in turn: %s" % ", ".join(orders.slice(1)))
 	ok(not s2.cycle_order("nobody")["ok"], "cycling an order for someone not in the party is refused")
 
 

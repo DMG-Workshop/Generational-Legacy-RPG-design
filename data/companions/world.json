@@ -17,7 +17,10 @@
     "guard_foe_level_mult": 1.0,
     "guard_gold_share": 0.5,
     "guard_rest_ticks": 60,
-    "guard_min_hp_frac": 0.35
+    "guard_min_hp_frac": 0.35,
+    "carry_capacity": 8,
+    "deliver_reach": 2.0,
+    "watch_reach_mult": 1.5
   },
   "classes": {
     "default": {"gather": 1.0, "guard": 1.0},
@@ -37,7 +40,8 @@
     "follow": "Follow",
     "stay": "Stay",
     "gather": "Gather",
-    "guard": "Guard"
+    "guard": "Guard",
+    "watch": "Watch"
   },
   "text": {
     "set": "{name} will {order}.",
@@ -49,6 +53,7 @@
     "guard_won": "{name} drives off {foe}.",
     "guard_won_gold": "{name} drives off {foe} and brings back {gold} gold.",
     "guard_hurt": "{name} is hurt by {foe} and falls back to rest.",
+    "delivered": "{name} brings back {what} to the stores.",
     "guard_too_hurt": "{name} is too hurt to take on {foe}.",
     "nothing": "{name} finds nothing to gather here.",
     "summary_none": "No companions.",
