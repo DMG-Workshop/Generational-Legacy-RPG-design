@@ -155,6 +155,7 @@ func _ready() -> void:
 	var ewhy := Kit.label("Remembers the game's last errors, for a report. Kept in memory only; nothing is sent.", 14, Kit.dim())
 	ewhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(ewhy)
+	v.add_child(Kit.button("Controls: change the world's keys", func(): app.open_controls(), Vector2(0, 40)))
 	v.add_child(Kit.button("Report a problem", func(): app.open_report(), Vector2(0, 40)))
 	v.add_child(HSeparator.new())
 	note = Kit.label("", 14, Kit.good())

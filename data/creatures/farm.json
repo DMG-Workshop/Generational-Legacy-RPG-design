@@ -26,6 +26,12 @@
         "summer": 1.1,
         "autumn": 1.0,
         "winter": 0.6
+      },
+      "honey": {
+        "spring": 1.1,
+        "summer": 1.5,
+        "autumn": 0.9,
+        "winter": 0.2
       }
     },
     "slaughter_stage": {
@@ -35,7 +41,8 @@
     },
     "market_place_type": "town",
     "no_slaughter": [
-      "horse"
+      "horse",
+      "bee"
     ]
   },
   "market": {
@@ -45,7 +52,8 @@
     "chicken": 6,
     "goat": 35,
     "goose": 8,
-    "horse": 120
+    "horse": 120,
+    "bee": 28
   },
   "slaughter": {
     "sheep": {

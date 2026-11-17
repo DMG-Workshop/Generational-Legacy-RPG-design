@@ -329,7 +329,10 @@ func test_gather() -> void:
 	var stocks := 0
 	for m in one.stores.get("materials", {}):
 		stocks += int(one.stores["materials"][m])
-	ok(stocks == total and total > 0, "all of it goes into the family's stores (%d)" % total)
+	var carried := 0
+	for a in agents:
+		carried += GameCompanions._load_n(a)
+	ok(stocks + carried == total and total > 0, "all of it is in the family's stores or on the companion on its way there (%d: %d in the stores, %d carried)" % [total, stocks, carried])
 	var key := GameCompanions.node_key(int(first["x"]), int(first["z"]))
 	ok(one.gathered.has(key) and GameCompanions.depleted(one, int(first["x"]), int(first["z"])), "a gathered node is marked")
 	var twice := got.filter(func(e: Dictionary) -> bool: return e["x"] == first["x"] and e["z"] == first["z"])

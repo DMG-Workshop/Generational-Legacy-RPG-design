@@ -84,9 +84,10 @@ static func load_stores(v: Variant) -> Dictionary:
 				clean[str(id)] = int(n)
 		if not clean.is_empty():
 			out[kind] = clean
-	var made: Variant = v.get("crafted", 0)
-	if typeof(made) in [TYPE_INT, TYPE_FLOAT] and int(made) > 0:
-		out["crafted"] = int(made)
+	for counter in ["crafted", "brewed"]:
+		var made: Variant = v.get(counter, 0)
+		if typeof(made) in [TYPE_INT, TYPE_FLOAT] and int(made) > 0:
+			out[counter] = int(made)
 	return out
 
 
@@ -235,7 +236,7 @@ static func quality(d: GameDynasty) -> int:
 	var r := RandomNumberGenerator.new()
 	r.seed = hash([d.seed_value, "craft", int(d.stores.get(str(setting("counter")), 0))])
 	var roll := r.randi_range(0, int(setting("quality_roll_max")))
-	return clampi(base + bonus + roll, int(setting("quality_floor")), GameLoot.QUALITY_MAX)
+	return clampi(base + bonus + roll + GameHouse.smithy_quality(d), int(setting("quality_floor")), GameLoot.QUALITY_MAX)
 
 
 ## The materials that can make a form (their tags meet its `needs`), sorted by tier then id.
@@ -263,7 +264,9 @@ static func essences_for(form_id: String, material: String) -> Array:
 
 
 ## What making this would be: {ok, why, id, item, units, fee, quality}. Nothing is spent.
-static func plan(d: GameDynasty, form_id: String, material: String, chosen: Array) -> Dictionary:
+## `forge` is where it is made: "" at a town's forge (the service of the place the heir is at), "home" at the family's own forge
+## (a built room with an anvil and a hearth, GameBuild room types), which needs no town forge and charges `home_fee_mult` of the fee.
+static func plan(d: GameDynasty, form_id: String, material: String, chosen: Array, forge: String = "") -> Dictionary:
 	var h := d.heir
 	var fail := func(key: String, vals: Dictionary = {}) -> Dictionary: return {"ok": false, "why": text(key, vals)}
 	var form: Dictionary = GameLoot.data()["_form"].get(form_id, {})
@@ -293,10 +296,11 @@ static func plan(d: GameDynasty, form_id: String, material: String, chosen: Arra
 	var item := GameLoot.build(id)
 	if item.is_empty():
 		return fail.call("unknown_form")
-	var fee := maxi(1, int(round(float(item["price"]) * float(setting("fee_share")))))
+	var at_home := forge == "home"
+	var fee := maxi(1, int(round(float(item["price"]) * float(setting("fee_share")) * (float(setting("home_fee_mult")) if at_home else 1.0) * GameHouse.smithy_fee_mult(d))))
 	var service := str(setting("needs_service"))
 	var base := {"ok": true, "why": "", "id": id, "item": item, "units": units, "fee": fee, "quality": q, "weight": float(item["weight"])}
-	if not d.world.has_service(service):
+	if not at_home and not d.world.has_service(service):
 		base["ok"] = false
 		base["why"] = text("no_forge")
 	elif h.gold < fee:
@@ -309,8 +313,8 @@ static func plan(d: GameDynasty, form_id: String, material: String, chosen: Arra
 
 
 ## Makes the piece: spends the material, the essences and the fee and puts it in the pack. Returns the line.
-static func craft(d: GameDynasty, form_id: String, material: String, chosen: Array) -> String:
-	var p := plan(d, form_id, material, chosen)
+static func craft(d: GameDynasty, form_id: String, material: String, chosen: Array, forge: String = "") -> String:
+	var p := plan(d, form_id, material, chosen, forge)
 	if not p["ok"]:
 		return str(p["why"])
 	add_material(d, material, -int(p["units"]))
@@ -321,6 +325,58 @@ static func craft(d: GameDynasty, form_id: String, material: String, chosen: Arr
 	var counter := str(setting("counter"))
 	d.stores[counter] = int(d.stores.get(counter, 0)) + 1
 	var line := text("made", {"h": d.heir.name, "a": GameMessages.text("life", "a_word"), "name": p["item"]["name"], "units": p["units"], "material": GameMaterials.name_of(material).to_lower(), "quality": p["quality"]})
+	d._say(line)
+	return line
+
+
+# ---------------------------------------------------------------- brewing
+
+## The consumables the forge brews, by id (`brews` in craft.json), sorted.
+static func brews() -> Array:
+	var ids: Array = data().get("brews", {}).keys()
+	ids.sort()
+	return ids
+
+
+## What brewing one batch would be: {ok, why, name, cost: {material: n}, fee, makes}. Nothing is spent. `forge` is as for `plan`.
+static func brew_plan(d: GameDynasty, id: String, forge: String = "") -> Dictionary:
+	var row: Dictionary = data().get("brews", {}).get(id, {})
+	if row.is_empty():
+		return {"ok": false, "why": text("no_brew")}
+	var fee := int(row["fee"])
+	if forge == "home":
+		fee = int(round(float(fee) * float(setting("home_fee_mult"))))
+	fee = int(round(float(fee) * GameHouse.smithy_fee_mult(d)))
+	var out := {"ok": true, "why": "", "name": str(row["name"]), "cost": row["cost"], "fee": fee, "makes": int(row["makes"])}
+	if forge != "home" and not d.world.has_service(str(setting("needs_service"))):
+		out["ok"] = false
+		out["why"] = text("no_forge")
+		return out
+	for m in row["cost"]:
+		if have(d, str(m)) < int(row["cost"][m]):
+			out["ok"] = false
+			out["why"] = text("short_brew", {"material": GameMaterials.name_of(str(m)).to_lower(), "need": int(row["cost"][m]), "have": have(d, str(m))})
+			return out
+	if d.heir.gold < fee:
+		out["ok"] = false
+		out["why"] = text("short_gold", {"fee": GameText.num(fee)})
+	return out
+
+
+## Brews a batch: spends the materials and the fee and adds the potions to the heir's pack. Returns the line.
+static func brew(d: GameDynasty, id: String, forge: String = "") -> String:
+	var p := brew_plan(d, id, forge)
+	if not p["ok"]:
+		return str(p["why"])
+	var parts: Array = []
+	for m in p["cost"]:
+		add_material(d, str(m), -int(p["cost"][m]))
+		parts.append(GameMessages.text("life", "stock_units", {"n": int(p["cost"][m]), "name": GameMaterials.name_of(str(m)).to_lower()}))
+	d.heir.gold -= int(p["fee"])
+	d.heir.potions += int(p["makes"])
+	var counter := str(setting("brew_counter"))
+	d.stores[counter] = int(d.stores.get(counter, 0)) + 1
+	var line := text("brewed", {"h": d.heir.name, "n": int(p["makes"]), "name": str(p["name"]), "list": ", ".join(parts)})
 	d._say(line)
 	return line
 
@@ -336,7 +392,7 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["needs_service", "units_per_weight", "fee_share", "salvage_share", "max_essences", "rarity_by_essences", "quality_per_level", "quality_per_craft_quality", "quality_roll_max", "quality_floor", "counter"]:
+	for k in ["needs_service", "units_per_weight", "fee_share", "home_fee_mult", "salvage_share", "max_essences", "rarity_by_essences", "quality_per_level", "quality_per_craft_quality", "quality_roll_max", "quality_floor", "counter", "brew_counter"]:
 		if not s.has(k):
 			bad.append("craft.json: settings.%s is missing" % k)
 	if not bad.is_empty():
@@ -346,6 +402,8 @@ static func validate() -> Array:
 	for k in ["fee_share", "salvage_share"]:
 		if float(s[k]) < 0.0 or float(s[k]) > 1.0:
 			bad.append("craft.json: %s must be between 0 and 1" % k)
+	if float(s["home_fee_mult"]) <= 0.0 or float(s["home_fee_mult"]) > 1.0:
+		bad.append("craft.json: home_fee_mult must be above 0 and at most 1")
 	if int(s["max_essences"]) < 0 or int(s["max_essences"]) > 3:
 		bad.append("craft.json: max_essences must be from 0 to 3")
 	for n in range(int(s["max_essences"]) + 1):
@@ -386,7 +444,19 @@ static func validate() -> Array:
 	for m in GameMaterials.ids():
 		if not dropped.has(str(m)):
 			bad.append("craft.json: nothing drops the material '%s'" % m)
-	for k in ["gathered", "no_forge", "unknown_form", "bad_material", "short_material", "short_essence", "bad_essence", "too_many", "short_gold", "no_room", "made", "salvaged", "cannot_salvage", "nothing"]:
+	for bid in dat.get("brews", {}):
+		var b: Dictionary = dat["brews"][bid]
+		for k in ["name", "cost", "fee", "makes"]:
+			if not b.has(k):
+				bad.append("craft.json: brew '%s' has no %s" % [bid, k])
+		if not bad.is_empty():
+			return bad
+		if b["cost"].is_empty() or int(b["fee"]) < 0 or int(b["makes"]) < 1:
+			bad.append("craft.json: brew '%s' needs a cost, a fee of 0 or more and makes of at least 1" % bid)
+		for m in b["cost"]:
+			if not GameMaterials.has(str(m)) or int(b["cost"][m]) < 1:
+				bad.append("craft.json: brew '%s' costs the unknown material '%s' or a bad amount" % [bid, m])
+	for k in ["brewed", "no_brew", "short_brew", "gathered", "no_forge", "unknown_form", "bad_material", "short_material", "short_essence", "bad_essence", "too_many", "short_gold", "no_room", "made", "salvaged", "cannot_salvage", "nothing"]:
 		if not dat["text"].has(k):
 			bad.append("craft.json: text.%s is missing" % k)
 	return bad

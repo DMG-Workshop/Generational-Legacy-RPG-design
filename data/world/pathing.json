@@ -5,7 +5,11 @@
     "diagonal_mult": 1.4142,
     "slope_penalty": 0.25,
     "up_mult": 1.5,
-    "min_cost": 0.5
+    "min_cost": 0.5,
+    "cache_max": 4000
+  },
+  "text": {
+    "cache_line": "{kept} steps kept, {hits} reused, {misses} found, cleared {clears} times."
   },
   "movers": {
     "walker": {"max_climb": 2, "max_drop": 5, "water": false, "ignore_blocks": false, "fly": false},
@@ -28,6 +32,7 @@
     "anvil": {"solid": true, "cost": 1.0},
     "hearth": {"solid": true, "cost": 1.0},
     "trough": {"solid": true, "cost": 1.0},
+    "roof": {"solid": true, "cost": 1.0},
     "stairs": {"solid": false, "cost": 1.2, "stairs": true}
   }
 }

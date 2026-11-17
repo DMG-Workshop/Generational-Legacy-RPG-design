@@ -371,5 +371,16 @@
       "fee": 0.8,
       "train": 1.15
     }
+  },
+  "quest_effects": {
+    "hostile": {"gold": 0.8, "xp": 0.9},
+    "wary": {"gold": 0.92, "xp": 0.96},
+    "neutral": {"gold": 1.0, "xp": 1.0},
+    "trusted": {"gold": 1.1, "xp": 1.05},
+    "honoured": {"gold": 1.25, "xp": 1.1}
+  },
+  "raid_effects": {
+    "faction": "thieves_guild",
+    "chance": {"hostile": 1.5, "wary": 1.2, "neutral": 1.0, "trusted": 0.85, "honoured": 0.7}
   }
 }

@@ -4,9 +4,18 @@
     "max_level": 5,
     "level_bonus": 0.01,
     "cost_base": 400,
-    "needs_service": "forge"
+    "needs_service": "forge",
+    "effect_per_level": 0.25
   },
   "levels": ["as it was taken", "reforged", "inlaid", "rune-cut", "storied", "legendary"],
+  "effects": {
+    "Grimfang's Fang": {"hunt_gold": 0.04},
+    "Crown of the Hollow King": {"persuasion": 0.03},
+    "Vaerthax's Scale": {"hunt_xp": 0.03},
+    "Heart of Stone": {"raid_cut": 0.06},
+    "Shard of the Unmade": {"hunt_gold": 0.02, "persuasion": 0.02}
+  },
+  "effect_names": {"hunt_gold": "gold from hunts", "hunt_xp": "XP from hunts", "persuasion": "better shop prices", "raid_cut": "fewer raids on the house"},
   "text": {
     "none": "There is no such heirloom.",
     "not_alive": "Only a living heir can have an heirloom reworked.",
@@ -16,6 +25,7 @@
     "gold": "Not enough gold ({need} needed).",
     "done": "{heir} has {name} reworked: it is now {level}, and gives every heir {bonus}% power.",
     "line": "{name}, {level}: +{bonus}% power. Taken from {boss} in generation {gen}.",
-    "worked": "Reworked by {smiths}."
+    "worked": "Reworked by {smiths}.",
+    "effect_line": "Also: +{pct}% {what}."
   }
 }

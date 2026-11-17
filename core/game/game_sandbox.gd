@@ -37,9 +37,17 @@ static func start(dyn: GameDynasty) -> GameSandbox:
 	var back := s._remembered()
 	if back != Vector2i(-1, -1):
 		t = back
+	var got_away := false
+	if not dyn.sandbox_escape.is_empty() and dyn.battle == null:
+		# A fight the heir fled from: they come back to the open world clear of it, not beside the creature.
+		t = Vector2i(int(dyn.sandbox_escape["x"]), int(dyn.sandbox_escape["z"]))
+		dyn.sandbox_escape = {}
+		got_away = true
 	s.heir = t
 	s.companions = GameCompanions.agents_for(dyn, float(t.x) + 0.5, float(t.y) + 0.5)
 	s.refresh()
+	if got_away:
+		s.log.append({"kind": "fight", "text": s._text("escaped", {"heir": dyn.heir.name})})
 	return s
 
 
@@ -103,6 +111,9 @@ func storey() -> int:
 func place_line() -> String:
 	if space != "world":
 		var name := str(GameSpaces.space(space).get("name", space))
+		var who := GamePeople.near(space, heir.x, heir.y)
+		if not who.is_empty() and heir != GameInterior.entry():
+			return GamePeople.text("near", {"name": str(who["name"])})
 		var room := GameInterior.room_at(space, heir.x, heir.y)
 		if room == "":
 			return _text("inside_in", {"place": name})
@@ -111,10 +122,10 @@ func place_line() -> String:
 			if str(r["id"]) == room:
 				room_name = str(r["name"])
 		return _text("inside_at", {"place": name, "room": room_name.to_lower()})
+	var line := GameBuild.room_line(d, heir.x, heir.y, heir_y)
 	if storey() > 0:
-		return _text("upstairs_at", {"n": storey()})
-	var line := GameBuild.room_line(d, heir.x, heir.y)
-	var u := GameBuild.room_use(d, heir.x, heir.y)
+		line = _text("upstairs_at", {"n": storey()}) if line == "" else "%s %s" % [_text("upstairs_at", {"n": storey()}), line]
+	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	return line if u.is_empty() else "%s %s" % [line, str(u["hint"])]
 
 
@@ -150,8 +161,37 @@ func move(dx: int, dz: int) -> Dictionary:
 	if not c["ok"]:
 		return c
 	heir += Vector2i(dx, dz)
+	_arrive()
 	refresh()
 	return {"ok": true, "why": ""}
+
+
+## Walking into a place's ground (a town or the wilds round an anchor) is arriving there: the family's place becomes it, as a
+## journey on the map would make it, but with no years spent (the open world has its own clock), no arrival event and no dice.
+## The place is marked visited and its quests told. Leaving it for open ground changes nothing: the family is still at the last
+## place walked into. Only on the ground of the open world.
+func _arrive() -> void:
+	if space != "world" or heir_y != GameBuild.SURFACE:
+		return
+	var place := str(GameSpaces.space(GameSpaces.at_tile(heir.x, heir.y)).get("place", ""))
+	if place == "" or place == str(d.world.location) or GameWorld.place(place).is_empty():
+		return
+	var dest: Dictionary = GameWorld.place(place)
+	var first: bool = place not in d.world.visited
+	d.world.visit(place)
+	var line := _text("arrived", {"heir": d.heir.name, "place": str(dest["name"])})
+	log.append({"kind": "arrive", "text": line})
+	if first:
+		log.append({"kind": "arrive", "text": GameMessages.text("life", "no_one_walked", {"house": d.dynasty_name, "dest": dest["name"], "description": dest.get("description", "")})})
+	var msgs: Array = []
+	d.quests.on_arrive(d, place, msgs)
+	for m in msgs:
+		log.append({"kind": "arrive", "text": str(m)})
+	arrived = place
+
+
+## The place the heir has just walked into, until the screen has said so (runtime only).
+var arrived := ""
 
 
 ## Spawns the creatures the world has in the square round the heir and lets go of those far behind.
@@ -234,13 +274,24 @@ func leave() -> Dictionary:
 ## lets them do (a bedroom the family built: rest). {ok, text}.
 func use() -> Dictionary:
 	if space != "world":
+		if heir != GameInterior.entry():
+			var p := GamePeople.near(space, heir.x, heir.y)
+			if not p.is_empty():
+				var t := GamePeople.talk(d, space, p)
+				log.append({"kind": "talk", "text": str(t["text"])})
+				return t
 		return leave()
 	if door_here() != "":
 		return enter()
-	var u := GameBuild.room_use(d, heir.x, heir.y) if storey() == 0 else {}
+	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty():
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
+		"keep":
+			return {"ok": true, "text": GameBuild.text("kennel_holds", {"places": GameBuild.kennel_places(d), "kept": d.roster.size(), "cap": GameRoster.cap(d)})}
+		"craft":
+			# The screen opens the workshop for it (GameCraft with forge "home"); nothing changes here.
+			return {"ok": true, "text": GameBuild.text("forge_lit"), "open": "workshop", "forge": "home"}
 		"rest":
 			var msgs := d.rest_for(float(u["years"]))
 			for m in msgs:
@@ -315,14 +366,67 @@ func step(ticks: int = 1) -> void:
 		if _contact():
 			return
 		companions = GameCompanions.reconcile(d, companions, heir_point().x, heir_point().y)
-		var router := GamePath.router(GamePath.world_ground(d))
+		GamePath.sync(path_cache, d)
+		var router := GamePath.cached_router(GamePath.world_ground(d), path_cache)
 		var out := GameCompanions.step_all(d, companions, GameCompanions.view(d, heir_point().x, heir_point().y, threats, router), tick)
 		companions = out["agents"]
 		for e in out["events"]:
+			if str(e["type"]) == "engage":
+				_guard_fights(e)
+				continue
 			log.append({"kind": "companion", "text": GameCompanions.event_text(e)})
+			if str(e.get("type", "")) == "gathered":
+				dirty.append(Vector2i(int(e["x"]), int(e["z"])))
 		var keep_lines := int(setting("log_lines"))
 		if log.size() > keep_lines:
 			log = log.slice(log.size() - keep_lines)
+
+
+## Tiles whose look has changed since the screen last drew them (a node gathered, a shaft dug), for it to redraw (runtime only).
+var dirty: Array = []
+
+
+## The companions' step cache (runtime only): their routes are found once for each (from, to) while the ground holds.
+var path_cache := GamePath.new_cache()
+
+
+## The cache's line for a pathing readout.
+func path_line() -> String:
+	return GamePath.cache_line(path_cache)
+
+
+## A guard is at the creature it went out to meet (`engage`): they fight (GameCompanions.duel). A win drives the creature out of
+## the world (the next `refresh` may bring another of its place back) and the family gets a share of its gold; a loss leaves the
+## guard hurt and resting at their post (`rest_until`) and the creature where it is; a guard too hurt to fight says so and rests.
+func _guard_fights(e: Dictionary) -> void:
+	var at := Vector2(float(e["x"]), float(e["z"]))
+	var hit := -1
+	var best := INF
+	for i in creatures.size():
+		var a: Dictionary = creatures[i]
+		var dist := Vector2(float(a["x"]), float(a["z"])).distance_to(at)
+		if dist < best and dist <= 1.0:
+			best = dist
+			hit = i
+	if hit < 0:
+		return
+	var id := str(e["id"])
+	var r := GameCompanions.duel(d, id, str(creatures[hit]["id"]), tick)
+	if r.is_empty():
+		return
+	var name := str(d.party.member(id).get("name", id))
+	var foe := str(r["foe"]).to_lower()
+	for c in companions:
+		if str(c["id"]) == id and (not bool(r["won"])):
+			c["rest_until"] = tick + int(GameCompanions.setting("guard_rest_ticks"))
+	if bool(r["refused"]):
+		log.append({"kind": "guard", "text": GameCompanions.text("guard_too_hurt", {"name": name, "foe": foe})})
+	elif bool(r["won"]):
+		creatures.remove_at(hit)
+		var key := "guard_won_gold" if int(r["gold"]) > 0 else "guard_won"
+		log.append({"kind": "guard", "text": GameCompanions.text(key, {"name": name, "foe": foe, "gold": int(r["gold"])})})
+	else:
+		log.append({"kind": "guard", "text": GameCompanions.text("guard_hurt", {"name": name, "foe": foe})})
 
 
 ## Plans a walk from the heir to a tile of the open world over the ground as it is now (GamePath, a walker). Sets the
@@ -383,9 +487,16 @@ func build_y() -> int:
 	return GameBuild.SURFACE - build_level
 
 
+## The build level as the Level button says it: "ground", the storey's number, or "roof" for the layer over the top storey.
+func level_name() -> String:
+	if build_level == 0:
+		return "ground"
+	return "roof" if build_level > int(GameBuild.setting("max_storeys")) else str(build_level)
+
+
 ## Steps the build level up a storey, and back to the ground after the top one.
 func cycle_level() -> int:
-	build_level = (build_level + 1) % (int(GameBuild.setting("max_storeys")) + 1)
+	build_level = (build_level + 1) % (int(GameBuild.setting("max_storeys")) + 2)   # the last step is the roof layer
 	return build_level
 
 
@@ -413,6 +524,30 @@ func remove_at(dx: int, dz: int) -> Dictionary:
 	return out
 
 
+## Mends the piece on the tile `dx, dz` from the heir (GameRepair.repair): {ok, text}.
+func repair_at(dx: int, dz: int) -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": _text("indoors")}
+	var t := heir + Vector2i(dx, dz)
+	var out := GameRepair.repair(d, t.x, build_y(), t.y)
+	if out["ok"]:
+		log.append({"kind": "build", "text": str(out["text"])})
+	return out
+
+
+## Forages the nodes beside the heir (GameForage): {ok, text}. Not indoors or upstairs.
+func forage() -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": GameForage.text("indoors")}
+	if storey() > 0:
+		return {"ok": false, "text": GameForage.text("upstairs")}
+	var out := GameForage.forage(d, heir.x, heir.y)
+	if out["ok"]:
+		log.append({"kind": "forage", "text": str(out["text"])})
+		dirty.append(Vector2i(int(out["x"]), int(out["z"])))
+	return out
+
+
 ## Digs the cell `depth` below the surface straight under the heir (`GameMine.dig`): {ok, why, ...}.
 func dig(depth: int) -> Dictionary:
 	if space != "world":
@@ -422,6 +557,11 @@ func dig(depth: int) -> Dictionary:
 	var out := GameMine.dig(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
 	if out["ok"]:
 		log.append({"kind": "dig", "text": _text("dug", {"depth": depth})})
+		dirty.append(heir)
+		var h := GameMine.hazard(d, GameWorldGen.MINE_SITE, heir.x, depth, heir.y)
+		out["hazard"] = h
+		if bool(h["hit"]):
+			log.append({"kind": "hazard", "text": str(h["text"])})
 	return out
 
 
@@ -463,11 +603,41 @@ func _contact() -> bool:
 	var fight := d.start_encounter(ids)
 	if fight == null:
 		return false
+	var away := _escape_tile(Vector2(float(creatures[first]["x"]), float(creatures[first]["z"])))
+	d.sandbox_escape = {"x": away.x, "z": away.y}
 	for a in gone:
 		creatures.erase(a)
 	var names: Array = fight.enemies.map(func(e): return str(e["name"]))
 	log.append({"kind": "fight", "text": _text("contact", {"foes": GameMessages.text("life", "list_comma").join(names), "heir": d.heir.name})})
 	return true
+
+
+## The tile `escape_tiles` away from the heir on the side opposite `from` (a creature's point), stopping at the last tile on the
+## way that can be stood on; the heir's own tile when there is none.
+func _escape_tile(from: Vector2) -> Vector2i:
+	var dir := heir_point() - from
+	dir = dir.normalized() if dir.length() > 0.001 else Vector2(0, 1)
+	var ground := GamePath.world_ground(d)
+	var mover: Dictionary = GamePath.data()["movers"]["walker"]
+	var best := heir
+	for i in range(1, int(setting("escape_tiles")) + 1):
+		var t := Vector2i(floori(heir_point().x + dir.x * float(i)), floori(heir_point().y + dir.y * float(i)))
+		if not GameWorldGen.in_bounds(t.x, t.y) or not GamePath.passable(ground, Vector3i(t.x, GameBuild.SURFACE, t.y), mover):
+			break
+		best = t
+	return best
+
+
+## After a fight on the map is over: if it was fled from, the heir gets clear of it now (the record `_contact` made), else
+## nothing changes. The creatures that fought are put back by the next `refresh`.
+func after_fight() -> void:
+	if d.battle != null or d.sandbox_escape.is_empty():
+		return
+	heir = Vector2i(int(d.sandbox_escape["x"]), int(d.sandbox_escape["z"]))
+	d.sandbox_escape = {}
+	route = []
+	refresh()
+	log.append({"kind": "fight", "text": _text("escaped", {"heir": d.heir.name})})
 
 
 ## The creatures within THREAT_NEAR tiles of the heir, as {x, z} points (the companions' threats).

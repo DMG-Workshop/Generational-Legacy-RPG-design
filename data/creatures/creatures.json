@@ -672,6 +672,25 @@
    "farm": true
   },
   {
+   "id": "bee",
+   "name": "Beehive",
+   "biomes": ["plains", "forest", "hills"],
+   "min_gen": 1,
+   "max_gen": 90,
+   "hp": 6,
+   "atk": 1,
+   "defense": 0,
+   "agi": 6,
+   "xp": 0,
+   "gold": 0,
+   "color": "#e9b43a",
+   "born": "live",
+   "young": "swarm",
+   "element": "",
+   "farm": true,
+   "hive": true
+  },
+  {
    "id": "thornhound",
    "name": "Thornhound",
    "biomes": ["forest", "fae"],

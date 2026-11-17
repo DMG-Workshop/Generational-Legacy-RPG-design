@@ -21,6 +21,7 @@ const PAD_AXES := {"left_x": JOY_AXIS_LEFT_X, "left_y": JOY_AXIS_LEFT_Y, "right_
 const FACINGS := [Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1)]
 
 static var _cache: Dictionary = {}
+static var _over: Variant = null   # the player's own keys, {action: [key names]}; null until read from the settings file
 
 
 static func data() -> Dictionary:
@@ -37,13 +38,134 @@ static func actions() -> Array:
 	return data()["actions"].keys()
 
 
+static func text(key: String, vals: Dictionary = {}) -> String:
+	return str(data()["text"][key]).format(vals)
+
+
+# ---------------------------------------------------------------- the player's own keys
+
+## The saved overrides, cleaned: only known actions, keys the engine knows and that are not reserved, no key on two actions
+## (the first action in the data's order keeps it), no more than `max_keys` to an action and never none. Anything else is dropped,
+## so a damaged settings file cannot break the controls. Pure: takes what was read, gives what is safe.
+static func clean_overrides(raw: Variant) -> Dictionary:
+	var out := {}
+	if typeof(raw) != TYPE_DICTIONARY:
+		return out
+	var taken := {}
+	for action in actions():   # what an action keeps by default is not up for grabs
+		if not ((raw as Dictionary).has(action) and typeof(raw[action]) == TYPE_ARRAY):
+			for k in data()["actions"][action].get("keys", []):
+				taken[str(k)] = action
+	for action in actions():
+		if not (raw as Dictionary).has(action) or typeof(raw[action]) != TYPE_ARRAY:
+			continue
+		var keys: Array = []
+		for k in raw[action]:
+			if typeof(k) != TYPE_STRING or OS.find_keycode_from_string(str(k)) == KEY_NONE or str(k) in reserved_keys() or taken.has(str(k)) or str(k) in keys:
+				continue
+			keys.append(str(k))
+		if keys.size() > int(setting("max_keys")):
+			keys = keys.slice(0, int(setting("max_keys")))
+		if keys.is_empty():
+			continue
+		for k in keys:
+			taken[k] = action
+		out[str(action)] = keys
+	return out
+
+
+static func reserved_keys() -> Array:
+	return data()["settings"].get("reserved_keys", [])
+
+
+## The player's overrides (read from settings.cfg the first time).
+static func overrides() -> Dictionary:
+	if _over == null:
+		_over = clean_overrides(UiSettings.stored("keys", {}))
+	return _over
+
+
+## Forgets what was read, so the next ask reads the settings file again (tests; a new settings file).
+static func forget_overrides() -> void:
+	_over = null
+
+
+## The keys an action answers to: the player's own if they set any, else the data's.
+static func keys_of(action: String) -> Array:
+	if overrides().has(action):
+		return overrides()[action]
+	return data()["actions"].get(action, {}).get("keys", [])
+
+
+## The action a key is bound to (its keys now, the player's or the data's), or "" when none; `except` is left out.
+static func key_owner(key_name: String, except: String = "") -> String:
+	for action in actions():
+		if action != except and key_name in keys_of(action):
+			return action
+	return ""
+
+
+## Binds a key to an action in a slot (0 up to the number of keys it has: the last slot adds one, up to `max_keys`). {ok, text}.
+## Refused: an unknown action or key, a reserved key, a key another action has (it names which), a slot beyond the next free one.
+## It is saved to settings.cfg and put into the engine's input map at once.
+static func remap(action: String, slot: int, key_name: String) -> Dictionary:
+	if not data()["actions"].has(action):
+		return {"ok": false, "text": text("no_action")}
+	if OS.find_keycode_from_string(key_name) == KEY_NONE:
+		return {"ok": false, "text": text("bad_key")}
+	if key_name in reserved_keys():
+		return {"ok": false, "text": text("reserved", {"key": key_name})}
+	var other := key_owner(key_name, action)
+	if other != "":
+		return {"ok": false, "text": text("clash", {"key": key_name, "action": str(data()["actions"][other]["name"]).to_lower()})}
+	var keys: Array = (keys_of(action) as Array).duplicate()
+	if slot < 0 or slot > keys.size():
+		return {"ok": false, "text": text("too_many", {"n": int(setting("max_keys"))})}
+	if slot == keys.size():
+		if keys.size() >= int(setting("max_keys")):
+			return {"ok": false, "text": text("too_many", {"n": int(setting("max_keys"))})}
+		keys.append(key_name)
+	else:
+		keys[slot] = key_name
+	var seen := {}
+	var unique: Array = []
+	for k in keys:
+		if not seen.has(k):
+			seen[k] = true
+			unique.append(k)
+	var now := overrides().duplicate(true)
+	now[action] = unique
+	_save_overrides(now)
+	return {"ok": true, "text": text("set", {"action": str(data()["actions"][action]["name"]), "keys": ", ".join(unique)})}
+
+
+## Takes an action back to the data's keys. A default key another action has since taken stays with that action.
+static func reset(action: String) -> Dictionary:
+	if not data()["actions"].has(action):
+		return {"ok": false, "text": text("no_action")}
+	var now := overrides().duplicate(true)
+	now.erase(action)
+	_save_overrides(now)
+	return {"ok": true, "text": text("reset", {"action": str(data()["actions"][action]["name"])})}
+
+
+static func reset_all() -> void:
+	_save_overrides({})
+
+
+static func _save_overrides(now: Dictionary) -> void:
+	_over = clean_overrides(now)
+	UiSettings.store("keys", _over)
+	install()
+
+
 # ---------------------------------------------------------------- bindings
 
 ## The events bound to an action, built from the data: keys, mouse buttons, pad buttons and pad axes.
 static func events_for(action: String) -> Array:
 	var out: Array = []
 	var a: Dictionary = data()["actions"].get(action, {})
-	for k in a.get("keys", []):
+	for k in keys_of(action):
 		var code := OS.find_keycode_from_string(str(k))
 		if code != KEY_NONE:
 			var ev := InputEventKey.new()
@@ -183,6 +305,19 @@ static func validate() -> Array:
 		bad.append("input.json: zoom_min must be above 0 and under zoom_max, and zoom_step above 0")
 	if float(s["touch_stick_radius_px"]) <= 0.0 or float(s["tap_max_px"]) <= 0.0 or float(s["tap_max_seconds"]) <= 0.0 or float(s["camera_follow_seconds"]) < 0.0:
 		bad.append("input.json: the stick radius and the tap limits must be above 0, and camera_follow_seconds 0 or more")
+	if int(s.get("max_keys", 0)) < 1 or typeof(s.get("reserved_keys", null)) != TYPE_ARRAY or not dat.has("text"):
+		bad.append("input.json: settings.max_keys (1 or more), settings.reserved_keys and text are needed for remapping")
+	else:
+		for k in s["reserved_keys"]:
+			if OS.find_keycode_from_string(str(k)) == KEY_NONE:
+				bad.append("input.json: reserved key '%s' is not a key the engine knows" % k)
+		for k in ["no_action", "bad_key", "reserved", "clash", "too_many", "set", "reset"]:
+			if not dat["text"].has(k):
+				bad.append("input.json: text.%s is missing" % k)
+		for action in dat["actions"]:
+			var nkeys: int = (dat["actions"][action].get("keys", []) as Array).size()
+			if nkeys > int(s["max_keys"]):
+				bad.append("input.json: action '%s' has more keys than max_keys" % action)
 	var used := {}   # binding -> action
 	for action in dat["actions"]:
 		var a: Dictionary = dat["actions"][action]

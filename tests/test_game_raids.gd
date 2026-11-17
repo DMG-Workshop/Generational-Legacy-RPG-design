@@ -84,7 +84,7 @@ func _guards(d: GameDynasty, n: int) -> void:
 
 func test_data() -> void:
 	ok(GameRaids.validate().is_empty(), "raids.json is sound: %s" % str(GameRaids.validate()))
-	ok(GameRaids.kinds() == ["beasts", "burglars", "rustlers", "thieves"], "four kinds of raid")
+	ok(GameRaids.kinds() == ["beasts", "burglars", "rustlers", "thieves", "vandals"], "five kinds of raid")
 	_with(func(x): x["settings"]["max_chance"] = 0.01, func(): ok(not GameRaids.validate().is_empty(), "a ceiling below the base is found"))
 	_with(func(x): x["settings"]["beat_off_max"] = 2.0, func(): ok(not GameRaids.validate().is_empty(), "a chance above 1 is found"))
 	_with(func(x): x["kinds"]["thieves"]["event"] = "tavern_brawl", func(): ok(not GameRaids.validate().is_empty(), "a raid kind whose event is not marked raid is found"))
@@ -94,7 +94,7 @@ func test_data() -> void:
 	_with(func(x): x["kinds"].erase("beasts"), func(): ok(not GameRaids.validate().is_empty(), "a raid event used by no kind is found"))
 	_with(func(x): x["text"].erase("stole_gold"), func(): ok(not GameRaids.validate().is_empty(), "missing text is found"))
 	ok(GameRaids.validate().is_empty(), "the data is put back")
-	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars"]:
+	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars", "raid_vandals"]:
 		ok(GameEvents.event_def(id).get("raid", false) == true, "%s is a raid event" % id)
 	_with(func(x): x["settings"]["house_value_share"] = 2.0, func(): ok(not GameRaids.validate().is_empty(), "a house value share above 1 is found"))
 
@@ -304,14 +304,14 @@ func test_defend() -> void:
 func test_events() -> void:
 	var d := dyn()
 	_animal(d, "slime")
-	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars"]:
+	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars", "raid_vandals"]:
 		ok(not GameEvents.is_eligible(d, GameEvents.event_def(id)), "%s is never found while exploring" % id)
 	ok(not GameEvents.eligible(d).any(func(e): return str(e["id"]).begins_with("raid_")), "no raid in any explore pool")
 	for place in ["hearthmere", "greenvale", "whisperwood", "emberpeak"]:
 		d.world.location = place
 		ok(not GameEvents.eligible(d).any(func(e): return e.get("raid", false)), "none at %s" % place)
 	# each choice of each event resolves
-	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars"]:
+	for id in ["raid_thieves", "raid_rustlers", "raid_beasts", "raid_burglars", "raid_vandals"]:
 		var ev := GameEvents.event_def(id)
 		for i in ev["choices"].size():
 			var e := dyn(i + 3)
@@ -364,7 +364,7 @@ func test_house() -> void:
 	var full := dyn()
 	for track in GameHouse.TRACKS:
 		full.house[track] = 3
-	ok(GameRaids.house_value(full) == 3 * (200 + 400 + 800) / 2, "a house built to the top is worth half of 3 x 1,400: %d" % GameRaids.house_value(full))
+	ok(GameRaids.house_value(full) == GameHouse.TRACKS.size() * (200 + 400 + 800) / 2, "a house built to the top is worth half of each track's 1,400: %d" % GameRaids.house_value(full))
 	ok(GameRaids.chance(full) > GameRaids.chance(hall), "the more built, the likelier a raid")
 	var both := dyn()
 	both.heir.gold = 0

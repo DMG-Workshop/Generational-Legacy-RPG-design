@@ -44,6 +44,10 @@ func _build() -> void:
 		var head := Kit.label(str(h["line"]), 16, Kit.ACCENT)
 		head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		text.add_child(head)
+		if str(h["effect"]) != "":
+			var fx := Kit.label(str(h["effect"]), 14, Kit.good())
+			fx.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			text.add_child(fx)
 		var under := str(h["worked"])
 		if str(h["why_not"]) != "":
 			under += ("  " if under != "" else "") + str(h["why_not"])

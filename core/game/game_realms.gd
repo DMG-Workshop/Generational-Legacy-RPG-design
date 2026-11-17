@@ -108,6 +108,13 @@ static func where(e: Dictionary) -> String:
 
 
 ## Whether a creature is at ease where it lives: at home, in a realm of its own, or in one it has adapted to.
+## How fast the time of the realm a creature is kept in runs, in its years for each year at home: 1.0 at home and for a creature
+## kept nowhere else. A pen in a realm lives at its realm's pace (GameRanch ages, feeds and works it by this).
+static func flow(e: Dictionary) -> float:
+	var r: Dictionary = data()["realms"].get(where(e), {})
+	return float(r.get("flow", 1.0))
+
+
 static func settled(e: Dictionary) -> bool:
 	var r := where(e)
 	return r == home() or r in of_entry(e) or r in e.get("settled", [])
@@ -260,7 +267,7 @@ static func on_years(d: GameDynasty, years: float, msgs: Array, year_now: float 
 	var year := int(floor(year_now if year_now >= 0.0 else float(d.world.year)))
 	for e in d.roster:
 		if not settled(e):
-			e["adapt"] = float(e.get("adapt", 0.0)) + years
+			e["adapt"] = float(e.get("adapt", 0.0)) + years * flow(e)   # the realm's own years
 			if adapt_left(e) <= 0.0:
 				var known: Array = e.get("settled", [])
 				known.append(where(e))
@@ -381,6 +388,11 @@ static func validate() -> Array:
 		for k in ["name", "stable", "adapt_years", "mark"]:
 			if not r.has(k):
 				bad.append("realm '%s' has no '%s'" % [id, k])
+		var fl: Variant = r.get("flow", null)
+		if typeof(fl) not in [TYPE_INT, TYPE_FLOAT] or float(fl) < 0.25 or float(fl) > 2.0:
+			bad.append("realm '%s' needs a flow (its years for each year at home) between 0.25 and 2" % id)
+		elif id == home() and float(fl) != 1.0:
+			bad.append("the home realm's time runs at 1")
 		if typeof(r.get("stable")) != TYPE_BOOL:
 			bad.append("realm '%s' does not say whether it is stable" % id)
 		var m := str(r.get("mark", ""))

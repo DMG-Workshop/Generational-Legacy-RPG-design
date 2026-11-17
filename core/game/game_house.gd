@@ -1,6 +1,7 @@
 ## The family house: upgrades bought with the heir's gold between hunts and kept by the dynasty, so every
-## heir after the first has them. Three tracks: the House Hall (a companion place per level), the
-## Training Yard (more XP from training per level) and the Ranch (pens, a hatchery and a nursery: GameRanch.ranch).
+## heir after the first has them. Four tracks: the House Hall (a companion place per level), the
+## Training Yard (more XP from training per level), the Ranch (pens, a hatchery and a nursery: GameRanch.ranch) and the Smithy
+## (better made pieces and a cheaper forge fee: GameCraft.quality, plan and brew_plan).
 ## Prices are in balance.json; what a Ranch level does is in data/creatures/ranch.json. Level 0 is what
 ## a new house has, and changes nothing in play.
 ## A save holds only the levels bought, as {track: level}; anything else in it is dropped on load.
@@ -10,7 +11,8 @@ extends RefCounted
 const HALL := "hall"
 const YARD := "yard"
 const RANCH := "ranch"
-const TRACKS := [HALL, YARD, RANCH]
+const SMITHY := "smithy"
+const TRACKS := [HALL, YARD, RANCH, SMITHY]
 
 
 ## The level of a track, 0 to house_max_level.
@@ -64,8 +66,18 @@ static func train_xp_mult(d: GameDynasty) -> float:
 	return 1.0 + float(level(d, YARD)) * float(GameData.bal("house_yard_train_xp_per_level"))
 
 
+## The Smithy's cut of a forge fee, 0.0 at level 0 (so a house without one pays exactly what it did).
+static func smithy_fee_mult(d: GameDynasty) -> float:
+	return 1.0 - float(level(d, SMITHY)) * float(GameData.bal("house_smithy_fee_cut_per_level"))
+
+
+## Quality points the Smithy adds to a made piece, 0 at level 0.
+static func smithy_quality(d: GameDynasty) -> int:
+	return level(d, SMITHY) * int(GameData.bal("house_smithy_quality_per_level"))
+
+
 static func track_name(track: String) -> String:
-	return GameMessages.text("life", "track_hall") if track == HALL else GameMessages.text("life", "track_yard") if track == YARD else GameMessages.text("life", "track_ranch") if track == RANCH else track
+	return GameMessages.text("life", "track_hall") if track == HALL else GameMessages.text("life", "track_yard") if track == YARD else GameMessages.text("life", "track_ranch") if track == RANCH else GameMessages.text("life", "track_smithy") if track == SMITHY else track
 
 
 ## The saved house, checked: only known tracks with whole-number levels in range survive.
