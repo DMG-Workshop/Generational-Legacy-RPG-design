@@ -22,6 +22,7 @@ const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
 
 var dynasty: GameDynasty
 var slot := 1   # the save slot in use (GameSaves); GameDynasty.save_path is its file
+var boot_in_world := false   # set by main.gd for the real game: launch straight into the open world when a house is saved (see _ready)
 var closed_badly := false   # the last session ended without warning (GameSessionMark): the title offers a report
 var hunt_stopped := false   # the player pressed Stop: auto-battle's run of hunts ends after this fight
 var current: Control
@@ -66,7 +67,13 @@ func _ready() -> void:
 	add_child(hints)
 	get_viewport().size_changed.connect(apply_safe_area)
 	apply_safe_area()
-	show_title()
+	# The real game (main.gd) opens the 2D open world at once when the player wants it (the menu's Start in), a house is saved and the
+	# last session ended properly (after a bad close the title offers the error report first). Otherwise, and for a house that
+	# cannot be loaded, the title.
+	if boot_in_world and UiSettings.open_world_first() and not closed_badly and GameSaves.newest() > 0:
+		continue_game(true)
+	if current == null:
+		show_title()
 
 
 ## Insets the screens by the display's safe area (phones only, where the game fills the screen; a
@@ -127,18 +134,34 @@ func show_title() -> void:
 	sound.music(Sound.track_for(null))
 
 
-func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "", p_hard: Dictionary = {}) -> void:
+func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, race_id: String = "human", p_sex: String = GameSex.MALE, p_subclass: String = "", p_hard: Dictionary = {}, open_world: bool = false) -> void:
 	dynasty = GameDynasty.new_game(p_seed, p_name, class_id, bloodline, race_id, p_sex, p_subclass, p_hard)
 	dynasty.save_to_disk()
 	show_state()
+	if open_world:
+		_open_world_first()
 
 
-func continue_game() -> void:
+func continue_game(open_world: bool = false) -> void:
 	var d := GameDynasty.load_from_disk()
 	if d == null:
 		return
 	dynasty = d
 	show_state()
+	if open_world:
+		_open_world_first()
+
+
+## Opens the 2D open world over the life, for a house that is in its life (not mid-fight, between heirs or at the saga's end: those
+## screens come first). The title's New game and Continue ask for it when the menu's Start in says the open world.
+func _open_world_first() -> void:
+	if dynasty != null and dynasty.battle == null and dynasty.state == "life":
+		show_sandbox()
+
+
+## The menu's Start in: whether New game and Continue open the open world or the life screen.
+func set_open_world_first(on: bool) -> void:
+	UiSettings.set_open_world_first(on)
 
 
 ## The open world (roadmap items 39 and 51): the sandbox screen over the life. Back returns to the state's screen.
