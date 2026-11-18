@@ -23,6 +23,7 @@ func _init() -> void:
 func _run() -> void:
 	GameData.load_all()
 	test_data()
+	test_built_look()
 	test_atlas()
 	test_layer()
 	test_changes()
@@ -81,6 +82,33 @@ func test_data() -> void:
 	ok(not TileView.validate().is_empty(), "a glyph for something that is not a kind is caught")
 	g.erase("ghost")
 	ok(TileView.validate().is_empty(), "and mending the data clears it")
+
+
+func test_built_look() -> void:
+	var g: Dictionary = TileView.settings()["glyphs"]
+	var ts := TileView.make_tileset()
+	var img: Image = (ts.get_source(0) as TileSetAtlasSource).texture.get_image()
+	var px := int(TileView.settings()["px"])
+	var kinds := TileView.kinds()
+	var seen := {}
+	for pk in GameBuild.pieces():
+		ok(g.has(pk), "the built piece '%s' is drawn from a glyph, not a flat colour" % pk)
+		var i := kinds.find(pk)
+		var solid := true
+		for y in px:
+			for x in px:
+				if img.get_pixel(i * px + x, y).a < 1.0:
+					solid = false
+		ok(solid, "and '%s' covers the whole tile" % pk)
+		var sig := str(g.get(pk, {}).get("rows", []))
+		ok(not seen.has(sig), "and no two pieces share a drawing ('%s')" % pk)
+		seen[sig] = true
+	var rows: Array = g["wall"]["rows"]
+	var keep: Variant = rows[0]
+	rows[0] = "........"
+	ok(not TileView.validate().is_empty(), "a built piece's glyph left clear is caught")
+	rows[0] = keep
+	ok(TileView.validate().is_empty(), "and mending it clears that")
 
 
 func test_atlas() -> void:

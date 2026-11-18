@@ -47,6 +47,7 @@ const SHOTS := [
 	["battle_swamp", DESKTOP, false, "battle:mirefen"],
 	["town", DESKTOP, false, "town"],
 	["river", DESKTOP, false, "river"],
+	["homestead", DESKTOP, false, "homestead"],
 	["phone_life", PHONE, true, "life"],
 	["phone_battle", PHONE, true, "battle:kingshold"],
 ]
@@ -209,7 +210,7 @@ func _screen(what: String) -> void:
 	app.show_state()
 	await _frames(3)
 	match what:
-		"town", "river":
+		"town", "river", "homestead":
 			await _open_world(what)
 		"life":
 			pass
@@ -312,6 +313,9 @@ func _select_tab(n: Node, name: String) -> void:
 func _open_world(what: String) -> void:
 	var town := what == "town"
 	var spot := Vector2i(160, 290) if town else Vector2i(143, 206)
+	if what == "homestead":
+		spot = Vector2i(178, 290)
+		_build_house()
 	d.world.visit("hearthmere")
 	app.show_sandbox()
 	await _frames(3)
@@ -325,7 +329,30 @@ func _open_world(what: String) -> void:
 	if town:
 		scr.sb.creatures.append(GameBehaviour.new_agent(900, "wolf", float(spot.x) - 5.5, float(spot.y) + 2.5))
 		scr.sb.creatures.append(GameBehaviour.new_agent(901, "slime", float(spot.x) + 7.5, float(spot.y) - 3.5))
-	scr.zoom = 1.6 if town else 0.75
+	scr.zoom = 1.8 if what == "homestead" else (1.6 if town else 0.75)
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
+
+
+## A family house on the homestead plot: walls round floor, two doors, a bed, an anvil and hearth, a trough, stairs, a road to the door, and an upper floor and roof.
+func _build_house() -> void:
+	var base := GameBuild.base()
+	var ox := int(base["x"]) - 5
+	var oz := int(base["z"]) - 4
+	var s := GameBuild.SURFACE
+	for x in 9:
+		for z in 6:
+			var edge := x == 0 or x == 8 or z == 0 or z == 5 or x == 4
+			d.built[GameBuild.key(ox + x, s, oz + z)] = "wall" if edge else "floor"
+			d.built[GameBuild.key(ox + x, s - 1, oz + z)] = "wall" if (x == 0 or x == 8 or z == 0 or z == 5) else "floor"
+			d.built[GameBuild.key(ox + x, s - 2, oz + z)] = "roof"
+	d.built[GameBuild.key(ox + 2, s, oz + 5)] = "door"
+	d.built[GameBuild.key(ox + 4, s, oz + 2)] = "door"
+	d.built[GameBuild.key(ox + 1, s, oz + 1)] = "bed"
+	d.built[GameBuild.key(ox + 6, s, oz + 1)] = "anvil"
+	d.built[GameBuild.key(ox + 7, s, oz + 1)] = "hearth"
+	d.built[GameBuild.key(ox + 2, s, oz + 3)] = "stairs"
+	d.built[GameBuild.key(ox + 6, s, oz + 3)] = "trough"
+	for z in range(6, 10):
+		d.built[GameBuild.key(ox + 2, s, oz + z)] = "road"
