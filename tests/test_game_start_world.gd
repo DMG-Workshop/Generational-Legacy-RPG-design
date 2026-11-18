@@ -36,6 +36,7 @@ func _run() -> void:
 	await test_app()
 	await test_title()
 	await test_menu()
+	await test_boot()
 	DirAccess.remove_absolute(UiSettings.path)
 	print("start world tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -172,4 +173,74 @@ func test_menu() -> void:
 	ok(JSON.stringify(d.to_dict()) == before, "the choice is not in the save")
 	UiSettings.set_open_world_first(true)
 	app.queue_free()
+	await _frames(2)
+
+
+const TitleScreen := preload("res://ui/play/title_screen.gd")
+
+
+## The real game launches into the open world when a house is saved: main.gd sets boot_in_world; the tests and tools that make an app
+## themselves do not, so they open the title as ever.
+func test_boot() -> void:
+	ok(FileAccess.get_file_as_string("res://main.gd").contains("boot_in_world = true"), "the game's entry point (main.gd) asks the app to boot into the world")
+	DirAccess.remove_absolute(GameDynasty.save_path)
+	DirAccess.remove_absolute(GameDynasty.save_path + ".bak")
+	UiSettings.set_open_world_first(true)
+	var none: Node = GameApp.new()
+	none.boot_in_world = true
+	root.add_child(none)
+	await _frames(3)
+	ok(none.current is TitleScreen, "with no house saved the real game opens the title (a new dynasty to found)")
+	none.queue_free()
+	await _frames(2)
+	var maker := await _app()
+	maker.new_game("Tess", "warrior", "faetouched", 7)   # saves a house
+	maker.queue_free()
+	await _frames(2)
+	var plain: Node = GameApp.new()
+	root.add_child(plain)
+	await _frames(3)
+	ok(plain.current is TitleScreen, "an app made without boot_in_world (the tests, the tools) opens the title even with a house saved")
+	plain.queue_free()
+	await _frames(2)
+	var boot: Node = GameApp.new()
+	boot.boot_in_world = true
+	root.add_child(boot)
+	await _frames(3)
+	ok(boot.current is SandboxScreen and boot.dynasty != null, "the real game with a house saved opens the 2D open world at once")
+	boot.queue_free()
+	await _frames(2)
+	UiSettings.set_open_world_first(false)
+	var life: Node = GameApp.new()
+	life.boot_in_world = true
+	root.add_child(life)
+	await _frames(3)
+	ok(life.current is TitleScreen, "and the title when the player chose the life screen")
+	life.queue_free()
+	await _frames(2)
+	UiSettings.set_open_world_first(true)
+	# a session that ended without warning leaves its mark: the title comes first, with the offer of a report
+	var mark_path := UiSettings.path.get_base_dir().path_join("session.mark")
+	var mark := FileAccess.open(mark_path, FileAccess.WRITE)
+	mark.store_string("running")
+	mark.close()
+	var bad: Node = GameApp.new()
+	bad.boot_in_world = true
+	root.add_child(bad)
+	await _frames(3)
+	ok(bad.closed_badly and bad.current is TitleScreen, "after a bad close the title comes first (it offers the error report)")
+	bad.queue_free()
+	await _frames(2)
+	DirAccess.remove_absolute(mark_path)
+	# a house that cannot be read falls back to the title
+	var junk := FileAccess.open(GameDynasty.save_path, FileAccess.WRITE)
+	junk.store_string("not a save")
+	junk.close()
+	DirAccess.remove_absolute(GameDynasty.save_path + ".bak")
+	var broken: Node = GameApp.new()
+	broken.boot_in_world = true
+	root.add_child(broken)
+	await _frames(3)
+	ok(broken.current is TitleScreen, "a saved house that cannot be read falls back to the title")
+	broken.queue_free()
 	await _frames(2)

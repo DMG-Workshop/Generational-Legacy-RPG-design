@@ -22,6 +22,7 @@ const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
 
 var dynasty: GameDynasty
 var slot := 1   # the save slot in use (GameSaves); GameDynasty.save_path is its file
+var boot_in_world := false   # set by main.gd for the real game: launch straight into the open world when a house is saved (see _ready)
 var closed_badly := false   # the last session ended without warning (GameSessionMark): the title offers a report
 var hunt_stopped := false   # the player pressed Stop: auto-battle's run of hunts ends after this fight
 var current: Control
@@ -66,7 +67,13 @@ func _ready() -> void:
 	add_child(hints)
 	get_viewport().size_changed.connect(apply_safe_area)
 	apply_safe_area()
-	show_title()
+	# The real game (main.gd) opens the 2D open world at once when the player wants it (the menu's Start in), a house is saved and the
+	# last session ended properly (after a bad close the title offers the error report first). Otherwise, and for a house that
+	# cannot be loaded, the title.
+	if boot_in_world and UiSettings.open_world_first() and not closed_badly and GameSaves.newest() > 0:
+		continue_game(true)
+	if current == null:
+		show_title()
 
 
 ## Insets the screens by the display's safe area (phones only, where the game fills the screen; a

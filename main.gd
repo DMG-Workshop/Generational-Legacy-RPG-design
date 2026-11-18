@@ -5,4 +5,6 @@ const GameApp := preload("res://ui/play/game_app.gd")
 
 
 func _ready() -> void:
-	add_child(GameApp.new())
+	var app := GameApp.new()
+	app.boot_in_world = true   # a saved house opens in the 2D open world, not on the title
+	add_child(app)
