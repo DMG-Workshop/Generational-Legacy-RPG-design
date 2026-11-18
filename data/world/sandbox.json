@@ -77,6 +77,16 @@
       "ford": [0.2, 0.42, 0.55]
     },
     "glyphs": {
+      "wall": {"rows": ["sssmssss", "sssmssss", "mmmmmmmm", "gsssssms", "gsssssms", "mmmmmmmm", "sssmssss", "dddddddd"], "palette": {"s": [0.54, 0.49, 0.45], "m": [0.37, 0.34, 0.31], "g": [0.6, 0.56, 0.5], "d": [0.24, 0.22, 0.2]}},
+      "floor": {"rows": ["pppppppp", "pPppppPp", "dddddddd", "pppppppp", "ppPpppPp", "dddddddd", "pppppppp", "dddddddd"], "palette": {"p": [0.66, 0.53, 0.33], "P": [0.72, 0.58, 0.37], "d": [0.49, 0.38, 0.25]}},
+      "road": {"rows": ["CCcgCCcg", "cccgcccg", "gggggggg", "gCCcgCCc", "gcccgccc", "gggggggg", "CCcgCCcg", "cccgcccg"], "palette": {"c": [0.6, 0.59, 0.55], "C": [0.67, 0.65, 0.6], "g": [0.42, 0.41, 0.38]}},
+      "door": {"rows": ["ffffffff", "fpplpplf", "fpplpplf", "fpplkplf", "fpplpplf", "fpplpplf", "ffffffff", "ffffffff"], "palette": {"f": [0.24, 0.15, 0.07], "p": [0.54, 0.33, 0.15], "l": [0.42, 0.25, 0.11], "k": [0.88, 0.72, 0.25]}},
+      "stairs": {"rows": ["rllllllr", "rssssssr", "rddddddr", "rllllllr", "rssssssr", "rddddddr", "rllllllr", "rssssssr"], "palette": {"r": [0.37, 0.29, 0.19], "l": [0.82, 0.71, 0.5], "s": [0.7, 0.6, 0.41], "d": [0.48, 0.41, 0.27]}},
+      "roof": {"rows": ["RRRrRRRr", "rrrrrrrr", "dddddddd", "rRRRrRRR", "rrrrrrrr", "dddddddd", "RRRrRRRr", "rrrrrrrr"], "palette": {"R": [0.69, 0.27, 0.23], "r": [0.56, 0.2, 0.16], "d": [0.36, 0.12, 0.1]}},
+      "bed": {"rows": ["ffffffff", "fwwwwwwf", "fwppbbbf", "fwppbbbf", "fwppbbbf", "fwppbbbf", "fwwwwwwf", "ffffffff"], "palette": {"f": [0.66, 0.53, 0.33], "w": [0.42, 0.29, 0.16], "p": [0.93, 0.9, 0.86], "b": [0.69, 0.29, 0.35]}},
+      "anvil": {"rows": ["ffffffff", "fAAAAAAf", "fAaaaAAA", "ffAAAAff", "fffAAfff", "fffAAfff", "ffAAAAff", "ffffffff"], "palette": {"f": [0.66, 0.53, 0.33], "A": [0.23, 0.24, 0.27], "a": [0.49, 0.52, 0.58]}},
+      "hearth": {"rows": ["ssssssss", "sFFFFFFs", "sFFYYFFs", "sFYYYYFs", "sFFYYFFs", "sRRRRRRs", "ssssssss", "ssssssss"], "palette": {"s": [0.42, 0.39, 0.36], "F": [0.88, 0.42, 0.1], "Y": [0.96, 0.82, 0.28], "R": [0.54, 0.16, 0.08]}},
+      "trough": {"rows": ["ffffffff", "wwwwwwww", "wBBBBBBw", "wBbbbbBw", "wBbbbbBw", "wBBBBBBw", "wwwwwwww", "ffffffff"], "palette": {"f": [0.66, 0.53, 0.33], "w": [0.42, 0.29, 0.16], "B": [0.29, 0.48, 0.66], "b": [0.42, 0.6, 0.78]}},
       "oak_tree": {"rows": ["..gggg..", ".gGGGGg.", "gGGGGGGg", "gGGGGGGg", ".gGGGGg.", "...tt...", "...tt...", "..tttt.."], "palette": {"g": [0.08, 0.24, 0.08], "G": [0.18, 0.48, 0.16], "t": [0.4, 0.26, 0.12]}},
       "yew_tree": {"rows": ["...gg...", "..gGGg..", "..gGGg..", ".gGGGGg.", ".gGGGGg.", "gGGGGGGg", "...tt...", "...tt..."], "palette": {"g": [0.05, 0.2, 0.16], "G": [0.12, 0.36, 0.26], "t": [0.34, 0.22, 0.12]}},
       "herb_patch": {"rows": ["........", "..p..p..", ".pgp.gp.", "..g..g..", "p.g.pg.p", "gg.gg.gg", ".g.g..g.", "........"], "palette": {"g": [0.2, 0.62, 0.22], "p": [0.86, 0.5, 0.7]}},

@@ -342,6 +342,13 @@ static func validate() -> Array:
 			var col: Array = g["palette"][ch]
 			if col.size() < 3 or col.size() > 4:
 				bad.append("sandbox.json: glyph '%s' palette '%s' needs [r, g, b] or [r, g, b, a]" % [k, ch])
+	for pk in GameBuild.pieces():
+		if glyphs.has(pk):
+			for row in glyphs[pk].get("rows", []):
+				for ch in str(row):
+					if ch == "." or (glyphs[pk]["palette"].has(ch) and (glyphs[pk]["palette"][ch] as Array).size() > 3):
+						bad.append("sandbox.json: the built piece '%s' has a glyph that is clear in places: it is the whole tile, so every pixel needs a colour" % pk)
+						break
 	for nk in GameWorldGen.data()["nodes"]:
 		if not glyphs.has(nk):
 			bad.append("sandbox.json: the node '%s' has no glyph to be drawn with" % nk)
