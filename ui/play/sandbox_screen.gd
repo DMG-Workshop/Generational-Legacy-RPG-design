@@ -529,6 +529,7 @@ func _sync_tiles() -> void:
 		light = 1.0   # indoors it is always light
 	tile_view.set_level(sb.build_level)
 	tile_view.show_view(centre, area * 0.5 / cell + Vector2(1, 1))
+	tile_view.set_heir(float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5)   # the lids of the family's houses lift as they come near
 	tile_view.place(Vector2.ZERO, area, centre, cell, light)
 
 
@@ -589,9 +590,16 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 			"building":
 				var b: Dictionary = it[2]
 				var at := origin + (Vector2(float(b["x"]), float(b["z"])) - centre) * cell + area * 0.5
-				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"])), Rect2(at, Vector2(float(b["w"]), float(b["h"])) * cell), false, dim)
+				var box := Rect2(at, Vector2(float(b["w"]), float(b["h"])) * cell)
+				var lid := GameReveal.alpha(GameReveal.distance_to(Rect2i(int(b["x"]), int(b["z"]), int(b["w"]), int(b["h"])), float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5))
+				var inside: Texture2D = BuildingArt.inside(str(b["kind"]), int(b["style"])) if lid < 1.0 else null
+				if inside != null:   # a doll house: the roof thins and the rooms show (nobody in them is drawn)
+					c.draw_texture_rect(inside, box, false, dim)
+				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"])), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
 			"creature":
 				var a: Dictionary = it[2]
+				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
+					continue   # under a whole roof: not seen
 				var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 				var tex: Texture2D = SpriteArt.creature(str(a["id"]))
 				if tex == null:
@@ -603,6 +611,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					_stand(c, tex, p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell)   # the art faces left
 			"companion":
 				var a: Dictionary = it[2]
+				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
+					continue
 				var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 				var tex: Texture2D = _party_figure(str(a["id"]))
 				if tex == null:

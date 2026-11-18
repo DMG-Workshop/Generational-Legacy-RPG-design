@@ -17,6 +17,12 @@ var interior := {}        # its cells, "x,z" -> floor, door, exit or wall (GameI
 var level := 0            # the storey shown: 0 is the ground; above it the ground is dimmed and that storey's pieces are drawn over it
 var uppers := {}          # Vector2i chunk -> TileMapLayer of the shown storey's pieces (empty cells where nothing is built)
 var things := {}          # Vector2i chunk -> TileMapLayer of what stands on the ground: nodes (trees, herbs, bones, rock) and dug shafts
+var roofs := {}           # Vector2i chunk -> TileMapLayer of the roofs seen from outside (a doll house's lid): shown on the ground floor only
+var roof_steps := {}      # "x,z" -> how far a roof has lifted (GameReveal: 1 to steps; a roof not listed is whole)
+var _heir_tile := Vector2i(-100000, -100000)
+var _roofs_dirty := true
+
+const ROOF_ALT := 100     # the alternative tile of a roof lifted k steps is ROOF_ALT + k (faded by k of `steps`)
 
 
 static func settings() -> Dictionary:
@@ -110,6 +116,11 @@ static func make_tileset() -> TileSet:
 			src.create_alternative_tile(Vector2i(i, 0), alt)
 			var m := GameRelief.light(step)
 			src.get_tile_data(Vector2i(i, 0), alt).modulate = Color(m, m, m)
+	var roof_i := all.find("roof")
+	var lift := int(GameReveal.setting("steps"))
+	for k in range(1, lift):
+		src.create_alternative_tile(Vector2i(roof_i, 0), ROOF_ALT + k)
+		src.get_tile_data(Vector2i(roof_i, 0), ROOF_ALT + k).modulate = Color(1, 1, 1, 1.0 - float(k) / float(lift))
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(px, px)
 	ts.add_source(src, 0)
@@ -154,6 +165,9 @@ func show_view(centre: Vector2, half: Vector2) -> void:
 			if things.has(c):
 				(things[c] as TileMapLayer).queue_free()
 				things.erase(c)
+			if roofs.has(c):
+				(roofs[c] as TileMapLayer).queue_free()
+				roofs.erase(c)
 
 
 ## Shows a storey (0 is the ground). Above the ground, the ground tiles are dimmed by `below_shade` and the pieces built at that
@@ -169,6 +183,8 @@ func set_level(n: int) -> void:
 	uppers.clear()
 	for c in things:
 		(things[c] as TileMapLayer).visible = level == 0   # the ground's trees and shafts are not on a storey
+	for c in roofs:
+		(roofs[c] as TileMapLayer).visible = level == 0   # a storey is looked at from inside: no lid
 	var shade := float(settings()["below_shade"]) if level > 0 else 1.0
 	for c in layers:
 		(layers[c] as TileMapLayer).modulate = Color(shade, shade, shade)
@@ -193,6 +209,10 @@ func set_interior(id: String, cells: Dictionary) -> void:
 	for c in things.keys():
 		(things[c] as TileMapLayer).queue_free()
 	things.clear()
+	for c in roofs.keys():
+		(roofs[c] as TileMapLayer).queue_free()
+	roofs.clear()
+	roof_steps.clear()
 	level = 0   # an interior has one floor
 
 
@@ -219,6 +239,12 @@ func _fill(c: Vector2i) -> void:
 		over.visible = level == 0
 		add_child(over)
 		things[c] = over
+		var lid := TileMapLayer.new()
+		lid.tile_set = tile_set
+		lid.position = layer.position
+		lid.visible = level == 0
+		add_child(lid)
+		roofs[c] = lid
 	for dz in n:
 		for dx in n:
 			var x := c.x * n + dx
@@ -234,12 +260,58 @@ func _fill(c: Vector2i) -> void:
 			var thing := _thing_from(tile, built, x, z)
 			if thing != "":
 				over.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(thing), 0))
+			if not d.built.is_empty() and GameReveal.roofed(d, x, z):
+				_set_roof(Vector2i(x, z), c)
 	layers[c] = layer
 	fills += 1
 	if level > 0:
 		var shade := float(settings()["below_shade"])
 		layer.modulate = Color(shade, shade, shade)
 		_fill_upper(c)
+
+
+## Draws (or clears) the roof over a column in its chunk's lid layer, lifted as far as `roof_steps` says.
+func _set_roof(cell: Vector2i, c: Vector2i) -> void:
+	if not roofs.has(c):
+		return
+	var n := int(settings()["chunk"])
+	var local := Vector2i(cell.x - c.x * n, cell.y - c.y * n)
+	var layer: TileMapLayer = roofs[c]
+	var step := int(roof_steps.get("%d,%d" % [cell.x, cell.y], 0))
+	if not GameReveal.roofed(d, cell.x, cell.y) or step >= int(GameReveal.setting("steps")):
+		layer.erase_cell(local)
+	else:
+		layer.set_cell(local, 0, Vector2i(kinds().find("roof"), 0), 0 if step == 0 else ROOF_ALT + step)
+
+
+## Tells the view where the heir is (tiles): the roofs near them lift, those far off go back on. Only does work when the heir's tile
+## changes or something was built or taken down.
+func set_heir(x: float, z: float) -> void:
+	if interior_id != "" or level != 0:
+		return
+	var t := Vector2i(floori(x), floori(z))
+	if t == _heir_tile and not _roofs_dirty:
+		return
+	_heir_tile = t
+	_roofs_dirty = false
+	var want := GameReveal.roof_steps(d, float(t.x) + 0.5, float(t.y) + 0.5)
+	var changed: Array = []
+	for k in roof_steps:
+		if int(want.get(k, 0)) != int(roof_steps[k]):
+			changed.append(k)
+	for k in want:
+		if int(roof_steps.get(k, 0)) != int(want[k]):
+			changed.append(k)
+	roof_steps = want
+	for k in changed:
+		var parts := str(k).split(",")
+		var cell := Vector2i(int(parts[0]), int(parts[1]))
+		_set_roof(cell, chunk_of(cell.x, cell.y))
+
+
+## Whether a column is under a roof that is whole (what is under it is not seen: the screen draws nobody there).
+func covered(x: int, z: int) -> bool:
+	return interior_id == "" and level == 0 and not roof_steps.has("%d,%d" % [x, z]) and not d.built.is_empty() and GameReveal.roofed(d, x, z)
 
 
 ## The pieces of the shown storey in a chunk, as a layer over the ground's: a tile where something is built, none elsewhere.
@@ -303,6 +375,9 @@ func refresh_cell(x: int, z: int) -> void:
 			(things[c] as TileMapLayer).erase_cell(local)
 		else:
 			(things[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(thing), 0))
+	if roofs.has(c) and interior_id == "":
+		_set_roof(Vector2i(x, z), c)
+		_roofs_dirty = true
 	if level > 0 and uppers.has(c):
 		var kind := GameBuild.kind_at(d, x, GameBuild.SURFACE - level, z)
 		if kind == "":

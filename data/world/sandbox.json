@@ -13,6 +13,7 @@
     "walk_seconds": 0.2,
     "tick_seconds": 0.25
   },
+  "reveal": {"near": 1.5, "far": 4.5, "steps": 4, "max_roof_cells": 600},
   "view": {
     "cell_px": 16.0,
     "cam_tiles_per_second": 12.0,

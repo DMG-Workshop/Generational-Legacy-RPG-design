@@ -48,6 +48,7 @@ const SHOTS := [
 	["town", DESKTOP, false, "town"],
 	["river", DESKTOP, false, "river"],
 	["homestead", DESKTOP, false, "homestead"],
+	["dollhouse", DESKTOP, false, "dollhouse"],
 	["phone_life", PHONE, true, "life"],
 	["phone_battle", PHONE, true, "battle:kingshold"],
 ]
@@ -210,7 +211,7 @@ func _screen(what: String) -> void:
 	app.show_state()
 	await _frames(3)
 	match what:
-		"town", "river", "homestead":
+		"town", "river", "homestead", "dollhouse":
 			await _open_world(what)
 		"life":
 			pass
@@ -313,8 +314,8 @@ func _select_tab(n: Node, name: String) -> void:
 func _open_world(what: String) -> void:
 	var town := what == "town"
 	var spot := Vector2i(160, 290) if town else Vector2i(143, 206)
-	if what == "homestead":
-		spot = Vector2i(178, 290)
+	if what == "homestead" or what == "dollhouse":
+		spot = Vector2i(178, 290) if what == "homestead" else Vector2i(178, 294)   # inside the house, or at its door with the roof half lifted
 		_build_house()
 	d.world.visit("hearthmere")
 	app.show_sandbox()
@@ -329,7 +330,7 @@ func _open_world(what: String) -> void:
 	if town:
 		scr.sb.creatures.append(GameBehaviour.new_agent(900, "wolf", float(spot.x) - 5.5, float(spot.y) + 2.5))
 		scr.sb.creatures.append(GameBehaviour.new_agent(901, "slime", float(spot.x) + 7.5, float(spot.y) - 3.5))
-	scr.zoom = 1.8 if what == "homestead" else (1.6 if town else 0.75)
+	scr.zoom = 1.8 if what == "homestead" or what == "dollhouse" else (1.6 if town else 0.75)
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()

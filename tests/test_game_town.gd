@@ -359,6 +359,6 @@ func test_data() -> void:
 	kinds["forge"] = forge.duplicate(true)
 	kinds.erase("tavern")
 	ok(not BuildingArt.validate().is_empty(), "a town building with no look is refused")
-	kinds["tavern"] = {"roof": ["#7a5a34", "#563d20"], "wall": ["#cfb48a", "#a58d63"], "features": ["chimney", "sign"]}
+	kinds["tavern"] = {"roof": ["#7a5a34", "#563d20"], "wall": ["#cfb48a", "#a58d63"], "features": ["chimney", "sign"], "furniture": ["bar", "tables"]}
 	kinds["forge"] = forge
 	ok(BuildingArt.validate().is_empty(), "and the art is back as it was")
