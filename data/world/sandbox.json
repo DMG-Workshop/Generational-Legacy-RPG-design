@@ -44,6 +44,7 @@
     "chunk": 16,
     "keep": 1,
     "below_shade": 0.5,
+    "wall_edge": [0.2, 0.17, 0.15],
     "colors": {
       "plains": [0.30, 0.50, 0.24],
       "forest": [0.16, 0.36, 0.18],
@@ -123,6 +124,7 @@
     "left": "{heir} steps back outside.",
     "no_exit": "The way out is back at the door.",
     "indoors": "Not while indoors.",
+    "house_ground": "Raise a house from the ground floor.",
     "inside_at": "Inside {place}, {room}.",
     "inside_in": "Inside {place}."
   }

@@ -18,8 +18,8 @@
     "clump_min": 0.0,
     "clump_max": 2.2,
     "outcrop_depths": [12, 14, 16, 18, 20, 22],
-    "anchor_radius": {"town": 9, "dungeon": 4, "wilds": 0},
-    "plots": [{"id": "hearthmere_homestead", "near": "hearthmere", "dx": 18, "dz": 2, "radius": 8}],
+    "anchor_radius": {"town": 24, "dungeon": 4, "wilds": 0},
+    "plots": [{"id": "hearthmere_homestead", "near": "hearthmere", "dx": 60, "dz": 2, "radius": 12}],
     "water": {
       "clear_inner": 5, "clear_outer": 14,
       "wet_scale": 220.0, "wet_from": 0.38, "wet_to": 0.55,

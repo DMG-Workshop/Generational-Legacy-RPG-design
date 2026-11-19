@@ -576,6 +576,32 @@ func build(kind: String, dx: int, dz: int) -> Dictionary:
 	return out
 
 
+## The sizes of house the screen offers, [w, h] in tiles (any size from 3 by 3 can be raised by `build_house`).
+func house_sizes() -> Array:
+	return GameBuild.setting("house_sizes")
+
+
+## The tiles a house of `w` by `h` takes with its door `dx, dz` from the heir (the tile in front of its south wall).
+func house_rect(w: int, h: int, dx: int, dz: int) -> Rect2i:
+	var door := heir + Vector2i(dx, dz)
+	return Rect2i(door.x - (w - 1) / 2, door.y - (h - 1), w, h)
+
+
+## Raises a whole house (`GameBuild.build_house`) with its door on the tile `dx, dz` from the heir: {ok, text, rect}. Ground floor
+## only, outdoors.
+func build_house(w: int, h: int, dx: int, dz: int) -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": _text("indoors"), "rect": Rect2i()}
+	if build_level != 0:
+		return {"ok": false, "text": _text("house_ground"), "rect": Rect2i()}
+	var door := heir + Vector2i(dx, dz)
+	var out := GameBuild.build_house(d, w, h, door.x, door.y)
+	out["rect"] = house_rect(w, h, dx, dz)
+	if out["ok"]:
+		log.append({"kind": "build", "text": str(out["text"])})
+	return out
+
+
 ## A creature that is hunting the heir and has reached them starts a fight (GameDynasty.start_encounter), with any others that
 ## are hunting them within `contact_join` tiles, up to `contact_max` in all. The creatures in the fight are taken out of the
 ## open world. Only while no fight is on and the heir is living; returns whether one began.

@@ -158,6 +158,8 @@ func test_indoors_rules() -> void:
 	ok(not s.dig(0)["ok"], "no digging indoors")
 	ok(s.build_check("wall", 1, 0) != "" and not s.build("wall", 1, 0)["ok"] and not s.remove_at(1, 0)["ok"], "no building or taking down indoors")
 	ok(not s.climb(-1)["ok"], "no stairs indoors")
+	if s.creatures.is_empty():   # (a town's own ground has none: put one out there to wait)
+		s.creatures.append(GameBehaviour.new_agent(900, "wolf", float(s.heir.x) + 30.5, float(s.heir.y) + 0.5, 20))
 	var before: Array = s.creatures.map(func(a): return [a["x"], a["z"], a["mode"]])
 	ok(before.size() > 0, "(there are creatures out there to wait)")
 	var tick := s.tick

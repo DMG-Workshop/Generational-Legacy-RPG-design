@@ -22,6 +22,7 @@ var roof_steps := {}      # "x,z" -> how far a roof has lifted (GameReveal: 1 to
 var _heir_tile := Vector2i(-100000, -100000)
 var _roofs_dirty := true
 
+const JOINS := 16         # a wall's look by which sides have a wall or door beside it (N 1, E 2, S 4, W 8), the tiles after the kinds in the atlas
 const ROOF_ALT := 100     # the alternative tile of a roof lifted k steps is ROOF_ALT + k (faded by k of `steps`)
 
 
@@ -93,7 +94,7 @@ static func wanted(centre: Vector2, half: Vector2, keep: int) -> Array:
 static func make_tileset() -> TileSet:
 	var px := int(settings()["px"])
 	var all := kinds()
-	var img := Image.create(px * all.size(), px, false, Image.FORMAT_RGBA8)
+	var img := Image.create(px * (all.size() + JOINS), px, false, Image.FORMAT_RGBA8)
 	var colors: Dictionary = settings()["colors"]
 	var glyphs: Dictionary = settings().get("glyphs", {})
 	for i in all.size():
@@ -103,6 +104,7 @@ static func make_tileset() -> TileSet:
 		var c := Color(float(colors[all[i]][0]), float(colors[all[i]][1]), float(colors[all[i]][2]))
 		img.fill_rect(Rect2i(i * px, 0, px, px), c.darkened(0.12))
 		img.fill_rect(Rect2i(i * px + 1, 1, px - 2, px - 2), c)
+	_paint_joins(img, all.find("wall") * px, all.size() * px, px)
 	var src := TileSetAtlasSource.new()
 	src.texture = ImageTexture.create_from_image(img)
 	src.texture_region_size = Vector2i(px, px)
@@ -116,6 +118,8 @@ static func make_tileset() -> TileSet:
 			src.create_alternative_tile(Vector2i(i, 0), alt)
 			var m := GameRelief.light(step)
 			src.get_tile_data(Vector2i(i, 0), alt).modulate = Color(m, m, m)
+	for m in JOINS:
+		src.create_tile(Vector2i(all.size() + m, 0))   # the wall joined every way there is, no alternatives
 	var roof_i := all.find("roof")
 	var lift := int(GameReveal.setting("steps"))
 	for k in range(1, lift):
@@ -125,6 +129,54 @@ static func make_tileset() -> TileSet:
 	ts.tile_size = Vector2i(px, px)
 	ts.add_source(src, 0)
 	return ts
+
+
+## The wall at `from` (the wall's own tile) drawn again at `to` for each join mask: a side with no wall or door beside it gets an
+## edge line (`wall_edge`), a side with one is open, so walls run on into each other and a corner is a corner.
+static func _paint_joins(img: Image, from: int, to: int, px: int) -> void:
+	var block := maxi(1, px / 8)
+	var e: Array = settings().get("wall_edge", [0.2, 0.17, 0.15])
+	var edge := Color(float(e[0]), float(e[1]), float(e[2]))
+	for m in JOINS:
+		var x0 := to + m * px
+		img.blit_rect(img, Rect2i(from, 0, px, px), Vector2i(x0, 0))
+		if m & 4:   # a wall to the south: the shadow row at the foot gives way to stone
+			img.blit_rect(img, Rect2i(x0, px - 2 * block, px, block), Vector2i(x0, px - block))
+		if not (m & 1):
+			img.fill_rect(Rect2i(x0, 0, px, block), edge)
+		if not (m & 4):
+			img.fill_rect(Rect2i(x0, px - block, px, block), edge)
+		if not (m & 2):
+			img.fill_rect(Rect2i(x0 + px - block, 0, block, px), edge)
+		if not (m & 8):
+			img.fill_rect(Rect2i(x0, 0, block, px), edge)
+
+
+## Which sides of a wall at (x, y, z) have a wall or a door beside them: N (z - 1) 1, E 2, S 4, W 8.
+static func join_mask(dyn: GameDynasty, x: int, y: int, z: int) -> int:
+	var m := 0
+	for pair in [[1, 0, -1], [2, 1, 0], [4, 0, 1], [8, -1, 0]]:
+		var k := GameBuild.kind_at(dyn, x + int(pair[1]), y, z + int(pair[2]))
+		if k == "wall" or k == "door":
+			m |= int(pair[0])
+	return m
+
+
+## The atlas cell of a kind at a place: a wall joined to its neighbours, anything else its own tile.
+func _coords(kind: String, x: int, y: int, z: int) -> Vector2i:
+	var all := kinds()
+	if kind == "wall" and interior_id == "":
+		return Vector2i(all.size() + join_mask(d, x, y, z), 0)
+	return Vector2i(all.find(kind), 0)
+
+
+## The kind a layer's cell shows (a joined wall is a wall), or "" for an empty cell.
+static func cell_kind(layer: TileMapLayer, local: Vector2i) -> String:
+	if layer.get_cell_source_id(local) < 0:
+		return ""
+	var all := kinds()
+	var cx := layer.get_cell_atlas_coords(local).x
+	return "wall" if cx >= all.size() else str(all[cx])
 
 
 ## Paints an 8 by 8 glyph into the atlas at x0, each pixel a block of px / 8 (a '.' or a character with no colour stays clear).
@@ -256,7 +308,7 @@ func _fill(c: Vector2i) -> void:
 				continue
 			var tile := GameWorldGen.tile(d, x, z)   # once for the ground and what stands on it
 			var built := GameBuild.kind_at(d, x, GameBuild.SURFACE, z)
-			layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind_for(tile, built)), 0), _alt_at(x, z, built, bool(tile["water"])))
+			layer.set_cell(Vector2i(dx, dz), 0, _coords(kind_for(tile, built), x, GameBuild.SURFACE, z), _alt_at(x, z, built, bool(tile["water"])))
 			var thing := _thing_from(tile, built, x, z)
 			if thing != "":
 				over.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(thing), 0))
@@ -326,7 +378,7 @@ func _fill_upper(c: Vector2i) -> void:
 		for dx in n:
 			var kind := GameBuild.kind_at(d, c.x * n + dx, GameBuild.SURFACE - level, c.y * n + dz)
 			if kind != "":
-				layer.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(kind), 0))
+				layer.set_cell(Vector2i(dx, dz), 0, _coords(kind, c.x * n + dx, GameBuild.SURFACE - level, c.y * n + dz))
 	uppers[c] = layer
 
 
@@ -356,7 +408,13 @@ func _kind_at(x: int, z: int) -> String:
 
 
 ## Redraws one tile (after something is built or taken down there), when its chunk is kept.
-func refresh_cell(x: int, z: int) -> void:
+func refresh_cell(x: int, z: int, spread: bool = true) -> void:
+	if spread and interior_id == "":
+		for off in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]:
+			var k := GameBuild.kind_at(d, x + off.x, GameBuild.SURFACE, z + off.y)
+			var ku := GameBuild.kind_at(d, x + off.x, GameBuild.SURFACE - level, z + off.y) if level > 0 else ""
+			if k == "wall" or ku == "wall":
+				refresh_cell(x + off.x, z + off.y, false)   # a wall beside joins to this one
 	var c := chunk_of(x, z)
 	if not layers.has(c):
 		return
@@ -368,7 +426,7 @@ func refresh_cell(x: int, z: int) -> void:
 	else:
 		var wet := interior_id == "" and bool(GameWorldGen.tile(d, x, z)["water"])
 		var built_here := GameBuild.kind_at(d, x, GameBuild.SURFACE, z) if interior_id == "" else "interior"
-		(layers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(here), 0), _alt_at(x, z, built_here, wet))
+		(layers[c] as TileMapLayer).set_cell(local, 0, _coords(here, x, GameBuild.SURFACE, z), _alt_at(x, z, built_here, wet))
 	if things.has(c):
 		var thing := _thing_at(x, z)
 		if thing == "":
@@ -383,7 +441,7 @@ func refresh_cell(x: int, z: int) -> void:
 		if kind == "":
 			(uppers[c] as TileMapLayer).erase_cell(local)
 		else:
-			(uppers[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(kind), 0))
+			(uppers[c] as TileMapLayer).set_cell(local, 0, _coords(kind, x, GameBuild.SURFACE - level, z))
 
 
 static func validate() -> Array:

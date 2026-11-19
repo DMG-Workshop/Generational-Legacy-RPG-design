@@ -313,9 +313,10 @@ func _select_tab(n: Node, name: String) -> void:
 ## The open world with the party in it: the home town with its buildings and two creatures near, or a river with its fords.
 func _open_world(what: String) -> void:
 	var town := what == "town"
-	var spot := Vector2i(160, 290) if town else Vector2i(143, 206)
+	var spot := Vector2i(160, 296) if town else Vector2i(143, 206)   # the town: the street between the store and the tavern
 	if what == "homestead" or what == "dollhouse":
-		spot = Vector2i(178, 290) if what == "homestead" else Vector2i(178, 294)   # inside the house, or at its door with the roof half lifted
+		var plot := GameBuild.base()
+		spot = Vector2i(int(plot["x"]), int(plot["z"])) + (Vector2i.ZERO if what == "homestead" else Vector2i(0, 4))   # inside the house, or at its door with the roof half lifted
 		_build_house()
 	d.world.visit("hearthmere")
 	app.show_sandbox()
@@ -327,13 +328,17 @@ func _open_world(what: String) -> void:
 	scr.sb.heir = spot
 	scr.sb.creatures.clear()
 	scr.sb.companions = GameCompanions.agents_for(d, float(spot.x) + 0.5, float(spot.y) + 0.5)
+	scr._warm_figures()
 	if town:
 		scr.sb.creatures.append(GameBehaviour.new_agent(900, "wolf", float(spot.x) - 5.5, float(spot.y) + 2.5))
 		scr.sb.creatures.append(GameBehaviour.new_agent(901, "slime", float(spot.x) + 7.5, float(spot.y) - 3.5))
-	scr.zoom = 1.8 if what == "homestead" or what == "dollhouse" else (1.6 if town else 0.75)
+	scr.zoom = 1.8 if what == "homestead" or what == "dollhouse" else (1.0 if town else 0.75)
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
+	await _frames(2)   # (the world is held still, so the map is drawn again by hand once everything is made: a figure made while drawing blanks those drawn before it in that frame)
+	scr.overlay.queue_redraw()
+	await _frames(2)
 
 
 ## A family house on the homestead plot: walls round floor, two doors, a bed, an anvil and hearth, a trough, stairs, a road to the door, and an upper floor and roof.
