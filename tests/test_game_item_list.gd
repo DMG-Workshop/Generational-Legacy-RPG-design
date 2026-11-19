@@ -84,7 +84,7 @@ func test_items() -> void:
 		n += 1
 		var m := GameItems.material_of(str(id))
 		ok(GameMaterials.has(m) and GameItems.weight_of(str(id)) > 0.0, "%s has a listed material and a weight" % id)
-	ok(n == 53, "the 53 items are all still there (%d)" % n)
+	ok(n == 93, "the 93 items (53 and the 40 works of the callings) are all still there (%d)" % n)
 	ok(GameItems.material_of("iron_sword") == "iron" and GameItems.material_of("mithril_blade") == "mithril", "swords are made of their metal")
 	ok(GameItems.material_of("dragonscale_mail") == "dragonscale", "the dragonscale mail is dragonscale")
 	ok(GameItems.weight_of("plate_armor") > GameItems.weight_of("leather_armor") and GameItems.weight_of("leather_armor") > GameItems.weight_of("copper_ring"), "plate is heavier than leather, which is heavier than a ring")
@@ -113,5 +113,5 @@ func test_queries() -> void:
 			weapons += 1
 		if GameItems.has_tag(str(id), "metal") and GameItems.has_tag(str(id), "weapon"):
 			metal += 1
-	ok(weapons == 17, "17 weapons are found by tag (%d)" % weapons)
+	ok(weapons == 25, "25 weapons are found by tag (%d)" % weapons)
 	ok(metal > 0 and metal < weapons, "some but not all weapons are metal (%d of %d)" % [metal, weapons])

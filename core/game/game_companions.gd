@@ -406,7 +406,7 @@ static func _gather(d: GameDynasty, a: Dictionary, view: Dictionary, tick: int, 
 			a["work"] = int(a["work"]) - 1
 			if int(a["work"]) > 0:
 				return
-			var n := maxi(1, int(round(float(target["amount"]) * class_mult(str(a["id"]), "gather"))))
+			var n := maxi(1, int(round(float(target["amount"]) * class_mult(str(a["id"]), "gather") * GameSubclass.perk(d.heir, "haul_mult"))))
 			var load: Dictionary = a["load"]
 			load[str(target["material"])] = int(load.get(str(target["material"]), 0)) + n   # carried, not yet in the stores
 			a["load"] = load

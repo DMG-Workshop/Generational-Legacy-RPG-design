@@ -23,6 +23,13 @@
   "brews": {
     "healing_potion": {"name": "healing potion", "cost": {"herb": 2}, "fee": 6, "makes": 1}
   },
+  "calling_brews": {
+    "distilled_elixir": {"subclass": "alchemist", "name": "distilled elixir", "cost": {"herb": 3, "glass": 1}, "fee": 12, "makes": 3},
+    "travellers_stew": {"subclass": "feastwright", "name": "traveller's stew", "cost": {"herb": 2, "bone": 1}, "fee": 6, "makes": 2},
+    "green_tincture": {"subclass": "greenwarden", "name": "green tincture", "cost": {"herb": 3}, "fee": 8, "makes": 2},
+    "venomwrights_antidote": {"subclass": "venomwright", "name": "venomwright's antidote", "cost": {"venom": 2, "herb": 2}, "fee": 10, "makes": 2},
+    "keepers_draught": {"subclass": "breeder", "name": "keeper's draught", "cost": {"herb": 2, "bone": 1}, "fee": 7, "makes": 2}
+  },
   "drops": {
     "slime": {
       "materials": [
@@ -659,6 +666,7 @@
     "cannot_salvage": "There is no {name} in the pack to break up.",
     "brewed": "{h} brews {n} {name} from {list}.",
     "no_brew": "No one brews that.",
+    "not_your_brew": "Only a {name} brews that.",
     "short_brew": "Not enough {material} to brew it: {need} needed, {have} in the stores.",
     "nothing": "nothing"
   }

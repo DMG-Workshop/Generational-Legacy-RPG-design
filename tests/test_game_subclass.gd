@@ -321,8 +321,8 @@ func test_screens() -> void:
 				title = c
 	ok(title != null, "the title screen is up")
 	if title != null:
-		ok(title.subclass_pick.item_count == 2 and title.subclass_pick.get_item_text(1) == "Breeder", "it offers None and the Breeder")
-		ok(title.subclass_ids == ["", "breeder"] and title.subclass_pick.selected == 0, "with none chosen to begin with")
+		ok(title.subclass_pick.item_count == 21 and title.subclass_pick.get_item_text(0) == "None" and title.subclass_pick.get_item_text(1) == "Breeder", "it offers None, the Breeder and the nineteen other callings")
+		ok(title.subclass_ids.size() == 21 and title.subclass_ids.slice(0, 2) == ["", "breeder"] and title.subclass_pick.selected == 0, "with none chosen to begin with")
 		title.subclass_pick.selected = 1
 		title._refresh()
 		ok("Raises creatures for a living" in title.subclass_desc.text and "60% more" in title.subclass_desc.text, "and shows what it does at the founded strength: %s" % title.subclass_desc.text)

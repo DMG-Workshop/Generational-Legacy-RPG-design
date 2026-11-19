@@ -1290,7 +1290,7 @@ func use_potion() -> void:
 	if not _begin_action() or heir.potions <= 0:
 		return
 	heir.potions -= 1
-	var amt := int(round(float(heir.max_hp()) * float(GameData.bal("potion_heal_pct")) * (1.0 + heir.trait_total("healing_power"))))
+	var amt := int(round(float(heir.max_hp()) * float(GameData.bal("potion_heal_pct")) * (1.0 + heir.trait_total("healing_power")) * GameSubclass.perk(heir, "potion_mult")))
 	_heal_player(amt, "Potion")
 	_end_player_turn()
 
@@ -1306,7 +1306,7 @@ func pass_turn() -> void:
 func flee() -> void:
 	if not _begin_action():
 		return
-	var chance := clampf(0.45 + heir.trait_total("stealth") + heir.trait_total("intimidation") * 0.5 + heir.dodge_chance() * 0.3 + float(weather.get("flee", 0.0)), 0.1, 0.9)
+	var chance := minf(0.95, clampf(0.45 + heir.trait_total("stealth") + heir.trait_total("intimidation") * 0.5 + heir.dodge_chance() * 0.3 + float(weather.get("flee", 0.0)), 0.1, 0.9) * GameSubclass.perk(heir, "flee_mult"))
 	var boss := false
 	for e in enemies:
 		boss = boss or e.get("boss", false)

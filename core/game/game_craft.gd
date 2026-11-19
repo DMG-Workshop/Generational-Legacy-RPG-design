@@ -128,7 +128,7 @@ static func after_search(d: GameDynasty, foes: Array, place: String = "search") 
 	var got := {}
 	var gotess := {}
 	for f in foes:
-		_roll_drops(r, str(f.get("id", "")), got, gotess, false)
+		_roll_drops(r, str(f.get("id", "")), got, gotess, false, d.heir)
 	return _tell(d, got, gotess)
 
 
@@ -146,20 +146,22 @@ static func after_legend(d: GameDynasty, result: String, enemies: Array) -> Arra
 		d.set_flag(flag)
 		var r := RandomNumberGenerator.new()
 		r.seed = hash([d.seed_value, "gather_legend", id])
-		_roll_drops(r, id, got, gotess, true)
+		_roll_drops(r, id, got, gotess, true, d.heir)
 	return _tell(d, got, gotess)
 
 
-static func _roll_drops(r: RandomNumberGenerator, creature: String, got: Dictionary, gotess: Dictionary, sure: bool) -> void:
+## The heir's calling may put more in the haul (`gather_mult`) or find essences likelier (`essence_mult`); the dice are
+## drawn exactly as they were, so a house with no calling gets exactly what it did.
+static func _roll_drops(r: RandomNumberGenerator, creature: String, got: Dictionary, gotess: Dictionary, sure: bool, h: GameHeir = null) -> void:
 	var row: Dictionary = data()["drops"].get(creature, {})
 	for m in row.get("materials", []):
 		var roll := r.randf()
 		var n := r.randi_range(int(m["min"]), int(m["max"]))
 		if roll < float(m["chance"]) or (sure and float(m["chance"]) >= 1.0):
-			got[m["material"]] = int(got.get(m["material"], 0)) + n
+			got[m["material"]] = int(got.get(m["material"], 0)) + maxi(1, int(round(float(n) * GameSubclass.perk(h, "gather_mult"))))
 	if row.has("essence"):
 		var roll := r.randf()
-		if roll < float(row["essence"]["chance"]):
+		if roll < float(row["essence"]["chance"]) * GameSubclass.perk(h, "essence_mult"):
 			gotess[row["essence"]["affix"]] = int(gotess.get(row["essence"]["affix"], 0)) + 1
 
 
@@ -185,11 +187,12 @@ static func _tell(d: GameDynasty, got: Dictionary, gotess: Dictionary) -> Array:
 # ---------------------------------------------------------------- salvage
 
 ## What breaking up one item gives: {materials: {id: n}, essences: [affix ids]}. {} for an item that is not known.
-static func salvage_yield(item_id: String) -> Dictionary:
+## `h` is who breaks it up: a calling may return more of the material (`salvage_mult`).
+static func salvage_yield(item_id: String, h: GameHeir = null) -> Dictionary:
 	var def := GameItems.item_def(item_id)
 	if def.is_empty() or str(def.get("material", "")) == "":
 		return {}
-	var n := maxi(1, int(floor(float(units_for(float(def.get("weight", 0.0)))) * float(setting("salvage_share")))))
+	var n := maxi(1, int(floor(float(units_for(float(def.get("weight", 0.0)))) * float(setting("salvage_share")) * GameSubclass.perk(h, "salvage_mult"))))
 	var ess: Array = []
 	var parts := GameLoot.parse(item_id)
 	if not parts.is_empty():
@@ -206,7 +209,7 @@ static func salvage(d: GameDynasty, item_id: String) -> String:
 	var h := d.heir
 	if item_id not in h.inventory:
 		return text("cannot_salvage", {"name": GameItems.item_name(item_id)})
-	var y := salvage_yield(item_id)
+	var y := salvage_yield(item_id, h)
 	if y.is_empty():
 		return text("cannot_salvage", {"name": GameItems.item_name(item_id)})
 	var name := GameItems.item_name(item_id)
@@ -231,7 +234,7 @@ static func salvage(d: GameDynasty, item_id: String) -> String:
 ## seed and how many pieces have been made, so the preview shows what the forge will make.
 static func quality(d: GameDynasty) -> int:
 	var h := d.heir
-	var base := int(floor(float(h.level) * float(setting("quality_per_level"))))
+	var base := int(floor(float(h.level) * float(setting("quality_per_level")) * GameSubclass.perk(h, "craft_quality_mult")))
 	var bonus := int(round(h.trait_total("craft_quality") * float(setting("quality_per_craft_quality"))))
 	var r := RandomNumberGenerator.new()
 	r.seed = hash([d.seed_value, "craft", int(d.stores.get(str(setting("counter")), 0))])
@@ -297,7 +300,7 @@ static func plan(d: GameDynasty, form_id: String, material: String, chosen: Arra
 	if item.is_empty():
 		return fail.call("unknown_form")
 	var at_home := forge == "home"
-	var fee := maxi(1, int(round(float(item["price"]) * float(setting("fee_share")) * (float(setting("home_fee_mult")) if at_home else 1.0) * GameHouse.smithy_fee_mult(d))))
+	var fee := maxi(1, int(round(float(item["price"]) * float(setting("fee_share")) * (float(setting("home_fee_mult")) if at_home else 1.0) * GameHouse.smithy_fee_mult(d) * GameSubclass.perk(h, "forge_fee_mult"))))
 	var service := str(setting("needs_service"))
 	var base := {"ok": true, "why": "", "id": id, "item": item, "units": units, "fee": fee, "quality": q, "weight": float(item["weight"])}
 	if not at_home and not d.world.has_service(service):
@@ -338,16 +341,31 @@ static func brews() -> Array:
 	return ids
 
 
+## The brews only the heir's calling can make (`calling_brews` in craft.json), sorted. [] with no calling.
+static func calling_brews(h: GameHeir) -> Array:
+	var ids: Array = []
+	if h == null or h.subclass == "":
+		return ids
+	for id in data().get("calling_brews", {}):
+		if str(data()["calling_brews"][id].get("subclass", "")) == h.subclass:
+			ids.append(id)
+	ids.sort()
+	return ids
+
+
 ## What brewing one batch would be: {ok, why, name, cost: {material: n}, fee, makes}. Nothing is spent. `forge` is as for `plan`.
 static func brew_plan(d: GameDynasty, id: String, forge: String = "") -> Dictionary:
-	var row: Dictionary = data().get("brews", {}).get(id, {})
+	var row: Dictionary = data().get("brews", {}).get(id, data().get("calling_brews", {}).get(id, {}))
 	if row.is_empty():
 		return {"ok": false, "why": text("no_brew")}
+	if row.has("subclass") and d.heir.subclass != str(row["subclass"]):
+		return {"ok": false, "why": text("not_your_brew", {"name": GameSubclass.name_of(str(row["subclass"]))})}
 	var fee := int(row["fee"])
 	if forge == "home":
 		fee = int(round(float(fee) * float(setting("home_fee_mult"))))
-	fee = int(round(float(fee) * GameHouse.smithy_fee_mult(d)))
-	var out := {"ok": true, "why": "", "name": str(row["name"]), "cost": row["cost"], "fee": fee, "makes": int(row["makes"])}
+	fee = int(round(float(fee) * GameHouse.smithy_fee_mult(d) * GameSubclass.perk(d.heir, "forge_fee_mult")))
+	var makes := int(round(float(row["makes"]) * GameSubclass.perk(d.heir, "brew_yield_mult")))
+	var out := {"ok": true, "why": "", "name": str(row["name"]), "cost": row["cost"], "fee": fee, "makes": makes}
 	if forge != "home" and not d.world.has_service(str(setting("needs_service"))):
 		out["ok"] = false
 		out["why"] = text("no_forge")
@@ -456,7 +474,23 @@ static func validate() -> Array:
 		for m in b["cost"]:
 			if not GameMaterials.has(str(m)) or int(b["cost"][m]) < 1:
 				bad.append("craft.json: brew '%s' costs the unknown material '%s' or a bad amount" % [bid, m])
-	for k in ["brewed", "no_brew", "short_brew", "gathered", "no_forge", "unknown_form", "bad_material", "short_material", "short_essence", "bad_essence", "too_many", "short_gold", "no_room", "made", "salvaged", "cannot_salvage", "nothing"]:
+	for bid in dat.get("calling_brews", {}):
+		var b: Dictionary = dat["calling_brews"][bid]
+		for k in ["name", "cost", "fee", "makes", "subclass"]:
+			if not b.has(k):
+				bad.append("craft.json: calling brew '%s' has no %s" % [bid, k])
+		if not bad.is_empty():
+			return bad
+		if dat.get("brews", {}).has(bid):
+			bad.append("craft.json: '%s' is both a brew and a calling brew" % bid)
+		if not GameSubclass.has(str(b["subclass"])):
+			bad.append("craft.json: calling brew '%s' belongs to the unknown calling '%s'" % [bid, b["subclass"]])
+		if b["cost"].is_empty() or int(b["fee"]) < 0 or int(b["makes"]) < 1:
+			bad.append("craft.json: calling brew '%s' needs a cost, a fee of 0 or more and makes of at least 1" % bid)
+		for m in b["cost"]:
+			if not GameMaterials.has(str(m)) or int(b["cost"][m]) < 1:
+				bad.append("craft.json: calling brew '%s' costs the unknown material '%s' or a bad amount" % [bid, m])
+	for k in ["not_your_brew", "brewed", "no_brew", "short_brew", "gathered", "no_forge", "unknown_form", "bad_material", "short_material", "short_essence", "bad_essence", "too_many", "short_gold", "no_room", "made", "salvaged", "cannot_salvage", "nothing"]:
 		if not dat["text"].has(k):
 			bad.append("craft.json: text.%s is missing" % k)
 	return bad

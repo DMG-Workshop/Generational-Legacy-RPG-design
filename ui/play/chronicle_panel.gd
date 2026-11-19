@@ -492,6 +492,14 @@ func _fill_subclass() -> void:
 	if current != "":
 		for l in GameSubclass.perk_lines(h, current, h.subclass_founded):
 			box.add_child(Kit.label(l, 14, Kit.good()))
+		box.add_child(Kit.label(GameSubclass.text("works_head", {"name": GameSubclass.name_of(current)}), 16, Kit.ACCENT))
+		for w in GameSubclass.works(current):
+			var line := Kit.label(GameSubclass.work_line(dynasty, str(w)), 14, Kit.TEXT)
+			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(line)
+		var where := Kit.label(GameSubclass.text("works_where"), 14, Kit.dim())
+		where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(where)
 	for s in GameSubclass.defs():
 		var id := str(s["id"])
 		var col := VBoxContainer.new()
@@ -502,6 +510,9 @@ func _fill_subclass() -> void:
 		about.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(about)
 		if id != current:
+			var perks := Kit.label("  ".join(GameSubclass.perk_lines(h, id, false)), 13, Kit.dim())
+			perks.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			col.add_child(perks)
 			var price := GameText.num(GameSubclass.cost(dynasty, id))
 			var why := GameSubclass.why_not(dynasty, id)
 			var b := Kit.button(GameSubclass.text("change" if current != "" else "take", {"name": str(s["name"]), "gold": price}), func(): _take_subclass(id), Vector2(0, 0))

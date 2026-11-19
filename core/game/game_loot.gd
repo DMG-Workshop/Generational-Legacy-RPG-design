@@ -328,11 +328,12 @@ static func after_search(d: GameDynasty, foes: Array, place: String = "search") 
 		return out
 	var r := RandomNumberGenerator.new()
 	r.seed = hash([d.seed_value, "loot", d.total_hunts, place])
-	var boost := float(setting("source_boost").get(place, 1.0))
+	var boost := float(setting("source_boost").get(place, 1.0)) * GameSubclass.perk(d.heir, "rarity_mult")
+	var chance := float(setting("drop_chance")) * GameSubclass.perk(d.heir, "drop_mult")
 	for f in foes:
 		var drop := r.randf()
 		var item_seed := r.randi()
-		if drop >= float(setting("drop_chance")):
+		if drop >= chance:
 			continue
 		var ir := RandomNumberGenerator.new()
 		ir.seed = item_seed
@@ -353,7 +354,7 @@ static func after_legend(d: GameDynasty, result: String, enemies: Array) -> Arra
 		d.set_flag(flag)
 		var ir := RandomNumberGenerator.new()
 		ir.seed = hash([d.seed_value, "loot_legend", id])
-		out.append(_give(d, roll_item(ir, d.gen, float(setting("source_boost")["legend"]))))
+		out.append(_give(d, roll_item(ir, d.gen, float(setting("source_boost")["legend"]) * GameSubclass.perk(d.heir, "rarity_mult"))))
 	return out
 
 

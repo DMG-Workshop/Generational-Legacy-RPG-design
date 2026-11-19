@@ -457,6 +457,7 @@ func work() -> Array:
 	var amount := float(GameData.bal("work_gold")) * GameData.enemy_scale(gen) * rng.randf_range(0.8, 1.2)
 	amount *= 1.0 + heir.trait_total("work_gold") + heir.trait_total("theft") * 0.5 + echo_total("glory")
 	amount *= GameWorldEvents.mult(self, "work_gold_mult")
+	amount *= GameSubclass.perk(heir, "work_mult")
 	var g := maxi(1, int(round(amount)))
 	heir.gold += g
 	return _finish_time("work", [GameMessages.text("life", "works_odd_jobs", {"name": heir.name, "gold": GameText.num(g)})])
@@ -465,7 +466,7 @@ func work() -> Array:
 func train(stat: String) -> Array:
 	heir.training[stat] += 1.5
 	var msgs: Array = [GameMessages.text("life", "trains", {"name": heir.name, "stat": stat.to_upper()})]
-	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level) * GameHouse.train_xp_mult(self) * GameFactions.town_mult(self, "train"))))
+	var lv := heir.gain_xp(int(round(float(GameData.bal("train_xp")) * GameData.xp_level_scale(heir.level) * GameHouse.train_xp_mult(self) * GameFactions.town_mult(self, "train") * GameSubclass.perk(heir, "train_mult"))))
 	if lv > 0:
 		msgs.append(GameMessages.text("life", "level_up_now", {"level": GameText.num(heir.level)}))
 	return _finish_time("train", msgs)
@@ -724,8 +725,8 @@ func finish_battle() -> Array:
 						msgs.append(GameMessages.text("life", "heirloom_claimed", {"heirloom": e["heirloom"], "pct": int(int(float(GameData.bal("heirloom_bonus")) * 100.0))}))
 					_add_echo("slayer", e["id"], GameMessages.text("life", "echo_slew", {"name": heir.name, "foe": e["name"]}), 0.25)
 					msgs.append(GameMessages.text("life", "legend_slain", {"name": heir.name, "foe": e["name"]}))
-			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory")) * GameWorldEvents.mult(self, "hunt_gold_mult") * (1.0 + heirloom_gold)))
-			var xp_mult := GameWorldEvents.mult(self, "hunt_xp_mult") * (1.0 + heirloom_xp)
+			gold = int(round(float(gold) * (1.0 + heir.trait_total("luck") + heir.trait_total("theft") * 0.3 + echo_total("glory")) * GameWorldEvents.mult(self, "hunt_gold_mult") * (1.0 + heirloom_gold) * GameSubclass.perk(heir, "hunt_gold_mult")))
+			var xp_mult := GameWorldEvents.mult(self, "hunt_xp_mult") * (1.0 + heirloom_xp) * GameSubclass.perk(heir, "hunt_xp_mult")
 			if xp_mult != 1.0:
 				xp = int(round(float(xp) * xp_mult))
 			heir.gold += gold

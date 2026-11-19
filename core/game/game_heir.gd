@@ -185,16 +185,16 @@ func max_mp() -> int:
 
 
 func attack_power() -> float:
-	return (stat("str") * 1.6) * (1.0 + trait_total("melee_damage") + trait_total("strength") + heirloom_bonus)
+	return (stat("str") * 1.6) * (1.0 + trait_total("melee_damage") + trait_total("strength") + heirloom_bonus) * GameSubclass.perk(self, "attack_mult")
 
 
 func magic_power() -> float:
 	var bonus := trait_total("element_power") + trait_total("divine_magic_power") + trait_total("dark_magic_power")
-	return (stat("mag") * 1.6) * (1.0 + bonus + heirloom_bonus)
+	return (stat("mag") * 1.6) * (1.0 + bonus + heirloom_bonus) * GameSubclass.perk(self, "spell_mult")
 
 
 func defense() -> float:
-	return stat("vit") * 0.8 * maxf(0.0, 1.0 + trait_total("defense"))
+	return stat("vit") * 0.8 * maxf(0.0, 1.0 + trait_total("defense")) * GameSubclass.perk(self, "defense_mult")
 
 
 func dodge_chance() -> float:
