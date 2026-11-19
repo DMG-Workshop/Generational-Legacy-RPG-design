@@ -58,6 +58,7 @@ func _build() -> void:
 	_body.add_child(note)
 	_build_make()
 	_build_brew()
+	_build_works()
 	_build_salvage()
 
 
@@ -169,7 +170,7 @@ func _make(chosen: Array) -> void:
 
 func _build_brew() -> void:
 	_body.add_child(Kit.label("Brew at the forge", 18, Kit.ACCENT))
-	for id in GameCraft.brews():
+	for id in GameCraft.brews() + GameCraft.calling_brews(dynasty.heir):
 		var bid: String = id
 		var p := GameCraft.brew_plan(dynasty, bid, forge)
 		var parts: Array = []
@@ -187,6 +188,29 @@ func _build_brew() -> void:
 		_body.add_child(row)
 
 
+# ---------------------------------------------------------------- the calling's works
+
+## What the heir's subclass makes (GameSubclass.works): one row each, with its cost and what it does. Nothing here for no calling.
+func _build_works() -> void:
+	var calling := dynasty.heir.subclass
+	if calling == "":
+		return
+	_body.add_child(Kit.label(GameSubclass.text("works_head", {"name": GameSubclass.name_of(calling)}), 18, Kit.ACCENT))
+	for id in GameSubclass.works(calling):
+		var wid: String = id
+		var p := GameSubclass.work_plan(dynasty, wid, forge)
+		var row := VBoxContainer.new()
+		row.add_theme_constant_override("separation", 2)
+		row.add_child(_wrap(GameSubclass.work_line(dynasty, wid, forge), 15, Kit.TEXT))
+		var b := Kit.button(GameSubclass.text("works_make"), func(): _say(GameSubclass.make(dynasty, wid, forge)), Vector2(_column, 44))
+		b.name = "Work"
+		b.disabled = not p["ok"]
+		row.add_child(b)
+		if not p["ok"]:
+			row.add_child(_wrap(str(p["why"]), 14))
+		_body.add_child(row)
+
+
 # ---------------------------------------------------------------- salvage
 
 func _build_salvage() -> void:
@@ -194,10 +218,10 @@ func _build_salvage() -> void:
 	var listed := {}
 	for id in dynasty.heir.inventory:
 		var iid: String = id
-		if listed.has(iid) or GameCraft.salvage_yield(iid).is_empty():
+		if listed.has(iid) or GameCraft.salvage_yield(iid, dynasty.heir).is_empty():
 			continue
 		listed[iid] = true
-		var y := GameCraft.salvage_yield(iid)
+		var y := GameCraft.salvage_yield(iid, dynasty.heir)
 		var parts: Array = []
 		for m in y["materials"]:
 			parts.append("%d %s" % [int(y["materials"][m]), GameMaterials.name_of(str(m)).to_lower()])

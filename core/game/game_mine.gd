@@ -238,7 +238,7 @@ static func hazard_chance(d: GameDynasty, site: String, x: int, y: int, z: int) 
 	if base <= 0.0:
 		return 0.0
 	var deep := maxf(0.0, float(y - int(setting("hazard_from_depth")))) * float(setting("hazard_per_depth"))
-	return minf(float(setting("hazard_max")), base + deep)
+	return minf(float(setting("hazard_max")), base + deep) * GameSubclass.perk(d.heir, "cave_mult")
 
 
 ## The roof over a cell just dug may fall: rolled on dice keyed on the seed, the site and the cell (never the dynasty's). A
@@ -271,7 +271,7 @@ static func dig(d: GameDynasty, site: String, x: int, y: int, z: int, strength: 
 	if not can["ok"]:
 		return {"ok": false, "why": can["why"], "lines": []}
 	var st: Dictionary = d.mine.get(site, {})
-	var power := strength if strength >= 0.0 else (d.heir.stat("str") if d.heir != null else 0.0)
+	var power := (strength if strength >= 0.0 else (d.heir.stat("str") if d.heir != null else 0.0)) * GameSubclass.perk(d.heir, "dig_mult")
 	var l := layer_at(y)
 	var cost := effort(d, site, x, y, z, power)
 	var ore := ore_here(d, site, x, y, z)
@@ -279,6 +279,7 @@ static func dig(d: GameDynasty, site: String, x: int, y: int, z: int, strength: 
 	if ore != "":
 		var span := int(setting("yield_max")) - int(setting("yield_min")) + 1
 		qty = int(setting("yield_min")) + int(_unit(d, site, x, y, z, "qty") * float(span)) + tool_bonus(d)
+		qty = maxi(1, int(round(float(qty) * GameSubclass.perk(d.heir, "ore_mult"))))   # a Delver or a Gemwright strikes more
 		GameCraft.add_material(d, ore, qty)
 	_mark(st, x, y, z)
 	var key := region_key(x, z)

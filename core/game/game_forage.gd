@@ -39,7 +39,7 @@ static func forage(d: GameDynasty, x: int, z: int) -> Dictionary:
 	if nodes.is_empty():
 		return {"ok": false, "text": text("nothing"), "n": 0, "material": ""}
 	var node: Dictionary = nodes[0]
-	var n := maxi(1, int(round(float(node["amount"]) * share(d))))
+	var n := maxi(1, int(round(float(node["amount"]) * share(d) * GameSubclass.perk(d.heir, "forage_mult"))))
 	GameCraft.add_material(d, str(node["material"]), n)
 	d.gathered[GameCompanions.node_key(int(node["x"]), int(node["z"]))] = float(d.world.year)
 	var line := text("foraged", {"heir": d.heir.name, "n": n, "material": GameMaterials.name_of(str(node["material"])).to_lower()})

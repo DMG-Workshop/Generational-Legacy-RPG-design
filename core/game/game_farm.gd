@@ -55,6 +55,8 @@ static func yield_mult(d: GameDynasty, e: Dictionary) -> float:
 	var m := mood_scale(e)
 	if d != null and d.world != null and not w.is_empty():
 		m *= float(setting("season_mult").get(str(w["kind"]), {}).get(str(d.world.season()["id"]), 1.0))
+	if d != null:
+		m *= GameSubclass.perk(d.heir, "farm_mult")   # a Steadholder's beasts give more
 	return m
 
 

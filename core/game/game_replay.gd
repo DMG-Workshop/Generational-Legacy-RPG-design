@@ -6,8 +6,9 @@
 ## and proof that a new view or renderer leaves the game alone. Logic only (no UI).
 ##
 ## A replay is {format, version, start, commands, checks, end}:
-##   start: {seed, name, class, bloodline, race, sex, hard?}          how the dynasty was founded; `hard` (the house's
-##          hard-mode options exactly as GameHardMode keeps them) is written only when a house was founded with one
+##   start: {seed, name, class, bloodline, race, sex, hard?, subclass?}   how the dynasty was founded; `hard` (the house's
+##          hard-mode options exactly as GameHardMode keeps them) is written only when a house was founded with one, and
+##          `subclass` (the id of the calling the founder chose) only when one was chosen
 ##   commands: [{op, ...}]                                            see OPS
 ##   checks: [[index, fingerprint]]                                   after command `index` (0 based)
 ##   end: fingerprint after the last command
@@ -54,10 +55,12 @@ var dynasty: GameDynasty = null     # the dynasty being recorded (recording only
 ## would refuse found a plain house, as GameDynasty.new_game does, and the replay then says nothing about them.
 ## The autopilot is given none by default, so its replays do not change.
 static func begin(p_seed: int, founder_name: String, class_id: String, bloodline_id: String, race_id: String = "human",
-		p_sex: String = GameSex.MALE, p_check_every: int = 25, p_hard: Dictionary = {}) -> GameReplay:
+		p_sex: String = GameSex.MALE, p_check_every: int = 25, p_hard: Dictionary = {}, p_subclass: String = "") -> GameReplay:
 	var r := GameReplay.new()
 	r.check_every = maxi(1, p_check_every)
 	r.start = {"seed": p_seed, "name": founder_name, "class": class_id, "bloodline": bloodline_id, "race": race_id, "sex": p_sex}
+	if GameSubclass.has(p_subclass):
+		r.start["subclass"] = p_subclass
 	if not p_hard.is_empty():
 		var c := GameHardMode.choices(p_hard)
 		if c["ok"] and not (c["hard"] as Dictionary).is_empty():
@@ -160,6 +163,8 @@ static func check(v: Variant) -> Dictionary:
 			return _bad(GameMessages.text("life", "replay_start_not_text", {"key": k}))
 	if not GameData.classes.has(s["class"]) or not GameData.races.has(s["race"]) or not GameData.traits.has(s["bloodline"]):
 		return _bad(GameMessages.text("life", "replay_unknown_start"))
+	if s.has("subclass") and (typeof(s["subclass"]) != TYPE_STRING or not GameSubclass.has(str(s["subclass"]))):
+		return _bad(GameMessages.text("life", "replay_unknown_start"))
 	if s.has("hard"):
 		var why := _hard_problem(s["hard"])
 		if why != "":
@@ -248,7 +253,7 @@ static func play(rep: Dictionary, stop_at: int = -1) -> Dictionary:
 
 static func found(s: Dictionary) -> GameDynasty:
 	var hard: Dictionary = s["hard"] if typeof(s.get("hard")) == TYPE_DICTIONARY else {}
-	return GameDynasty.new_game(int(s["seed"]), str(s["name"]), str(s["class"]), str(s["bloodline"]), str(s["race"]), str(s["sex"]), "", hard)
+	return GameDynasty.new_game(int(s["seed"]), str(s["name"]), str(s["class"]), str(s["bloodline"]), str(s["race"]), str(s["sex"]), str(s["subclass"]) if typeof(s.get("subclass")) == TYPE_STRING else "", hard)
 
 
 ## A short fingerprint of everything a run has made so far: the dynasty as it would be saved (a fight in

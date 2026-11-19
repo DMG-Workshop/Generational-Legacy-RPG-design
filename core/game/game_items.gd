@@ -164,7 +164,7 @@ static func persuasion(d: GameDynasty) -> float:
 
 ## Shop price multiplier: generation scaling, the heir's persuasion, the house's infamy.
 static func price_mult(d: GameDynasty) -> float:
-	return GameData.enemy_scale(d.gen) * (1.0 + d.echo_total("infamy")) * (1.0 - persuasion(d)) * GameWorldEvents.mult(d, "price_mult") * GameFactions.town_mult(d, "price")
+	return GameData.enemy_scale(d.gen) * (1.0 + d.echo_total("infamy")) * (1.0 - persuasion(d)) * GameWorldEvents.mult(d, "price_mult") * GameFactions.town_mult(d, "price") * GameSubclass.perk(d.heir, "buy_mult")
 
 
 static func price(d: GameDynasty, id: String) -> int:
@@ -173,7 +173,7 @@ static func price(d: GameDynasty, id: String) -> int:
 
 ## What a merchant pays for an item: a fraction of its value, less for an infamous house.
 static func sell_price(d: GameDynasty, id: String) -> int:
-	var v := float(item_def(id).get("price", 0)) * GameData.enemy_scale(d.gen) * float(GameData.bal("sell_fraction"))
+	var v := float(item_def(id).get("price", 0)) * GameData.enemy_scale(d.gen) * float(GameData.bal("sell_fraction")) * GameSubclass.perk(d.heir, "sell_mult")
 	return maxi(1, int(round(v / (1.0 + d.echo_total("infamy")))))
 
 

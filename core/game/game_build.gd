@@ -139,12 +139,26 @@ static func check(d: GameDynasty, kind: String, x: int, y: int, z: int) -> Strin
 	return _cost_problem(d, p)
 
 
+## What a piece costs this family: its listed cost, less for a calling that builds cheaply (`build_cost_mult`; each
+## material at least 1 of what it was, and the gold at least 1 when the piece takes any). Exactly the list with no calling.
+static func cost_of(d: GameDynasty, p: Dictionary) -> Dictionary:
+	var m := GameSubclass.perk(d.heir, "build_cost_mult")
+	var cost := {}
+	for k in p["cost"]:
+		cost[k] = maxi(1, int(round(float(p["cost"][k]) * m)))
+	var gold := int(p["gold"])
+	if gold > 0:
+		gold = maxi(1, int(round(float(gold) * m)))
+	return {"cost": cost, "gold": gold}
+
+
 static func _cost_problem(d: GameDynasty, p: Dictionary) -> String:
-	for m in p["cost"]:
-		if GameCraft.have(d, str(m)) < int(p["cost"][m]):
-			return text("missing", {"material": GameMaterials.name_of(str(m)).to_lower(), "need": int(p["cost"][m]), "have": GameCraft.have(d, str(m))})
-	if int(p["gold"]) > d.heir.gold:
-		return text("gold", {"need": int(p["gold"])})
+	var c := cost_of(d, p)
+	for m in c["cost"]:
+		if GameCraft.have(d, str(m)) < int(c["cost"][m]):
+			return text("missing", {"material": GameMaterials.name_of(str(m)).to_lower(), "need": int(c["cost"][m]), "have": GameCraft.have(d, str(m))})
+	if int(c["gold"]) > d.heir.gold:
+		return text("gold", {"need": int(c["gold"])})
 	return ""
 
 
@@ -229,9 +243,10 @@ static func place(d: GameDynasty, kind: String, x: int, y: int, z: int) -> Dicti
 	if why != "":
 		return {"ok": false, "text": why}
 	var p: Dictionary = pieces()[kind]
-	for m in p["cost"]:
-		GameCraft.add_material(d, str(m), -int(p["cost"][m]))
-	d.heir.gold -= int(p["gold"])
+	var c := cost_of(d, p)
+	for m in c["cost"]:
+		GameCraft.add_material(d, str(m), -int(c["cost"][m]))
+	d.heir.gold -= int(c["gold"])
 	d.built[key(x, y, z)] = kind
 	return {"ok": true, "text": text("placed", {"piece": str(p["name"]).to_lower()})}
 
@@ -265,12 +280,13 @@ static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 	d.built.erase(k)
 	d.damage.erase(k)
 	var back: Array = []
-	for m in p["cost"]:
-		var n := int(floor(float(p["cost"][m]) * float(p["refund"])))
+	var paid := cost_of(d, p)   # the refund is a share of what this family paid, so a cheap builder cannot gain by pulling down
+	for m in paid["cost"]:
+		var n := int(floor(float(paid["cost"][m]) * float(p["refund"])))
 		if n > 0:
 			GameCraft.add_material(d, str(m), n)
 			back.append(GameMessages.text("life", "stock_units", {"n": int(n), "name": GameMaterials.name_of(str(m)).to_lower()}))
-	var gold := int(floor(float(p["gold"]) * float(p["refund"])))
+	var gold := int(floor(float(paid["gold"]) * float(p["refund"])))
 	if gold > 0:
 		d.heir.gold += gold
 		back.append(GameMessages.text("life", "gold_plain", {"n": int(gold)}))
