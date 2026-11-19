@@ -6,7 +6,7 @@
     "radius_per_house_level": 3,
     "max_span": 3,
     "max_room_area": 80,
-    "max_storeys": 2,
+    "max_storeys": 2, "house_sizes": [[4, 3], [5, 4], [6, 4], [7, 5], [8, 6], [10, 7], [12, 8]],
     "max_kennels": 3,
     "ground_bearers": ["wall", "stairs"],
     "upper_bearers": ["wall", "floor", "stairs"],
@@ -31,6 +31,9 @@
     {"id": "bedroom", "name": "Bedroom", "phrase": "a bedroom", "needs": {"bed": 1}, "min_area": 4, "use": {"kind": "rest", "years": 0.25, "hint": "Use to rest."}}
   ],
   "text": {
+    "house_built": "You raise a house of {w} by {h} tiles ({count} pieces).",
+    "house_failed": "A house of {w} by {h} cannot be raised there: {why}",
+    "house_size": "A house is at least 3 by 3 tiles and at most {max} by {max}.",
     "unknown": "There is no such thing as a {kind} to build.",
     "out_of_range": "That is beyond the ground that can be built on.",
     "off_map": "That is off the edge of the world.",

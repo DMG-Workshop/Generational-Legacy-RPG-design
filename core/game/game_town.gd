@@ -49,9 +49,16 @@ static func buildings(place_id: String) -> Array:
 	return out
 
 
+## The size in tiles (w, h) of a building of `kind`: `sizes` in towns.json, else the default `w` by `h`. Buildings differ in size,
+## a hut being small and a temple or the family house large; the door is always the tile in front of the bottom middle.
+static func size_of(kind: String) -> Vector2i:
+	var sizes: Dictionary = data().get("sizes", {})
+	if sizes.has(kind):
+		return Vector2i(int(sizes[kind][0]), int(sizes[kind][1]))
+	return Vector2i(int(setting("w")), int(setting("h")))
+
+
 static func _build() -> void:
-	var w := int(setting("w"))
-	var h := int(setting("h"))
 	var home := str(GameData.world["start"])
 	for place in towns():
 		var a := GameWorldGen.anchor(place)
@@ -68,11 +75,14 @@ static func _build() -> void:
 			if kind == "":
 				continue
 			var door := Vector2i(int(s["door"]["x"]), int(s["door"]["z"]))
-			_add(place, kind, door.x - (w - 1) / 2, door.y - h, w, h, door, n)
+			var size := size_of(kind)
+			_add(place, kind, door.x - (size.x - 1) / 2, door.y - size.y, size.x, size.y, door, n)
 			n += 1
 		for off in data()["houses"]:
 			var x := ax + int(off[0])
 			var z := az + int(off[1])
+			var w := int(off[2]) if off.size() > 2 else int(setting("w"))
+			var h := int(off[3]) if off.size() > 3 else int(setting("h"))
 			_add(place, "house", x, z, w, h, Vector2i(x + (w - 1) / 2, z + h), n)
 			n += 1
 
@@ -122,11 +132,19 @@ static func validate() -> Array:
 			bad.append("towns.json: settings.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
-	if int(s["w"]) < 1 or int(s["w"]) % 2 == 0 or int(s["h"]) < 1 or int(s["styles"]) < 1:
-		bad.append("towns.json: w must be odd (a door is in the middle) and h and styles at least 1")
+	if int(s["w"]) < 1 or int(s["h"]) < 1 or int(s["styles"]) < 1:
+		bad.append("towns.json: w, h and styles are at least 1")
+	var biggest := int(s.get("max_size", 6))
 	for off in dat["houses"]:
-		if typeof(off) != TYPE_ARRAY or off.size() != 2:
-			bad.append("towns.json: a house is [dx, dz]")
+		if typeof(off) != TYPE_ARRAY or (off.size() != 2 and off.size() != 4):
+			bad.append("towns.json: a house is [dx, dz] or [dx, dz, w, h]")
+		elif off.size() == 4 and (int(off[2]) < 1 or int(off[3]) < 1 or int(off[2]) > biggest or int(off[3]) > biggest):
+			bad.append("towns.json: a house of %d by %d is not between 1 and %d tiles a side" % [int(off[2]), int(off[3]), biggest])
+	var sizes: Dictionary = dat.get("sizes", {})
+	for k in sizes:
+		var sz: Variant = sizes[k]
+		if typeof(sz) != TYPE_ARRAY or sz.size() != 2 or int(sz[0]) < 1 or int(sz[1]) < 1 or int(sz[0]) > biggest or int(sz[1]) > biggest:
+			bad.append("towns.json: sizes.%s is [w, h], each 1 to %d" % [k, biggest])
 	if not bad.is_empty():
 		return bad
 	_all = []

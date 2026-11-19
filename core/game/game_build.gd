@@ -236,6 +236,70 @@ static func place(d: GameDynasty, kind: String, x: int, y: int, z: int) -> Dicti
 	return {"ok": true, "text": text("placed", {"piece": str(p["name"]).to_lower()})}
 
 
+## A whole house in one go, of any size the family chooses (`house_sizes` in building.json lists the sizes the screen offers; any size
+## from 3 by 3 up works): a ring of walls `w` by `h` tiles with the door in the bottom-middle of the south wall (at `door_x`,
+## `door_z`, the tile in front of which the house stands), floor inside and a roof over all but the doorway. The pieces are the
+## same ones one places by hand, in the order that lets each rest on the last (walls, door, floors, roof), each checked by `check`
+## and paid for as it is placed: `house_plan` lists them, `house_cost` adds up what they cost, and `build_house` places them all
+## or none (a piece that cannot go puts everything back, and says why).
+static func house_plan(w: int, h: int, door_x: int, door_z: int, roof: bool = true) -> Array:
+	var plan: Array = []
+	var x0 := door_x - (w - 1) / 2
+	var z0 := door_z - (h - 1)
+	for x in w:
+		for z in h:
+			var ring := x == 0 or z == 0 or x == w - 1 or z == h - 1
+			var at := Vector3i(x0 + x, SURFACE, z0 + z)
+			if ring and not (z == h - 1 and x0 + x == door_x):
+				plan.append({"kind": "wall", "at": at})
+	plan.append({"kind": "door", "at": Vector3i(door_x, SURFACE, door_z)})
+	for x in range(1, w - 1):
+		for z in range(1, h - 1):
+			plan.append({"kind": "floor", "at": Vector3i(x0 + x, SURFACE, z0 + z)})
+	if roof:
+		for x in w:
+			for z in h:
+				if not (z == h - 1 and x0 + x == door_x):
+					plan.append({"kind": "roof", "at": Vector3i(x0 + x, SURFACE - 1, z0 + z)})
+	return plan
+
+
+## What a house of `w` by `h` costs: {materials: {id: n}, gold: n}.
+static func house_cost(w: int, h: int, roof: bool = true) -> Dictionary:
+	var mats := {}
+	var gold := 0
+	for step in house_plan(w, h, 0, 0, roof):
+		var p: Dictionary = pieces()[str(step["kind"])]
+		for m in p["cost"]:
+			mats[m] = int(mats.get(m, 0)) + int(p["cost"][m])
+		gold += int(p["gold"])
+	return {"materials": mats, "gold": gold}
+
+
+## Raises the house, or nothing: {ok, text, count}.
+static func build_house(d: GameDynasty, w: int, h: int, door_x: int, door_z: int, roof: bool = true) -> Dictionary:
+	var biggest := 0
+	for sz in setting("house_sizes"):
+		biggest = maxi(biggest, maxi(int(sz[0]), int(sz[1])))
+	biggest = maxi(biggest, 16)
+	if w < 3 or h < 3 or w > biggest or h > biggest:
+		return {"ok": false, "text": text("house_size", {"max": biggest}), "count": 0}
+	var built_before: Dictionary = d.built.duplicate()
+	var stores_before: Dictionary = d.stores.duplicate(true)
+	var gold_before: int = d.heir.gold
+	var count := 0
+	for step in house_plan(w, h, door_x, door_z, roof):
+		var at: Vector3i = step["at"]
+		var out := place(d, str(step["kind"]), at.x, at.y, at.z)
+		if not bool(out["ok"]):
+			d.built = built_before
+			d.stores = stores_before
+			d.heir.gold = gold_before
+			return {"ok": false, "text": text("house_failed", {"w": w, "h": h, "why": str(out["text"])}), "count": 0}
+		count += 1
+	return {"ok": true, "text": text("house_built", {"w": w, "h": h, "count": count}), "count": count}
+
+
 ## Takes a piece down and gives back its `refund` share: {ok, text}.
 static func remove(d: GameDynasty, x: int, y: int, z: int) -> Dictionary:
 	var k := key(x, y, z)

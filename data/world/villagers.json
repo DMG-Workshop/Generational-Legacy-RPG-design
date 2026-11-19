@@ -1,0 +1,36 @@
+{
+  "note": "The people who live in the open world's town buildings (core/game/game_villagers.gd, drawn by the sandbox screen when a house has its roof off; checked by tools/check_data.gd). A plain house holds as many residents as its floor has room for: each needs `area_per_person` tiles times their size squared (`sizes`: a halfling is 0.75 of a human, an orc 1.2; `monsters` are creatures that live beside the people of a town, `monster_percent` of the places, and only in a house with the room for them: an ogre wants 26 tiles), at most `max_residents`; a service building has its one person (`service`, the one GamePeople names for it). Who they are (race from the town's `races`, a calling from `classes`, a shirt from `colors`) and where they stand come from the building's id, never from dice, so the same village always has the same people. By day a resident is in one of the body's cells (not the top row, where the furniture stands) and moves on every `slot_hours` hours; by night they are at their beds. Every house resident has a job (`jobs`, picked by weight from the ones the town has the place for): a farmer walks out to a field at the edge of the town and works there (`field_from`, `field_span` tiles from the anchor), a guard walks the streets to and fro, and the rest go to the service they work for and spend their shift (`hours`) inside it; they leave between `depart_from` and `depart_from` + `depart_span` hours at `tiles_per_hour`, by the way GamePath finds, and come back. Out of doors they are walkers (`walkers_near`) and not in their house; a service person has the service's own job (`service_jobs`).",
+  "settings": {"slot_hours": 2, "area_per_person": 8, "max_residents": 4, "monster_percent": 12},
+  "walk": {"tiles_per_hour": 16, "shift_hours": 6.0, "depart_from": 6.0, "depart_span": 4.0, "max_nodes": 3000, "field_from": 28, "field_span": 8},
+  "jobs": [
+    {"id": "farmer", "name": "Farmer", "work": "field", "weight": 4, "hours": 6.0},
+    {"id": "guard", "name": "Town guard", "work": "patrol", "weight": 3, "hours": 6.0},
+    {"id": "smith_hand", "name": "Smith's hand", "work": "forge", "weight": 2, "hours": 7.0},
+    {"id": "shop_hand", "name": "Shop hand", "work": "store", "weight": 2, "hours": 7.0},
+    {"id": "tavern_hand", "name": "Tavern hand", "work": "tavern", "weight": 2, "hours": 7.0},
+    {"id": "acolyte", "name": "Acolyte", "work": "temple", "weight": 1, "hours": 6.0},
+    {"id": "runner", "name": "Runner", "work": "black_market", "weight": 1, "hours": 6.0},
+    {"id": "homekeeper", "name": "Keeps house", "work": "", "weight": 1, "hours": 1.0}
+  ],
+  "service_jobs": {"forge": "Smith", "temple": "Priest", "store": "Storekeeper", "tavern": "Innkeeper", "black_market": "Fence"},
+  "sizes": {"halfling": 0.75, "gnome": 0.75, "dwarf": 0.85, "human": 1.0, "half_elf": 1.0, "elf": 1.05, "half_orc": 1.1, "beastkin": 1.1, "half_dragon": 1.15, "orc": 1.2, "dragonborn": 1.25},
+  "monsters": [
+    {"creature": "goblin", "scale": 0.7, "places": ["brinehaven", "ironford"]},
+    {"creature": "ogre", "scale": 1.8, "places": ["ironford", "kingshold", "brinehaven"]}
+  ],
+  "classes": ["warrior", "ranger", "monk", "druid", "cleric", "rogue", "mage"],
+  "races": {
+    "hearthmere": ["human", "halfling", "human"],
+    "kingshold": ["human", "half_elf", "human", "elf"],
+    "brinehaven": ["human", "half_orc", "beastkin", "human"],
+    "ironford": ["dwarf", "dwarf", "human", "gnome"]
+  },
+  "colors": ["#b8403a", "#b8653a", "#c49a3c", "#6e8a3c", "#3f7a4a", "#2f8a84", "#4a86c0", "#3a4f8a", "#7048a0", "#8a3a6e"],
+  "service": {
+    "forge": {"class": "warrior", "race": "dwarf", "color": "#8a5a2a"},
+    "temple": {"class": "cleric", "race": "human", "color": "#e4dfd0"},
+    "store": {"class": "rogue", "race": "halfling", "color": "#6e8a3c"},
+    "tavern": {"class": "ranger", "race": "human", "color": "#b8653a"},
+    "black_market": {"class": "rogue", "race": "human", "color": "#3b2f52"}
+  }
+}

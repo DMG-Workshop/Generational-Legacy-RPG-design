@@ -26,6 +26,10 @@ var cam := Vector2.ZERO   # the view's offset from the heir, in tiles
 var facing_dir := Vector2i(0, 1)
 var mode := "walk"          # "walk" (the heir moves) or "build" (the stick aims a piece and the bar places it)
 var build_kind := "wall"    # the piece the Place button puts down
+var _scales := {}           # companions: "id:level" -> their size against a human
+var house_size := 3         # the index of the size of house the Raise house button builds (GameSandbox.house_sizes)
+var house_preview := false  # whether the house's footprint is drawn (after the size button was pressed)
+var house_button: Button
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
 var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
@@ -69,6 +73,7 @@ func _ready() -> void:
 	if not WorldInput.installed():
 		WorldInput.install()   # the app installs them at start; a screen made on its own installs them itself
 	sb = GameSandbox.start(app.dynasty)
+	_warm_figures()
 	map = Control.new()
 	map.clip_contents = true
 	map.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -117,6 +122,10 @@ func _ready() -> void:
 	build_bar.add_child(Kit.button("Place", func(): _build(), Vector2(88, BAR - 12)))
 	build_bar.add_child(Kit.button("Take down", func(): _remove(), Vector2(108, BAR - 12)))
 	build_bar.add_child(Kit.button("Repair", func(): _repair(), Vector2(88, BAR - 12)))
+	house_button = Kit.button("", func(): _next_house_size(), Vector2(128, BAR - 12))
+	build_bar.add_child(house_button)
+	_next_house_size(false)
+	build_bar.add_child(Kit.button("Raise house", func(): _raise_house(), Vector2(128, BAR - 12)))
 	build_bar.visible = false
 	# The orders panel: each companion in the party with the order they hold; a tap moves it to the next.
 	orders_panel = VBoxContainer.new()
@@ -386,6 +395,35 @@ func _build() -> void:
 	queue_redraw()
 
 
+## The house button steps through the sizes of house on offer and shows where it would stand.
+func _next_house_size(step: bool = true) -> void:
+	var sizes: Array = sb.house_sizes()
+	if step:
+		house_size = (house_size + 1) % sizes.size()
+		house_preview = true
+	house_size = house_size % sizes.size()
+	var sz: Array = sizes[house_size]
+	house_button.text = "House: %d x %d" % [int(sz[0]), int(sz[1])]
+	_refresh_status()
+	queue_redraw()
+
+
+## Raises the chosen house with its door on the tile the heir faces, in one go (or says what stops it).
+func _raise_house() -> void:
+	var sz: Array = sb.house_sizes()[house_size]
+	var r := sb.build_house(int(sz[0]), int(sz[1]), facing_dir.x, facing_dir.y)
+	last_line = str(r["text"])
+	if r["ok"]:
+		var rect: Rect2i = r["rect"]
+		for x in range(rect.position.x - 1, rect.end.x + 1):
+			for z in range(rect.position.y - 1, rect.end.y + 1):
+				tile_view.refresh_cell(x, z)
+		house_preview = false
+		_save()
+	_refresh_status()
+	queue_redraw()
+
+
 func _repair() -> void:
 	var r := sb.repair_at(facing_dir.x, facing_dir.y)
 	last_line = str(r["text"])
@@ -423,6 +461,7 @@ func _next_level(step: bool = true) -> void:
 
 func _pick(kind: String) -> void:
 	build_kind = kind
+	house_preview = false
 	if piece_button != null:
 		piece_button.text = "Piece: %s" % GameBuild.pieces()[kind]["name"]
 	_refresh_status()
@@ -562,6 +601,11 @@ func _paint(c: Control) -> void:
 		var legal := sb.build_check(build_kind, facing_dir.x, facing_dir.y) == ""
 		var gc := Color(0.3, 0.9, 0.4, 0.9) if legal else Color(0.95, 0.3, 0.3, 0.9)
 		c.draw_rect(Rect2(gp, Vector2(cell, cell)), gc, false, maxf(2.0, cell * 0.1))
+	if mode == "build" and outdoors and house_preview:
+		var sz: Array = sb.house_sizes()[house_size]
+		var rc := sb.house_rect(int(sz[0]), int(sz[1]), facing_dir.x, facing_dir.y)
+		var rp := origin + (Vector2(rc.position) - centre) * cell + area * 0.5
+		c.draw_rect(Rect2(rp, Vector2(rc.size) * cell), Color(0.95, 0.85, 0.3, 0.9), false, maxf(2.0, cell * 0.1))
 	if fingers.steering():
 		var base := _rgb(colors["stick_base"])
 		var radius := WorldInput.setting("touch_stick_radius_px")
@@ -579,6 +623,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	var items: Array = []   # [depth, kind, thing]
 	for b in GameTown.in_rect(view):
 		items.append([float(b["z"] + b["h"]), "building", b])
+	for w in GameVillagers.walkers_near(d, centre.x, centre.y, half.length(), GameDay.hour(d)):
+		items.append([float(w["z"]), "villager", w])
 	for a in sb.creatures:
 		items.append([float(a["z"]) + 0.5, "creature", a])
 	for a in sb.companions:
@@ -592,10 +638,17 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				var at := origin + (Vector2(float(b["x"]), float(b["z"])) - centre) * cell + area * 0.5
 				var box := Rect2(at, Vector2(float(b["w"]), float(b["h"])) * cell)
 				var lid := GameReveal.alpha(GameReveal.distance_to(Rect2i(int(b["x"]), int(b["z"]), int(b["w"]), int(b["h"])), float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5))
-				var inside: Texture2D = BuildingArt.inside(str(b["kind"]), int(b["style"])) if lid < 1.0 else null
-				if inside != null:   # a doll house: the roof thins and the rooms show (nobody in them is drawn)
+				var inside: Texture2D = BuildingArt.inside(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"])) if lid < 1.0 else null
+				if inside != null:   # the roof thins and the rooms show, with the people who live there
 					c.draw_texture_rect(inside, box, false, dim)
-				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"])), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
+					_paint_residents(c, b, at, cell, dim)
+				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"]), GameVillagers.door_scale(b)), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
+			"villager":
+				var w: Dictionary = it[2]
+				var p := origin + (Vector2(float(w["x"]), float(w["z"])) - centre) * cell + area * 0.5
+				var tex := _villager_tex(w)
+				if tex != null:
+					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * float(w["scale"]), _villager_flip(w, int(w["dx"]) < 0), dim, cell)
 			"creature":
 				var a: Dictionary = it[2]
 				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
@@ -618,14 +671,64 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				if tex == null:
 					c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 				else:
-					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell)   # the art faces right
+					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell)   # the art faces right
 			"heir":
 				var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 				var tex: Texture2D = SpriteArt.figure(d.heir)
 				if tex == null:
 					c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 				else:
-					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell), facing_dir.x < 0, dim, cell)
+					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
+
+
+## Makes the figures of everyone who may be drawn now, together: the villagers, the heir and the companions (a figure first made while
+## drawing makes the atlas upload mid-frame, which blanks the sprites drawn before it in that frame).
+func _warm_figures() -> void:
+	SpriteArt.begin_batch()
+	var d: GameDynasty = app.dynasty
+	SpriteArt.figure(d.heir)
+	for m in d.party.members:
+		_party_figure(str(m["id"]))
+	for b in GameTown.all():
+		for r in GameVillagers.residents(b):
+			_villager_tex(r)
+	SpriteArt.end_batch()
+
+
+## A villager's picture: a person's figure in their race's colours, or a monster's own art.
+func _villager_tex(r: Dictionary) -> Texture2D:
+	if str(r.get("creature", "")) != "":
+		return SpriteArt.creature(str(r["creature"]))
+	return SpriteArt.hero(str(r["race"]), str(r["class"]), Color.html(str(r["color"])))
+
+
+## Whether to turn a villager's picture round: a person's art faces right and a monster's left; `left` is whether they look west.
+func _villager_flip(r: Dictionary, left: bool) -> bool:
+	return (not left) if str(r.get("creature", "")) != "" else left
+
+
+## The people of a building with its roof off (GameVillagers: where they are at this hour; by night they lie in their beds).
+func _paint_residents(c: Control, b: Dictionary, at: Vector2, cell: float, dim: Color) -> void:
+	var d: GameDynasty = app.dynasty
+	var hour := GameDay.hour(d)
+	var night := GameDay.is_night(d)
+	var who: Array = GameVillagers.residents(b)
+	for i in who.size():
+		var r: Dictionary = who[i]
+		if not GameVillagers.present(d, b, i, hour):
+			continue   # out in the street (or in the service they went to)
+		var tex := _villager_tex(r)
+		if tex == null:
+			continue
+		var sp: Dictionary = GameVillagers.spot(b, i, hour, night)
+		var cellv: Vector2i = sp["cell"]
+		if bool(sp["asleep"]):   # lying along the bed (two tiles long, a tile deep), head to the west
+			var box := _figure_size(tex, cell) * 0.9 * float(r["scale"])
+			c.draw_set_transform(at + (Vector2(cellv) + Vector2(1.0, 0.5)) * cell, -PI / 2.0, Vector2.ONE)
+			c.draw_texture_rect(tex, Rect2(-box * 0.5, box), false, dim)
+			c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		else:
+			_stand(c, tex, at + (Vector2(cellv) + Vector2(0.5, 0.85)) * cell, _figure_size(tex, cell) * float(r["scale"]), _villager_flip(r, false), dim, cell)
 
 
 ## Whether a creature or companion last moved to the east: it faces the way it last went (kept per key, for the look only).
@@ -653,6 +756,17 @@ func _stand(c: Control, tex: Texture2D, feet: Vector2, box: Vector2, flip: bool,
 		c.draw_texture_rect(tex, Rect2(at + Vector2(box.x, 0.0), Vector2(-box.x, box.y)), false, tint)
 	else:
 		c.draw_texture_rect(tex, Rect2(at, box), false, tint)
+
+
+## A companion's size against a human, by their race (a halfling is smaller, an orc larger).
+func _party_scale(id: String) -> float:
+	var m: Dictionary = app.dynasty.party.member(id)
+	if m.is_empty():
+		return 1.0
+	var key := "%s:%d" % [id, int(m.get("level", 0))]
+	if not _scales.has(key):
+		_scales[key] = GameVillagers.scale_of(app.dynasty.party.unit(app.dynasty, m).race_id)
+	return float(_scales[key])
 
 
 ## A companion's figure (their class in their race's colours), kept for as long as they stay the same level.

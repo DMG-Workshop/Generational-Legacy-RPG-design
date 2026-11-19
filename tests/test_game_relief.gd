@@ -221,7 +221,7 @@ func test_view() -> void:
 	d.built[GameBuild.key(hill.x, GameBuild.SURFACE, hill.y)] = "wall"   # (put there directly: the build rules would refuse a slope)
 	v.refresh_cell(hill.x, hill.y)
 	ok(layer.get_cell_alternative_tile(local) == 0, "a wall there is drawn as it is, not shaded as the hill under it")
-	ok(layer.get_cell_atlas_coords(local).x == TileView.kinds().find("wall"), "and it is a wall")
+	ok(TileView.cell_kind(layer, local) == "wall", "and it is a wall")
 	d.built.erase(GameBuild.key(hill.x, GameBuild.SURFACE, hill.y))
 	v.refresh_cell(hill.x, hill.y)
 	ok(layer.get_cell_alternative_tile(local) == lit, "and the ground is lit again when it comes down")

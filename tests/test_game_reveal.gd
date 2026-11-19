@@ -153,19 +153,20 @@ func test_view() -> void:
 func test_buildings() -> void:
 	var kinds: Dictionary = BuildingArt.data()["kinds"]
 	for k in kinds:
-		var tex: Texture2D = BuildingArt.inside(k)
+		var sz := GameTown.size_of(k)
+		var tex: Texture2D = BuildingArt.inside(k, 0, sz.x, sz.y)
 		if str(kinds[k].get("shape", "")) == "board":
 			ok(tex == null, "the notice board has no inside")
 			continue
-		ok(tex != null and tex.get_width() == BuildingArt.W and tex.get_height() == BuildingArt.H, "'%s' has an inside as big as its outside" % k)
-		var img := BuildingArt.inside_image(k)
+		ok(tex != null and tex.get_width() == sz.x * BuildingArt.TILE and tex.get_height() == sz.y * BuildingArt.TILE, "'%s' has an inside as big as its outside" % k)
+		var img := BuildingArt.inside_image(k, sz.x, sz.y)
 		var clear := 0
-		for y in BuildingArt.H:
-			for x in BuildingArt.W:
+		for y in img.get_height():
+			for x in img.get_width():
 				if img.get_pixel(x, y).a < 1.0:
 					clear += 1
 		ok(clear == 0, "and it is solid, a floor to the walls ('%s')" % k)
-	ok(BuildingArt.inside_image("forge").get_data() != BuildingArt.inside_image("temple").get_data(), "a forge's inside is not a temple's")
+	ok(BuildingArt.inside_image("forge", 4, 3).get_data() != BuildingArt.inside_image("temple", 4, 3).get_data(), "a forge's inside is not a temple's")
 	var f: Array = kinds["forge"]["furniture"]
 	f.append("sofa")
 	ok(not BuildingArt.validate().is_empty(), "furniture the art does not know is caught")
