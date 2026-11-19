@@ -85,7 +85,7 @@ func test_layout() -> void:
 		var space := GameSpaces.root_id() + "/" + str(b["place"]) + "/" + str(b["kind"])
 		var door: Dictionary = GameSpaces.space(space)["door"]
 		ok(b["door"] == Vector2i(int(door["x"]), int(door["z"])), "%s's door is the door tile of its service" % b["id"])
-		ok(int(b["x"]) + 1 == int(door["x"]) and int(b["z"]) + int(b["h"]) == int(door["z"]), "%s stands right behind its door" % b["id"])
+		ok(int(b["x"]) + (int(b["w"]) - 1) / 2 == int(door["x"]) and int(b["z"]) + int(b["h"]) == int(door["z"]), "%s stands right behind its door" % b["id"])
 	var family: Dictionary = {}
 	for b in GameTown.buildings(home):
 		if str(b["kind"]) == "family":
@@ -232,7 +232,9 @@ func test_art() -> void:
 	var looks := {}
 	for kind in kinds:
 		var img := BuildingArt.image(kind, 0)
-		ok(img.get_width() == BuildingArt.W and img.get_height() == BuildingArt.H, "%s is %d by %d pixels" % [kind, BuildingArt.W, BuildingArt.H])
+		var sz := GameTown.size_of(kind)
+		img = BuildingArt.image(kind, 0, sz.x, sz.y)
+		ok(img.get_width() == sz.x * BuildingArt.TILE and img.get_height() == sz.y * BuildingArt.TILE, "%s is %d by %d pixels" % [kind, img.get_width(), img.get_height()])
 		var opaque := 0
 		for y in img.get_height():
 			for x in img.get_width():
@@ -247,8 +249,8 @@ func test_art() -> void:
 				outlined += 1
 		ok(img.get_pixel(0, 16) != Color(0, 0, 0, 0) or kind == "board", "%s is outlined where it meets the edge" % kind)
 		looks[kind] = img.get_data()
-		ok(BuildingArt.image(kind, 0).get_data() == img.get_data(), "%s paints the same pixels every time" % kind)
-		ok(BuildingArt.texture(kind, 0) == BuildingArt.texture(kind, 0), "%s's texture is kept" % kind)
+		ok(BuildingArt.image(kind, 0, sz.x, sz.y).get_data() == img.get_data(), "%s paints the same pixels every time" % kind)
+		ok(BuildingArt.texture(kind, 0, sz.x, sz.y) == BuildingArt.texture(kind, 0, sz.x, sz.y), "%s's texture is kept" % kind)
 	var seen := {}
 	for kind in kinds:
 		seen[looks[kind]] = true
@@ -326,7 +328,7 @@ func test_data() -> void:
 	# a house on a door, one off the edge of the town, two on each other
 	var keep: Variant = GameTown.data()["houses"].duplicate(true)
 	var h: Array = GameTown.data()["houses"]
-	h.append([-4, -2])   # on the forge's door tile in every town that has a forge
+	h.append([-9, -6])   # on the forge's door tile in every town that has a forge
 	ok(not GameTown.validate().is_empty(), "a house on a door is refused")
 	GameTown.data()["houses"] = keep.duplicate(true)
 	GameTown.data()["houses"].append([20, 20])
@@ -340,7 +342,7 @@ func test_data() -> void:
 	GameTown.data()["houses"] = keep.duplicate(true)
 	ok(GameTown.validate().is_empty(), "and the data is back as it was")
 	var s: Dictionary = GameTown.data()["settings"]
-	for case in [["w", 2], ["w", 0], ["h", 0], ["styles", 0]]:
+	for case in [["w", 0], ["h", 0], ["styles", 0]]:
 		var old: Variant = s[case[0]]
 		s[case[0]] = case[1]
 		ok(not GameTown.validate().is_empty(), "%s of %s is refused" % [case[0], str(case[1])])
@@ -359,6 +361,6 @@ func test_data() -> void:
 	kinds["forge"] = forge.duplicate(true)
 	kinds.erase("tavern")
 	ok(not BuildingArt.validate().is_empty(), "a town building with no look is refused")
-	kinds["tavern"] = {"roof": ["#7a5a34", "#563d20"], "wall": ["#cfb48a", "#a58d63"], "features": ["chimney", "sign"]}
+	kinds["tavern"] = {"roof": ["#7a5a34", "#563d20"], "wall": ["#cfb48a", "#a58d63"], "features": ["chimney", "sign"], "furniture": ["bar", "tables"]}
 	kinds["forge"] = forge
 	ok(BuildingArt.validate().is_empty(), "and the art is back as it was")

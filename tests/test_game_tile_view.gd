@@ -85,7 +85,7 @@ func test_atlas() -> void:
 	var src: TileSetAtlasSource = ts.get_source(0)
 	var px: int = TileView.settings()["px"]
 	ok(ts.tile_size == Vector2i(px, px), "tiles are px square")
-	ok(src.get_tiles_count() == TileView.kinds().size(), "the atlas has one tile per kind")
+	ok(src.get_tiles_count() == TileView.kinds().size() + TileView.JOINS, "the atlas has one tile per kind and one per way a wall can join")
 	var img := src.texture.get_image()
 	var i := TileView.kinds().find("water")
 	var c: Array = TileView.settings()["colors"]["water"]
@@ -128,7 +128,7 @@ func test_cells() -> void:
 	ok(GameBuild.place(d, "wall", x, GameBuild.SURFACE, z)["ok"], "a wall is built there")
 	ok(layer.get_cell_atlas_coords(local) == before, "the view does not know until it is told")
 	v.refresh_cell(x, z)
-	ok(layer.get_cell_atlas_coords(local).x == TileView.kinds().find("wall"), "and then it shows the wall")
+	ok(TileView.cell_kind(layer, local) == "wall", "and then it shows the wall")
 	GameBuild.remove(d, x, GameBuild.SURFACE, z)
 	v.refresh_cell(x, z)
 	ok(layer.get_cell_atlas_coords(local) == before, "taken down, the ground is back")
@@ -176,7 +176,7 @@ func test_levels() -> void:
 	GameBuild.place(d, "wall", x, GameBuild.SURFACE, z + 1)
 	GameBuild.place(d, "wall", x, GameBuild.SURFACE - 1, z + 1)
 	v.refresh_cell(x, z + 1)
-	ok(up.get_cell_atlas_coords(local + Vector2i(0, 1)).x == TileView.kinds().find("wall"), "a piece built at the storey shows once the tile is refreshed")
+	ok(TileView.cell_kind(up, local + Vector2i(0, 1)) == "wall", "a piece built at the storey shows once the tile is refreshed")
 	GameBuild.remove(d, x, GameBuild.SURFACE - 1, z + 1)
 	v.refresh_cell(x, z + 1)
 	ok(up.get_cell_source_id(local + Vector2i(0, 1)) == -1, "and goes when it is taken down")

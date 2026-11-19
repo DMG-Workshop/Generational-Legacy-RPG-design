@@ -8,14 +8,15 @@
     {"roof": ["#6e8f45", "#4c672c"], "wall": ["#d1b98a", "#a88f60"]},
     {"roof": ["#8a6a3a", "#5f4724"], "wall": ["#c9b8a0", "#9d8c75"]}
   ],
+  "inside": {"floor": ["#a88655", "#8e7046"], "wall": "#6b6258", "rug": "#8a3a3a", "cloth": "#d8d0c0", "blanket": "#b04a58", "wood": "#6a4a2a", "fire": ["#e06a1a", "#f6d048"], "ember": "#8a2a14"},
   "kinds": {
-    "house": {"styled": true, "features": ["chimney"]},
-    "family": {"styled": true, "features": ["chimney", "banner", "gold_trim"]},
-    "forge": {"roof": ["#6b6f78", "#474b53"], "wall": ["#9a9288", "#756e65"], "features": ["chimney", "glow", "anvil"]},
-    "temple": {"roof": ["#c9ccd6", "#9a9fb0"], "wall": ["#ebe4d2", "#c4bba5"], "features": ["cross", "round_window"]},
-    "store": {"roof": ["#a8553a", "#7a3a26"], "wall": ["#d8c39a", "#b09a70"], "features": ["awning", "crate"], "awning": ["#e4dfd0", "#b8483a"]},
-    "tavern": {"roof": ["#7a5a34", "#563d20"], "wall": ["#cfb48a", "#a58d63"], "features": ["chimney", "sign"]},
+    "house": {"furniture": ["bed", "table", "hearth"], "styled": true, "features": ["chimney"]},
+    "family": {"furniture": ["bed", "table", "hearth", "chest"], "styled": true, "features": ["chimney", "banner", "gold_trim"]},
+    "forge": {"furniture": ["anvil_floor", "forge_fire", "rack"], "roof": ["#6b6f78", "#474b53"], "wall": ["#9a9288", "#756e65"], "features": ["chimney", "glow", "anvil"]},
+    "temple": {"furniture": ["altar", "pews"], "roof": ["#c9ccd6", "#9a9fb0"], "wall": ["#ebe4d2", "#c4bba5"], "features": ["cross", "round_window"]},
+    "store": {"furniture": ["counter", "shelves", "crates"], "roof": ["#a8553a", "#7a3a26"], "wall": ["#d8c39a", "#b09a70"], "features": ["awning", "crate"], "awning": ["#e4dfd0", "#b8483a"]},
+    "tavern": {"furniture": ["bar", "tables"], "roof": ["#7a5a34", "#563d20"], "wall": ["#cfb48a", "#a58d63"], "features": ["chimney", "sign"]},
     "board": {"shape": "board"},
-    "black_market": {"roof": ["#5b4a78", "#3b2f52"], "wall": ["#4a4458", "#352f42"], "features": ["awning", "lantern"], "awning": ["#3b2f52", "#8a4a9a"]}
+    "black_market": {"furniture": ["crates", "rug", "lamp_floor"], "roof": ["#5b4a78", "#3b2f52"], "wall": ["#4a4458", "#352f42"], "features": ["awning", "lantern"], "awning": ["#3b2f52", "#8a4a9a"]}
   }
 }

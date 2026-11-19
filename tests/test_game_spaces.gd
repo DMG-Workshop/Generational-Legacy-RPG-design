@@ -141,7 +141,7 @@ func test_map() -> void:
 			all = false
 	ok(all, "every place is on the map at its anchor tile in the generated world")
 	var h := GameSpaces.map_tile("world/hearthmere")
-	ok(GameSpaces.map_tile("world/hearthmere/forge") == h + Vector2i(-4, -2), "the forge's door is 4 west and 2 north of Hearthmere's middle")
+	ok(GameSpaces.map_tile("world/hearthmere/forge") == h + Vector2i(-9, -6), "the forge's door is 9 west and 6 north of Hearthmere's middle")
 	ok(GameSpaces.map_tile("world") == Vector2i(-1, -1) and GameSpaces.map_tile("nowhere") == Vector2i(-1, -1), "the open world itself, and a space that does not exist, are nowhere on it")
 	ok(GameSpaces.at_tile(h.x, h.y) == "world/hearthmere" and GameSpaces.at_tile(h.x + 5, h.y - 5) == "world/hearthmere", "a tile on a town's ground is in the town")
 	ok(GameSpaces.at_tile(h.x + 30, h.y) == "world", "one well outside it is in the open world")
@@ -206,9 +206,9 @@ func test_agreement() -> void:
 	var town := GameSpaces.map_tile("world/hearthmere")
 	var plot := GameWorldGen.plot("hearthmere")
 	ok(Vector2i(int(base["x"]), int(base["z"])) == Vector2i(int(plot["x"]), int(plot["z"])), "the family's building ground is the homestead plot beside the home town")
-	ok(Vector2(float(town.x) - float(base["x"]), float(town.y) - float(base["z"])).length() <= 20.0, "within a short walk of the home town's tile")
+	ok(Vector2(float(town.x) - float(base["x"]), float(town.y) - float(base["z"])).length() <= 70.0, "within a short walk of the home town's tile (beyond its own ground)")
 	var house := GameSpaces.map_tile(GameSpaces.house())
-	ok(GameBuild.in_claim(d, int(base["x"]), int(base["z"])) and house.distance_to(Vector2(float(base["x"]), float(base["z"]))) < 25.0, "and the family house's door is near it")
+	ok(GameBuild.in_claim(d, int(base["x"]), int(base["z"])) and house.distance_to(Vector2(float(base["x"]), float(base["z"]))) < 90.0, "and the family house's door is a walk from it")
 	for id in ["world/hearthmere", "world/ironford", "world/kingshold", "world/brinehaven"]:
 		var t := GameSpaces.map_tile(id)
 		var tile := GameWorldGen.tile(d, t.x, t.y)

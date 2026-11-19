@@ -19,36 +19,36 @@
 	},
 	"service_doors": {
 		"forge": [
-			-4,
-			-2
+			-9,
+			-6
 		],
 		"temple": [
-			4,
-			-3
+			7,
+			-8
 		],
 		"store": [
-			-3,
-			3
+			-8,
+			8
 		],
 		"tavern": [
-			2,
-			4
+			7,
+			10
 		],
 		"board": [
 			0,
-			-5
+			-6
 		],
 		"black_market": [
-			5,
-			5
+			16,
+			6
 		]
 	},
 	"house": {
 		"id": "house",
 		"name": "The family house",
 		"door": [
-			3,
-			0
+			-18,
+			2
 		]
 	},
 	"underworld": {
