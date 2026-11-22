@@ -47,6 +47,7 @@ const SHOTS := [
 	["battle_swamp", DESKTOP, false, "battle:mirefen"],
 	["town", DESKTOP, false, "town"],
 	["river", DESKTOP, false, "river"],
+	["gate", DESKTOP, false, "gate"],
 	["homestead", DESKTOP, false, "homestead"],
 	["dollhouse", DESKTOP, false, "dollhouse"],
 	["dungeon_barrow", DESKTOP, false, "dungeon:hollow_barrow:0,3"],
@@ -218,7 +219,7 @@ func _screen(what: String) -> void:
 		await _dungeon(what)
 		return
 	match what:
-		"town", "river", "homestead", "dollhouse":
+		"town", "river", "homestead", "dollhouse", "gate":
 			await _open_world(what)
 		"life":
 			pass
@@ -321,6 +322,9 @@ func _select_tab(n: Node, name: String) -> void:
 func _open_world(what: String) -> void:
 	var town := what == "town"
 	var spot := Vector2i(160, 296) if town else Vector2i(143, 206)   # the town: the street between the store and the tavern
+	if what == "gate":
+		var gate: Dictionary = GameWalls.gates("hearthmere")[0]   # the north gate, seen from inside the wall, its two guards at their posts
+		spot = (gate["inner"] as Vector2i) + Vector2i(0, 5)
 	if what == "homestead" or what == "dollhouse":
 		var plot := GameBuild.base()
 		spot = Vector2i(int(plot["x"]), int(plot["z"])) + (Vector2i.ZERO if what == "homestead" else Vector2i(0, 4))   # inside the house, or at its door with the roof half lifted
@@ -339,7 +343,7 @@ func _open_world(what: String) -> void:
 	if town:
 		scr.sb.creatures.append(GameBehaviour.new_agent(900, "wolf", float(spot.x) - 5.5, float(spot.y) + 2.5))
 		scr.sb.creatures.append(GameBehaviour.new_agent(901, "slime", float(spot.x) + 7.5, float(spot.y) - 3.5))
-	scr.zoom = 1.8 if what == "homestead" or what == "dollhouse" else (1.0 if town else 0.75)
+	scr.zoom = 1.8 if what == "homestead" or what == "dollhouse" else (1.0 if town else (1.5 if what == "gate" else 0.75))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
