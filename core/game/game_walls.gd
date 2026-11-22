@@ -105,6 +105,12 @@ static func blocks(x: int, z: int) -> bool:
 	return r != null and str((r as Dictionary)["k"]) in SOLID
 
 
+## Whether the town gates are shut at this moment of the dynasty's day (night, if walls.json `settings.shut_at_night` is on): a shut gate
+## blocks a walker like the wall beside it (GamePath.world_ground), and the screen draws its portcullis down. Pure of the world clock.
+static func shut_now(d: GameDynasty) -> bool:
+	return bool(setting("shut_at_night")) and GameDay.is_night(d)
+
+
 ## Whether the world leaves a tile free of trees and rocks: the wall itself and the way in and out of each gate.
 static func cleared(x: int, z: int) -> bool:
 	_ensure()
@@ -357,7 +363,7 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["radius", "thickness", "gate_width", "tower_len", "approach", "inside", "max_shift", "max_step", "road_angle", "min_gates", "check_seeds"]:
+	for k in ["radius", "thickness", "gate_width", "tower_len", "approach", "inside", "max_shift", "max_step", "road_angle", "min_gates", "shut_at_night", "check_seeds"]:
 		if not s.has(k):
 			bad.append("walls.json: settings.%s is missing" % k)
 	if not bad.is_empty():

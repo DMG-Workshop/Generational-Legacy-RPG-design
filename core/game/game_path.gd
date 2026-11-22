@@ -37,7 +37,9 @@ static func key(c: Vector3i) -> String:
 
 
 ## The ground of a dynasty's world: the generated surface (cached), the cells dug at the mining `site`, and a built overlay (the dynasty's own `built` unless one is given).
-static func world_ground(d: GameDynasty, built: Variant = null, site: String = GameWorldGen.MINE_SITE) -> Dictionary:
+## The town gates are shut by night (GameWalls.shut_hours) and open by day; `gates_shut` (true or false) overrides that, which the villagers' daily trips use (they are home before the gates close).
+static func world_ground(d: GameDynasty, built: Variant = null, site: String = GameWorldGen.MINE_SITE, gates_shut: Variant = null) -> Dictionary:
+	var shut: bool = GameWalls.shut_now(d) if gates_shut == null else bool(gates_shut)
 	var memo := {}
 	var surface := func(x: int, z: int) -> Dictionary:
 		var k := Vector2i(x, z)
@@ -49,7 +51,7 @@ static func world_ground(d: GameDynasty, built: Variant = null, site: String = G
 			var h := GameWorldGen.height_at(d.seed_value, x, z)
 			var water := GameWorldGen.water_at(d.seed_value, x, z)   # sea, lake or river; a ford is shallow and walked
 			var node := GameWorldGen.node_at(d, x, z, biome, water)
-			info = {"h": h, "water": water, "biome": biome, "block": (not node.is_empty() and bool(data()["node_blocks"].get(str(node["kind"]), false))) or GameTown.blocks(x, z) or GameWalls.blocks(x, z)}
+			info = {"h": h, "water": water, "biome": biome, "block": (not node.is_empty() and bool(data()["node_blocks"].get(str(node["kind"]), false))) or GameTown.blocks(x, z) or GameWalls.blocks(x, z) or (shut and GameWalls.kind_at(x, z) == "gate")}
 		memo[k] = info
 		return info
 	return {"surface": surface, "dug": func(x: int, y: int, z: int) -> bool: return GameMine.is_dug(d, site, x, y, z), "built": d.built if built == null else built, "max_depth": int(GameMine.setting("max_depth"))}
@@ -307,7 +309,7 @@ static func new_cache() -> Dictionary:
 
 ## What the ground is now, as one number: changes when anything is built, taken down, damaged or dug.
 static func ground_stamp(d: GameDynasty) -> int:
-	return hash([d.built.hash(), d.mine.hash()])
+	return hash([d.built.hash(), d.mine.hash(), GameWalls.shut_now(d)])
 
 
 ## Clears the cache if the ground has changed since it was filled.
