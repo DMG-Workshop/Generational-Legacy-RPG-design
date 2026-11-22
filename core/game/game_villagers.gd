@@ -182,7 +182,7 @@ static func trip_of(d: GameDynasty, b: Dictionary, i: int) -> Dictionary:
 		var work := str(job["work"])
 		if work == "field":
 			for attempt in 8:   # a spot at the edge of the town's ground, in a direction the id picks, that can be reached
-				var ang := float(_h(id + "a%d" % attempt) % 360) / 360.0 * TAU
+				var ang := float(_h(id + "a") % 360) / 360.0 * TAU + float(attempt) * TAU / 8.0   # each try turns an eighth round (hashes of nearby strings agree, so a river in the way beat all eight)
 				var r := float(w["field_from"]) + float(_h(id + "r%d" % attempt) % 100) / 100.0 * float(w["field_span"])
 				var spot := Vector2i(int(round(float(anchor["x"]) + cos(ang) * r)), int(round(float(anchor["z"]) + sin(ang) * r)))
 				if GameWorldGen.in_bounds(spot.x, spot.y):
