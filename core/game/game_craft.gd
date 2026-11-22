@@ -460,7 +460,7 @@ static func validate() -> Array:
 		for m in dat["drops"][cid].get("materials", []):
 			dropped[str(m["material"])] = true
 	for m in GameMaterials.ids():
-		if not dropped.has(str(m)):
+		if not dropped.has(str(m)) and not bool(GameMaterials.get_material(str(m)).get("trade", false)):
 			bad.append("craft.json: nothing drops the material '%s'" % m)
 	for bid in dat.get("brews", {}):
 		var b: Dictionary = dat["brews"][bid]

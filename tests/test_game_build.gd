@@ -212,9 +212,10 @@ func test_water() -> void:
 		if info.is_empty() or info["water"]:
 			return false
 		for i in range(1, 7):
-			var w: Dictionary = s.call(x + i, z)
-			if w.is_empty() or not w["water"]:
-				return false
+			for dz in range(-2, 3):   # open water on the rows either side too, so no other bank is within a bridge's reach of the east line
+				var w: Dictionary = s.call(x + i, z + dz)
+				if w.is_empty() or not w["water"]:
+					return false
 		return true, 120)
 	ok(lake.x >= 0, "(there is a shore with open water beside it to find)")
 	if lake.x < 0:

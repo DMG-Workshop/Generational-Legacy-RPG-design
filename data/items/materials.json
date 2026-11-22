@@ -1,6 +1,6 @@
 {
   "note": "The one material list (roadmap item 42; core/game/game_materials.gd, checked by tools/check_data.gd). Every item in items.json names a material and a weight, and gets its tags from the material plus its own slot or kind, so harvesting, mining, crafting and the loot generator all extend this list. Tier runs from 1 (common) up; weight_mult is how heavy a thing of this material is against the plain one, price_mult how dear.",
-  "tags": ["wood", "metal", "cloth", "leather", "scale", "bone", "gem", "herb", "venom", "glass", "holy", "magic", "precious", "light", "heavy", "conductive"],
+  "tags": ["wood", "metal", "cloth", "leather", "scale", "bone", "gem", "herb", "venom", "glass", "holy", "magic", "precious", "light", "heavy", "conductive", "grain", "food", "stone", "clay", "paper", "tallow", "fibre", "jewel", "ore"],
   "materials": [
     {"id": "oak", "name": "Oak", "tier": 1, "tags": ["wood"], "weight_mult": 1.0, "price_mult": 1.0},
     {"id": "yew", "name": "Yew", "tier": 2, "tags": ["wood", "light"], "weight_mult": 0.9, "price_mult": 1.3},
@@ -22,6 +22,31 @@
     {"id": "phoenix_feather", "name": "Phoenix Feather", "tier": 4, "tags": ["holy", "magic", "light"], "weight_mult": 0.1, "price_mult": 9.0},
     {"id": "herb", "name": "Herb", "tier": 1, "tags": ["herb"], "weight_mult": 0.5, "price_mult": 1.0},
     {"id": "venom", "name": "Venom", "tier": 1, "tags": ["venom"], "weight_mult": 0.5, "price_mult": 1.0},
-    {"id": "glass", "name": "Glass", "tier": 1, "tags": ["glass"], "weight_mult": 0.5, "price_mult": 1.0}
+    {"id": "glass", "name": "Glass", "tier": 1, "tags": ["glass"], "weight_mult": 0.5, "price_mult": 1.0},
+    {"id": "wheat", "name": "Wheat", "tier": 1, "tags": ["grain", "food"], "weight_mult": 0.6, "price_mult": 0.5, "trade": true},
+    {"id": "meat", "name": "Meat", "tier": 1, "tags": ["food"], "weight_mult": 0.8, "price_mult": 0.8, "trade": true},
+    {"id": "fish", "name": "Fish", "tier": 1, "tags": ["food"], "weight_mult": 0.7, "price_mult": 0.6, "trade": true},
+    {"id": "produce", "name": "Produce", "tier": 1, "tags": ["food"], "weight_mult": 0.6, "price_mult": 0.5, "trade": true},
+    {"id": "dairy", "name": "Dairy", "tier": 1, "tags": ["food"], "weight_mult": 0.8, "price_mult": 0.7, "trade": true},
+    {"id": "honey", "name": "Honey", "tier": 1, "tags": ["food"], "weight_mult": 0.7, "price_mult": 1.2, "trade": true},
+    {"id": "salt", "name": "Salt", "tier": 1, "tags": ["food"], "weight_mult": 0.8, "price_mult": 0.8, "trade": true},
+    {"id": "stone", "name": "Stone", "tier": 1, "tags": ["stone", "heavy"], "weight_mult": 1.5, "price_mult": 0.6, "trade": true},
+    {"id": "marble", "name": "Marble", "tier": 2, "tags": ["stone", "heavy"], "weight_mult": 1.6, "price_mult": 2.2, "trade": true},
+    {"id": "clay", "name": "Clay", "tier": 1, "tags": ["clay"], "weight_mult": 1.2, "price_mult": 0.5, "trade": true},
+    {"id": "paper", "name": "Paper", "tier": 1, "tags": ["paper", "light"], "weight_mult": 0.2, "price_mult": 0.9, "trade": true},
+    {"id": "vellum", "name": "Vellum", "tier": 2, "tags": ["paper", "light"], "weight_mult": 0.3, "price_mult": 1.8, "trade": true},
+    {"id": "wax", "name": "Wax", "tier": 1, "tags": ["tallow"], "weight_mult": 0.6, "price_mult": 0.9, "trade": true},
+    {"id": "wool", "name": "Wool", "tier": 1, "tags": ["fibre"], "weight_mult": 0.5, "price_mult": 0.8, "trade": true},
+    {"id": "hemp", "name": "Hemp", "tier": 1, "tags": ["fibre"], "weight_mult": 0.6, "price_mult": 0.6, "trade": true},
+    {"id": "garnet", "name": "Garnet", "tier": 1, "tags": ["jewel"], "weight_mult": 0.2, "price_mult": 1.6, "trade": true},
+    {"id": "amber", "name": "Amber", "tier": 1, "tags": ["jewel", "light"], "weight_mult": 0.2, "price_mult": 1.8, "trade": true},
+    {"id": "ruby", "name": "Ruby", "tier": 2, "tags": ["jewel"], "weight_mult": 0.2, "price_mult": 4.0, "trade": true},
+    {"id": "sapphire", "name": "Sapphire", "tier": 2, "tags": ["jewel"], "weight_mult": 0.2, "price_mult": 4.0, "trade": true},
+    {"id": "emerald", "name": "Emerald", "tier": 2, "tags": ["jewel"], "weight_mult": 0.2, "price_mult": 4.5, "trade": true},
+    {"id": "diamond", "name": "Diamond", "tier": 3, "tags": ["jewel", "precious"], "weight_mult": 0.2, "price_mult": 8.0, "trade": true},
+    {"id": "iron_ore", "name": "Iron ore", "tier": 1, "tags": ["ore", "heavy"], "weight_mult": 1.4, "price_mult": 0.5, "trade": true},
+    {"id": "copper_ore", "name": "Copper ore", "tier": 1, "tags": ["ore"], "weight_mult": 1.3, "price_mult": 0.6, "trade": true},
+    {"id": "silver_ore", "name": "Silver ore", "tier": 2, "tags": ["ore", "heavy"], "weight_mult": 1.4, "price_mult": 1.5, "trade": true},
+    {"id": "coal", "name": "Coal", "tier": 1, "tags": ["ore"], "weight_mult": 1.0, "price_mult": 0.4, "trade": true}
   ]
 }

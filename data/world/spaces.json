@@ -1,5 +1,5 @@
 {
-	"note": "World spaces and coordinates (roadmap item 41; core/game/game_spaces.gd, checked by tools/check_data.gd). Every place the game has is a space with an id of its own and a position, so the text game's map and the sandbox name places the same way. Ids are paths: `world` is the open world (the generated surface and the ground under it); a town or a stretch of wilds is an AREA of it, `world/hearthmere`, a region round the place's anchor tile that is walked into; a dungeon is an INTERIOR, `world/goblin_warrens`, a space of its own entered through a door on the open world; a town's services are interiors of the town, `world/hearthmere/forge`, each with its door a few tiles from the town's centre (`service_doors`, as [east, south] of it, inside the town's cleared ground); and the family house is an interior of the home town (`house`). `kind_of_type` says which kind each place type in world.json is. UNDERWORLD: `underworld` gives the shaft, a tile of the open world where the ground goes down, and the mining zones (data/mining/mining.json) that are bands of it, each a space `world/underworld/<zone>`: the first is entered from the open world at the shaft, each deeper one from the band above it, all at the shaft's own tile, and a band's depth runs from its zone's first cell to the next zone's. REALMS: `realm_gates` gives the tile of the open world where each realm's gate stands (not the home realm, which has none); every realm in data/creatures/realms.json is a space `realm/<id>`, a child of the open world at its gate, and the home realm is listed with no door since the open world is its ground. ROOMS: `rooms` gives each interior's floor plan, keyed by the layout it uses (a service's name, a dungeon's place id, or the house's id). A layout is a list of rooms (`id`, `name`, `rect` [x, z, width, height] in tiles on the interior's own floor, x east and z south, origin at the door, which must lie in the one `entrance` room) and `doors` ({from, to, at}: `at` is the gap tile between two rooms that touch it). Nothing here is saved or random: a space is worked out from world.json, this file, mining.json, realms.json and GameWorldGen's anchors.",
+	"note": "World spaces and coordinates (roadmap item 41; core/game/game_spaces.gd, checked by tools/check_data.gd). Every place the game has is a space with an id of its own and a position, so the text game's map and the sandbox name places the same way. Ids are paths: `world` is the open world (the generated surface and the ground under it); a town or a stretch of wilds is an AREA of it, `world/hearthmere`, a region round the place's anchor tile that is walked into; a dungeon is an INTERIOR, `world/goblin_warrens`, a space of its own entered through a door on the open world; a town's services are interiors of the town, `world/hearthmere/forge`, each with its door a few tiles from the town's centre (`service_doors`, as [east, south] of it, inside the town's cleared ground); and the family house is an interior of the home town (`house`). `kind_of_type` says which kind each place type in world.json is. UNDERWORLD: `underworld` gives the shaft, a tile of the open world where the ground goes down, and the mining zones (data/mining/mining.json) that are bands of it, each a space `world/underworld/<zone>`: the first is entered from the open world at the shaft, each deeper one from the band above it, all at the shaft's own tile, and a band's depth runs from its zone's first cell to the next zone's. REALMS: `realm_gates` gives the tile of the open world where each realm's gate stands (not the home realm, which has none); every realm in data/creatures/realms.json is a space `realm/<id>`, a child of the open world at its gate, and the home realm is listed with no door since the open world is its ground. ROOMS: `rooms` gives each interior's floor plan, keyed by the layout it uses (a service's name, a dungeon's place id, or the house's id). A layout is a list of rooms (`id`, `name`, `rect` [x, z, width, height] in tiles on the interior's own floor, x east and z south, origin at the door, which must lie in the one `entrance` room) and `doors` ({from, to, at}: `at` is the gap tile between two rooms that touch it). Nothing here is saved or random: a space is worked out from world.json, this file, mining.json, realms.json and GameWorldGen's anchors. TOWN DOORS: `town_doors` gives, for each town, the door tile of each shop of data/shops/shops.json ([east, south] of the town's anchor, inside its cleared ground); the six old services keep one door in `service_doors` for every town.",
 	"root": {
 		"id": "world",
 		"name": "The open world"
@@ -15,7 +15,47 @@
 		"store": "Store",
 		"tavern": "Tavern",
 		"board": "Notice board",
-		"black_market": "Black market"
+		"black_market": "Black market",
+		"bakery": "Bakery",
+		"greengrocer": "Greengrocer",
+		"butcher": "Butcher",
+		"fishmonger": "Fishmonger",
+		"dairy": "Dairy",
+		"herbalist": "Herbalist",
+		"apothecary": "Apothecary",
+		"alchemist": "Alchemist",
+		"armourer": "Armourer",
+		"bowyer": "Bowyer and Fletcher",
+		"tailor": "Tailor",
+		"cobbler": "Cobbler",
+		"leatherworker": "Tanner and Leatherworker",
+		"stables": "Stables and Farrier",
+		"stockyard": "Stockyard",
+		"hunters_lodge": "Hunter's Lodge",
+		"jeweller": "Jeweller",
+		"gem_cutter": "Gem-cutter",
+		"scribe": "Scribe and Stationer",
+		"bookseller": "Bookseller",
+		"spell_shop": "Scroll and Spell Shop",
+		"enchanter": "Enchanter",
+		"cartographer": "Cartographer",
+		"chandler": "Chandler",
+		"potter": "Potter",
+		"glassblower": "Glassblower",
+		"carpenter": "Carpenter and Lumberyard",
+		"mason": "Mason",
+		"miller": "Mill",
+		"smelter": "Smelter",
+		"shipwright": "Shipwright and Rope-walk",
+		"nursery": "Nursery",
+		"barber": "Barber-surgeon",
+		"bathhouse": "Bathhouse",
+		"brewery": "Brewery",
+		"bank": "Bank and Moneychanger",
+		"pawnbroker": "Pawnbroker",
+		"guild_hall": "Adventurers' Guild Hall",
+		"barracks": "Guard Barracks and Armoury",
+		"shrine": "Shrine"
 	},
 	"service_doors": {
 		"forge": [
@@ -762,6 +802,2264 @@
 						2
 					]
 				}
+			]
+		},
+		"bakery": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "bakehouse",
+					"name": "Bakehouse",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "flour_store",
+					"name": "Flour store",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "bakehouse",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "flour_store",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"greengrocer": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "cold_cellar",
+					"name": "Cold cellar",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "cart_shed",
+					"name": "Cart shed",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "cold_cellar",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "cart_shed",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"butcher": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "cold_room",
+					"name": "Cold room",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "smokehouse",
+					"name": "Smokehouse",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "cold_room",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "smokehouse",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"fishmonger": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "ice_cellar",
+					"name": "Ice cellar",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "salt_room",
+					"name": "Salt room",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "ice_cellar",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "salt_room",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"dairy": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "cool_room",
+					"name": "Cool room",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "cheese_cellar",
+					"name": "Cheese cellar",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "cool_room",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "cheese_cellar",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"herbalist": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "drying_loft",
+					"name": "Drying loft",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "still_room",
+					"name": "Still room",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "drying_loft",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "still_room",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"apothecary": {
+			"rooms": [
+				{
+					"id": "dispensary",
+					"name": "Dispensary",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "back_room",
+					"name": "Back room",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "storeroom",
+					"name": "Storeroom",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "dispensary",
+					"to": "back_room",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "dispensary",
+					"to": "storeroom",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"alchemist": {
+			"rooms": [
+				{
+					"id": "laboratory",
+					"name": "Laboratory",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "reagent_store",
+					"name": "Reagent store",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "cellar",
+					"name": "Cellar",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "laboratory",
+					"to": "reagent_store",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "laboratory",
+					"to": "cellar",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"armourer": {
+			"rooms": [
+				{
+					"id": "fitting_hall",
+					"name": "Fitting hall",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "workshop",
+					"name": "Workshop",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "store",
+					"name": "Store",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "fitting_hall",
+					"to": "workshop",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "fitting_hall",
+					"to": "store",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"bowyer": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "workshop",
+					"name": "Workshop",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "seasoning_loft",
+					"name": "Seasoning loft",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "workshop",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "seasoning_loft",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"tailor": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "cutting_room",
+					"name": "Cutting room",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "fabric_store",
+					"name": "Fabric store",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "cutting_room",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "fabric_store",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"cobbler": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "workbench",
+					"name": "Workbench",
+					"rect": [
+						-3,
+						2,
+						6,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "workbench",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"leatherworker": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "curing_yard",
+					"name": "Curing yard",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "vat_house",
+					"name": "Vat house",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "curing_yard",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "vat_house",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"stables": {
+			"rooms": [
+				{
+					"id": "stable_yard",
+					"name": "Stable yard",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "tack_room",
+					"name": "Tack room",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "hayloft",
+					"name": "Hayloft",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "stable_yard",
+					"to": "tack_room",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "stable_yard",
+					"to": "hayloft",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"stockyard": {
+			"rooms": [
+				{
+					"id": "pens",
+					"name": "Pens",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "feed_store",
+					"name": "Feed store",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "drover_s_hut",
+					"name": "Drover's hut",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "pens",
+					"to": "feed_store",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "pens",
+					"to": "drover_s_hut",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"hunters_lodge": {
+			"rooms": [
+				{
+					"id": "lodge_hall",
+					"name": "Lodge hall",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "skinning_shed",
+					"name": "Skinning shed",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "larder",
+					"name": "Larder",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "lodge_hall",
+					"to": "skinning_shed",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "lodge_hall",
+					"to": "larder",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"jeweller": {
+			"rooms": [
+				{
+					"id": "showroom",
+					"name": "Showroom",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "workshop",
+					"name": "Workshop",
+					"rect": [
+						-3,
+						2,
+						6,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "showroom",
+					"to": "workshop",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"gem_cutter": {
+			"rooms": [
+				{
+					"id": "cutting_room",
+					"name": "Cutting room",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "polishing_bay",
+					"name": "Polishing bay",
+					"rect": [
+						-3,
+						2,
+						6,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "cutting_room",
+					"to": "polishing_bay",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"scribe": {
+			"rooms": [
+				{
+					"id": "scriptorium",
+					"name": "Scriptorium",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "archive",
+					"name": "Archive",
+					"rect": [
+						-3,
+						2,
+						6,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "scriptorium",
+					"to": "archive",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"bookseller": {
+			"rooms": [
+				{
+					"id": "reading_room",
+					"name": "Reading room",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "stacks",
+					"name": "Stacks",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "rare_room",
+					"name": "Rare room",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "reading_room",
+					"to": "stacks",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "reading_room",
+					"to": "rare_room",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"spell_shop": {
+			"rooms": [
+				{
+					"id": "scroll_room",
+					"name": "Scroll room",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "component_store",
+					"name": "Component store",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "study",
+					"name": "Study",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "scroll_room",
+					"to": "component_store",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "scroll_room",
+					"to": "study",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"enchanter": {
+			"rooms": [
+				{
+					"id": "parlour",
+					"name": "Parlour",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "binding_room",
+					"name": "Binding room",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "vault",
+					"name": "Vault",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "parlour",
+					"to": "binding_room",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "parlour",
+					"to": "vault",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"cartographer": {
+			"rooms": [
+				{
+					"id": "chart_room",
+					"name": "Chart room",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "drafting_room",
+					"name": "Drafting room",
+					"rect": [
+						-3,
+						2,
+						6,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "chart_room",
+					"to": "drafting_room",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"chandler": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "dipping_room",
+					"name": "Dipping room",
+					"rect": [
+						-3,
+						2,
+						6,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "dipping_room",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"potter": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "kiln_yard",
+					"name": "Kiln yard",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "clay_store",
+					"name": "Clay store",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "kiln_yard",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "clay_store",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		},
+		"glassblower": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "furnace_room",
+					"name": "Furnace room",
+					"rect": [
+						-3,
+						2,
+						6,
+						2
+					]
+				},
+				{
+					"id": "annealing_bay",
+					"name": "Annealing bay",
+					"rect": [
+						4,
+						-2,
+						3,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "furnace_room",
+					"at": [
+						0,
+						1
+					]
+				},
+				{
+					"from": "shop_floor",
+					"to": "annealing_bay",
+					"at": [
+						3,
+						-1
+					]
+				}
+			]
+		},
+		"carpenter": {
+			"rooms": [
+				{
+					"id": "workshop",
+					"name": "Workshop",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "timber_yard",
+					"name": "Timber yard",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "joinery",
+					"name": "Joinery",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "workshop",
+					"to": "timber_yard",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "workshop",
+					"to": "joinery",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"mason": {
+			"rooms": [
+				{
+					"id": "masons_yard",
+					"name": "Masons' yard",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "carving_shed",
+					"name": "Carving shed",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "store",
+					"name": "Store",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "masons_yard",
+					"to": "carving_shed",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "masons_yard",
+					"to": "store",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"miller": {
+			"rooms": [
+				{
+					"id": "mill_floor",
+					"name": "Mill floor",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "grain_loft",
+					"name": "Grain loft",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "meal_store",
+					"name": "Meal store",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "mill_floor",
+					"to": "grain_loft",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "mill_floor",
+					"to": "meal_store",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"smelter": {
+			"rooms": [
+				{
+					"id": "furnace_hall",
+					"name": "Furnace hall",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "casting_floor",
+					"name": "Casting floor",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "ore_store",
+					"name": "Ore store",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "furnace_hall",
+					"to": "casting_floor",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "furnace_hall",
+					"to": "ore_store",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"shipwright": {
+			"rooms": [
+				{
+					"id": "boat_shed",
+					"name": "Boat shed",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "rope_walk",
+					"name": "Rope-walk",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "sail_loft",
+					"name": "Sail loft",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "boat_shed",
+					"to": "rope_walk",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "boat_shed",
+					"to": "sail_loft",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"nursery": {
+			"rooms": [
+				{
+					"id": "greenhouse",
+					"name": "Greenhouse",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "potting_shed",
+					"name": "Potting shed",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "seed_store",
+					"name": "Seed store",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "greenhouse",
+					"to": "potting_shed",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "greenhouse",
+					"to": "seed_store",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"barber": {
+			"rooms": [
+				{
+					"id": "shop_floor",
+					"name": "Shop floor",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "surgery",
+					"name": "Surgery",
+					"rect": [
+						-3,
+						2,
+						6,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shop_floor",
+					"to": "surgery",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"bathhouse": {
+			"rooms": [
+				{
+					"id": "entrance_hall",
+					"name": "Entrance hall",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "bathing_hall",
+					"name": "Bathing hall",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "boiler_room",
+					"name": "Boiler room",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "entrance_hall",
+					"to": "bathing_hall",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "entrance_hall",
+					"to": "boiler_room",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"brewery": {
+			"rooms": [
+				{
+					"id": "taproom",
+					"name": "Taproom",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "brewhouse",
+					"name": "Brewhouse",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "cellar",
+					"name": "Cellar",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "taproom",
+					"to": "brewhouse",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "taproom",
+					"to": "cellar",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"bank": {
+			"rooms": [
+				{
+					"id": "counting_hall",
+					"name": "Counting hall",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "strongroom",
+					"name": "Strongroom",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "clerks_office",
+					"name": "Clerks' office",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "counting_hall",
+					"to": "strongroom",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "counting_hall",
+					"to": "clerks_office",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"pawnbroker": {
+			"rooms": [
+				{
+					"id": "counter_room",
+					"name": "Counter room",
+					"rect": [
+						-3,
+						-2,
+						6,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "back_room",
+					"name": "Back room",
+					"rect": [
+						-3,
+						2,
+						6,
+						3
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "counter_room",
+					"to": "back_room",
+					"at": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		"guild_hall": {
+			"rooms": [
+				{
+					"id": "guild_hall",
+					"name": "Guild hall",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "quartermaster_s_store",
+					"name": "Quartermaster's store",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "trophy_room",
+					"name": "Trophy room",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "guild_hall",
+					"to": "quartermaster_s_store",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "guild_hall",
+					"to": "trophy_room",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"barracks": {
+			"rooms": [
+				{
+					"id": "armoury",
+					"name": "Armoury",
+					"rect": [
+						-4,
+						-2,
+						8,
+						4
+					],
+					"entrance": true
+				},
+				{
+					"id": "guardroom",
+					"name": "Guardroom",
+					"rect": [
+						-4,
+						3,
+						4,
+						2
+					]
+				},
+				{
+					"id": "bunk_room",
+					"name": "Bunk room",
+					"rect": [
+						5,
+						-2,
+						3,
+						4
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "armoury",
+					"to": "guardroom",
+					"at": [
+						-2,
+						2
+					]
+				},
+				{
+					"from": "armoury",
+					"to": "bunk_room",
+					"at": [
+						4,
+						0
+					]
+				}
+			]
+		},
+		"shrine": {
+			"rooms": [
+				{
+					"id": "shrine_hall",
+					"name": "Shrine hall",
+					"rect": [
+						-2,
+						-1,
+						4,
+						3
+					],
+					"entrance": true
+				},
+				{
+					"id": "vestry",
+					"name": "Vestry",
+					"rect": [
+						3,
+						-1,
+						4,
+						3
+					]
+				},
+				{
+					"id": "crypt",
+					"name": "Crypt",
+					"rect": [
+						-2,
+						3,
+						4,
+						2
+					]
+				}
+			],
+			"doors": [
+				{
+					"from": "shrine_hall",
+					"to": "vestry",
+					"at": [
+						2,
+						0
+					]
+				},
+				{
+					"from": "shrine_hall",
+					"to": "crypt",
+					"at": [
+						0,
+						2
+					]
+				}
+			]
+		}
+	},
+	"town_doors": {
+		"hearthmere": {
+			"stables": [
+				-5,
+				-12
+			],
+			"miller": [
+				8,
+				2
+			],
+			"stockyard": [
+				-9,
+				1
+			],
+			"carpenter": [
+				-10,
+				16
+			],
+			"nursery": [
+				-24,
+				-5
+			],
+			"hunters_lodge": [
+				7,
+				17
+			],
+			"bakery": [
+				-14,
+				-13
+			],
+			"greengrocer": [
+				4,
+				-17
+			],
+			"apothecary": [
+				11,
+				-17
+			],
+			"bowyer": [
+				3,
+				22
+			],
+			"tailor": [
+				22,
+				11
+			],
+			"leatherworker": [
+				25,
+				0
+			],
+			"potter": [
+				-14,
+				21
+			],
+			"butcher": [
+				-1,
+				9
+			],
+			"dairy": [
+				-15,
+				7
+			],
+			"herbalist": [
+				-3,
+				23
+			],
+			"cobbler": [
+				-26,
+				3
+			],
+			"chandler": [
+				19,
+				22
+			],
+			"barber": [
+				23,
+				17
+			]
+		},
+		"kingshold": {
+			"guild_hall": [
+				-5,
+				-12
+			],
+			"bathhouse": [
+				9,
+				0
+			],
+			"bank": [
+				-14,
+				2
+			],
+			"barracks": [
+				-10,
+				16
+			],
+			"armourer": [
+				7,
+				17
+			],
+			"alchemist": [
+				-22,
+				2
+			],
+			"spell_shop": [
+				-25,
+				-5
+			],
+			"enchanter": [
+				22,
+				12
+			],
+			"bakery": [
+				4,
+				-17
+			],
+			"greengrocer": [
+				-14,
+				-13
+			],
+			"apothecary": [
+				2,
+				22
+			],
+			"tailor": [
+				11,
+				-17
+			],
+			"bookseller": [
+				24,
+				0
+			],
+			"jeweller": [
+				-1,
+				9
+			],
+			"scribe": [
+				-14,
+				21
+			]
+		},
+		"ironford": {
+			"guild_hall": [
+				-5,
+				-12
+			],
+			"bathhouse": [
+				9,
+				0
+			],
+			"brewery": [
+				-15,
+				1
+			],
+			"carpenter": [
+				-9,
+				16
+			],
+			"mason": [
+				-24,
+				-5
+			],
+			"smelter": [
+				-24,
+				3
+			],
+			"armourer": [
+				7,
+				19
+			],
+			"hunters_lodge": [
+				24,
+				13
+			],
+			"bakery": [
+				1,
+				-19
+			],
+			"greengrocer": [
+				11,
+				-17
+			],
+			"leatherworker": [
+				-14,
+				-13
+			],
+			"butcher": [
+				-7,
+				1
+			],
+			"gem_cutter": [
+				-1,
+				10
+			],
+			"pawnbroker": [
+				-15,
+				7
+			],
+			"shrine": [
+				-2,
+				23
+			]
+		},
+		"brinehaven": {
+			"shipwright": [
+				9,
+				1
+			],
+			"brewery": [
+				-4,
+				-12
+			],
+			"barracks": [
+				-10,
+				1
+			],
+			"miller": [
+				-10,
+				16
+			],
+			"carpenter": [
+				-13,
+				-12
+			],
+			"armourer": [
+				7,
+				17
+			],
+			"glassblower": [
+				-19,
+				1
+			],
+			"bakery": [
+				-16,
+				6
+			],
+			"greengrocer": [
+				4,
+				-17
+			],
+			"fishmonger": [
+				2,
+				22
+			],
+			"apothecary": [
+				11,
+				-17
+			],
+			"tailor": [
+				24,
+				0
+			],
+			"leatherworker": [
+				-23,
+				-5
+			],
+			"cartographer": [
+				22,
+				11
+			],
+			"butcher": [
+				-1,
+				10
+			],
+			"scribe": [
+				-25,
+				3
+			],
+			"chandler": [
+				19,
+				22
+			],
+			"barber": [
+				22,
+				17
+			],
+			"pawnbroker": [
+				-14,
+				21
 			]
 		}
 	}

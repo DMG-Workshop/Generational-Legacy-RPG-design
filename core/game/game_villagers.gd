@@ -120,6 +120,8 @@ static func spot(b: Dictionary, i: int, hour: float, night: bool) -> Dictionary:
 ## Whether resident `i` of `b` is indoors at `hour`: a house's residents go to work by day (`jobs` in villagers.json) and are in
 ## their houses the rest of the time; a service person is always in. Needs the dynasty for the way (the land's trees and water).
 static func present(d: GameDynasty, b: Dictionary, i: int, hour: float) -> bool:
+	if str(b["kind"]) != "house":
+		return GameShops.open_at(str(b["kind"]), hour)   # a shop's keeper is in by its opening hours, gone when it is shut
 	var trip := trip_of(d, b, i)
 	if trip.is_empty():
 		return true

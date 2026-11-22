@@ -61,6 +61,8 @@ static func talk(d: GameDynasty, space_id: String, p: Dictionary) -> Dictionary:
 	var service := str(GameSpaces.space(space_id).get("service", ""))
 	if not here or service == "" or not d.world.has_service(service):
 		return {"ok": true, "text": text("only_talk", {"name": str(p["name"])}), "open": "", "tab": ""}
+	if GameShops.is_shop(service) and not GameShops.is_open(d, service):
+		return {"ok": true, "text": text("shut", {"name": str(p["name"]), "shop": GameShops.name_of(service), "open": GameShops.opens_text(service)}), "open": "", "tab": ""}
 	return {"ok": true, "text": text("talk", {"greet": str(p["greet"])}), "open": str(p["open"]), "tab": str(p["tab"])}
 
 
@@ -72,7 +74,7 @@ static func validate() -> Array:
 			bad.append("people.json: %s is missing" % k)
 	if not bad.is_empty():
 		return bad
-	for k in ["talk", "only_talk", "near", "nobody"]:
+	for k in ["talk", "only_talk", "near", "nobody", "shut"]:
 		if not dat["text"].has(k):
 			bad.append("people.json: text.%s is missing" % k)
 	var seen := {}
@@ -92,7 +94,7 @@ static func validate() -> Array:
 		layouts[str(p["layout"])] = true
 		if str(p["open"]) not in OPENS:
 			bad.append("people.json: '%s' opens '%s', which is not one of %s" % [id, p["open"], str(OPENS)])
-		if str(p["open"]) == "shop" and str(p["tab"]) not in ["forge", "store", "temple", "black_market"]:
+		if str(p["open"]) == "shop" and str(p["tab"]) not in ["forge", "store", "temple", "black_market"] and not GameShops.is_shop(str(p["tab"])):
 			bad.append("people.json: '%s' opens a shop tab '%s' that does not exist" % [id, p["tab"]])
 		if not GameSpaces.data()["rooms"].has(str(p["layout"])):
 			bad.append("people.json: '%s' stands in no known layout" % id)

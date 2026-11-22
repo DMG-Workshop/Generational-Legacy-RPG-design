@@ -85,6 +85,12 @@ func _test_every_item_obtainable() -> void:
 		for s in GameItems.shops_here(d):
 			for id in GameItems.stock(d, s):
 				found[id] = "shop"
+	for sh in GameShops.ids():   # the shops of data/shops/shops.json sell what their pools name or match
+		for pool in GameShops.def(str(sh))["stock"]:
+			if str(pool["type"]) == "items":
+				for id in GameData.items:
+					if GameShopStock.item_fits(pool, str(id), 9, "") or GameShopStock.item_fits(pool, str(id), 9, "spring") or GameShopStock.item_fits(pool, str(id), 9, "autumn"):
+						found[id] = "generated shelf"
 	for q in GameData.quests:
 		for id in q["reward"].get("items", []):
 			found[id] = "quest"

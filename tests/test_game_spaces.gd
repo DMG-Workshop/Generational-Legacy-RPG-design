@@ -118,7 +118,7 @@ func test_interiors() -> void:
 				on_ground = false
 			elif not GameWorldGen.in_anchor_ground(int(s["door"]["x"]), int(s["door"]["z"])) or (int(s["door"]["x"]) == int(a["x"]) and int(s["door"]["z"]) == int(a["z"])):
 				on_ground = false
-	ok(count == 21 and on_ground, "each town's services are interiors of the town (%d), each with a door on the town's cleared ground" % count)
+	ok(count == 21 + 68 and on_ground, "each town's services are interiors of the town (%d), each with a door on the town's cleared ground" % count)
 	ok(GameSpaces.space("world/hearthmere/forge")["name"] == "Forge" and GameSpaces.space("world/kingshold/black_market")["name"] == "Black market", "they are named for what they are")
 	ok(GameSpaces.of_service("hearthmere", "black_market") == "" and GameSpaces.of_service("greenvale", "forge") == "", "a town has only its own services, and the wilds none")
 	var house := GameSpaces.space(GameSpaces.house())
@@ -128,7 +128,7 @@ func test_interiors() -> void:
 	for id in GameSpaces.children("world/hearthmere"):
 		var t := GameSpaces.map_tile(str(id))
 		doors["%d,%d" % [t.x, t.y]] = true
-	ok(doors.size() == GameSpaces.children("world/hearthmere").size() and GameSpaces.children("world/hearthmere").size() == 6, "Hearthmere's five services and the house have six different doors")
+	ok(doors.size() == GameSpaces.children("world/hearthmere").size() and GameSpaces.children("world/hearthmere").size() == GameWorld.place("hearthmere")["services"].size() + 1, "Hearthmere's services and the house have different doors")
 	ok(GameSpaces.chain("world/hearthmere/forge") == ["world/hearthmere/forge", "world/hearthmere", "world"], "the forge is in the town, which is in the world")
 	ok(GameSpaces.place_of("world/hearthmere/forge") == "hearthmere" and GameSpaces.place_of("world") == "", "an interior belongs to its town's place")
 
@@ -144,7 +144,7 @@ func test_map() -> void:
 	ok(GameSpaces.map_tile("world/hearthmere/forge") == h + Vector2i(-9, -6), "the forge's door is 9 west and 6 north of Hearthmere's middle")
 	ok(GameSpaces.map_tile("world") == Vector2i(-1, -1) and GameSpaces.map_tile("nowhere") == Vector2i(-1, -1), "the open world itself, and a space that does not exist, are nowhere on it")
 	ok(GameSpaces.at_tile(h.x, h.y) == "world/hearthmere" and GameSpaces.at_tile(h.x + 5, h.y - 5) == "world/hearthmere", "a tile on a town's ground is in the town")
-	ok(GameSpaces.at_tile(h.x + 30, h.y) == "world", "one well outside it is in the open world")
+	ok(GameSpaces.at_tile(h.x + 40, h.y) == "world", "one well outside it is in the open world")
 	var g := GameSpaces.map_tile("world/greenvale")
 	ok(GameSpaces.at_tile(g.x, g.y) == "world", "the wilds have no bounded ground: a tile there is the open world's")
 	ok(GameSpaces.tiles_between(Vector2i(0, 0), Vector2i(3, 4)) == 5, "tiles are counted as the crow flies")
@@ -206,9 +206,9 @@ func test_agreement() -> void:
 	var town := GameSpaces.map_tile("world/hearthmere")
 	var plot := GameWorldGen.plot("hearthmere")
 	ok(Vector2i(int(base["x"]), int(base["z"])) == Vector2i(int(plot["x"]), int(plot["z"])), "the family's building ground is the homestead plot beside the home town")
-	ok(Vector2(float(town.x) - float(base["x"]), float(town.y) - float(base["z"])).length() <= 70.0, "within a short walk of the home town's tile (beyond its own ground)")
+	ok(Vector2(float(town.x) - float(base["x"]), float(town.y) - float(base["z"])).length() <= 90.0, "within a short walk of the home town's tile (beyond its own ground)")
 	var house := GameSpaces.map_tile(GameSpaces.house())
-	ok(GameBuild.in_claim(d, int(base["x"]), int(base["z"])) and house.distance_to(Vector2(float(base["x"]), float(base["z"]))) < 90.0, "and the family house's door is a walk from it")
+	ok(GameBuild.in_claim(d, int(base["x"]), int(base["z"])) and house.distance_to(Vector2(float(base["x"]), float(base["z"]))) < 110.0, "and the family house's door is a walk from it")
 	for id in ["world/hearthmere", "world/ironford", "world/kingshold", "world/brinehaven"]:
 		var t := GameSpaces.map_tile(id)
 		var tile := GameWorldGen.tile(d, t.x, t.y)
