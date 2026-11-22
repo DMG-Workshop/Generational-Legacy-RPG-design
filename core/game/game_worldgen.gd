@@ -341,8 +341,8 @@ static func in_anchor_ground(x: int, z: int) -> bool:
 ## water, and never on a town's or dungeon's cleared ground. An outcrop is shown only where the mining ground has ore
 ## within a few cells of the surface, and its material is that ore.
 static func node_at(d: GameDynasty, x: int, z: int, biome: String, water: bool) -> Dictionary:
-	if water or biome == "ocean" or in_anchor_ground(x, z):
-		return {}
+	if water or biome == "ocean" or in_anchor_ground(x, z) or GameWalls.cleared(x, z):
+		return {}   # (a town's wall and the way through each of its gates are free of trees too)
 	var seed_value := d.seed_value
 	var table: Dictionary = data()["biomes"][biome]["nodes"]
 	var total := 0.0

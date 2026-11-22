@@ -15,6 +15,7 @@ const ShopPanel := preload("res://ui/play/shop_panel.gd")
 const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
+const TalkPanel := preload("res://ui/play/talk_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
 const BAR := 56.0
@@ -46,6 +47,10 @@ var piece_button: Button
 var level_button: Button
 var last_line := ""
 var _walk_wait := 0.0
+var _greet_wait := 0.0
+var _bubbles := {}        # a person's id -> {text, until (msec)}: what they just said, over their head
+var _bubble_pos := {}     # a person's id -> where their head was drawn last (screen)
+var _banners := {}        # place -> the colour of its gate guards and banners
 var _tick_wait := 0.0
 var _save_wait := 0.0
 var _press := Vector2.ZERO
@@ -179,6 +184,13 @@ func _process(delta: float) -> void:
 		stepped = true
 	if stepped:
 		cam = Vector2.ZERO   # the view follows the heir while they walk
+	_greet_wait -= delta
+	if sb.space == "world" and mode == "walk" and (stepped or _greet_wait <= 0.0):
+		_greet_wait = 1.0
+		var g := sb.greeting()   # someone in the town may call out (never in a fight or with a panel open: both return above)
+		if not g.is_empty():
+			_say(str(g["who"]["id"]), str(g["text"]))
+			last_line = str(g["line"])
 	if not sb.dirty.is_empty():
 		for c in sb.dirty:
 			tile_view.refresh_cell(int(c.x), int(c.y))   # a node gathered, a shaft dug: its tile looks different
@@ -353,8 +365,28 @@ func _use() -> void:
 		_open_workshop(str(r.get("forge", "")))
 	elif str(r.get("open", "")) in ["shop", "tavern", "board"]:
 		_open_service(str(r["open"]), str(r.get("tab", "")))
+	elif r.has("who") and not (r["who"] as Dictionary).is_empty():
+		_say(str(r["who"]["id"]), str(r.get("bare", "")))   # a villager answered: their words show over their head
+		if not (r["choices"] as Array).is_empty():
+			_open_talk(r)
 	_refresh_status()
 	queue_redraw()
+
+
+## Puts words over a person's head for a few seconds.
+func _say(id: String, said: String) -> void:
+	_bubbles[id] = {"text": said, "until": Time.get_ticks_msec() + int(float(GameTalk.setting("bubble_seconds")) * 1000.0)}
+
+
+## A short conversation with a villager over the map: the world waits while it is open.
+func _open_talk(r: Dictionary) -> void:
+	var panel: Control = TalkPanel.new()
+	panel.dynasty = app.dynasty
+	panel.who = r["who"]
+	panel.first = str(r.get("bare", ""))
+	panel.on_say = func(line: String): last_line = line
+	panel.set_meta("modal", true)
+	add_child(panel)
 
 
 ## Up or down the stairs the heir stands at (`GameSandbox.climb`); the line says why not.
@@ -621,6 +653,9 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	var half := area / (2.0 * cell) + Vector2(3, 3)
 	var view := Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0))
 	var items: Array = []   # [depth, kind, thing]
+	_bubble_pos.clear()
+	for p in GameWalls.pieces_in(Rect2i(view.position.x - 2, view.position.y - 5, view.size.x + 4, view.size.y + 10)):
+		items.append([float(int(p["z"]) + 1) + (0.5 if str(p["k"]) == "gate" else 0.0), "wall", p])
 	for b in GameTown.in_rect(view):
 		items.append([float(b["z"] + b["h"]), "building", b])
 	for w in GameVillagers.walkers_near(d, centre.x, centre.y, half.length(), GameDay.hour(d)):
@@ -643,12 +678,16 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_texture_rect(inside, box, false, dim)
 					_paint_residents(c, b, at, cell, dim)
 				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"]), GameVillagers.door_scale(b)), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
+			"wall":
+				_paint_wall(c, it[2], origin, area, centre, cell, dim)
 			"villager":
 				var w: Dictionary = it[2]
 				var p := origin + (Vector2(float(w["x"]), float(w["z"])) - centre) * cell + area * 0.5
 				var tex := _villager_tex(w)
 				if tex != null:
-					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * float(w["scale"]), _villager_flip(w, int(w["dx"]) < 0), dim, cell)
+					var fs := _figure_size(tex, cell) * float(w["scale"])
+					_stand(c, tex, p + Vector2(0, cell * 0.3), fs, _villager_flip(w, int(w["dx"]) < 0), dim, cell)
+					_bubble_pos[str(w["id"])] = p + Vector2(0, cell * 0.3 - fs.y)
 			"creature":
 				var a: Dictionary = it[2]
 				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
@@ -679,6 +718,54 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 				else:
 					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
+	_paint_bubbles(c)
+
+
+## One piece of a town's wall: a wall, a tower, the tower by a gate (with the town's banner), or the arch or beam over a gate's passage
+## (high above the ground, so a walker goes under it). A piece fades while the heir stands behind it, so they are never lost.
+func _paint_wall(c: Control, p: Dictionary, origin: Vector2, area: Vector2, centre: Vector2, cell: float, dim: Color) -> void:
+	var k := str(p["k"])
+	var x := int(p["x"])
+	var z := int(p["z"])
+	var tex: Texture2D
+	var top: float
+	if k == "gate":
+		var ns := str(p["a"]) == "ns"
+		tex = WallArt.texture("arch" if ns else "beam", int(p["i"]) if ns else (x + z) % 2)
+		top = float(z + 1) - float(WallArt.data()["lintel_height"]) - WallArt.tiles_tall("arch")
+	else:
+		tex = WallArt.texture(k, (x + z) % 2, _banner(str(p["p"])))
+		top = float(z + 1) - WallArt.tiles_tall(k)
+	var a := WallArt.fade(Vector2i(x, z), k, Vector2(float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5)) if k != "gate" else 1.0
+	var at := origin + (Vector2(float(x), top) - centre) * cell + area * 0.5
+	c.draw_texture_rect(tex, Rect2(at, Vector2(cell, tex.get_height() * cell / 16.0)), false, Color(dim.r, dim.g, dim.b, a))
+
+
+func _banner(place: String) -> Color:
+	if not _banners.has(place):
+		_banners[place] = Color.html(str(GameVillagers.data()["guards"]["colors"].get(place, "#b8403a")))
+	return _banners[place]
+
+
+## What people have just said, in a bubble over their heads (a few seconds; one line each, the longest wrapped).
+func _paint_bubbles(c: Control) -> void:
+	var now := Time.get_ticks_msec()
+	var font := ThemeDB.fallback_font
+	for id in _bubbles.keys():
+		var b: Dictionary = _bubbles[id]
+		if int(b["until"]) < now:
+			_bubbles.erase(id)
+			continue
+		if not _bubble_pos.has(id):
+			continue
+		var head: Vector2 = _bubble_pos[id]
+		var line := str(b["text"])
+		var width := 200.0
+		var sz := font.get_multiline_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, width, 13)
+		var box := Rect2(head + Vector2(-sz.x * 0.5 - 6.0, -sz.y - 16.0), sz + Vector2(12.0, 8.0))
+		c.draw_style_box(Kit.style(Color(0.96, 0.94, 0.86, 0.95), 6, Color(0.1, 0.09, 0.14)), box)
+		c.draw_colored_polygon(PackedVector2Array([head + Vector2(-4, -8), head + Vector2(4, -8), head + Vector2(0, -2)]), Color(0.96, 0.94, 0.86, 0.95))
+		c.draw_multiline_string(font, box.position + Vector2(6.0, 4.0 + 13.0), line, HORIZONTAL_ALIGNMENT_LEFT, width, 13, -1, Color(0.1, 0.09, 0.14))
 
 
 ## Makes the figures of everyone who may be drawn now, together: the villagers, the heir and the companions (a figure first made while
@@ -691,6 +778,9 @@ func _warm_figures() -> void:
 		_party_figure(str(m["id"]))
 	for b in GameTown.all():
 		for r in GameVillagers.residents(b):
+			_villager_tex(r)
+	for g in GameWalls.all_gates():
+		for r in GameVillagers.guards(g):
 			_villager_tex(r)
 	SpriteArt.end_batch()
 
@@ -728,7 +818,10 @@ func _paint_residents(c: Control, b: Dictionary, at: Vector2, cell: float, dim: 
 			c.draw_texture_rect(tex, Rect2(-box * 0.5, box), false, dim)
 			c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		else:
-			_stand(c, tex, at + (Vector2(cellv) + Vector2(0.5, 0.85)) * cell, _figure_size(tex, cell) * float(r["scale"]), _villager_flip(r, false), dim, cell)
+			var rs := _figure_size(tex, cell) * float(r["scale"])
+			var feet := at + (Vector2(cellv) + Vector2(0.5, 0.85)) * cell
+			_stand(c, tex, feet, rs, _villager_flip(r, false), dim, cell)
+			_bubble_pos[str(r["id"])] = feet - Vector2(0, rs.y)
 
 
 ## Whether a creature or companion last moved to the east: it faces the way it last went (kept per key, for the look only).

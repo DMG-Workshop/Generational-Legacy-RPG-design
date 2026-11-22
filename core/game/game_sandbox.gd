@@ -283,6 +283,12 @@ func use() -> Dictionary:
 		return leave()
 	if door_here() != "":
 		return enter()
+	if storey() == 0:
+		var who := GameTalk.beside(d, heir, GameDay.hour(d))
+		if not who.is_empty():
+			var t := GameTalk.talk(d, who, GameDay.hour(d))
+			log.append({"kind": "talk", "text": str(t["text"])})
+			return t
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty():
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
@@ -298,6 +304,27 @@ func use() -> Dictionary:
 				log.append({"kind": "rest", "text": str(m)})
 			return {"ok": true, "text": str(msgs[0]) if not msgs.is_empty() else ""}
 	return {"ok": false, "text": GameBuild.text("nothing_to_use")}
+
+
+## The people who have spoken first today (their id -> the day) and when anyone last did (the world clock's seconds): runtime only,
+## so a new visit may be greeted again. The decision itself is GameTalk's, a pure function of the seed, the person, the day and the tile.
+var talk_seen := {}
+var talk_last := GameTalk.NEVER
+
+
+## Someone out in the town calls out to the heir (GameTalk.greeting): {who, text (their words), line (with their job), offers} and the
+## greeting is noted, or {} when nobody does. Never indoors, upstairs, in a fight or with the heir fallen; the screen also holds it off
+## while a panel is open.
+func greeting() -> Dictionary:
+	if space != "world" or storey() > 0 or d.battle != null or d.state != "life":
+		return {}
+	var g := GameTalk.greeting(d, heir, GameDay.hour(d), talk_seen, talk_last)
+	if g.is_empty():
+		return {}
+	talk_seen[str(g["who"]["id"])] = GameDay.day_number(d)
+	talk_last = GameDay.seconds(d)
+	log.append({"kind": "talk", "text": str(g["line"])})
+	return g
 
 
 ## Climbs from where the heir stands: `dir` -1 up (the cell must be stairs and the one above something to stand on), +1 down
