@@ -177,7 +177,7 @@ static func trip_of(d: GameDynasty, b: Dictionary, i: int) -> Dictionary:
 		var id := str(residents(b)[i]["id"])
 		var from: Vector2i = b["door"]
 		var anchor := GameWorldGen.anchor(str(b["place"]))
-		var ground := GamePath.world_ground(d, {})
+		var ground := GamePath.world_ground(d, {}, GameWorldGen.MINE_SITE, false)
 		var legs: Array = []   # the places the way runs through, after the home door
 		var work := str(job["work"])
 		if work == "field":

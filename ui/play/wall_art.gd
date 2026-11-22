@@ -31,6 +31,8 @@ static func tiles_tall(kind: String) -> float:
 			return float(data()["wall_tiles"])
 		"tower", "jamb":
 			return float(data()["tower_tiles"])
+	if kind == "leaf":
+		return float(data()["lintel_height"])   # a shut gate fills the passage up to the lintel
 	return float(data()["lintel_tiles"]) if kind in ["arch", "beam"] else 1.0
 
 
@@ -127,6 +129,14 @@ static func image(kind: String, variant: int = 0, banner: Color = Color.WHITE) -
 						img.set_pixel(x, y, Color(0, 0, 0, 0))
 						if gy < -13.0 and (int(gx) + 100) % 3 == 0:
 							img.set_pixel(x, y, _c("iron"))
+		"leaf":
+			# the shut gate: planks from the ground to the lintel, held by two iron bands
+			var wood := [_c("pole"), _c("pole").darkened(0.3)]
+			_r(img, 0, 0, TILE, tall, wood[0])
+			for x in range(0, TILE, 4):
+				_r(img, x, 0, 1, tall, wood[1])
+			_r(img, 0, 8, TILE, 2, _c("iron"))
+			_r(img, 0, tall - 12, TILE, 2, _c("iron"))
 		"beam":
 			_top(img, stone, cap, true)
 			_courses(img, 9, tall, variant, stone)

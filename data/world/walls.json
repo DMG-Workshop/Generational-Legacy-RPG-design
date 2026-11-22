@@ -11,6 +11,7 @@
     "max_step": 2,
     "road_angle": 50,
     "min_gates": 2,
+    "shut_at_night": true,
     "check_seeds": [1, 7, 14, 24, 77, 123, 2024]
   },
   "towns": {

@@ -31,6 +31,7 @@ func _run() -> void:
 	test_world_reach()
 	test_creatures_and_heir()
 	test_guards()
+	test_night_gates()
 	test_breaks()
 	test_art()
 	print("walls tests: %d checks, %d failures" % [checks, fails])
@@ -466,6 +467,46 @@ func test_guards() -> void:
 			ok(str(GameVillagers.job_of(b, i).get("id", "")) != "gate_guard", "no house resident draws the post job")
 			break
 	ok(GameVillagers.on_shift(18.0, 6.0, 23.0) and GameVillagers.on_shift(18.0, 6.0, 2.0) and not GameVillagers.on_shift(18.0, 6.0, 12.0), "a night shift runs past midnight")
+
+
+## Sets the dynasty's clock to a night or a day (the seconds of the world clock; the day is `day_seconds` long).
+func _at(d: GameDynasty, night: bool) -> void:
+	var span := float(GameDay.setting("day_seconds"))
+	for i in 48:
+		d.world_seconds = span * float(i) / 48.0
+		if GameDay.is_night(d) == night:
+			return
+
+
+func test_night_gates() -> void:
+	ok(bool(GameWalls.setting("shut_at_night")), "the gates shut by night")
+	var d := _dyn()
+	var g: Dictionary = GameWalls.gates("hearthmere")[1]   # the east gate
+	var c: Vector2i = g["centre"]
+	var inner: Vector2i = g["inner"]
+	var outer: Vector2i = g["outer"]
+	_at(d, false)
+	ok(not GameWalls.shut_now(d), "by day the gates stand open")
+	var day := GamePath.find(GamePath.world_ground(d), Vector3i(inner.x, -1, inner.y), Vector3i(outer.x, -1, outer.y), "walker", 4000)
+	ok(bool(day["found"]), "by day a walker goes out by the gate")
+	_at(d, true)
+	ok(GameWalls.shut_now(d), "by night they are shut")
+	var ground := GamePath.world_ground(d)
+	ok(not GamePath.passable(ground, Vector3i(c.x, -1, c.y), GamePath.data()["movers"]["walker"]), "a shut gate blocks a walker like the wall")
+	var night := GamePath.find(ground, Vector3i(inner.x, -1, inner.y), Vector3i(outer.x, -1, outer.y), "walker", 4000)
+	ok(not bool(night["found"]) or float(night["cost"]) > float(day["cost"]) * 3.0, "by night the way out by that gate is shut (another gate may be far)")
+	var open := GamePath.world_ground(d, null, GameWorldGen.MINE_SITE, false)
+	ok(GamePath.passable(open, Vector3i(c.x, -1, c.y), GamePath.data()["movers"]["walker"]), "villagers' trips are found as if the gates stood open")
+	ok(GamePath.ground_stamp(d) != _stamp_at(d, false), "the path cache is cleared when the gates shut")
+	_at(d, false)
+
+
+func _stamp_at(d: GameDynasty, night: bool) -> int:
+	var was := d.world_seconds
+	_at(d, night)
+	var s := GamePath.ground_stamp(d)
+	d.world_seconds = was
+	return s
 
 
 func test_breaks() -> void:

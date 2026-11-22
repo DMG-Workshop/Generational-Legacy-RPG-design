@@ -743,6 +743,10 @@ func _paint_wall(c: Control, p: Dictionary, origin: Vector2, area: Vector2, cent
 	else:
 		tex = WallArt.texture(k, (x + z) % 2, _banner(str(p["p"])))
 		top = float(z + 1) - WallArt.tiles_tall(k)
+	if k == "gate" and GameWalls.shut_now(app.dynasty):   # the leaves are closed by night
+		var leaf := WallArt.texture("leaf", (x + z) % 2)
+		var lat := origin + (Vector2(float(x), float(z + 1) - WallArt.tiles_tall("leaf")) - centre) * cell + area * 0.5
+		c.draw_texture_rect(leaf, Rect2(lat, Vector2(cell, leaf.get_height() * cell / 16.0)), false, dim)
 	var a := WallArt.fade(Vector2i(x, z), k, Vector2(float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5)) if k != "gate" else 1.0
 	var at := origin + (Vector2(float(x), top) - centre) * cell + area * 0.5
 	c.draw_texture_rect(tex, Rect2(at, Vector2(cell, tex.get_height() * cell / 16.0)), false, Color(dim.r, dim.g, dim.b, a))
