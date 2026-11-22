@@ -299,7 +299,7 @@ static func _move(pos: Vector2, dir: Vector2, dist: float, flier: bool, walkable
 static func world_view(d: GameDynasty, targets: Array, night: bool = false) -> Dictionary:
 	return {"targets": targets, "night": night, "walkable": func(x: float, z: float) -> bool:
 		var t := GameWorldGen.tile(d, int(floor(x)), int(floor(z)))
-		return not t["water"]}
+		return not t["water"] and not GameWalls.blocks(int(floor(x)), int(floor(z)))}
 
 
 # ---------------------------------------------------------------- the data

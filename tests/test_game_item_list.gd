@@ -81,6 +81,8 @@ func test_breaks() -> void:
 func test_items() -> void:
 	var n := 0
 	for id in GameData.items:
+		if GameDungeonLoot.is_unique_found_somewhere(str(id)):
+			continue   # the named items of the dungeons are counted by test_game_dungeon_loot.gd
 		n += 1
 		var m := GameItems.material_of(str(id))
 		ok(GameMaterials.has(m) and GameItems.weight_of(str(id)) > 0.0, "%s has a listed material and a weight" % id)
@@ -109,6 +111,8 @@ func test_queries() -> void:
 	var weapons := 0
 	var metal := 0
 	for id in GameData.items:
+		if GameDungeonLoot.is_unique_found_somewhere(str(id)):
+			continue
 		if GameItems.has_tag(str(id), "weapon"):
 			weapons += 1
 		if GameItems.has_tag(str(id), "metal") and GameItems.has_tag(str(id), "weapon"):

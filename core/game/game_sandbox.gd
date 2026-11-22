@@ -21,6 +21,8 @@ var route: Array = []              # tiles still to walk to (set by set_route), 
 var space := "world"               # where the heir is: the open world, or the id of an interior they have gone into (never saved)
 var outside := Vector2i.ZERO       # the open-world tile to come back to when the heir goes out of an interior
 var interior: Dictionary = {}      # the cells of the interior the heir is in (GameInterior.cells), {} on the open world
+var denizens: Array = []           # the creatures of the dungeon the heir is in (GameBehaviour agents with a key, room and boss flag), never saved
+var fight_foes: Array = []         # the dungeon creatures in the fight now on, for after_fight
 var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
 var offer := {}                    # a trader's pending offer at a landmark of the wilds (GameWildsSites), never saved
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
@@ -168,6 +170,8 @@ func move(dx: int, dz: int) -> Dictionary:
 	heir += Vector2i(dx, dz)
 	_arrive()
 	refresh()
+	if space != "world":
+		_dungeon_arrive()
 	return {"ok": true, "why": ""}
 
 
@@ -254,9 +258,11 @@ func enter() -> Dictionary:
 		return {"ok": false, "text": _text("no_door")}
 	outside = heir
 	space = id
-	interior = cells
+	interior = GameDungeons.walk_cells(id) if GameDungeons.is_dungeon(id) else cells
 	heir = GameInterior.entry()
 	route = []
+	denizens = _spawn_denizens(id) if GameDungeons.is_dungeon(id) else []
+	fight_foes = []
 	var line := _text("entered", {"heir": d.heir.name, "place": str(GameSpaces.space(id).get("name", id)).to_lower()})
 	log.append({"kind": "door", "text": line})
 	return {"ok": true, "text": line}
@@ -270,6 +276,8 @@ func leave() -> Dictionary:
 		return {"ok": false, "text": _text("no_exit")}
 	space = "world"
 	interior = {}
+	denizens = []
+	fight_foes = []
 	heir = outside
 	route = []
 	refresh()
@@ -288,9 +296,22 @@ func use() -> Dictionary:
 				var t := GamePeople.talk(d, space, p)
 				log.append({"kind": "talk", "text": str(t["text"])})
 				return t
+			var thing := GameDungeons.thing_near(space, heir.x, heir.y)
+			if not thing.is_empty():
+				var u := GameDungeons.use_thing(d, space, thing)
+				log.append({"kind": "dungeon", "text": str(u["text"])})
+				for c in u["dirty"]:
+					dirty.append(c)
+				return u
 		return leave()
 	if door_here() != "":
 		return enter()
+	if storey() == 0:
+		var who := GameTalk.beside(d, heir, GameDay.hour(d))
+		if not who.is_empty():
+			var t := GameTalk.talk(d, who, GameDay.hour(d))
+			log.append({"kind": "talk", "text": str(t["text"])})
+			return t
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty():
 		var site := GameWildsSites.near(d, heir.x, heir.y) if storey() == 0 else {}
@@ -312,6 +333,27 @@ func use() -> Dictionary:
 				log.append({"kind": "rest", "text": str(m)})
 			return {"ok": true, "text": str(msgs[0]) if not msgs.is_empty() else ""}
 	return {"ok": false, "text": GameBuild.text("nothing_to_use")}
+
+
+## The people who have spoken first today (their id -> the day) and when anyone last did (the world clock's seconds): runtime only,
+## so a new visit may be greeted again. The decision itself is GameTalk's, a pure function of the seed, the person, the day and the tile.
+var talk_seen := {}
+var talk_last := GameTalk.NEVER
+
+
+## Someone out in the town calls out to the heir (GameTalk.greeting): {who, text (their words), line (with their job), offers} and the
+## greeting is noted, or {} when nobody does. Never indoors, upstairs, in a fight or with the heir fallen; the screen also holds it off
+## while a panel is open.
+func greeting() -> Dictionary:
+	if space != "world" or storey() > 0 or d.battle != null or d.state != "life":
+		return {}
+	var g := GameTalk.greeting(d, heir, GameDay.hour(d), talk_seen, talk_last)
+	if g.is_empty():
+		return {}
+	talk_seen[str(g["who"]["id"])] = GameDay.day_number(d)
+	talk_last = GameDay.seconds(d)
+	log.append({"kind": "talk", "text": str(g["line"])})
+	return g
 
 
 ## Climbs from where the heir stands: `dir` -1 up (the cell must be stairs and the one above something to stand on), +1 down
@@ -371,6 +413,7 @@ func step(ticks: int = 1) -> void:
 	for _i in ticks:
 		tick += 1
 		if space != "world":
+			_dungeon_tick()
 			continue   # the open world is outside: its creatures and companions wait
 		check_footing()
 		var night := GameDay.is_night(d)
@@ -671,7 +714,12 @@ func _escape_tile(from: Vector2) -> Vector2i:
 ## After a fight on the map is over: if it was fled from, the heir gets clear of it now (the record `_contact` made), else
 ## nothing changes. The creatures that fought are put back by the next `refresh`.
 func after_fight() -> void:
-	if d.battle != null or d.sandbox_escape.is_empty():
+	if d.battle != null:
+		return
+	if not fight_foes.is_empty():
+		_after_dungeon_fight()
+		return
+	if d.sandbox_escape.is_empty():
 		return
 	heir = Vector2i(int(d.sandbox_escape["x"]), int(d.sandbox_escape["z"]))
 	d.sandbox_escape = {}
@@ -699,3 +747,141 @@ func _key(x: int, z: int) -> String:
 
 func _text(key: String, vals: Dictionary = {}) -> String:
 	return str(data()["text"][key]).format(vals)
+
+
+# ---------------------------------------------------------------- dungeons
+
+## The creatures of a dungeon as agents (GameDungeons.inhabitants), each with its slot's key, room and boss flag.
+func _spawn_denizens(id: String) -> Array:
+	var out: Array = []
+	for h in GameDungeons.inhabitants(d, id):
+		var a := GameBehaviour.new_agent(next_uid, str(h["creature"]), float(h["x"]) + 0.5, float(h["z"]) + 0.5)
+		a["key"] = str(h["key"])
+		a["room"] = str(h["room"])
+		a["boss"] = bool(h["boss"])
+		next_uid += 1
+		out.append(a)
+	return out
+
+
+## The rooms the heir can be seen from: the one they stand in, or on a door both it joins.
+func _heir_rooms() -> Array:
+	var r := GameInterior.room_at(space, heir.x, heir.y)
+	if r != "":
+		return [r]
+	var out: Array = []
+	for dir in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var n := GameInterior.room_at(space, heir.x + dir.x, heir.y + dir.y)
+		if n != "" and n not in out:
+			out.append(n)
+	return out
+
+
+func _room_walk(room: String, x: int, z: int) -> bool:
+	return GameInterior.passable(interior, x, z) and GameInterior.room_at(space, x, z) == room
+
+
+## A tick in a dungeon: each room's creatures act (GameBehaviour, held inside their room, seeing the heir only when the heir is in
+## or at the door of that room), and a chaser that reaches the heir starts a fight.
+func _dungeon_tick() -> void:
+	if denizens.is_empty() or d.battle != null or d.state != "life":
+		return
+	var by_room := {}
+	for a in denizens:
+		var k := str(a["room"])
+		if not by_room.has(k):
+			by_room[k] = []
+		by_room[k].append(a)
+	var seen_in := _heir_rooms()
+	var next: Array = []
+	for room in by_room:
+		var group: Array = by_room[room]
+		var targets: Array = [{"x": heir_point().x, "z": heir_point().y}] if room in seen_in else []
+		var r: String = room
+		var view := {"targets": targets, "night": false, "walkable": func(x: float, z: float) -> bool: return _room_walk(r, floori(x), floori(z))}
+		var moved := GameBehaviour.step_all(group, view, d.seed_value, tick)
+		for i in moved.size():
+			if not _room_walk(r, floori(float(moved[i]["x"])), floori(float(moved[i]["z"]))):
+				moved[i]["x"] = group[i]["x"]   # a flier does not go through a wall
+				moved[i]["z"] = group[i]["z"]
+		next.append_array(moved)
+	denizens = next
+	_dungeon_contact()
+
+
+## A creature of the dungeon in `chase` that reaches the heir fights them: it and others of its room hunting within
+## `contact_join`, up to `contact_max`, by GameDynasty.start_encounter at the dungeon's danger; a lair's boss alone, as the
+## legend (GameDynasty.start_legend_at). The creatures are taken out of the room until the fight is over.
+func _dungeon_contact() -> bool:
+	var me := heir_point()
+	var first := -1
+	for i in denizens.size():
+		var a: Dictionary = denizens[i]
+		if str(a["mode"]) == "chase" and Vector2(float(a["x"]), float(a["z"])).distance_to(me) <= float(setting("contact_range")):
+			first = i
+			break
+	if first < 0:
+		return false
+	var place := GameDungeons.place_of(space)
+	var lead: Dictionary = denizens[first]
+	var gone: Array = []
+	var fight: GameBattle = null
+	if bool(lead["boss"]):
+		fight = d.start_legend_at(str(lead["id"]))
+		gone = [lead]
+	else:
+		var ids: Array = []
+		for a in denizens:
+			if ids.size() >= int(setting("contact_max")):
+				break
+			if bool(a["boss"]) or str(a["room"]) != str(lead["room"]):
+				continue
+			if a == lead or (str(a["mode"]) == "chase" and Vector2(float(a["x"]), float(a["z"])).distance_to(me) <= float(setting("contact_join"))):
+				ids.append(str(a["id"]))
+				gone.append(a)
+		fight = d.start_encounter(ids, place)
+	if fight == null:
+		return false
+	d.sandbox_escape = {"x": outside.x, "z": outside.y, "space": space}
+	for a in gone:
+		denizens.erase(a)
+	fight_foes = gone
+	var names: Array = fight.enemies.map(func(e): return str(e["name"]))
+	log.append({"kind": "fight", "text": _text("contact", {"foes": GameMessages.text("life", "list_comma").join(names), "heir": d.heir.name})})
+	return true
+
+
+## After a dungeon fight: a win kills the creatures for `foe_years` and leaves their drops (GameDungeonLoot.roll_drop); a flight
+## or a defeat puts them back where they live and the heir at the way out.
+func _after_dungeon_fight() -> void:
+	var foes := fight_foes
+	fight_foes = []
+	d.sandbox_escape = {}
+	route = []
+	if space == "world" or not GameDungeons.is_dungeon(space):
+		return
+	var place := GameDungeons.place_of(space)
+	if d.last_result == "victory":
+		for a in foes:
+			GameDungeons.mark(d, "k", place, str(a["key"]))
+			var got := GameDungeonLoot.roll_drop(d, place, str(a["key"]), str(a["id"]), bool(a["boss"]))
+			for line in GameDungeonLoot.give(d, got):
+				log.append({"kind": "dungeon", "text": str(line)})
+	else:
+		for a in foes:
+			a["x"] = float(a["home_x"])
+			a["z"] = float(a["home_z"])
+			a["mode"] = "idle"
+			a["target"] = {}
+			denizens.append(a)
+		heir = GameInterior.entry()
+		log.append({"kind": "fight", "text": _text("escaped", {"heir": d.heir.name})})
+
+
+## The heir has stepped on a cell of a dungeon: a hidden trap goes off, and the cell is redrawn (it shows once sprung).
+func _dungeon_arrive() -> void:
+	var t := GameDungeons.step_on(d, space, heir.x, heir.y)
+	var text := str(t.get("text", ""))
+	if text != "":
+		log.append({"kind": "dungeon", "text": text})
+		dirty.append(heir)

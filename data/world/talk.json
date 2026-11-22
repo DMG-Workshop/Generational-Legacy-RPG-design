@@ -1,0 +1,41 @@
+{
+  "note": "How the people of the open world's towns talk to the heir (core/game/game_talk.gd; the words are in data/text/talk.json, the `talk` catalog, so they can be translated; checked by tools/check_data.gd). Everything is a pure function of the seed, the person's id, the day, the hour and the heir's tile: no dice of the dynasty's, nothing saved. USE beside a person (within `reach_street` tiles of one out of doors, within `reach_house` of one inside a building whose roof is lifting) and they say something: their job's line for the time (day or night), then `extras` more things picked from what fits (the weather, the family's standing with the town's faction, whether the family has built a house, their own or the heir's size, their race, their town), all by an id hash that changes every `hour_block` hours; a sleeper only mumbles. A person may also talk first: when the heir comes within `call_range` tiles of one (`call_range_house` for one inside a building) who is awake and has not spoken today, a hash of the seed, their id, the day and the heir's tile decides (`chance_percent`, `gate_percent` for a gate guard); at most one greeting a day for each person, and `cooldown_seconds` of the world clock between any two; the screen never asks during a fight or while a panel is open. A person of a job in `conversations` also offers a few `choices` (`news` a rumour of a creature seen near the town, `fear` the same as a warning, `wares` what their service offers); a rumour is the creature GameSpawn would put on a tile `rumour.min` to `rumour.max` tiles from the town's anchor, found by up to `rumour.tries` hashes of the seed, the town and the day. `bubble_seconds` is how long a line stays over a head.",
+  "settings": {
+    "reach_street": 2.0,
+    "reach_house": 3.0,
+    "call_range": 4.0,
+    "call_range_house": 2.5,
+    "chance_percent": 12,
+    "gate_percent": 70,
+    "cooldown_seconds": 12.0,
+    "hour_block": 3.0,
+    "extras": 2,
+    "small_below": 0.9,
+    "large_above": 1.12,
+    "size_gap": 0.15,
+    "bubble_seconds": 5.0
+  },
+  "rumour": {"min": 30, "max": 70, "tries": 80},
+  "conversations": {
+    "farmer": ["news"],
+    "guard": ["fear", "news"],
+    "gate_guard": ["fear"],
+    "smith_hand": ["wares"],
+    "shop_hand": ["wares"],
+    "tavern_hand": ["wares", "news"],
+    "acolyte": ["wares"],
+    "runner": ["wares"],
+    "tavern": ["news"],
+    "store": ["wares"],
+    "forge": ["wares"],
+    "temple": ["wares"],
+    "black_market": ["wares"]
+  },
+  "choices": {
+    "news": {"label": "choice.news", "reply": "rumour"},
+    "fear": {"label": "choice.fear", "reply": "warn"},
+    "wares": {"label": "choice.wares", "reply": "wares"}
+  },
+  "extras": ["weather", "standing", "house", "size", "race", "town"],
+  "directions": ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
+}

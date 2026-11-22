@@ -14,6 +14,7 @@ var tile_set: TileSet
 var fills := 0            # chunks filled so far (for tests)
 var interior_id := ""     # the interior shown instead of the open world ("" shows the world)
 var interior := {}        # its cells, "x,z" -> floor, door, exit or wall (GameInterior.cells); nothing is drawn elsewhere
+var dungeon: DungeonView = null   # a dungeon's floor in its own theme (GameDungeonArt), drawn in place of the chunks while the heir is in one
 var level := 0            # the storey shown: 0 is the ground; above it the ground is dimmed and that storey's pieces are drawn over it
 var uppers := {}          # Vector2i chunk -> TileMapLayer of the shown storey's pieces (empty cells where nothing is built)
 var decor := {}           # Vector2i chunk -> TileMapLayer of what lies on the ground under the nodes: tones, tufts, flowers, a landmark (GameWilds, GameWildsSites)
@@ -212,6 +213,8 @@ func setup(dyn: GameDynasty) -> void:
 
 ## Keeps the chunks of a view (centre and half-size in tiles) and frees the others.
 func show_view(centre: Vector2, half: Vector2) -> void:
+	if dungeon != null:
+		return   # a dungeon is drawn whole
 	var want := wanted(centre, half, int(settings()["keep"]))
 	for c in want:
 		if not layers.has(c):
@@ -283,6 +286,13 @@ func set_interior(id: String, cells: Dictionary) -> void:
 	roofs.clear()
 	roof_steps.clear()
 	level = 0   # an interior has one floor
+	if dungeon != null:
+		dungeon.queue_free()
+		dungeon = null
+	if id != "" and GameDungeons.is_dungeon(id):
+		dungeon = DungeonView.new()
+		dungeon.setup(d, id, cells)
+		add_child(dungeon)
 
 
 ## Places the view: the tile `centre` goes to the middle of `area` (the map's rectangle, top-left at `origin`), `cell` pixels a tile.
@@ -447,6 +457,9 @@ func _kind_at(x: int, z: int) -> String:
 
 ## Redraws one tile (after something is built or taken down there), when its chunk is kept.
 func refresh_cell(x: int, z: int, spread: bool = true) -> void:
+	if dungeon != null:
+		dungeon.refresh_cell(x, z)
+		return
 	if spread and interior_id == "":
 		for off in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]:
 			var k := GameBuild.kind_at(d, x + off.x, GameBuild.SURFACE, z + off.y)
