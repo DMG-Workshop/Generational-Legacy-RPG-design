@@ -74,6 +74,28 @@ static func markers(d: GameDynasty) -> Array:
 	return out
 
 
+## A marker for every landmark of the wilds the family has found (and none it has not): {id, name, kind, area, x, z, cell}.
+static func landmark_markers(d: GameDynasty) -> Array:
+	var out: Array = []
+	for lm in GameWildsSites.found(d):
+		out.append({"id": str(lm["id"]), "name": GameWildsSites.name_of(lm), "kind": str(lm["kind"]), "area": GameWildsSites.area_name(lm),
+			"x": int(lm["x"]), "z": int(lm["z"]), "cell": cell_of(int(lm["x"]), int(lm["z"]))})
+	return out
+
+
+## The lines that list them, `max_lines` at most, then how many more.
+static func landmark_lines(d: GameDynasty, max_lines: int) -> Array:
+	var marks := landmark_markers(d)
+	var out: Array = []
+	if marks.is_empty():
+		return [GameWilds.text("map_none")]
+	for i in mini(max_lines, marks.size()):
+		out.append(GameWilds.text("map_line", {"name": marks[i]["name"], "area": marks[i]["area"]}))
+	if marks.size() > max_lines:
+		out.append(GameWilds.text("map_more", {"n": marks.size() - max_lines}))
+	return out
+
+
 ## The line that says where the family is.
 static func here_line(d: GameDynasty) -> String:
 	return text("here", {"place": str(d.world.here().get("name", d.world.location))})

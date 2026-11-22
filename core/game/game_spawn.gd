@@ -57,9 +57,20 @@ static func _lives_here(c: Dictionary, spec: Dictionary, ctx: Dictionary) -> boo
 		return true   # the pool is the place's own; hunt_pool has already chosen
 	var depth := int(ctx.get("depth", -1))
 	if depth < 0:
-		return str(ctx.get("surface", "")) in spec.get("surface", [])
+		return str(ctx.get("surface", "")) in spec.get("surface", []) or _area_adds(ctx).has(str(c.get("id", "")))
 	var band: Array = spec.get("depth", [])
 	return band.size() == 2 and depth >= int(band[0]) and depth <= int(band[1])
+
+
+## The spawn rules of the wilds area a context is in ({} for generic land): `weights` multiply the surface table's creatures,
+## `add` lets in creatures of the area's own biome that the biome's table lacks (by that weight), `density` scales how thickly they
+## spawn. Each wilds place has its own, so no two areas share a creature table.
+static func area_spec(ctx: Dictionary) -> Dictionary:
+	return data().get("areas", {}).get(str(ctx.get("area", "")), {})
+
+
+static func _area_adds(ctx: Dictionary) -> Dictionary:
+	return area_spec(ctx).get("add", {})
 
 
 ## What a creature's weight is in a context: its own weight times what it likes of the season, weather and night.
@@ -68,6 +79,12 @@ static func weight_of(id: String, ctx: Dictionary) -> float:
 	if spec.is_empty():
 		return 0.0
 	var w := float(spec.get("weight", 1.0))
+	var area := area_spec(ctx)
+	if not area.is_empty() and int(ctx.get("depth", -1)) < 0:
+		if str(ctx.get("surface", "")) in spec.get("surface", []):
+			w *= float(area.get("weights", {}).get(id, 1.0))
+		else:
+			w *= float(area.get("add", {}).get(id, 0.0))
 	w *= float(spec.get("seasons", {}).get(str(ctx.get("season", "")), 1.0))
 	w *= float(spec.get("weather", {}).get(str(ctx.get("weather", "")), 1.0))
 	if bool(ctx.get("night", false)):
@@ -138,6 +155,9 @@ static func context_at(d: GameDynasty, x: int, y: int, z: int, night: bool = fal
 		c2["zone"] = "place"
 		return c2
 	var c3 := context(str(t["biome"]), -1, era, season, weather, night)
+	var area := GameWilds.area_of(x, z, str(t["biome"]))
+	if area != "":
+		c3["area"] = area
 	c3["zone"] = "surface"
 	return c3
 
@@ -157,6 +177,8 @@ static func density(ctx: Dictionary) -> float:
 			base = float(setting("underground_density").get(str(ctx.get("zone", "")), 0.0))
 	if bool(ctx.get("night", false)):
 		base *= float(setting("night_density_mult"))
+	if str(ctx.get("zone", "")) == "surface":
+		base *= float(area_spec(ctx).get("density", 1.0))
 	return base
 
 
@@ -247,4 +269,48 @@ static func validate() -> Array:
 			bad.append("spawn.json: '%s' needs a night multiplier above 0" % id)
 		if spec.get("surface", []).is_empty() and not spec.has("depth"):
 			bad.append("spawn.json: '%s' lives nowhere (no surface biome and no depth band)" % id)
+	bad.append_array(_area_problems(dat, named))
+	return bad
+
+
+static func _area_problems(dat: Dictionary, named: Dictionary) -> Array:
+	var bad: Array = []
+	var areas: Dictionary = dat.get("areas", {})
+	var seen := {}
+	for id in areas:
+		var a: Dictionary = areas[id]
+		var place: Dictionary = GameWorld.place(str(id))
+		if place.is_empty() or str(place.get("type", "")) != "wilds":
+			bad.append("spawn.json: the area '%s' is not a wilds place" % id)
+			continue
+		var surf := str(GameWorldGen.anchor(str(id)).get("biome", ""))
+		if float(a.get("density", 1.0)) <= 0.0 or float(a.get("density", 1.0)) > 3.0:
+			bad.append("spawn.json: the area '%s' needs a density above 0 and at most 3" % id)
+		for cid in a.get("weights", {}):
+			if not named.has(cid) or surf not in dat["creatures"].get(cid, {}).get("surface", []):
+				bad.append("spawn.json: the area '%s' weights '%s', which does not roam %s" % [id, cid, surf])
+			elif float(a["weights"][cid]) < 0.0:
+				bad.append("spawn.json: the area '%s' has a negative weight for '%s'" % [id, cid])
+		for cid in a.get("add", {}):
+			var ok := false
+			if named.has(cid):
+				for pb in named[cid].get("biomes", []):
+					if str(GameWorldGen.data()["surface_of"].get(str(pb), "")) == surf:
+						ok = true
+			if not ok or float(a["add"][cid]) <= 0.0:
+				bad.append("spawn.json: the area '%s' adds '%s', which has no biome of %s or no weight" % [id, cid, surf])
+		var sig: Array = []
+		for cid in dat["creatures"]:
+			if surf in dat["creatures"][cid].get("surface", []):
+				sig.append("%s=%s" % [cid, str(float(a.get("weights", {}).get(cid, 1.0)))])
+		for cid in a.get("add", {}):
+			sig.append("+%s=%s" % [cid, str(a["add"][cid])])
+		sig.sort()
+		var key := JSON.stringify(sig)
+		if seen.has(key):
+			bad.append("spawn.json: the areas '%s' and '%s' have the same creature table" % [id, seen[key]])
+		seen[key] = id
+	for l in GameData.world["locations"]:
+		if str(l["type"]) == "wilds" and not areas.has(str(l["id"])):
+			bad.append("spawn.json: the wilds place '%s' has no creature table of its own" % l["id"])
 	return bad
