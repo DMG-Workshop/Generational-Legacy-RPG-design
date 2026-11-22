@@ -15,11 +15,12 @@ static func budgets() -> Dictionary:
 
 ## One dynasty played for up to `gens` generations. Returns the measurements:
 ## {seed, race, class, gens, reached, lives, slain, save_bytes, load_ms, play_ms, ms_per_gen, journal, history, state}.
-static func run_one(seed_val: int, race: String, gens: int) -> Dictionary:
+## `subclass` founds the dynasty in that calling ("" for none); it passes down at the game's own chance.
+static func run_one(seed_val: int, race: String, gens: int, subclass: String = "") -> Dictionary:
 	GameData.load_all()
 	var classes := GameData.starting_ids(GameData.classes)
 	var cls: String = classes[seed_val % classes.size()]
-	var d := GameDynasty.new_game(seed_val, "", cls, BLOODLINE, race)
+	var d := GameDynasty.new_game(seed_val, "", cls, BLOODLINE, race, GameSex.MALE, subclass)
 	var lives := 0
 	var slain := 0
 	var t0 := Time.get_ticks_usec()
