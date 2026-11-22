@@ -297,7 +297,10 @@ func _build_actions() -> void:
 	_act("Explore", func(): _do(func(): return d.explore()))
 	var w := d.world
 	if w.has_service("forge") or w.has_service("store") or w.has_service("temple") or not GameShops.here(d).is_empty():
-		_act("Shops", func(): _open(ShopPanel))
+		var shops := _act("Shops", func(): _open(ShopPanel))
+		var shut: Array = GameShops.here(d).filter(func(id): return not GameShops.is_open(d, str(id)))
+		if not shut.is_empty():   # the shops keep their hours: say which are shut now and when they open
+			shops.tooltip_text = "Shut now: %s." % ", ".join(shut.map(func(id): return "%s (opens %s)" % [GameShops.name_of(str(id)), GameShops.opens_text(str(id))]))
 	if w.has_service("tavern"):
 		_act("Tavern", func(): _open(TavernPanel))
 	if w.has_service("board"):

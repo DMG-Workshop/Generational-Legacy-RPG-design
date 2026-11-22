@@ -146,3 +146,71 @@ Re-measured on all 36 seeds, `keep`: **wildcaller 90 slain of 2,880 (3.1%, range
 ### What a retune should do
 
 Judge a calling by arithmetic first (the perks above the autopilot cannot reach have no harness signal) and by `subclass=<id> keep` on at least 36 seeds when it touches the fights, training, hunts or potions; one 12-seed run cannot tell a 1.5-point change from noise.
+
+## Perks the autopilot cannot use (measurement plan)
+
+Twelve of the twenty callings have most of their power in places `GameBot` never visits (list under *What the autopilot can use*, above). The sweep cannot see them, so
+"all twenty are within noise" says nothing about the Delver's ore, the Steadholder's flock or the Stonewright's walls. This section defines how to measure them. **Status: method
+and metrics specified; the profile bots are not built** (nothing below changes a seeded life, so no balance number moves until they are).
+
+### Terms (the same as above)
+
+- **Plain house**: no calling. **Calling run**: `subclass=<id> keep`. **Founded strength**: `founder_scale` (1.5x on the perk's distance from 1).
+- **Value in gold** (`GE`): everything a perk produces priced in gold with the numbers the game already has, so perks of different kinds can be compared:
+  materials at `GameShops.unit_price(material)` (`material_unit` 6 gold times the material's `price_mult`), made pieces at `GameItems.sell_price`, creatures at their `GameRanch.sell`
+  value, farm yield as paid gold, saved fees and costs as the gold not spent, raids prevented as `plain_chance` times the expected loss, hp saved as `potion_price` per heal share.
+- **Effort** (`E`): the number of *player actions* a profile spends per generation (a dig, a forage, a craft, a build, an order). It is counted by the bot, not guessed, and is the price a
+  human pays in attention. A perk that needs 400 actions for +50 GE is not the same as one that needs 4.
+- **Risk** (`R`): extra expected battle death share per life while pursuing the profile (a delver goes deeper, a forager walks further), measured in points of battle deaths against the plain house on the
+  same profile.
+
+### Profile bots (to build)
+
+A **profile** is a small policy layered on `GameBot.live_life` that adds the actions a perk needs, and **only those**, through the same core calls the screens use (no new rules, so what it measures is
+what a player gets). Each is run once for the plain house and once for each calling that has a perk it exercises. Suggested set (`tools/profiles.gd`, run through `balance_harness.gd -- profile=<id>`):
+
+| Profile | The bot additionally... | Perks it exercises | Callings |
+|---|---|---|---|
+| `forge` | salvages every find, crafts the best piece it can afford each generation, brews the potion | `forge_fee_mult`, `craft_quality_mult`, `salvage_mult`, `brew_yield_mult`, `gather_mult`, `essence_mult` | armorer, bladewright, enchanter, runescribe, alchemist, hidewright, spiritbinder |
+| `miner` | digs down a fixed shaft each generation to the `max_depth`/hazard limit, props when it can | `ore_mult`, `dig_mult`, `cave_mult` | delver, stonewright |
+| `builder` | raises a house of the first size it can pay for, then the next, to the claim limit | `build_cost_mult`, `raid_mult` | stonewright, trapsmith, steadholder |
+| `farmer` | buys young animals up to the ranch's pens, keeps them, sells or slaughters when grown | `farm_mult`, `keep_mult`, `value_mult`, `work_mult` | steadholder, wildcaller, breeder |
+| `breeder` | pairs creatures, keeps the young, sells the surplus | `find_mult`, `fertility_mult`, `mutation_mult`, `value_mult`, `keep_mult` | breeder, wildcaller |
+| `forager` | forages the nearest node each generation and hauls with companions | `forage_mult`, `haul_mult`, `carry_mult` | feastwright, greenwarden, wayfinder, caravaneer, delver |
+| `fleer` | flees any fight under a hp share (it never does today) | `flee_mult` | trapsmith, wayfinder |
+
+A profile never changes the **fights** (`GameBattle` still plays by `GameTactics`), so the existing 3-7% battle-death band still applies to the plain house with the profile on.
+
+### Metrics, per profile and calling (36 seeds, `keep`, 10 generations)
+
+1. **`dGE`**: mean gold-equivalent per life of the calling run minus the plain house's, on the profile. Reported with its standard error across seeds (the same seeds both runs).
+2. **`E`**: actions per generation the profile spent (identical for both runs unless the perk changes how many are needed).
+3. **Return on effort** `dGE / E`, compared across callings *on the same profile*.
+4. **`dR`**: change in battle-death share (points), the old measure; noise about 1 point per row on 960 lives (see *Method and noise*).
+5. **Gold-at-death shift** (the existing column) to make sure a profile's gains do not leak outside the plan.
+6. **Synergy**: the same measures with `keep` and the calling's *natural partner* items (the forty works, `GameSubclass.make`) for the `forge` profile, and with two profiles at once (`builder`+`miner`) to see whether the effects add or multiply. A synergy is a problem when `dGE(A+B) > 1.25 * (dGE(A) + dGE(B))`.
+
+### Targets
+
+- **Power**: a calling's `dGE` on its own profile is within **0.8x to 1.25x of the median calling's `dGE` on its profile** after pricing the effort (`dGE / E`), and the *whole-life* uplift (`dGE` summed over the profiles the calling is built for) is at most **+15% of the plain house's mean gold at death** (about 700 gold on the 4,775 baseline) so no calling is a second economy. These numbers are a first guess: they are the width of the existing gold noise (about +-12%) and should be set from the first measurement, not before.
+- **Risk**: `dR` within +-1.5 points of the plain house on the same profile (the existing noise floor); a perk that buys power by making deaths 3 points likelier is a tradeoff to document, not a failure.
+- **Manual effort**: the effort `E` of the best profile for a calling should be at most **2x** the plain house's profile `E` (a perk that makes the player do twice the work for the gain is a cost, and counts against it).
+- **Autopilot options** (the baseline comparison): none of these perks may make the **autopilot-reachable** numbers move; the profile run changes nothing about the plain autopilot life (`test_game_subclass_roster` already checks that the unreached callings equal the baseline to the digit).
+
+### Procedure
+
+```bash
+# the plain house on a profile, then each calling built for it; same seeds and races every time
+godot --headless --path . -s res://tools/balance_harness.gd -- seeds=1-36 profile=forge subclass=none
+godot --headless --path . -s res://tools/balance_harness.gd -- seeds=1-36 profile=forge subclass=armorer keep
+...
+```
+Order: profile on the plain house first (that is the baseline for the profile); callings next; then a re-run of the ones that stand out on **24 new seeds** (as the sweep did for the five that stood out). Do not retune a perk from one 12-seed run. After a retune, re-run the *same* seeds and read the difference with the noise above in mind. Record the table in this file under the profile's name with the commit it was run on.
+
+### Flagged: numbers missing for a full pass
+
+- `GameBot` has **no profile hooks**: the profiles above need `GameBot.live_life` to call a `profile` callable each generation (a small, optional parameter, off by default so seeded lives do not move). Its place in the dice order must be chosen so that profile `none` is bit-for-bit today's run (the determinism tests will catch a slip).
+- **Gold-equivalent prices** for creature work (wool, eggs, venom: `GameRanch.yearly_work`), made-piece quality and mined ore are listed above only as "use the shop's number"; there is no single `gold_value(item)` function. One is a prerequisite (`GameItems.sell_price` for items, `unit_price` for materials, `GameRanch.sell` for creatures) and should live in core, not in the tool.
+- **Effort counting**: `E` needs a counter on every player action the profiles use; the sandbox's `log` is not a count.
+- **Target band** for `dGE` (above) is a guess pending the first measurement; the existing docs give a band for *battle deaths* only (3-7%), not for gold.
+- The older table's claim that the autopilot "searches the dead (`gather_mult`, `essence_mult`, `drop_mult`, `rarity_mult`)" disagrees with `CLAUDE.md`, which says `GameBot` never calls `GameLoot.search_dead`/`GameCraft.after_search` (they are asked for by the screens). Resolve by reading `GameBot.step` before using those four keys as "autopilot-measured".

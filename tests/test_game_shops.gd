@@ -32,6 +32,7 @@ func _fresh(place: String = "hearthmere") -> GameDynasty:
 	d.pending_event = {}
 	d.heir.gold = 100000
 	d.world.location = place
+	_hour(d, 12.0)
 	return d
 
 
@@ -41,6 +42,7 @@ func _run() -> void:
 	test_towns()
 	test_stock()
 	test_buy_sell()
+	test_hours_gate()
 	test_sell_out()
 	test_use_and_service()
 	test_hours()
@@ -188,6 +190,38 @@ func test_buy_sell() -> void:
 	var p0 := GameShops.price(cheap, "bakery", e0)
 	cheap.gen = 12
 	ok(GameShops.price(cheap, "bakery", e0) > p0, "prices rise with the generations")
+
+
+## Sets the dynasty's clock to an hour of the day (the world clock's seconds; a day is `day_seconds` from `start_phase`).
+func _hour(d: GameDynasty, hour: float) -> void:
+	var day := float(GameDay.setting("day_seconds"))
+	d.world_seconds = fposmod(hour / 24.0 - float(GameDay.setting("start_phase")), 1.0) * day
+
+
+func test_hours_gate() -> void:
+	var d := _fresh("hearthmere")
+	var def := GameShops.def("bakery")
+	var open_h := float(def["hours"][0])
+	var close_h := float(def["hours"][1])
+	_hour(d, open_h + 1.0)
+	ok(GameShops.is_open(d, "bakery") and GameShops.shut_line(d, "bakery") == "", "open in the day")
+	_hour(d, close_h - 0.5)
+	ok(GameShops.is_open(d, "bakery") and GameShops.closing_soon(d, "bakery").contains("closes"), "a word of warning in the last hour")
+	_hour(d, open_h + 1.0)
+	ok(GameShops.closing_soon(d, "bakery") == "", "none earlier in the day")
+	_hour(d, close_h + 0.2)
+	ok(not GameShops.is_open(d, "bakery") and GameShops.shut_line(d, "bakery").contains("shut"), "shut after closing: no grace past the hour")
+	var g := d.heir.gold
+	ok(GameShops.buy(d, "bakery", "bread_loaf").contains("shut") and d.heir.gold == g and d.shop_sold.is_empty(), "nothing can be bought from a shut shop, and the shelf is not touched")
+	d.heir.inventory.append("bread_loaf")
+	ok(GameShops.sell(d, "bakery", "bread_loaf").contains("shut"), "nor sold to it")
+	ok(GameShops.sell_material(d, "bakery", "iron_ore", 1).contains("shut"), "nor materials")
+	_hour(d, open_h - 0.2)
+	ok(GameShops.shut_line(d, "bakery").contains(GameShops.opens_text("bakery")), "before opening it says when it opens")
+	ok(not GameShops.open_here(d).has("bakery") and GameShops.here(d).has("bakery"), "open_here leaves it out while it is shut")
+	ok(GameShops.shut_line(d, "forge") == "" and GameShops.is_open(d, "forge"), "the six old services have no hours")
+	_hour(d, 12.0)
+	ok(GameShops.open_here(d).has("bakery"), "and it is back at noon")
 
 
 func test_sell_out() -> void:

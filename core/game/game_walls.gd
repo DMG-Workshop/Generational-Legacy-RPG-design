@@ -111,6 +111,54 @@ static func shut_now(d: GameDynasty) -> bool:
 	return bool(setting("shut_at_night")) and GameDay.is_night(d)
 
 
+## Whether a tile stops a blow or a reach (not just a step): a wall or tower, or a gate's passage while the gates are shut. A tree does not
+## (a creature can strike past one); a building's body is `GameTown.blocks`, which the caller asks too.
+static func stops_reach(x: int, z: int, gates_shut: bool) -> bool:
+	_ensure()
+	var r: Variant = _kinds.get(_k(x, z))
+	if r == null:
+		return false
+	var k := str((r as Dictionary)["k"])
+	return k in SOLID or (k == "gate" and gates_shut)
+
+
+## Whether a straight line from `a` to `b` (points in tiles) is clear of everything that stops a reach (`stops_reach`, a town building):
+## the line is sampled every `step` tiles, so a blow cannot pass through a wall, however thin, or between two tiles that touch only at a
+## corner. The tile the line starts in is not tested (a creature standing in a gate's passage, or the heir in it, is not walled off).
+static func line_clear(a: Vector2, b: Vector2, gates_shut: bool, step: float = 0.25, probe: Callable = Callable()) -> bool:
+	var len := a.distance_to(b)
+	var n := maxi(1, int(ceil(len / maxf(step, 0.05))))
+	var from := Vector2i(floori(a.x), floori(a.y))
+	var to := Vector2i(floori(b.x), floori(b.y))
+	var last := from
+	for i in range(1, n + 1):
+		var p := a.lerp(b, float(i) / float(n))
+		var t := Vector2i(floori(p.x), floori(p.y))
+		if t == last:
+			continue
+		# a diagonal step from one tile to the next must not squeeze between two solid neighbours (corner clipping)
+		if t.x != last.x and t.y != last.y:
+			if _stop_at(Vector2i(t.x, last.y), gates_shut, probe) and _stop_at(Vector2i(last.x, t.y), gates_shut, probe):
+				return false
+		last = t
+		if t != to and t != from and _stop_at(t, gates_shut, probe):
+			return false
+		if t == to and _stop_at(t, gates_shut, probe) and from != to:
+			return false
+	return true
+
+
+## `probe` (tests): a Callable(x, z) -> bool that stands in for the world's own tiles.
+static func _stop_at(t: Vector2i, gates_shut: bool, probe: Callable) -> bool:
+	if probe.is_valid():
+		return bool(probe.call(t.x, t.y))
+	return _stops(t, gates_shut)
+
+
+static func _stops(t: Vector2i, gates_shut: bool) -> bool:
+	return stops_reach(t.x, t.y, gates_shut) or GameTown.blocks(t.x, t.y)
+
+
 ## Whether the world leaves a tile free of trees and rocks: the wall itself and the way in and out of each gate.
 static func cleared(x: int, z: int) -> bool:
 	_ensure()

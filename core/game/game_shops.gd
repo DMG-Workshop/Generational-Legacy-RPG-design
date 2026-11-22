@@ -76,6 +76,32 @@ static func opens_text(id: String) -> String:
 	return "%02d:00" % int(def(id)["hours"][0])
 
 
+static func closes_text(id: String) -> String:
+	return "%02d:00" % int(def(id)["hours"][1])
+
+
+## "" while a shop is open (or is not a shop: the six old services are always open), else the line saying it is shut and when it
+## opens. A shop shuts at its closing hour and not before (no grace is given after it); `closing_soon` warns in the last
+## `last_call_hours` before. The day is `GameDay`'s; the calendar has no days of the week, so hours are all there is.
+static func shut_line(d: GameDynasty, id: String) -> String:
+	if not is_shop(id) or is_open(d, id):
+		return ""
+	return text("not_open", {"shop": name_of(id), "opens": opens_text(id), "closes": closes_text(id)})
+
+
+## "" or the line telling the heir the shop is about to close.
+static func closing_soon(d: GameDynasty, id: String) -> String:
+	if not is_shop(id) or not is_open(d, id):
+		return ""
+	var left := float(def(id)["hours"][1]) - GameDay.hour(d)
+	return text("closing_soon", {"shop": name_of(id), "closes": closes_text(id)}) if left <= float(setting("last_call_hours")) else ""
+
+
+## The shops of this town that are open now.
+static func open_here(d: GameDynasty) -> Array:
+	return here(d).filter(func(id): return is_open(d, str(id)))
+
+
 # ---------------------------------------------------------------- the shelves
 
 ## The shelf as it stands: what the shop has this season (`GameShopStock`, a pure function of the seed, town, year and season) less
@@ -180,6 +206,8 @@ static func _buy(d: GameDynasty, shop_id: String, key: String) -> String:
 	var h := d.heir
 	if not d.world.has_service(shop_id):
 		return text("not_here", {"shop": name_of(shop_id)})
+	if not is_open(d, shop_id):
+		return shut_line(d, shop_id)
 	var e := entry(d, shop_id, key)
 	if e.is_empty():
 		return text("not_on_shelf", {"shop": name_of(shop_id)})
@@ -252,6 +280,8 @@ static func sell(d: GameDynasty, shop_id: String, id: String) -> String:
 	var h := d.heir
 	if not d.world.has_service(shop_id):
 		return text("not_here", {"shop": name_of(shop_id)})
+	if not is_open(d, shop_id):
+		return shut_line(d, shop_id)
 	if id not in h.inventory:
 		return text("not_in_pack", {"name": h.name, "item": GameItems.item_name(id)})
 	if not buys(shop_id, id):
@@ -297,6 +327,8 @@ static func sell_material(d: GameDynasty, shop_id: String, material: String, n: 
 	var h := d.heir
 	if not d.world.has_service(shop_id):
 		return text("not_here", {"shop": name_of(shop_id)})
+	if not is_open(d, shop_id):
+		return shut_line(d, shop_id)
 	var nm := GameMaterials.name_of(material).to_lower()
 	if not buys_material(shop_id, material):
 		return text("no_trade", {"shop": name_of(shop_id), "item": nm})
@@ -351,6 +383,8 @@ static func serve(d: GameDynasty, shop_id: String, service_id: String) -> String
 	var h := d.heir
 	if not d.world.has_service(shop_id):
 		return text("not_here", {"shop": name_of(shop_id)})
+	if not is_open(d, shop_id):
+		return shut_line(d, shop_id)
 	for s in def(shop_id).get("services", []):
 		if str(s["id"]) != service_id:
 			continue
