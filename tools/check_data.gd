@@ -38,6 +38,8 @@ static func problems() -> Array:
 	for pair in [["dungeons", GameDungeons.validate()], ["dungeon looks", GameDungeonArt.validate()], ["dungeon loot", GameDungeonLoot.validate()], ["dungeon entrances", DungeonEntranceArt.validate()]]:
 		for p in pair[1]:
 			out.append("%s: %s" % [pair[0], p])
+	for p in GameShops.validate():
+		out.append("shops: %s" % p)
 	return out
 
 
