@@ -78,8 +78,55 @@ static func opens_text(id: String) -> String:
 
 # ---------------------------------------------------------------- the shelves
 
+## The shelf as it stands: what the shop has this season (`GameShopStock`, a pure function of the seed, town, year and season) less
+## what the family has already bought from it this season. Each thing on a shelf is one of its kind, and the shelf fills again with
+## the season.
 static func stock(d: GameDynasty, shop_id: String) -> Array:
-	return GameShopStock.stock(d, shop_id)
+	var out: Array = []
+	for e in GameShopStock.stock(d, shop_id):
+		if not sold_out(d, shop_id, str(e["key"])):
+			out.append(e)
+	return out
+
+
+static func _period(d: GameDynasty) -> String:
+	return "%d|%s" % [int(floor(d.world.year)), str(d.world.season()["id"])]
+
+
+## Whether the family has bought this entry of the shelf already this season.
+static func sold_out(d: GameDynasty, shop_id: String, key: String) -> bool:
+	var rec: Variant = d.shop_sold.get("%s|%s" % [d.world.location, shop_id])
+	return rec != null and str((rec as Dictionary)["period"]) == _period(d) and (rec as Dictionary)["keys"].has(key)
+
+
+static func _mark_sold(d: GameDynasty, shop_id: String, key: String) -> void:
+	var rk := "%s|%s" % [d.world.location, shop_id]
+	var period := _period(d)
+	for k in d.shop_sold.keys():   # a season on, the old record is forgotten (the shelf has filled again)
+		if str((d.shop_sold[k] as Dictionary)["period"]) != period:
+			d.shop_sold.erase(k)
+	if not d.shop_sold.has(rk):
+		d.shop_sold[rk] = {"period": period, "keys": []}
+	if not (d.shop_sold[rk]["keys"] as Array).has(key):
+		(d.shop_sold[rk]["keys"] as Array).append(key)
+
+
+## A saved record read clean: only well-formed rows, and only text keys.
+static func load_sold(v: Variant) -> Dictionary:
+	var out := {}
+	if typeof(v) != TYPE_DICTIONARY:
+		return out
+	for k in (v as Dictionary):
+		var rec: Variant = (v as Dictionary)[k]
+		if typeof(k) != TYPE_STRING or typeof(rec) != TYPE_DICTIONARY or typeof((rec as Dictionary).get("period")) != TYPE_STRING or typeof((rec as Dictionary).get("keys")) != TYPE_ARRAY:
+			continue
+		var keys: Array = []
+		for x in (rec as Dictionary)["keys"]:
+			if typeof(x) == TYPE_STRING and not keys.has(x):
+				keys.append(x)
+		if not keys.is_empty():
+			out[k] = {"period": str((rec as Dictionary)["period"]), "keys": keys}
+	return out
 
 
 static func entry(d: GameDynasty, shop_id: String, key: String) -> Dictionary:
@@ -122,6 +169,14 @@ static func entry_name(e: Dictionary) -> String:
 
 ## Buys an entry of the shelf by its key. Returns the line to tell (also written to the journal by the screen).
 static func buy(d: GameDynasty, shop_id: String, key: String) -> String:
+	var gold := d.heir.gold
+	var line := _buy(d, shop_id, key)
+	if d.heir.gold < gold:   # it was paid for, so it is gone from the shelf until the season turns
+		_mark_sold(d, shop_id, key)
+	return line
+
+
+static func _buy(d: GameDynasty, shop_id: String, key: String) -> String:
 	var h := d.heir
 	if not d.world.has_service(shop_id):
 		return text("not_here", {"shop": name_of(shop_id)})
