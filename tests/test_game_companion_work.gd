@@ -53,6 +53,8 @@ func _grove(d: GameDynasty) -> Vector2:
 			var z := int(a["z"]) + int(round(sin(ang) * r))
 			if not GameWorldGen.in_bounds(x, z) or GameWorldGen.in_anchor_ground(x, z) or GameWorldGen.tile(d, x, z)["water"]:
 				continue
+			if Vector2(x - int(a["x"]), z - int(a["z"])).length() < GameWalls.radius("hearthmere") + 6.0:
+				continue   # (the town's wall is in the way: a grove beside it is out of reach of the trees on its far side)
 			if GameCompanions.scan(d, Vector2(x, z)).size() >= 8:
 				return Vector2(float(x), float(z))
 	return Vector2(-1, -1)

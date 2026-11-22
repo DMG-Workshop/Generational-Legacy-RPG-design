@@ -145,6 +145,8 @@ static func job_of(b: Dictionary, i: int) -> Dictionary:
 	var total := 0
 	for j in data()["jobs"]:
 		var w := str(j["work"])
+		if bool(j.get("post", false)):
+			continue   # a post (the gate guard's) is not a house job
 		if w in ["", "field", "patrol"] or here.has(w):
 			open.append(j)
 			total += int(j["weight"])
@@ -280,9 +282,64 @@ static func _at(pts: Array, target: float, forward: bool) -> Dictionary:
 	return {}
 
 
-## Everyone out of doors within `radius` tiles of (x, z) at `hour`: [{id, class, race, color, x, z, dx, job}].
+## The guards of a gate (GameWalls.gates): everyone who holds it over the day, `per_shift` for each shift, as [{id, class, race,
+## color, creature "", scale, service "", job (the post job's name), job_id, shift, from, to, gate, place, post (the tile they stand
+## on), dx}]. A guard's race comes from their town's races by the id; the colour is the town's. No dice.
+static func guards(g: Dictionary) -> Array:
+	var gd: Dictionary = data()["guards"]
+	var place := str(g["place"])
+	var races: Array = data()["races"].get(place, ["human"])
+	var job := _post_job(str(gd["job"]))
+	var out: Array = []
+	var posts: Array = g["posts"]
+	for sh in gd["shifts"]:
+		for i in int(gd["per_shift"]):
+			var id := "%s:%s%d" % [g["id"], sh["id"], i]
+			var race := str(races[_h(id + "r") % races.size()])
+			var post: Vector2i = posts[i % posts.size()] if not posts.is_empty() else g["centre"]
+			out.append({"id": id, "class": str(gd["class"]), "race": race, "color": str(gd["colors"].get(place, "#b8403a")), "creature": "", "scale": scale_of(race),
+				"service": "", "job": str(job.get("name", "Gate guard")), "job_id": str(gd["job"]), "shift": str(sh["id"]), "from": float(sh["from"]), "to": float(sh["to"]),
+				"gate": str(g["id"]), "place": place, "post": post, "dx": 1 if i % 2 == 0 else -1})
+	return out
+
+
+static func _post_job(id: String) -> Dictionary:
+	for j in data()["jobs"]:
+		if str(j["id"]) == id:
+			return j
+	return {}
+
+
+## Whether a shift holds the post at `hour` (a night shift runs past midnight).
+static func on_shift(from_h: float, to_h: float, hour: float) -> bool:
+	var h := fposmod(hour, 24.0)
+	return (h >= from_h and h < to_h) if from_h < to_h else (h >= from_h or h < to_h)
+
+
+## The guards standing at a gate at `hour`: [{... as `guards`, x, z (the middle of their post tile)}].
+static func guards_on(g: Dictionary, hour: float) -> Array:
+	var out: Array = []
+	for r in guards(g):
+		if on_shift(float(r["from"]), float(r["to"]), hour):
+			var p: Vector2i = r["post"]
+			var o: Dictionary = (r as Dictionary).duplicate()
+			o["x"] = float(p.x) + 0.5
+			o["z"] = float(p.y) + 0.5
+			out.append(o)
+	return out
+
+
+## Everyone out of doors within `radius` tiles of (x, z) at `hour`: [{id, class, race, color, x, z, dx, job}], the gate guards
+## on duty included.
 static func walkers_near(d: GameDynasty, x: float, z: float, radius: float, hour: float) -> Array:
 	var out: Array = []
+	for g in GameWalls.all_gates():
+		var gc: Vector2i = g["centre"]
+		if Vector2(float(gc.x), float(gc.y)).distance_to(Vector2(x, z)) > radius + 8.0:
+			continue
+		for r in guards_on(g, hour):
+			out.append({"id": r["id"], "class": r["class"], "race": r["race"], "color": r["color"], "creature": "", "scale": r["scale"], "x": r["x"], "z": r["z"], "dx": r["dx"],
+				"job": r["job"], "job_id": r["job_id"], "place": r["place"], "gate": r["gate"]})
 	for b in GameTown.all():
 		if str(b["kind"]) != "house":
 			continue
@@ -294,7 +351,7 @@ static func walkers_near(d: GameDynasty, x: float, z: float, radius: float, hour
 			var o := outside(d, b, i, hour)
 			if not o.is_empty():
 				var r: Dictionary = who[i]
-				out.append({"id": r["id"], "class": r["class"], "race": r["race"], "color": r["color"], "creature": r["creature"], "scale": r["scale"], "x": o["x"], "z": o["z"], "dx": o["dx"], "job": str(job_of(b, i).get("name", ""))})
+				out.append({"id": r["id"], "class": r["class"], "race": r["race"], "color": r["color"], "creature": r["creature"], "scale": r["scale"], "x": o["x"], "z": o["z"], "dx": o["dx"], "job": str(job_of(b, i).get("name", "")), "job_id": str(job_of(b, i).get("id", "")), "place": str(b["place"]), "gate": ""})
 	return out
 
 
@@ -319,10 +376,13 @@ static func validate() -> Array:
 		kinds_seen[str(o["kind"])] = true
 	var weight_total := 0
 	for j in d["jobs"]:
-		if str(j.get("id", "")) == "" or str(j.get("name", "")) == "" or int(j.get("weight", 0)) < 1 or float(j.get("hours", 0)) <= 0.0:
-			bad.append("villagers.json: a job needs an id, a name, a weight of at least 1 and hours above 0")
+		var post := bool(j.get("post", false))
+		if str(j.get("id", "")) == "" or str(j.get("name", "")) == "" or int(j.get("weight", 0)) < (0 if post else 1) or (post and int(j.get("weight", 0)) != 0) or float(j.get("hours", 0)) <= 0.0:
+			bad.append("villagers.json: a job needs an id, a name, a weight of at least 1 (a post's is 0) and hours above 0")
 			continue
 		weight_total += int(j["weight"])
+		if post:
+			continue
 		var w := str(j.get("work", ""))
 		if w != "" and w not in ["field", "patrol"] and not kinds_seen.has(w):
 			bad.append("villagers.json: the job '%s' works at '%s', which no town has" % [j["id"], w])
@@ -375,6 +435,7 @@ static func validate() -> Array:
 		var s: Dictionary = d["service"][k]
 		if not known_classes.has(str(s.get("class", ""))) or not known_races.has(str(s.get("race", ""))) or not Color.html_is_valid(str(s.get("color", ""))):
 			bad.append("villagers.json: the service person of %s needs a class and race with art and a colour" % k)
+	bad.append_array(_guard_problems(d))
 	# every service building of the towns has its person, and no one lives in a building too small to stand in
 	for b in GameTown.all():
 		var kind := str(b["kind"])
@@ -382,4 +443,43 @@ static func validate() -> Array:
 			bad.append("villagers.json: the %s has no person" % kind)
 		if kind == "house" and residents(b).is_empty():
 			bad.append("villagers.json: a house with no residents")
+	return bad
+
+
+## Every gate of every town has its guards: the `guards` job is a post job, each shift has `per_shift` of them (at least 2) with art,
+## and at every half hour of the day at least `per_shift` stand at each gate.
+static func _guard_problems(d: Dictionary) -> Array:
+	var bad: Array = []
+	var gd: Variant = d.get("guards")
+	if typeof(gd) != TYPE_DICTIONARY or not (gd as Dictionary).has_all(["job", "per_shift", "class", "shifts", "colors"]):
+		return ["villagers.json: guards needs job, per_shift, class, shifts and colors"]
+	var job := _post_job(str(gd["job"]))
+	if job.is_empty() or not bool(job.get("post", false)) or str(job["name"]) != "Gate guard":
+		bad.append("villagers.json: guards.job must be a post job named Gate guard")
+	if int(gd["per_shift"]) < 2:
+		bad.append("villagers.json: guards.per_shift is at least 2")
+	var known_classes: Array = GameData.load_json("res://data/art/classes.json").get("sprites", {}).keys()
+	if not known_classes.has(str(gd["class"])):
+		bad.append("villagers.json: the guards' class has no figure art")
+	for sh in gd["shifts"]:
+		if float(sh.get("from", -1)) < 0.0 or float(sh.get("from", 99)) >= 24.0 or float(sh.get("to", -1)) < 0.0 or float(sh.get("to", 99)) >= 24.0 or float(sh["from"]) == float(sh["to"]):
+			bad.append("villagers.json: a guard shift runs from an hour of the day to another")
+	for place in GameWalls.walled():
+		if not Color.html_is_valid(str(gd["colors"].get(place, ""))):
+			bad.append("villagers.json: the guards of %s have no colour" % place)
+	if not bad.is_empty():
+		return bad
+	var gates := GameWalls.all_gates()
+	if gates.is_empty():
+		bad.append("villagers.json: no town has a gate to guard")
+	for g in gates:
+		for k in 48:
+			var hour := float(k) / 2.0
+			var on := guards_on(g, hour)
+			if on.size() < int(gd["per_shift"]):
+				bad.append("villagers.json: only %d gate guards stand at %s at %.1f o'clock" % [on.size(), g["id"], hour])
+				break
+		for r in guards(g):
+			if str(r["job"]) != "Gate guard":
+				bad.append("villagers.json: a guard of %s is not a Gate guard" % g["id"])
 	return bad

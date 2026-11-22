@@ -1,0 +1,20 @@
+{
+  "note": "The walls and gates of the open world's towns, painted as pixel art (ui/play/wall_art.gd, rendering only; core/game/game_walls.gd says where each piece stands; checked by tools/check_data.gd). A tile is 16 pixels and about a metre, a person two tiles tall: a piece of wall is one tile wide and `wall_tiles` tall (3, battlements on top), a tower piece `tower_tiles` (4), and the lintel over a gate's passage is drawn `lintel_height` tiles above the ground (a cart with a driver passes under) and is `lintel_tiles` tall (an arch with battlements on a north or south gate, a thick beam seen from the side on an east or west one). The tower tiles next to the passage carry a banner in the town's colour (villagers.json `guards.colors`). Colours are [light, dark]. Nothing is random.",
+  "wall_tiles": 3,
+  "tower_tiles": 4,
+  "lintel_height": 3,
+  "lintel_tiles": 2,
+  "fade_alpha": 0.4,
+  "colors": {
+    "outline": "#1b1626",
+    "stone": ["#9a979f", "#75727b"],
+    "cap": ["#b4b1b8", "#8d8a94"],
+    "tower": ["#a39fa8", "#7b7882"],
+    "mortar": "#5c5a63",
+    "moss": "#5f7d4a",
+    "slit": "#26232d",
+    "wood": ["#7a5628", "#5a3f22"],
+    "iron": "#3a3d46",
+    "pole": "#5a3f22"
+  }
+}

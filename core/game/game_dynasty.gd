@@ -35,8 +35,11 @@ var roster: Array = []          # eggs and young the family keeps (see GameRoste
 var mine: Dictionary = {}       # the ground dug at each site, its strain and its gateways (see GameMine); saved only when not empty
 var damage: Dictionary = {}     # damaged built pieces, {"x,y,z": level} (see GameRepair); saved only when not empty
 var built: Dictionary = {}      # the pieces the family has built, {"x,y,z": kind} (see GameBuild); saved only when not empty
+var wilds: Dictionary = {}      # the landmarks of the wilds found and used, {found: [ids], used: {id: {gen, n}}} (see GameWildsSites); saved only when set
 var sandbox_at: Dictionary = {} # where the heir last stood in the open world, {x, z, gen, place} (see GameSandbox); saved only when set
 var gathered: Dictionary = {}   # nodes companions have gathered, {"x,z": world year} (see GameCompanions); saved only when not empty
+var dungeon_marks: Dictionary = {}   # what the heir has opened, sprung, used or killed in the dungeons, {"kind:place:key": world year} (see GameDungeons); saved only when not empty
+var last_result: String = ""    # runtime only: how the last battle ended (victory, fled, defeat), for the sandbox
 var stores: Dictionary = {}     # materials and essences the family has gathered, and how many pieces it has made (see GameCraft); saved only when not empty
 var world: GameWorld
 var flags: Dictionary = {}      # story flags set by quests and events (flag -> generation set); never cleared
@@ -619,9 +622,9 @@ func start_hunt(kind: String) -> GameBattle:
 ## Starts a fight with particular wild creatures that have caught the heir in the open world (GameSandbox): the hunt's
 ## rules (levels round the heir's, the hunt's scale and reward) for exactly these creatures, by id. Returns null when
 ## nothing known was given. Draws from the dynasty's dice like any hunt; the autopilot never calls it.
-func start_encounter(ids: Array) -> GameBattle:
+func start_encounter(ids: Array, place_id: String = "") -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")["hunt"]
-	var danger := float(world.here().get("danger", 1.0))
+	var danger := float((GameWorld.place(place_id) if place_id != "" else world.here()).get("danger", 1.0))
 	var foes: Array = []
 	for id in ids:
 		var kin: Dictionary = {}
@@ -645,6 +648,15 @@ func foe_for(creature_id: String, level: int) -> Dictionary:
 		if c["id"] == creature_id:
 			return _make_enemy(c, float(cfg["scale"]), float(cfg["reward"]), maxi(1, level))
 	return {}
+
+
+## Starts the fight with a particular stirring legend in its own lair (the sandbox's dungeons), wherever the family's place is.
+## Null when it is not stirring. Draws no dice, like start_legend.
+func start_legend_at(boss_id: String) -> GameBattle:
+	for c in stirring_legends():
+		if str(c["id"]) == boss_id:
+			return _begin_battle([_make_enemy(c, 1.0, 1.0, int(c.get("min_level", 1)))], "legend")
+	return null
 
 
 func start_legend() -> GameBattle:
@@ -698,6 +710,7 @@ func finish_battle() -> Array:
 	var msgs: Array = []
 	if b == null:
 		return msgs
+	last_result = str(b.result)
 	if b.result != "fled":
 		sandbox_escape = {}   # only a fight that was fled from sends the heir back clear of it
 	var party_msgs := party.after_battle(self, b)
@@ -1050,6 +1063,10 @@ func to_dict() -> Dictionary:
 		out["gathered"] = gathered
 	if not sandbox_at.is_empty():   # and only once the heir has walked the open world
 		out["sandbox_at"] = sandbox_at
+	if not wilds.is_empty():   # and only once a landmark of the wilds is found
+		out["wilds"] = wilds
+	if not dungeon_marks.is_empty():   # and only once something is opened, sprung, used or killed in a dungeon
+		out["dungeon_marks"] = dungeon_marks
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
 		out["house"] = house
 	if world_seconds > 0.0:   # likewise: only once the clock has run
@@ -1110,6 +1127,8 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.damage = GameRepair.load_state(d.get("damage", {}), g.built)
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.sandbox_at = GameSandbox.load_at(d.get("sandbox_at", {}))
+	g.wilds = GameWildsSites.load_state(d.get("wilds", {}))
+	g.dungeon_marks = GameDungeons.load_marks(d.get("dungeon_marks", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
 	g.achievements = GameAchievements.load_state(d.get("achievements", {}))
 	g.world_event = GameWorldEvents.load_state(d.get("world_event", {}))

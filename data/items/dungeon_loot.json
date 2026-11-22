@@ -1,0 +1,573 @@
+{
+ "note": "Dungeon loot tables (core/game/game_dungeon_loot.gd, checked by tools/check_data.gd). `GameDungeonLoot.roll(d, dungeon, container, tier)` is a pure function of the seed, the dungeon, the container and the 'cycle' (how many `refill_years` of the world's calendar have passed), never the dynasty's dice. A `tier` of container says how many rolls it gives (`rolls`), the chance of each being a made item (`item_chance`; else a find of materials), the gold (`gold`, scaled by the generation), a `rarity_boost` on the rare rarities, and the lowest rarity it can give (`min_rarity`). Items are built by GameLoot's own parts (forms, materials, affixes, rarities): the generation opens material tiers and adds grades. Each dungeon's table then weights the slot (`slot_weights`), the forms (`form_bias`) and the materials by their tags (`material_tag_bias`), lifts the material ceiling by `tier_shift`, scales gold by `gold_mult`, lists the `materials` its rooms hold, its `uniques` (named items of items.json, one each for a dynasty, in a container of a room `role`) and what its creatures `drops`. The room's depth (doors from the entrance) raises the rarity boost by `depth_boost` a door. A container `kind` may shift the slots (`slot_mult`) or the gold (`gold_mult`).",
+ "settings": {
+  "depth_boost": 0.3,
+  "gold_gen_power": 1.0,
+  "material_cap_tiers": 4
+ },
+ "tiers": {
+  "plain": {
+   "name": "plain",
+   "rolls": [
+    1,
+    1
+   ],
+   "item_chance": 0.35,
+   "gold": [
+    8,
+    40
+   ],
+   "rarity_boost": 1.0,
+   "min_rarity": "common",
+   "material_chance": 0.5
+  },
+  "fine": {
+   "name": "fine",
+   "rolls": [
+    1,
+    2
+   ],
+   "item_chance": 0.55,
+   "gold": [
+    30,
+    110
+   ],
+   "rarity_boost": 2.0,
+   "min_rarity": "common",
+   "material_chance": 0.5
+  },
+  "rich": {
+   "name": "rich",
+   "rolls": [
+    2,
+    3
+   ],
+   "item_chance": 0.75,
+   "gold": [
+    80,
+    280
+   ],
+   "rarity_boost": 5.0,
+   "min_rarity": "fine",
+   "material_chance": 0.6
+  },
+  "hoard": {
+   "name": "hoard",
+   "rolls": [
+    3,
+    4
+   ],
+   "item_chance": 0.9,
+   "gold": [
+    250,
+    800
+   ],
+   "rarity_boost": 12.0,
+   "min_rarity": "rare",
+   "material_chance": 0.8
+  }
+ },
+ "kinds": {
+  "chest": {},
+  "crate": {
+   "slot_mult": {
+    "weapon": 0.6,
+    "armor": 0.6,
+    "trinket": 0.4
+   }
+  },
+  "rack": {
+   "slot_mult": {
+    "weapon": 3.0,
+    "armor": 3.0,
+    "trinket": 0.0
+   },
+   "gold_mult": 0.3
+  },
+  "hoard": {
+   "gold_mult": 2.0
+  },
+  "urn": {
+   "slot_mult": {
+    "weapon": 0.2,
+    "armor": 0.2,
+    "trinket": 4.0
+   }
+  },
+  "sarcophagus": {
+   "slot_mult": {
+    "weapon": 1.5,
+    "armor": 0.7,
+    "trinket": 2.0
+   },
+   "gold_mult": 1.5
+  }
+ },
+ "dungeons": {
+  "goblin_warrens": {
+   "slot_weights": {
+    "weapon": 45,
+    "armor": 25,
+    "trinket": 30
+   },
+   "material_tag_bias": {
+    "bone": 3.0,
+    "leather": 2.0,
+    "metal": 1.2
+   },
+   "form_bias": {
+    "dagger": 3,
+    "mace": 2,
+    "leathers": 2
+   },
+   "gold_mult": 0.8,
+   "tier_shift": 0,
+   "materials": [
+    {
+     "id": "bone",
+     "n": [
+      1,
+      3
+     ],
+     "weight": 3
+    },
+    {
+     "id": "leather",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 2
+    },
+    {
+     "id": "iron",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 2
+    },
+    {
+     "id": "copper",
+     "n": [
+      1,
+      3
+     ],
+     "weight": 1
+    }
+   ],
+   "uniques": [
+    {
+     "item": "warchiefs_cleaver",
+     "role": "treasure_vault",
+     "chance": 0.5
+    }
+   ],
+   "drops": {
+    "default": {
+     "chance": 0.1,
+     "tier": "plain"
+    },
+    "ogre": {
+     "chance": 0.25,
+     "tier": "fine"
+    }
+   }
+  },
+  "hollow_barrow": {
+   "slot_weights": {
+    "weapon": 25,
+    "armor": 30,
+    "trinket": 45
+   },
+   "material_tag_bias": {
+    "holy": 3.0,
+    "bone": 2.0,
+    "precious": 1.5
+   },
+   "form_bias": {
+    "amulet": 3,
+    "ring": 2,
+    "mace": 2,
+    "plate": 2
+   },
+   "gold_mult": 1.3,
+   "tier_shift": 0,
+   "materials": [
+    {
+     "id": "bone",
+     "n": [
+      1,
+      3
+     ],
+     "weight": 3
+    },
+    {
+     "id": "silver",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 2
+    },
+    {
+     "id": "relic",
+     "n": [
+      1,
+      1
+     ],
+     "weight": 1
+    },
+    {
+     "id": "linen",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 2
+    }
+   ],
+   "uniques": [
+    {
+     "item": "hollow_kings_crown_fragment",
+     "role": "boss_lair",
+     "chance": 1.0
+    }
+   ],
+   "drops": {
+    "default": {
+     "chance": 0.12,
+     "tier": "plain"
+    },
+    "lich_acolyte": {
+     "chance": 0.3,
+     "tier": "fine"
+    },
+    "wraith": {
+     "chance": 0.2,
+     "tier": "plain"
+    }
+   }
+  },
+  "emberpeak": {
+   "slot_weights": {
+    "weapon": 40,
+    "armor": 40,
+    "trinket": 20
+   },
+   "material_tag_bias": {
+    "scale": 3.0,
+    "heavy": 1.8,
+    "metal": 1.5
+   },
+   "form_bias": {
+    "warhammer": 3,
+    "scale": 3,
+    "plate": 2
+   },
+   "gold_mult": 1.2,
+   "tier_shift": 1,
+   "materials": [
+    {
+     "id": "iron",
+     "n": [
+      1,
+      3
+     ],
+     "weight": 3
+    },
+    {
+     "id": "steel",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 2
+    },
+    {
+     "id": "dragonscale",
+     "n": [
+      1,
+      1
+     ],
+     "weight": 1
+    },
+    {
+     "id": "crystal",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 1
+    }
+   ],
+   "uniques": [
+    {
+     "item": "emberscale_cuirass",
+     "role": "boss_lair",
+     "chance": 1.0
+    }
+   ],
+   "drops": {
+    "default": {
+     "chance": 0.12,
+     "tier": "plain"
+    },
+    "drake": {
+     "chance": 0.3,
+     "tier": "fine"
+    },
+    "ash_wyrm": {
+     "chance": 0.35,
+     "tier": "rich"
+    }
+   }
+  },
+  "sunken_temple": {
+   "slot_weights": {
+    "weapon": 20,
+    "armor": 25,
+    "trinket": 55
+   },
+   "material_tag_bias": {
+    "gem": 3.0,
+    "holy": 2.5,
+    "magic": 1.8,
+    "glass": 1.5
+   },
+   "form_bias": {
+    "staff": 3,
+    "wand": 3,
+    "amulet": 3,
+    "charm": 2,
+    "robe": 2
+   },
+   "gold_mult": 1.2,
+   "tier_shift": 0,
+   "materials": [
+    {
+     "id": "crystal",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 3
+    },
+    {
+     "id": "silver",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 2
+    },
+    {
+     "id": "glass",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 2
+    },
+    {
+     "id": "herb",
+     "n": [
+      1,
+      3
+     ],
+     "weight": 2
+    }
+   ],
+   "uniques": [
+    {
+     "item": "tidecaller_trident",
+     "role": "treasure_vault",
+     "chance": 0.4
+    },
+    {
+     "item": "pearl_locket",
+     "role": "shrine",
+     "chance": 0.35
+    }
+   ],
+   "drops": {
+    "default": {
+     "chance": 0.1,
+     "tier": "plain"
+    },
+    "wraith": {
+     "chance": 0.25,
+     "tier": "fine"
+    },
+    "time_wraith": {
+     "chance": 0.35,
+     "tier": "rich"
+    }
+   }
+  },
+  "deepstone_halls": {
+   "slot_weights": {
+    "weapon": 40,
+    "armor": 40,
+    "trinket": 20
+   },
+   "material_tag_bias": {
+    "metal": 2.5,
+    "heavy": 2.0,
+    "precious": 1.4,
+    "gem": 1.4
+   },
+   "form_bias": {
+    "warhammer": 4,
+    "plate": 3,
+    "mail": 2,
+    "sword": 2
+   },
+   "gold_mult": 1.3,
+   "tier_shift": 1,
+   "materials": [
+    {
+     "id": "iron",
+     "n": [
+      1,
+      3
+     ],
+     "weight": 3
+    },
+    {
+     "id": "steel",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 3
+    },
+    {
+     "id": "mithril",
+     "n": [
+      1,
+      1
+     ],
+     "weight": 1
+    },
+    {
+     "id": "gold",
+     "n": [
+      1,
+      1
+     ],
+     "weight": 1
+    },
+    {
+     "id": "crystal",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 1
+    }
+   ],
+   "uniques": [
+    {
+     "item": "stonefathers_rune_maul",
+     "role": "boss_lair",
+     "chance": 1.0
+    },
+    {
+     "item": "delvers_runeplate",
+     "role": "treasure_vault",
+     "chance": 0.4
+    }
+   ],
+   "drops": {
+    "default": {
+     "chance": 0.12,
+     "tier": "plain"
+    },
+    "stone_golem": {
+     "chance": 0.3,
+     "tier": "fine"
+    },
+    "ogre": {
+     "chance": 0.25,
+     "tier": "fine"
+    }
+   }
+  },
+  "the_rift": {
+   "slot_weights": {
+    "weapon": 35,
+    "armor": 25,
+    "trinket": 40
+   },
+   "material_tag_bias": {
+    "magic": 3.0,
+    "precious": 1.5,
+    "gem": 1.5
+   },
+   "form_bias": {
+    "amulet": 2,
+    "ring": 2,
+    "wand": 2,
+    "staff": 2
+   },
+   "gold_mult": 1.5,
+   "tier_shift": 1,
+   "materials": [
+    {
+     "id": "crystal",
+     "n": [
+      1,
+      3
+     ],
+     "weight": 3
+    },
+    {
+     "id": "starmetal",
+     "n": [
+      1,
+      1
+     ],
+     "weight": 1
+    },
+    {
+     "id": "shadowsilk",
+     "n": [
+      1,
+      2
+     ],
+     "weight": 2
+    },
+    {
+     "id": "relic",
+     "n": [
+      1,
+      1
+     ],
+     "weight": 1
+    }
+   ],
+   "uniques": [
+    {
+     "item": "shard_of_the_unmade",
+     "role": "boss_lair",
+     "chance": 1.0
+    }
+   ],
+   "drops": {
+    "default": {
+     "chance": 0.14,
+     "tier": "fine"
+    },
+    "void_stalker": {
+     "chance": 0.3,
+     "tier": "rich"
+    },
+    "abyssal_knight": {
+     "chance": 0.35,
+     "tier": "rich"
+    }
+   }
+  }
+ }
+}

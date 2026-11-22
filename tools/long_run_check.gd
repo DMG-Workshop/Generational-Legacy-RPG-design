@@ -2,11 +2,12 @@
 ## budgets in data/game/budgets.json (save size, load time, time per generation, the journal's size, and the line
 ## carrying on). The battle-death share is judged against the 3-7% band when enough lives were played.
 ##
-## Run: godot --headless --path . -s res://tools/long_run_check.gd -- [seeds=1-2] [gens=60] [races=human,elf] [check]
+## Run: godot --headless --path . -s res://tools/long_run_check.gd -- [seeds=1-2] [gens=60] [races=human,elf] [subclass=<id,id|all|none>] [check]
 ##      godot --headless --path . -s res://tools/long_run_check.gd -- list-races      (prints the starting races as JSON)
 ##   seeds  seeds to play, as a range (1-3) or a list (1,5,9); each seed plays one dynasty per race (default 1-2)
 ##   gens   generations per dynasty (default 60; a generation takes about a second to play)
 ##   races  starting races to play (default: all of them)
+##   subclass  found the dynasties in these callings (a list, or "all" for the twenty), one run of the set for each
 ##   check  exit 1 when anything is over budget (default: only print)
 ## .github/workflows/long-runs.yml runs it every night, one race per job. The logic is in tools/long_run.gd.
 extends SceneTree
@@ -21,6 +22,7 @@ func _init() -> void:
 	var gens := 60
 	var races: Array = GameData.starting_ids(GameData.races)
 	var check := false
+	var subclasses: Array = []   # the callings to found a dynasty in; none given plays the plain house
 	for a in OS.get_cmdline_user_args():
 		if a == "list-races":
 			print(JSON.stringify(races))
@@ -34,6 +36,13 @@ func _init() -> void:
 			gens = int(a.substr(5))
 		elif a.begins_with("races="):
 			races = Array(a.substr(6).split(",", false))
+		elif a.begins_with("subclass="):
+			subclasses = [] if a.substr(9) == "none" else (_all_subclasses() if a.substr(9) == "all" else Array(a.substr(9).split(",", false)))
+			for sc in subclasses:
+				if not GameSubclass.has(str(sc)):
+					print("No such subclass: %s" % sc)
+					quit(2)
+					return
 		else:
 			print("Not understood: %s" % a)
 			quit(2)
@@ -51,14 +60,16 @@ func _init() -> void:
 	var problems: Array = []
 	var lives := 0
 	var slain := 0
-	print("Long run: %d seeds x %d races x %d generations" % [seeds.size(), races.size(), gens])
-	for s in seeds:
-		for r in races:
-			var m := LongRun.run_one(int(s), str(r), gens)
-			print(LongRun.line(m))
-			lives += int(m["lives"])
-			slain += int(m["slain"])
-			problems.append_array(LongRun.judge(m, b))
+	var callings: Array = subclasses if not subclasses.is_empty() else [""]
+	print("Long run: %d seeds x %d races x %d generations x %d callings" % [seeds.size(), races.size(), gens, callings.size()])
+	for sc in callings:
+		for s in seeds:
+			for r in races:
+				var m := LongRun.run_one(int(s), str(r), gens, str(sc))
+				print(("[%s] " % sc if sc != "" else "") + LongRun.line(m))
+				lives += int(m["lives"])
+				slain += int(m["slain"])
+				problems.append_array(LongRun.judge(m, b).map(func(p): return ("[%s] " % sc if sc != "" else "") + p))
 	problems.append_array(LongRun.judge_deaths(lives, slain, b))
 	print("")
 	print("%d lives, %d slain in battle (%.1f%%)." % [lives, slain, 100.0 * float(slain) / maxf(1.0, float(lives))])
@@ -68,6 +79,10 @@ func _init() -> void:
 		for p in problems:
 			print("OVER BUDGET: %s" % p)
 	quit(1 if check and not problems.is_empty() else 0)
+
+
+func _all_subclasses() -> Array:
+	return GameSubclass.defs().map(func(s): return str(s["id"]))
 
 
 func _seeds(text: String) -> Array:

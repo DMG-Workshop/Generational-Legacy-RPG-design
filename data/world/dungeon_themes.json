@@ -1,0 +1,1288 @@
+{
+  "note": "Dungeon looks (core/game/game_dungeon_art.gd, ui/play/dungeon_view.gd, ui/play/dungeon_entrance_art.gd; checked by tools/check_data.gd). `dungeons` gives each dungeon place its theme. A theme has a `palette` (a character is a colour) and 8 by 8 pixel `glyphs` ('.' is clear): the floor in three looks (floor_a, floor_b, floor_c, chosen by a hash of the tile), wall_face (a wall with floor to its south), wall_top, door, exit, and the props it uses. `shared.containers` are the shapes of the loot containers (chest, crate, rack, hoard, urn, sarcophagus, each closed and `_open`), coloured by the theme's `containers` colours (M main, N dark, H light, T trim, P black). `propdefs` say what each prop is (name, whether it blocks the way, the radius of light it gives, whether it hangs on a wall). `ambient` rules place props from the dungeon's id alone (`where`: floor, edge, corner, center, pillar, head, wall_north; `roles` limits them to rooms of those roles). `light` is the darkness (0 to 1), the heir's own light radius in tiles and a tint. `entrance` is the dungeon's door drawn on the open world, w by h tiles of 16 pixels, the door tile at the bottom middle. Nothing here is saved or random.",
+  "dungeons": {
+    "goblin_warrens": "warren",
+    "hollow_barrow": "barrow",
+    "emberpeak": "ember",
+    "sunken_temple": "temple",
+    "deepstone_halls": "halls",
+    "the_rift": "rift"
+  },
+  "shared": {
+    "containers": {
+      "chest": ["........", ".NNNNNN.", "NMMMMMMN", "NHHHHHHN", "NNNTTNNN", "NMMTTMMN", "NMMMMMMN", ".NNNNNN."],
+      "chest_open": [".NNNNNN.", "NMMMMMMN", "NNNNNNNN", "NHTTTTHN", "NTTHHTTN", "NMMMMMMN", "NMMMMMMN", ".NNNNNN."],
+      "crate": ["........", "NNNNNNNN", "NMMNMMMN", "NMNMNMMN", "NMMNMNMN", "NMNMMMNN", "NMMMNMMN", "NNNNNNNN"],
+      "crate_open": ["........", "NNNNNNNN", "NNNNNNNN", "NHNHNHHN", "NHHNHNHN", "NMNMMMNN", "NMMMNMMN", "NNNNNNNN"],
+      "rack": ["........", "N..N..N.", "NT.NT.NT", "NT.NT.NT", "NT.NT.NT", "NMMMMMMM", "NNNNNNNN", "........"],
+      "rack_open": ["........", "N.....N.", "N.....N.", "N..T..N.", "N.....N.", "NMMMMMMM", "NNNNNNNN", "........"],
+      "hoard": ["........", "........", "...HT...", "..HTHT..", ".HMHTMH.", "HTMMHMTH", "NMHTMHMN", "NNNNNNNN"],
+      "hoard_open": ["........", "........", "........", "........", "....N...", "..N.....", ".NMN..N.", "NNNNNNNN"],
+      "urn": ["........", "..NNNN..", "...MM...", "..NMMN..", ".NMHMMN.", ".NMHMMN.", "..NMMN..", "...NN..."],
+      "urn_open": ["........", "..NNNN..", "..NTTN..", "..NMMN..", ".NMHMMN.", ".NMHMMN.", "..NMMN..", "...NN..."],
+      "sarcophagus": [".NNNNNN.", "NMMMMMMN", "NMHHHHMN", "NMHTTHMN", "NMHHHHMN", "NMHTTHMN", "NMMMMMMN", ".NNNNNN."],
+      "sarcophagus_open": [".NNNNNN.", "NNNNNNNN", "NNPPPPNN", "NNPPPPNN", "NNPTTPNN", "NNPPPPNN", "NMMMMMMN", ".NNNNNN."]
+    }
+  },
+  "themes": {
+    "warren": {
+      "name": "Warren",
+      "about": "Packed earth, bones and crude torches: a goblin warren.",
+      "palette": {
+        "a": "#3a2a1a",
+        "b": "#52402a",
+        "c": "#685238",
+        "d": "#86745a",
+        "e": "#261a0e",
+        "f": "#7a5430",
+        "g": "#4a3118",
+        "h": "#d6ceb4",
+        "i": "#f08a20",
+        "j": "#ffd45a",
+        "k": "#b8453a",
+        "l": "#e6dcc4",
+        "m": "#50702e",
+        "n": "#706a60",
+        "o": "#4a463f",
+        "p": "#161008",
+        "q": "#a8883e",
+        "r": "#d8b040",
+        "s": "#8a9a3a"
+      },
+      "containers": {
+        "M": "#8a5a2a",
+        "N": "#3e2810",
+        "H": "#b07a3a",
+        "T": "#d8b040",
+        "P": "#161008"
+      },
+      "glyphs": {
+        "floor_a": ["bbbbbbbb", "bbcbbbab", "bbbbdbbb", "abbbbbbb", "bbbcbbbb", "bbbbbabb", "bdbbbbbb", "bbbbcbbb"],
+        "floor_b": ["bbbabbbb", "bcbbbbdb", "bbbbbbbb", "bbabcbbb", "bbbbbbab", "dbbbbbbb", "bbbbcbbb", "bbabbbbb"],
+        "floor_c": ["bbbbbbbb", "bdbbbbcb", "bbbbabbb", "bbcbbbbb", "bbbbbbdb", "bbabbbbb", "bbbbcbbb", "bdbbbbab"],
+        "wall_face": ["eaaeaaae", "aabaabaa", "abbaabba", "aacaabca", "ababbaab", "bbmbbbmb", "aaaaaaaa", "eeeeeeee"],
+        "wall_top": ["eaeeaeea", "aeaaeaae", "eaaeeaea", "aeaeaaee", "eaeaeaea", "aeeaeaae", "eaaeaeea", "aeaeeaae"],
+        "door": ["gggggggg", "gfffgfff", "gfdfgfdf", "gfffgfff", "gqfqgfqf", "gfffgfff", "gfdfgfdf", "gggggggg"],
+        "exit": ["bbbbbbbb", "bqqqqqqb", "bqbbbbqb", "bqbiibqb", "bqbiibqb", "bqbbbbqb", "bqqqqqqb", "bbbbbbbb"],
+        "bones": ["........", "........", "..h..h..", ".hhh.hh.", "..h.hh..", ".hhhh.h.", "...hh...", "........"],
+        "rubble": ["........", "........", "...nn...", "..nnno..", ".nnnonn.", "nnonnnoo", "noonnooo", "........"],
+        "mushrooms": ["........", "........", "..kk....", ".kkkk.k.", "..l..kkk", "..l...l.", "....m.l.", "...mmm.."],
+        "skull_stake": ["...hh...", "..hhhh..", "..hpph..", "...hh...", "...ff...", "...fg...", "...fg...", "..ggog.."],
+        "campfire": ["........", "...j....", "..jij...", ".ijjji..", "..iii...", ".gfgfg..", "gfgnfgn.", ".ggnng.."],
+        "straw": ["........", "........", "..q..q..", ".qqq.qq.", "qqrqqqqq", ".qqqrqq.", "qqqqqqqq", "........"],
+        "torch_wall": ["eaaeaaae", "aabjbbaa", "abbjibba", "aacifbca", "ababfaab", "bbbbfbbb", "aaaagaaa", "eeeeeeee"]
+      },
+      "propdefs": {
+        "bones": {
+          "name": "bones",
+          "solid": false,
+          "light": 0
+        },
+        "rubble": {
+          "name": "rubble",
+          "solid": true,
+          "light": 0
+        },
+        "mushrooms": {
+          "name": "mushrooms",
+          "solid": false,
+          "light": 0
+        },
+        "skull_stake": {
+          "name": "skull on a stake",
+          "solid": true,
+          "light": 0
+        },
+        "campfire": {
+          "name": "campfire",
+          "solid": true,
+          "light": 3
+        },
+        "straw": {
+          "name": "straw bedding",
+          "solid": false,
+          "light": 0
+        },
+        "torch_wall": {
+          "name": "crude torch",
+          "solid": false,
+          "light": 4,
+          "on_wall": true
+        }
+      },
+      "ambient": [
+        {
+          "prop": "bones",
+          "chance": 0.05,
+          "where": "floor"
+        },
+        {
+          "prop": "rubble",
+          "chance": 0.05,
+          "where": "edge"
+        },
+        {
+          "prop": "mushrooms",
+          "chance": 0.12,
+          "where": "edge",
+          "roles": ["nest", "prison", "shrine"]
+        },
+        {
+          "prop": "straw",
+          "chance": 0.14,
+          "where": "floor",
+          "roles": ["barracks", "nest", "prison"]
+        },
+        {
+          "prop": "skull_stake",
+          "chance": 0.08,
+          "where": "edge",
+          "roles": ["entrance_hall", "guard_room", "shrine"]
+        },
+        {
+          "prop": "campfire",
+          "chance": 0.05,
+          "where": "center",
+          "roles": ["guard_room", "barracks"]
+        },
+        {
+          "prop": "torch_wall",
+          "chance": 0.25,
+          "where": "wall_north"
+        }
+      ],
+      "light": {
+        "dark": 0.55,
+        "radius": 5,
+        "tint": [0.06, 0.03, 0.0]
+      },
+      "entrance": {
+        "shape": "cave_mouth",
+        "name": "Cave mouth",
+        "about": "Tunnels gnawed into a hillside, a skull on a stake either side.",
+        "w": 5,
+        "h": 3,
+        "palette": {
+          "a": "#3c3022",
+          "b": "#5a4a38",
+          "c": "#7a6850",
+          "g": "#4a7a30",
+          "h": "#6a9a3c",
+          "k": "#0c0804",
+          "d": "#241a10",
+          "w": "#7a5430",
+          "x": "#4a3118",
+          "s": "#d6ceb4",
+          "f": "#f08a20",
+          "y": "#ffd45a",
+          "o": "#14100a"
+        },
+        "rows": [
+          "................................................................................",
+          "................................................................................",
+          "................................................................................",
+          "................................oooooooooooooooo................................",
+          "..........................ooooooggggggggggggggggoooooo..........................",
+          ".......................oooggggggggggggggggggggggggggggooo.......................",
+          "....................ooogggggggghhhhhhhhhhhhhgggggggggggggooo....................",
+          "..................oogggggghhhhhhhhhhhhhhhhhhhhhhhgggggggggggoo..................",
+          "................ooggcfghhhhhhchhhhhhhhhhhhhahhhhhhhhggggggggfgoo................",
+          "..............ooggggfyfchhhhhhhhhhhhhhhhhhhhhhhchhhhhhgggggfyfggoo..............",
+          ".............oggaggfyyyfchhhhhhhhhhahhhhhhhhhhhhhhhhhhhhggfyyyfggao.............",
+          "............oggggghfyyyfhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhchgfyyyfggggo............",
+          "...........oggggghhfyyyfhhhhhhhhhhhhhhhhhhhhhhhhchhhhhhhhhfyyyfgggggo...........",
+          "..........oggggghhhffyffhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhffyffggggggo..........",
+          ".........oggggghhhhxfffxhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhxfffxgggggggo.........",
+          "........ogcggghhhhhxxfxxhhhhhahhahhhhhhhahhhhhhhhhhhhhhhhhxxfxxggagggggo........",
+          "........oggggghhhhhxxxxxhhhhhhhhhhhhhhhhhhhhhhhhhhhhahhhhhxxxxxggggggggo........",
+          ".......ogggggghhhhhxxxxxhhhhhhhhhhhhhahhhhhhhhhhhhhhhhahhhxxxxxgggggggggo.......",
+          "......oggggggghhhhhhssshhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhcccsssgggggggggggo......",
+          "......oggggggghhhhhssssshhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhcccsssssggggggggggo......",
+          "......ogggggggghhhssssssshhhhhhhhhhhhdddddddhhhhhhhhhhccbsssssssgggggcgcgo......",
+          ".....ogggggggggghhssososshhhhhhhhhhdddddddddddhhhhhhhhcbbssosossgggcggggggo.....",
+          ".....oggbggggggggcssssssshhhhhhhhdddddddddddddddhhhhhhhbbsssssssgggggggbggo.....",
+          ".....oggbggggggggcssssssschhhhhhddddddkkkkkddddddhhhhhhhbsssssssggggaggbggo.....",
+          ".....ogbbbggggggggbssssshhhhhhhdddddkkkkkkkkkdddddhhhhhhggsssssgggggggbbbgo.....",
+          ".....obcbbbgggggggggssshhhhchhdddddkkkkkkkkkkkdddddhhhgggggsssggggcccccbbbo.....",
+          ".....obbbbbbagggggggwwxhhhhhhhddddkkkkkkkkkkkkkddddhgggggcgwwxggcccccccccbo.....",
+          "....obbbbbbbbgggggggwwxggghhhddddkkkkkkkkkkkkkkkddddgggggggwwxccccbbabbcccbo....",
+          "....obbbcccccbgggcggwwxgagggddddkkkkkkkkkkkkkkkkkddddggggagwwxccbbbbbbbbbcco....",
+          "ooooobccccccccabggggwwxgggggdddkkkkkkkkkkkkkkkkkkkdddggggggwwxcbbbbbbbbbbaaooooo",
+          "bbbbbcccbbbabcacbbggwwxggggddddkkkkkkkkkkkkkkkkkkkddddgggggwwxbcbbbbbbbbbbbbbbbb",
+          "bbbbbccbbbbbbbbcbbbbwwxgggadddkkkkkkkkkkkkkkkkkkkkkdddgggggwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxggggdddkkkkkkkkkkkkkkkkkkkkkdddgggbbwwxbbbbbbcbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbgdddkkkkkkkkkkkkkkkkkkkkkdddbbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbbbabbbbbbbbbbbwwxbbbdddkkkkkkkkkkkkkkkkkkkkkkkdddbbbawwxbbbbbbbbbbabbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbdddkkkkkkkkkkkkkkkkkkkkkkkdddbbbbwwxbbbbbbbabbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbssskkkkkkkkkkkkkkkkkkkkkkksssbbbbwwxbbbbbbbbbbbbbbcbbb",
+          "bbbbbbbbcbbbbbbbbbbbwwxbbbssskkkkkkkkkkkkkkkkkkkkkkksssbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbcbbbbcbbbbbbbbbwwxbbbssskkkkkkkkkkkkkkkkkkkkkkksssbbbbwwxbbbabbbbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbdsdkkkkkkkkkkkkkkkkkkkkkkkdsdbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbdsdkkkkkkkkkkkkkkkkkkkkkkkdsdbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbcbbbbbbbbbbbbbwwxcbbdsdkkkkkkkkkkkkkkkkkkkkkkkdsdbbbbwwxcbbbbbbbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbabbwwxbbbdddkkkkkkkkkkkkkkkkkkkkkkkdddbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbdddkkkkkkkkkkkkkkkkkkkkkkkdddbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbbabbbbbbbbbbbbwwxbbbdddddkkkkkkkkkkkkkkkkkkkdddddbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbdddddkkkkkkkkkkkkkkkkkkkdddddbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbddddsssskksssskkkkkkssssssssdbbbbwwxbbbbbbbbbbbbbbbbbb",
+          "bbbbbbbbbbbbbbbbbbbbwwxbbbddddsssskksssskkkkkkssssssssdbbbbwwxbbbbbbbbbbbbbbbbbb"
+        ]
+      }
+    },
+    "barrow": {
+      "name": "Barrow",
+      "about": "Flagstones, sarcophagi, urns and candles: a king's tomb.",
+      "palette": {
+        "a": "#2a2c34",
+        "b": "#3c4048",
+        "c": "#4a4e58",
+        "d": "#5c6068",
+        "e": "#1a1c22",
+        "f": "#6a6e76",
+        "g": "#8a8e96",
+        "h": "#d8d4c0",
+        "i": "#f4c860",
+        "j": "#fff0a0",
+        "k": "#a8a090",
+        "l": "#c8c4b0",
+        "m": "#3a4a3a",
+        "n": "#201a26",
+        "o": "#58506a",
+        "p": "#101014",
+        "q": "#a08a5a",
+        "r": "#7a6a8a",
+        "s": "#e8e4d4"
+      },
+      "containers": {
+        "M": "#6a6a72",
+        "N": "#22242a",
+        "H": "#9a9aa4",
+        "T": "#c8b060",
+        "P": "#0a0a0c"
+      },
+      "glyphs": {
+        "floor_a": ["ccccdccc", "cbbbbbbc", "cbbbbbbc", "dbbbbbbc", "cbbbbbbc", "cbbbbbbc", "ccccccdc", "cccccccc"],
+        "floor_b": ["ccccccdc", "cbbbbbbc", "cbbabbbc", "cbbbbbbc", "cbbbbbbd", "cbbbbabc", "cbbbbbbc", "dccccccc"],
+        "floor_c": ["cdcccccc", "cbbbbbbc", "cbbbbbbc", "cbabbbbc", "cbbbbbbc", "cbbbbbbc", "cbbbbbbc", "cccccdcc"],
+        "wall_face": ["eaaaaaae", "abbbabbb", "aeeeaeee", "bbabbbab", "eeaeeeae", "abbbabbb", "aaaaaaaa", "eeeeeeee"],
+        "wall_top": ["eeaaeeaa", "aaeeaaee", "eeaaeeaa", "aaeeaaee", "eeaaeeaa", "aaeeaaee", "eeaaeeaa", "aaeeaaee"],
+        "door": ["eeeeeeee", "ekkkkkke", "ekdkkdke", "ekkkkkke", "ekkigkke", "ekkkkkke", "ekdkkdke", "eeeeeeee"],
+        "exit": ["cccccccc", "cddddddc", "cdcccccd", "cdciicdc", "cdciicdc", "cdcccccd", "cddddddc", "cccccccc"],
+        "cobweb": ["s.s.....", ".ss.....", "..s.s...", "...s.s..", "....s.s.", "......s.", "........", "........"],
+        "urn_deco": ["........", "..aaaa..", "...bb...", "..abba..", ".abccba.", ".abccba.", "..abba..", "...aa..."],
+        "candle": ["........", "...j....", "...i....", "..lll...", "..lhl...", "..lll...", ".kkkkk..", "........"],
+        "skull_pile": ["........", "........", "..hh....", ".hphh.h.", "hhhhhhph", "hphhhhhh", "hhhhphhh", "........"],
+        "pillar": [".ffffff.", ".gggggg.", "..kkkk..", "..kddk..", "..kddk..", "..kddk..", ".gggggg.", ".ffffff."],
+        "altar": ["........", ".gggggg.", "gllllllg", "gkkkkkkg", ".kddddk.", ".kd..dk.", ".kd..dk.", ".gggggg."],
+        "candle_wall": ["eaaaaaae", "abbijbbb", "aeelheee", "bbablbab", "eeaeeeae", "abbbabbb", "aaaaaaaa", "eeeeeeee"],
+        "niche_wall": ["eaaaaaae", "abbbbbbb", "aeppppee", "bbppphab", "eeppppae", "abbbbbbb", "aaaaaaaa", "eeeeeeee"]
+      },
+      "propdefs": {
+        "cobweb": {
+          "name": "cobwebs",
+          "solid": false,
+          "light": 0
+        },
+        "urn_deco": {
+          "name": "burial urn",
+          "solid": true,
+          "light": 0
+        },
+        "candle": {
+          "name": "candle",
+          "solid": false,
+          "light": 2
+        },
+        "skull_pile": {
+          "name": "skulls",
+          "solid": false,
+          "light": 0
+        },
+        "pillar": {
+          "name": "pillar",
+          "solid": true,
+          "light": 0
+        },
+        "altar": {
+          "name": "altar",
+          "solid": true,
+          "light": 0
+        },
+        "candle_wall": {
+          "name": "wall candles",
+          "solid": false,
+          "light": 3,
+          "on_wall": true
+        },
+        "niche_wall": {
+          "name": "burial niche",
+          "solid": false,
+          "light": 0,
+          "on_wall": true
+        }
+      },
+      "ambient": [
+        {
+          "prop": "cobweb",
+          "chance": 0.45,
+          "where": "corner"
+        },
+        {
+          "prop": "skull_pile",
+          "chance": 0.06,
+          "where": "edge"
+        },
+        {
+          "prop": "urn_deco",
+          "chance": 0.08,
+          "where": "edge",
+          "roles": ["crypt", "shrine", "guard_room", "treasure_vault"]
+        },
+        {
+          "prop": "candle",
+          "chance": 0.1,
+          "where": "edge",
+          "roles": ["shrine", "crypt", "boss_lair"]
+        },
+        {
+          "prop": "pillar",
+          "chance": 0.5,
+          "where": "pillar",
+          "roles": ["crypt", "boss_lair", "entrance_hall"]
+        },
+        {
+          "prop": "altar",
+          "chance": 1.0,
+          "where": "head",
+          "roles": ["shrine", "boss_lair"]
+        },
+        {
+          "prop": "candle_wall",
+          "chance": 0.22,
+          "where": "wall_north"
+        },
+        {
+          "prop": "niche_wall",
+          "chance": 0.3,
+          "where": "wall_north",
+          "roles": ["crypt", "charnel"]
+        }
+      ],
+      "light": {
+        "dark": 0.62,
+        "radius": 4,
+        "tint": [0.0, 0.0, 0.05]
+      },
+      "entrance": {
+        "shape": "barrow_door",
+        "name": "Barrow door",
+        "about": "A grassed mound with a stone door set in it, standing stones leaning round.",
+        "w": 5,
+        "h": 3,
+        "palette": {
+          "a": "#2c3a2a",
+          "b": "#3e5238",
+          "c": "#566e48",
+          "m": "#6a8458",
+          "s": "#7a7e84",
+          "t": "#5a5e66",
+          "u": "#3c4048",
+          "k": "#0c0c10",
+          "r": "#9aa0c8",
+          "o": "#14161a",
+          "n": "#c8c4b0",
+          "e": "#3a3028"
+        },
+        "rows": [
+          "................................................................................",
+          "................................................................................",
+          "................................................................................",
+          "...........o....................................................................",
+          "..........oeo...................................................................",
+          ".........oeeeo..................................................................",
+          "..........oeeo..................................................................",
+          "...........oeeo...o..............oooooooooooooo.....................o...........",
+          "...........oeeeo.oeo.........oooocmmmmmmmmmmmccoooo................oeo..........",
+          "............oeeooeo.......ooocmmmmmmmmmmmmmmmmmmmccooo............oeeeo.........",
+          "............oeeoeo.....ooocmmmmmmmmmmcmmmmmmmmmmmmmmcmooo.........oeeo..........",
+          "............oeeeo....ooccmmmmmmmmmmmmmmmammmmmmmmmmmmmcccoo......oeeo...........",
+          "............oeeo...oocccmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmccccoo...oeeeo...........",
+          "............oeeo..occcmmmmammmmmmmmmmmmmmmmmmmmmmmmmmmmmmcccco..oeeo............",
+          "............oeeooocccmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmccccoooeeo............",
+          "............oeeoccccmmmmmmmmcmmmmmmmmmmmmmcmmmmmmmmmmmmmmmmccaccoeeo............",
+          "............oeeccccmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmamccccceeo............",
+          "............oeecccmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmcccceeo............",
+          "............oeecccmmmmcmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmcacceeo............",
+          "........o..oceeccmmmmmmmmmmmmmmmmmmmmmmmcmmmmmmmmmmmmmmmmammmmccceeco...........",
+          ".......osoocaeeccmmmmmmmcmmmmmmmmmammmmmmmmmmmmmmmmmmmmmmmmcmmccceecco..........",
+          "......osssccccccmmmmmmmmmmmmmmmmcmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmcceecccoo........",
+          "......osssscccccmmmmmmmmnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnmmmmmmcceecccbso.......",
+          ".....osssssscccammmmmmmmsssssssssssssssssssssssssssssssssmmmmmmcccccccssso......",
+          "....osssssssscccmmmmmmmmsssssssssssssssssssssssssssssssssmmmmmmcccccccsssso.....",
+          "....ossssstttcccmmmmmmmmsssssssssssssssssssssssssssssssssmmmmmmccccccsssssso....",
+          "....ossssstttcccmmmmmmmmsstttttkkkkkkkkkkkkkkkkkkktttttssmmmmmmcccccsssssssso...",
+          "....ossssstttcccmmmmmmmmuutttttkkkkkkkkkkkkkkkkkkktttttuummmmmmcccccsssssttto...",
+          "....ossssstttccccmmmmmmmuutttttkkkkkkkkkkkkkkkkkkktttttuummmmmccccccsssssttto...",
+          "...obssusstttccccmmmmmmmuutttttkkuuuuuuuuuuuuuuukktttttuummmmmccccccsssssttto...",
+          "...obssssstttcccccmmmmmmuutttttkkutttttuuttttttukktttttuummmmccccccasssssttto...",
+          "..obbssssstttcmcccmmmmmmuutttttkkutttttuuttttttukktttttuummmmcccccccssusstttbo..",
+          "..obbssssstttccccccmmmmmuutttttkkutttttuuttttttukktttttuumamccccccccssssstttbo..",
+          ".obbbsssustttcccccccammmuutttttkkutttttuuttttttukktttttuummccacmccccssssstttbbo.",
+          ".obbbssssstttccccccccmmmuutttttkkutrrrruurrrrrtukktttttuumccccccccccssssstttbbo.",
+          ".obbbssssstttcccccccccmmuutttttkkutttttuuttttttukktttttuucccccccccccsssustttbbo.",
+          "obbbbssssstttmccccccccccuuttttrkkutttttuuttrtttukktttttuucccccccacccssssstttbbbo",
+          "obbbbssssstttcccccccccccuutttttkkutttttuuttttttukktttrtuucccccccccccssssstttbrbo",
+          "obbbbssssstttcccccccccccuutttttkkurrrrruurrrrrturkttttruucccccccccccssssstttbbbo",
+          "obbrbssssstttcccccccccccuutttttkkutttrtuuttttttukktttttuucccccccccccssssstttbbbo",
+          "bbbbbssssstttcccccccccccuutttttkkutttttuuttttttukktttttuucccccccccccssssstttbbbb",
+          "rbbbbssssstttccccmccccccuutttttkkutttttuuttttttukktttttuucccccccccccssssstttbbbb",
+          "rbbbbssssstttcccccccccccuurttttkkutrrrruurrrrrtukktttttuucccccccccccssssstttbbbb",
+          "bbbbbssssstttcccccccccccuutttttkkutttttuutttttturktttttuucccccccccccssssstttbbbb",
+          "bbbbbssssstttcccrcccccccuutttttkkutttttuuttttttukktttttuucccccccccccssssstttbbbb",
+          "bbbbbssssstttcrcccccccccuutttttkkutttttuuttttttukktttttuuccrccccccccssrsstttbbbb",
+          "bbbbbssssstttcccccccccccuutttttkkutttttuuttttttukktttttuucccccccccccssssstttbbbb",
+          "bbbbbssssstttcccccccccccuutttttkkutttttuuttttttukrtttttuucccccccccccssssstttbbbb"
+        ]
+      }
+    },
+    "ember": {
+      "name": "Ember",
+      "about": "Cracked obsidian lit by lava: a smoking mountain's forge-halls.",
+      "palette": {
+        "a": "#1e1816",
+        "b": "#2c2422",
+        "c": "#3a302c",
+        "d": "#4a3e38",
+        "e": "#120e0c",
+        "f": "#e0501a",
+        "g": "#ff8a2a",
+        "h": "#ffd060",
+        "i": "#6a2a1a",
+        "j": "#8a3a1e",
+        "k": "#52504e",
+        "l": "#7a7672",
+        "m": "#3a1410",
+        "n": "#b0b0b8",
+        "o": "#2a2a30",
+        "p": "#0a0808",
+        "q": "#d84018",
+        "r": "#caa860"
+      },
+      "containers": {
+        "M": "#5a5456",
+        "N": "#1a1618",
+        "H": "#8a8486",
+        "T": "#e8a030",
+        "P": "#0a0808"
+      },
+      "glyphs": {
+        "floor_a": ["bbbbbbbb", "bcbbbbcb", "bbbbfbbb", "bbcbbbbb", "bbbbbcbb", "bfbbbbbb", "bbbbcbbb", "bbbbbbbb"],
+        "floor_b": ["bbbcbbbb", "bbbbbbbc", "bfgbbbbb", "bbbbbcbb", "bcbbbbbb", "bbbbbfbb", "bbcbbbbb", "bbbbbbbb"],
+        "floor_c": ["bbbbbbbb", "bbbbfbbb", "bcbbgfbb", "bbbbbfbb", "bbbbbbbb", "bbcbbbbc", "bbbbbbbb", "bfbbbcbb"],
+        "wall_face": ["kllkkllk", "kkkklkkk", "okkoookk", "ooooooko", "occoocoo", "aaaaaaaa", "eeeeeeee", "pppppppp"],
+        "wall_top": ["oacoaoco", "aooaocoa", "coaocoao", "oaocaaoo", "aoaooaca", "ocaoaoao", "aoocoaoa", "coaoaoco"],
+        "door": ["kkkkkkkk", "kooooook", "kofggfok", "kofghfok", "kofghfok", "kofggfok", "kooooook", "kkkkkkkk"],
+        "exit": ["bbbbbbbb", "bkkkkkkb", "bkbbbbkb", "bkbffbkb", "bkbffbkb", "bkbbbbkb", "bkkkkkkb", "bbbbbbbb"],
+        "lava_pool": ["........", "..mmmm..", ".mqffqm.", "mqfghfqm", "mqfhhgqm", ".mqffqm.", "..mmmm..", "........"],
+        "vent": ["........", "........", "...n....", "..n.n...", ".bffffb.", ".bfggfb.", "..bbbb..", "........"],
+        "anvil": ["........", "........", ".nnnnnn.", "nnnnnnn.", "..nnn...", "..lll...", ".lllll..", ".ooooo.."],
+        "brazier": ["...h....", "..hgh...", ".hgfgh..", "..gfg...", ".kkkkk..", "..kok...", "..kok...", ".kkokk.."],
+        "spike": ["........", "...o....", "..oko...", "..oko...", ".oookk..", ".ookkko.", "oookkooo", "oooooooo"],
+        "slag": ["........", "........", "........", "..cc....", ".cddc.c.", "cdidddcc", "dididdid", "........"],
+        "charred_bones": ["........", "........", "..k..k..", ".kkk.kk.", "..k.kk..", ".kkkk.k.", "...kk...", "........"],
+        "lava_crack": ["kllkkllk", "kkkklkkk", "okkfookk", "oooghoko", "occoffoo", "aaaaaaaa", "eeeeeeee", "pppppppp"]
+      },
+      "propdefs": {
+        "lava_pool": {
+          "name": "pool of lava",
+          "solid": true,
+          "light": 4
+        },
+        "vent": {
+          "name": "steam vent",
+          "solid": false,
+          "light": 1
+        },
+        "slag": {
+          "name": "slag",
+          "solid": false,
+          "light": 0
+        },
+        "charred_bones": {
+          "name": "charred bones",
+          "solid": false,
+          "light": 0
+        },
+        "anvil": {
+          "name": "anvil",
+          "solid": true,
+          "light": 0
+        },
+        "brazier": {
+          "name": "brazier",
+          "solid": true,
+          "light": 4
+        },
+        "spike": {
+          "name": "obsidian spike",
+          "solid": true,
+          "light": 0
+        },
+        "lava_crack": {
+          "name": "glowing crack",
+          "solid": false,
+          "light": 4,
+          "on_wall": true
+        }
+      },
+      "ambient": [
+        {
+          "prop": "lava_pool",
+          "chance": 0.1,
+          "where": "center",
+          "roles": ["guard_room", "boss_lair", "forge", "guard_room", "nest"]
+        },
+        {
+          "prop": "vent",
+          "chance": 0.06,
+          "where": "floor"
+        },
+        {
+          "prop": "slag",
+          "chance": 0.1,
+          "where": "floor"
+        },
+        {
+          "prop": "charred_bones",
+          "chance": 0.08,
+          "where": "floor",
+          "roles": ["nest", "boss_lair", "shrine"]
+        },
+        {
+          "prop": "anvil",
+          "chance": 0.5,
+          "where": "center",
+          "roles": ["forge"]
+        },
+        {
+          "prop": "brazier",
+          "chance": 0.3,
+          "where": "edge",
+          "roles": ["forge", "shrine", "armoury", "entrance_hall", "boss_lair"]
+        },
+        {
+          "prop": "spike",
+          "chance": 0.07,
+          "where": "edge"
+        },
+        {
+          "prop": "lava_crack",
+          "chance": 0.28,
+          "where": "wall_north"
+        }
+      ],
+      "light": {
+        "dark": 0.42,
+        "radius": 5,
+        "tint": [0.1, 0.02, 0.0]
+      },
+      "entrance": {
+        "shape": "volcano_gate",
+        "name": "Volcano gate",
+        "about": "A smoking cone with an obsidian gate, its throat glowing.",
+        "w": 5,
+        "h": 3,
+        "palette": {
+          "a": "#241c1a",
+          "b": "#382c28",
+          "c": "#4c3c34",
+          "d": "#605048",
+          "f": "#e0501a",
+          "g": "#ff8a2a",
+          "h": "#ffd060",
+          "k": "#120c0a",
+          "i": "#7a2a14",
+          "o": "#0a0606",
+          "s": "#6a6664",
+          "t": "#403c3a"
+        },
+        "rows": [
+          "......................................otttttttottttto...........................",
+          ".................................ooooootttttttottttto...........................",
+          "................................oiiffggtttttttiittto............................",
+          "................................oiiffgggtttttfiiooo.............................",
+          "...............................obiifffffftttffiibo..............................",
+          "..............................obbiiiiiiiiiiiiiiibbo.............................",
+          ".............................obbbbccccccfcccccabbbbo............................",
+          "............................obbbbcccccccfcccccaabbbbo...........................",
+          "...........................ocbbbbccccdcfccccfbaaaabbbo..........................",
+          "..........................obbbcbaccccccfccccfbbaaaabbbo.........................",
+          ".........................obbbbbcccccccfcccccbfbaaaaaabbo........................",
+          "........................obbbbbbccccccafccccbbfbaaaaaaabbo.......................",
+          ".......................obbbbbbccccccccfcccbbbbfaaaaaaaaabo......................",
+          "......................obdbbbbccccccccfcccbbbbbfbaaaaaaaaabo.....................",
+          ".....................obbbbbbbccccccccfcctbbbbbfbaaaaaaaaaaao....................",
+          "....................obbbbbbbcccccccccftttttbbbbfaaaaaaacaaabo...................",
+          "....................oabbbbbccccccccctttttttttbbfaaaaaaacaaaao...................",
+          ".................ooobbbbbbbcccccccttttttattttttfbaaaaaaaaaaabooo................",
+          "................offbbbbbbbccccccttttttaaaaattttttaaaaaaaaaaaabffo...............",
+          "...............ofggfbbbbbbcccctttttaaaaaaaaaaatttttaaaadaaaaafggfo..............",
+          "..............ofggggfbbbbccctttttaaaaaaaaaaaaaaatttttaaaaaaafggggfo.............",
+          "..............ofghggfbbbccttttaaaaaaaaaaaaaaaaaaaaattttaaaaafghggfo.............",
+          "..............ofggggfbbbttttaaaaaaaaaaaaaaaaaaaaaaaaattttaaafggggfo.............",
+          "..............ofggggfbbbtttttttttttttttttttttttttttttttttaaafggggfo.............",
+          "..............offggffbbcttaaaaaaaaaaaaaaaaaaaaaaaaaaaaattaaaffggffo.............",
+          "..............oaffffbbbcttaaaaaaaaaaaaaaaaaaaaaaaaaaaaattaaaaffffbo.............",
+          ".............osssffssscittaaoooooooooooooooooooooooooaattaasssffssso............",
+          "............obsssssssscittaaoooooooooooooooooooooooooaattaasssssssso............",
+          "............obssssssssicttaaoooiiiiiiiiiiiiiiiiiiioooaattaassssssssbo...........",
+          "...........obbbbssstbcicttaaoooiiiiiiiiiiiiiiiiiiioooaattaaaassstbbbbo..........",
+          "..........obbbbbssstccicttaaoooiifffffffffffffffiioooaattaaaassstadbbo..........",
+          "..........obbbbbssstciccttaaoooiifffffffffffffffiioooaattaaaassstabbbbo.........",
+          ".........obbbbbbssstciccttaaoooiiffgggggggggggffiioooaattaaaassstadbbbo.........",
+          "........obbbbbbbsssticccttaaoooiiffgggggggggggffiioooaattaaaassstaabbbbo........",
+          "........obbbbbbbsssticdcttaaoooiiffgggggggggggffiioooaattaaaassstaabbbbbo.......",
+          ".......obbbbbbbbsssticcbttaaoooiiffgggggggggggffiioooaattaaaassstaaabbbbo.......",
+          "......obbbbbbbbbssstaibbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaabbbbbo......",
+          "......obbcbbbcbbssstcibbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaabbbbbo.....",
+          ".....obbbbbbbbbassstbibbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaabbbbbo.....",
+          "....obbbbbbbbbbbssstbbicttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaaabbdbbo....",
+          "....obbbbbcbbbbcssstbbibttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaaabbdbbbo...",
+          "...obbbabbbbbbbcssstbbbbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaaabbbbbbo...",
+          "..obbbbbbbbbbbccssstbbbbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaaaabbbbbbo..",
+          "..obbbbbbbbbbbccssstbbbbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaaaabbbbbbo..",
+          ".obbbbbbbbbbbccbssstbbbbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaaaaababbbbo.",
+          "obbbbbbbbbbbbccbssstbbbbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaaaaaabbbbbbo",
+          "obbbbbbabbbcccbbssstbbbbttaaoooiiffgghhhhhhhggffiioooaattaacassstaaaaaaaabbbbbbo",
+          "bbbbbbbbbbbbcbbbssstbbbbttaaoooiiffgghhhhhhhggffiioooaattaaaassstaaaaaaaabbbbbbb"
+        ]
+      }
+    },
+    "temple": {
+      "name": "Sunken temple",
+      "about": "Green-stained flagstones and standing water: a drowned shrine.",
+      "palette": {
+        "a": "#1c3236",
+        "b": "#2c4a4a",
+        "c": "#3e6460",
+        "d": "#5a8078",
+        "e": "#122428",
+        "f": "#7aa89a",
+        "g": "#a6c8b8",
+        "h": "#d8e8d0",
+        "i": "#58a8b8",
+        "j": "#2a6078",
+        "k": "#4a7a52",
+        "l": "#7aa86a",
+        "m": "#b89a58",
+        "n": "#8a7240",
+        "o": "#e8c870",
+        "p": "#0c181c",
+        "q": "#c8786a",
+        "r": "#a85a4a"
+      },
+      "containers": {
+        "M": "#7a6a4a",
+        "N": "#1c2a2a",
+        "H": "#aa9a6a",
+        "T": "#58a8b8",
+        "P": "#0c181c"
+      },
+      "glyphs": {
+        "floor_a": ["cccccddc", "cbbbbbcc", "cbbbjbbc", "cbbbbbbc", "dbbbbbbc", "cbbbbbjc", "cbbbbbbc", "ccccdccc"],
+        "floor_b": ["ccdccccc", "cbbbbbbc", "cbbbbbbc", "cbjbbbbc", "cbbbbbbc", "cbbbbbbc", "cbbbbjbc", "cccccccd"],
+        "floor_c": ["ijjijjij", "jiijjiij", "ijjjijji", "jjiijjij", "ijjijjij", "jiijjiji", "ijjjijji", "jjijjiij"],
+        "wall_face": ["eaaaaaae", "abbkbbbb", "aeeleeee", "bbabbbab", "eeaeekae", "abbbabbb", "aaaaaaaa", "eeeeeeee"],
+        "wall_top": ["eeaakeaa", "aaeeaaee", "eekaeeaa", "aaeeaaek", "eeaaeeaa", "aaeeaaee", "eeaaleaa", "aaeeaaee"],
+        "door": ["eeeeeeee", "enmmnmme", "enmommne", "enmmnmme", "enmmnmme", "enmommne", "enmmnmke", "eeeeeeee"],
+        "exit": ["cccccccc", "cddddddc", "cdcccccd", "cdciicdc", "cdciicdc", "cdcccccd", "cddddddc", "cccccccc"],
+        "column": [".dffffd.", ".dggggd.", "..fddf..", "..fddf..", "..fddf..", "..fddf..", ".dggggd.", ".dffffd."],
+        "idol": ["...mm...", "..mooom.", "..mpomm.", "...mm...", "..mnnm..", ".mnnnnm.", ".mnnnnm.", ".nnnnnn."],
+        "coral": ["........", ".q....r.", ".qq..rr.", "..qq.r..", ".qqqrrr.", "..qqrr..", "...qr...", "........"],
+        "fish_bones": ["........", "........", "........", ".h.hhhh.", "hhhphhhh", ".h.hhhh.", "........", "........"],
+        "kelp": ["..k...l.", "..kl.lk.", ".lk..k..", ".kl.lk..", "..klk...", "..kk.l..", "..lk.k..", "...kk..."],
+        "puddle": ["........", "........", "..iiii..", ".ijjjji.", ".ijgjji.", "..ijji..", "........", "........"],
+        "altar": ["........", ".gggggg.", "gooooooo", "gddddddg", ".dffffd.", ".df..fd.", ".df..fd.", ".gggggg."],
+        "glow_moss": ["eaaaaaae", "abbkbbbb", "aekllkee", "bbaklkab", "eeaeklae", "abbbabbb", "aaaaaaaa", "eeeeeeee"]
+      },
+      "propdefs": {
+        "column": {
+          "name": "column",
+          "solid": true,
+          "light": 0
+        },
+        "idol": {
+          "name": "idol of the drowned god",
+          "solid": true,
+          "light": 2
+        },
+        "coral": {
+          "name": "coral",
+          "solid": false,
+          "light": 0
+        },
+        "fish_bones": {
+          "name": "fish bones",
+          "solid": false,
+          "light": 0
+        },
+        "kelp": {
+          "name": "kelp",
+          "solid": false,
+          "light": 0
+        },
+        "puddle": {
+          "name": "standing water",
+          "solid": false,
+          "light": 0
+        },
+        "altar": {
+          "name": "altar",
+          "solid": true,
+          "light": 0
+        },
+        "glow_moss": {
+          "name": "glowing moss",
+          "solid": false,
+          "light": 3,
+          "on_wall": true
+        }
+      },
+      "ambient": [
+        {
+          "prop": "puddle",
+          "chance": 0.16,
+          "where": "floor"
+        },
+        {
+          "prop": "coral",
+          "chance": 0.08,
+          "where": "edge"
+        },
+        {
+          "prop": "fish_bones",
+          "chance": 0.05,
+          "where": "floor"
+        },
+        {
+          "prop": "kelp",
+          "chance": 0.1,
+          "where": "edge",
+          "roles": ["cistern", "nest", "entrance_hall"]
+        },
+        {
+          "prop": "column",
+          "chance": 0.55,
+          "where": "pillar",
+          "roles": ["entrance_hall", "shrine", "guard_room", "cistern"]
+        },
+        {
+          "prop": "idol",
+          "chance": 1.0,
+          "where": "head",
+          "roles": ["shrine"]
+        },
+        {
+          "prop": "glow_moss",
+          "chance": 0.3,
+          "where": "wall_north"
+        }
+      ],
+      "light": {
+        "dark": 0.48,
+        "radius": 5,
+        "tint": [0.0, 0.05, 0.07]
+      },
+      "entrance": {
+        "shape": "temple_steps",
+        "name": "Temple steps",
+        "about": "A drowned temple front, steps going down into the water.",
+        "w": 5,
+        "h": 3,
+        "palette": {
+          "s": "#8aa098",
+          "t": "#5e7870",
+          "u": "#3e5650",
+          "g": "#a8c0b4",
+          "k": "#0a161a",
+          "w": "#2a6078",
+          "x": "#58a8b8",
+          "y": "#a8e0e8",
+          "m": "#4a7a52",
+          "l": "#7aa86a",
+          "o": "#0c181c",
+          "n": "#b89a58"
+        },
+        "rows": [
+          "................................................................................",
+          "........................................o.......................................",
+          "......................................ootoo.....................................",
+          "...................................oootttttooo..................................",
+          ".................................ootttttttttttoo................................",
+          "...............................ootttttttstttttttoo..............................",
+          "............................oootttttttssssstttttttooo...........................",
+          "..........................ootttttttssssssssssstttttttoo.........................",
+          "........................ootttttttsssssssussssssstttttttoo.......................",
+          ".....................ooottttttssssssssuuuuussssssssttttttooo....................",
+          "...................ootttttttsssssssuuuuuuuuuuussssssstttttttoo..................",
+          ".................oottttttssssssssuuuuuuuuuuuuuuussssssssttttttoo................",
+          "..............ooottttttssssssssuuuuuuuuuuuuuuuuuuussssssssttttttooo.............",
+          "..........oooottttttssssssssuuuuuuuuuuuuuuuuuuuuuuuuussssssssttttttoooo.........",
+          ".........ogggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggo........",
+          ".........ogggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggo........",
+          ".........ogggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggo........",
+          ".........ogggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggo........",
+          ".........ottttttttttttttttttttttttttttttttttttttttttttttttttttttttttttto........",
+          ".........ottmgggggggtttgggggggtttttttttttttttttttttgggggggtttgggggmgttto........",
+          "..........oomgggggggooogggggggotttttttttttttttttttogggggggooogggggmgooo.........",
+          "...........omossssto...osssstoottkkkkkkkkkkkkkkkttoossssto...ossssmo............",
+          "...........omossssto...osssstoottkkkkkkkkkkkkkkkttoossssto...ossssmo............",
+          "...........omossssto...osssstoottkkuuuuuuuuuuukkttoossssto...ossssmo............",
+          "...........omossssto...osssstoottkkunnnkkknnnukkttoossssto...ossssmo............",
+          "...........omossmsto...osssstoottkkunnnkkknnnukkttoossssto...ossssmo............",
+          "...........omossssto...osssstoottkkunnnkkknnnukkttoossssto...ossssmo............",
+          "...........omossssto...osssstoottkkunnnkkknnnukkttoossssto...ossssmo............",
+          "...........omossssto...osssstoottkkunnnkkknnnukkttoossssto...ossssmo............",
+          "...........omossssto...osssstoottkkunnnkkknnnukkttoossssto...ossssmo............",
+          "...........omossssto...osslstoottkkunnnkkknnnukkttoossssto...ossssmo............",
+          "...........omossssto...osssstoottkkunnnkkknnnukkttoossssto...ossssto............",
+          "...........omossssto...osssstoottkkunnnkkknnnukkttoossssto...ossssto............",
+          "oooooooooooomosssstooooosssstoottkkunnnkkknnnukkttoosssstooooosssstooooooooooooo",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "wwwwwwwwwwwwwwsssstwwwwwsssstwwttkkunnnkkknnnukkttwwsssstwwwwwsssstwwwwwwwwwwwww",
+          "wwwwwwwwwwwwwwsssstwwwwwsssstwwttkkunngkkkgnnukkttwwsssstwwwwwsssstwwwwwwwwwwwww",
+          "wwwwwwwwwwwwwwsssstwwwwwsssstwwttkkunnnkkknnnukkttwwsssstwwwwwsssstwwwwwwwwwwwww",
+          "wwwwxxxxxxwwwwsssstwwwwwsssstwwttkkunnnkkknnnukkttwwsssstwwwwwssssxxxxxxwwwwwwww",
+          "wwwwwwwwwwwwwgggggggwwwgggggggwttkkunnnkkknnnukkttwgggggggwwwgggggggwwwwwwwwwwww",
+          "wwwwwwwwyyywwgggggggwwwgggggggwttkkunnnkkknnnukkttwgggggggwwwgggggggwwwwwwwwwwww",
+          "wwwwwwwwwwwwwgggggggwwwgggsssssssssssssssssssssssssssssgggwwwgggggggyyywwwwwwwww",
+          "wwwwwwwwwwwwxxxxxxwwwwwwwwssssssssssssssssssssssssssssswwwwwwwwwwwwwwwwwwwwwwwww",
+          "wwwwwwwwwwwwwwwwwwwwwwwwtttttttttttttttttttttttttttttttttwwwwwwwwwwwwwwwxxxxxxww",
+          "wwwwwwwwwwwwwwwwwwwwwwwwtttttttttttttttttttttttttttttttttwwwwwwwwwwwwwwwwwwwwwww",
+          "wwwwwwxxxxxxwwwwwwwwwwuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuwwwwwwwwwwwwwwwwwwwww",
+          "wwwwwwwwwwwwwwwwwwwwwwuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuwwwwwwwwwwwxxxxxxwwww",
+          "wwwwwwwwwwwwwwwwwwwwwwuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuwwwwwwwwwwwwwwwwwwwww"
+        ]
+      }
+    },
+    "halls": {
+      "name": "Dwarf halls",
+      "about": "Carved stone, forges and rune pillars: abandoned dwarf-halls.",
+      "palette": {
+        "a": "#2c2c34",
+        "b": "#44444e",
+        "c": "#585862",
+        "d": "#70707a",
+        "e": "#1c1c22",
+        "f": "#8a8a94",
+        "g": "#a8a8b0",
+        "h": "#e0b050",
+        "i": "#58d0e0",
+        "j": "#98f0f8",
+        "k": "#8a5a30",
+        "l": "#b07a40",
+        "m": "#6a6a74",
+        "n": "#d0a040",
+        "o": "#3a3a44",
+        "p": "#101016",
+        "q": "#c06a2a",
+        "r": "#a8a8b0",
+        "s": "#686a70"
+      },
+      "containers": {
+        "M": "#7a5a34",
+        "N": "#2a1c10",
+        "H": "#a8804a",
+        "T": "#d0a040",
+        "P": "#101016"
+      },
+      "glyphs": {
+        "floor_a": ["ccccccdc", "cbbbbbbc", "cbbbbbbc", "cbbbbbbc", "cbbbbbbc", "cbbbbbbc", "dbbbbbbc", "cccccccc"],
+        "floor_b": ["ccdccccc", "cbbbbbbc", "cbbbbbbc", "cbbbbbbc", "cbbbibbc", "cbbbbbbc", "cbbbbbbd", "cccccccc"],
+        "floor_c": ["cccccccc", "cbbbbbbc", "cbbibbbc", "cbbbibbc", "cbbbbbbc", "cbbbbbbc", "cbbbbbbc", "ccccdccc"],
+        "wall_face": ["dcccdccc", "cbbbcbbb", "dcccdccc", "cbbbcbbb", "bbcbbbcb", "aaaaaaaa", "eeeeeeee", "pppppppp"],
+        "wall_top": ["abaabaab", "baabaaba", "aabaabaa", "abaabaab", "baabaaba", "aabaabaa", "abaabaab", "baabaaba"],
+        "door": ["ffffffff", "fdddddgf", "fdnddnbf", "fdddddbf", "fdddddbf", "fdnddnbf", "fdddddbf", "ffffffff"],
+        "exit": ["bbbbbbbb", "bddddddb", "bdbbbbdb", "bdbhhbdb", "bdbhhbdb", "bdbbbbdb", "bddddddb", "bbbbbbbb"],
+        "rune_pillar": [".ffffff.", ".gggggg.", "..dbbd..", "..dibd..", "..dbjd..", "..dbid..", ".gggggg.", ".ffffff."],
+        "anvil": ["........", "........", ".rrrrrr.", "rrrrrrr.", "..rrr...", "..sss...", ".sssss..", ".ooooo.."],
+        "minecart": ["........", "........", ".kkkkkk.", "kllkkllk", "kkkkkkkk", ".kkkkkk.", "..o..o..", "..oooo.."],
+        "ore_sack": ["........", "...hh...", "..kllk..", ".kllllk.", ".kllhlk.", ".kllllk.", "..kkkk..", "........"],
+        "statue": ["...gg...", "..gffg..", "...gg...", "..gffg..", ".gfddfg.", "..fddf..", ".gffffg.", ".gggggg."],
+        "crystal": ["........", "....j...", "...ji...", "..jii.j.", ".jiijji.", ".jiiiii.", "..iiii..", "........"],
+        "rubble": ["........", "........", "...ss...", "..sssb..", ".ssbsss.", "sssbssbb", "sbbssbbb", "........"],
+        "lantern_wall": ["dcccdccc", "cbbhhbbb", "dcchjhcc", "cbbhhbbb", "bbcbbbcb", "aaaaaaaa", "eeeeeeee", "pppppppp"]
+      },
+      "propdefs": {
+        "rune_pillar": {
+          "name": "rune pillar",
+          "solid": true,
+          "light": 3
+        },
+        "anvil": {
+          "name": "anvil",
+          "solid": true,
+          "light": 0
+        },
+        "minecart": {
+          "name": "mine cart",
+          "solid": true,
+          "light": 0
+        },
+        "ore_sack": {
+          "name": "ore sack",
+          "solid": false,
+          "light": 0
+        },
+        "statue": {
+          "name": "statue of a dwarf-king",
+          "solid": true,
+          "light": 0
+        },
+        "crystal": {
+          "name": "glow crystal",
+          "solid": false,
+          "light": 2
+        },
+        "rubble": {
+          "name": "rubble",
+          "solid": true,
+          "light": 0
+        },
+        "lantern_wall": {
+          "name": "lantern",
+          "solid": false,
+          "light": 4,
+          "on_wall": true
+        }
+      },
+      "ambient": [
+        {
+          "prop": "rune_pillar",
+          "chance": 0.55,
+          "where": "pillar",
+          "roles": ["entrance_hall", "guard_room", "boss_lair", "shrine", "barracks"]
+        },
+        {
+          "prop": "anvil",
+          "chance": 0.5,
+          "where": "center",
+          "roles": ["forge"]
+        },
+        {
+          "prop": "minecart",
+          "chance": 0.3,
+          "where": "edge",
+          "roles": ["nest", "forge", "armoury"]
+        },
+        {
+          "prop": "ore_sack",
+          "chance": 0.15,
+          "where": "edge",
+          "roles": ["nest", "forge", "treasure_vault"]
+        },
+        {
+          "prop": "statue",
+          "chance": 0.6,
+          "where": "head",
+          "roles": ["boss_lair", "treasure_vault", "shrine"]
+        },
+        {
+          "prop": "crystal",
+          "chance": 0.12,
+          "where": "edge",
+          "roles": ["nest", "shrine"]
+        },
+        {
+          "prop": "rubble",
+          "chance": 0.1,
+          "where": "edge",
+          "roles": ["nest", "entrance_hall"]
+        },
+        {
+          "prop": "lantern_wall",
+          "chance": 0.25,
+          "where": "wall_north"
+        }
+      ],
+      "light": {
+        "dark": 0.5,
+        "radius": 5,
+        "tint": [0.0, 0.03, 0.05]
+      },
+      "entrance": {
+        "shape": "dwarf_gate",
+        "name": "Dwarf gate",
+        "about": "A carved gate in the mountain, rune pillars glowing either side.",
+        "w": 5,
+        "h": 3,
+        "palette": {
+          "a": "#2c2c34",
+          "b": "#44444e",
+          "c": "#585862",
+          "d": "#70707a",
+          "e": "#1c1c22",
+          "k": "#8a5a30",
+          "l": "#b07a40",
+          "n": "#d0a040",
+          "i": "#58d0e0",
+          "j": "#98f0f8",
+          "o": "#101016",
+          "f": "#8a8a94",
+          "p": "#0a0a0e"
+        },
+        "rows": [
+          "................................................................................",
+          "................................................................................",
+          "................................................................................",
+          "....................ooooooooooooooooooooooooooooooooooooooooo...................",
+          "..................oobbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbboo.................",
+          ".................obbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbo................",
+          "...............oobbbbebbbbbbbbbbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbboo..............",
+          "..............obbbbbebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbo.............",
+          "............oobbbbbbccccaccccccccecccccccccccccccccccccccccccbbbbbboo...........",
+          "..........oobbbbbbbcccceccccccccccccccccccccccccccccccccccccccbbbbbbaoo.........",
+          ".........obbbcbbbbccccccccccccccccccccccccccccccccccccdccccccccbbbcbbbbo........",
+          ".......oobbbbbbbbbcccccaccnnnnnnnnnnnnnnnnnnnnnnnnnnnnnccccccccbbbbbbbbboo......",
+          "......obbbbbbbbbbcccccccccnnnnnnnnnnnnnnnnnnnnnnnnnnnnncccccccccbbbbbcbbbbo.....",
+          "....oobbbbbbbdbbcccccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbbboo...",
+          "...obbbbbbbbbbbcccccccdddddddddddddddddddddddddddddddddddddcccccccbbbbbbbbbbbo..",
+          "...obbbbbbbbcbcccccccaddjdddjdddjdddjdddjdddjdddjdddjdddjddccccccccbbbbbbabbbo..",
+          "...obbbbbbbabcccccccccddcccccccccccccccccccccccccccccccccddcccccceccbbbbbbbbbo..",
+          "...obbbbbbbbecccccccccddcccccccccccccccccccccccccccccccccddcccccccccbbbbbbbbbo..",
+          "...obbbbbbbbccccccccccddcceeeeeeeeeeeeeeeeeeeeeeeeeeeeeccddccccccccccbbbbbbbbo..",
+          "..obbbbabbbcccccccccccddcceeeeeeeeeeeeeeeeeeeeeeeeeeeeeccddcccccccccccbbbbbbbo..",
+          "..obbbbbbddddddddcccccddcceekkkkkkkkkkpppppkkkkkkkkkkeeccddcccccddddddddbbbbbbo.",
+          "..obbbbbbddddddddbbbbbddcceeklllllllllppppplllllllllkeeccddbbabbddddddddbbbbbbo.",
+          "..obbbbbbddddddddbbbbbddcceeklllllllllppppplllllllllkeeccddbbbbbddddddddbbbbbbo.",
+          "..obbbabbbfffffdbbbbbbddcceeklllllllllppppplllllllllkeeccddbbbbbbfffffdbbbbbbbo.",
+          "..obbbbbbbfffffdbbbbbbddcceennnnnnnnnnpeeepnnnnnnnnnneeccddbbbbbbfffffdbbbbbbbo.",
+          "..obbbbbbbffjffdbbbbdbddcceennnnnnnnnnpeeepnnnnnnnnnneeccddbbbbbbffjffdbbbbbbbo.",
+          "..obbbbbbbffiifdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbffiifdbbbbbbbo.",
+          ".obbbbbbebffiifdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbcffiifdbbbebbbo.",
+          ".obbbbbbdbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbfffffdbbbbbbbo.",
+          ".obbbbebbbfffffdbbabbbddcceeklllllllllpeeeplllllllllkeeccddbbababfffffdbbbbbbbo.",
+          ".obbbbbcbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddcbbbbbfffffdbbbbcbbo.",
+          ".obbbbbbbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbebfffffdbbbbbbbbo",
+          ".obbbbbbbbffiifdbbbbbbddcceennnnnnnnnnpeeepnnnnnnnnnneeccddbebbbbffiifdbbbbbbbbo",
+          ".obbbbbbbbffiifdbbbbbbddcceennnnnnnnnnpeeepnnnnnnnnnneeccddbbbbbbffiifdabbbbbbbo",
+          ".obbbbbcbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbfffffdbbbbbbbbo",
+          "obbbbbcbbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbfffffdbbbbbbbbo",
+          "obbbbbbbcbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbebbbbfffffdabbbbbbbo",
+          "obbbbbbbbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbcbfffffdbbbbbbbbo",
+          "obbbbbbbbbffiifdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbcffiifdbbbbbbbbo",
+          "obbbbbbbbbffiifdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbffiifdbbbbbbbbo",
+          "obbbbbbbbbfffffdabbbbbddcceennnnnnnnnnpeeepnnnnnnnnnneeccddbbbbbbfffffdbbbbbbbbo",
+          "obbbbbbbbbfffffdbbbbbbddcceennnnnnnnnnpeeepnnnnnnnnnneeccddbbbbbbfffffdcbbbbbbbo",
+          "obbbbbbbbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbfffffdbbbbbbbbb",
+          "bbbbbbabbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbfffffdbbbbbbbbb",
+          "bbbbbbbbbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbfffffdebbbbbbbb",
+          "bbbbbbbbbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbdbbfffffdbbbbbbbbb",
+          "bbbbbbbbbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbdbbbfffffdbbbbbbbbb",
+          "bbbbbbbbbbfffffdbbbbbbddcceeklllllllllpeeeplllllllllkeeccddbbbbbbfffffdbbbbbbbbb"
+        ]
+      }
+    },
+    "rift": {
+      "name": "Rift",
+      "about": "Shards of void-crystal over a floor that is not quite there.",
+      "palette": {
+        "a": "#14101e",
+        "b": "#201a30",
+        "c": "#2e2442",
+        "d": "#40325c",
+        "e": "#0a0812",
+        "f": "#6a48a8",
+        "g": "#9a70e0",
+        "h": "#d8c0ff",
+        "i": "#c040c0",
+        "j": "#ff80ff",
+        "k": "#38e0d0",
+        "l": "#a0fff0",
+        "m": "#504068",
+        "n": "#7a68a0",
+        "o": "#1a1428",
+        "p": "#05040a",
+        "q": "#e8e0ff",
+        "r": "#8a3a8a"
+      },
+      "containers": {
+        "M": "#4a3a78",
+        "N": "#120e20",
+        "H": "#8a6ac8",
+        "T": "#38e0d0",
+        "P": "#05040a"
+      },
+      "glyphs": {
+        "floor_a": ["bbbbbbcb", "bcbbbbbb", "bbbbdbbb", "bbbbbbbb", "bbfbbbcb", "bbbbbbbb", "dbbbbbbb", "bbbbcbbb"],
+        "floor_b": ["bbbcbbbb", "bbbbbbdb", "bcbbbbbb", "bbbbbfbb", "bbbbbbbb", "bbdbbbbc", "bbbbbbbb", "bfbbbcbb"],
+        "floor_c": ["bbbbbbbb", "bcbbkbbb", "bbbbbbbb", "bbbbbbdb", "bdbbbbbb", "bbbbbcbb", "bbbfbbbb", "bbbbbbbb"],
+        "wall_face": ["mnmmnmmn", "dmddmddm", "cddcddcd", "bcccbccb", "bbcbbbcb", "aaaaaaaa", "eeeeeeee", "pppppppp"],
+        "wall_top": ["oaoaoaoa", "aoaoaoao", "oaoaoaoa", "aoaoaoao", "oaoaoaoa", "aoaoaoao", "oaoaoaoa", "aoaoaoao"],
+        "door": ["mmmmmmmm", "mrrjjrrm", "mrjhhjrm", "mjhqqhjm", "mjhqqhjm", "mrjhhjrm", "mrrjjrrm", "mmmmmmmm"],
+        "exit": ["bbbbbbbb", "bkkkkkkb", "bkbbbbkb", "bkblbbkb", "bkbblbkb", "bkbbbbkb", "bkkkkkkb", "bbbbbbbb"],
+        "shard": ["....g...", "...gf...", "..ggfg..", "..gfhfg.", ".ggfhff.", ".gffhff.", "..fffd..", "...dd..."],
+        "floating_rock": ["........", "..mmm...", ".mnnnm..", "mnnnmmm.", ".mmmm...", "........", "..ooo...", "...o...."],
+        "tear": ["........", "...j....", "..jqj...", "..jqqj..", "..iqqj..", "..ijqi..", "...ii...", "........"],
+        "void_eye": ["........", "........", "..mmmm..", ".mqkkqm.", ".mqkpkqm", "..mqkqm.", "..mmmm..", "........"],
+        "stardust": ["........", ".q...l..", "........", "..l..q..", "........", ".q....l.", "...q....", "........"],
+        "obelisk": ["...gg...", "..gffg..", "..fddf..", "..fkdf..", "..fddf..", "..fdkf..", ".gfddfg.", ".gggggg."],
+        "crack_wall": ["mnmmnmmn", "dmdjjddm", "cddjqddd", "bcciijcb", "bbcbbjcb", "aaaaaaaa", "eeeeeeee", "pppppppp"]
+      },
+      "propdefs": {
+        "shard": {
+          "name": "crystal shard",
+          "solid": true,
+          "light": 3
+        },
+        "floating_rock": {
+          "name": "floating rock",
+          "solid": true,
+          "light": 0
+        },
+        "tear": {
+          "name": "tear in the air",
+          "solid": false,
+          "light": 2
+        },
+        "void_eye": {
+          "name": "watching eye",
+          "solid": false,
+          "light": 1
+        },
+        "stardust": {
+          "name": "stardust",
+          "solid": false,
+          "light": 0
+        },
+        "obelisk": {
+          "name": "black obelisk",
+          "solid": true,
+          "light": 2
+        },
+        "crack_wall": {
+          "name": "glowing crack",
+          "solid": false,
+          "light": 4,
+          "on_wall": true
+        }
+      },
+      "ambient": [
+        {
+          "prop": "shard",
+          "chance": 0.12,
+          "where": "edge"
+        },
+        {
+          "prop": "floating_rock",
+          "chance": 0.07,
+          "where": "center"
+        },
+        {
+          "prop": "tear",
+          "chance": 0.07,
+          "where": "floor"
+        },
+        {
+          "prop": "void_eye",
+          "chance": 0.05,
+          "where": "floor",
+          "roles": ["shrine", "boss_lair"]
+        },
+        {
+          "prop": "stardust",
+          "chance": 0.1,
+          "where": "floor"
+        },
+        {
+          "prop": "obelisk",
+          "chance": 0.6,
+          "where": "head",
+          "roles": ["shrine", "boss_lair", "treasure_vault"]
+        },
+        {
+          "prop": "crack_wall",
+          "chance": 0.3,
+          "where": "wall_north"
+        }
+      ],
+      "light": {
+        "dark": 0.68,
+        "radius": 4,
+        "tint": [0.05, 0.0, 0.08]
+      },
+      "entrance": {
+        "shape": "rift_tear",
+        "name": "The tear",
+        "about": "A crack of violet light in broken ground, shards hanging above it.",
+        "w": 5,
+        "h": 3,
+        "palette": {
+          "a": "#14101e",
+          "b": "#201a30",
+          "c": "#2e2442",
+          "d": "#40325c",
+          "f": "#6a48a8",
+          "g": "#9a70e0",
+          "h": "#d8c0ff",
+          "i": "#c040c0",
+          "j": "#ff80ff",
+          "k": "#38e0d0",
+          "o": "#05040a",
+          "m": "#504068",
+          "q": "#e8e0ff"
+        },
+        "rows": [
+          "....................................oijqjjiio...................................",
+          "..................................ooijqjjiiio...................................",
+          ".................................oiijjqjiiiio...................................",
+          "................................oiijjqjiiiiio...................................",
+          "...............................oiiijjqjiiiio....................................",
+          "...............................oiiiijqjjioo.....................................",
+          "..............................oiiiiijqjjo.......................................",
+          "...............................ooiiijjqjioo...................o.................",
+          ".................................ooiijqjjiio.................ogo................",
+          "...................................oojjqjiiio...............ofhgoo..............",
+          "..................................oijjqjiiiio...............offgggo.............",
+          "............o...................ooiijqjjiiio...............offfgfo..............",
+          "...........ogo................ooiiijqjjiiiio................offffo..............",
+          "..........ofhgoo.............oiiiijqjjiiioo..................offo...............",
+          "..........offgggo..........ooiiijjqjiiooo.....................ofo...............",
+          ".........offfgfo..........oiiiijjqjioo.........................o................",
+          "..........offffo...........ooiiijjqjiio.........................................",
+          "...........offo..............oooiijqjjioo.......................................",
+          "............ofo.................ooijqjjiio......................................",
+          ".............o..................ooijqjjiiioooooo................................",
+          "...........................ooooobiijjqjiiiibbbbbooooo...........................",
+          ".......................oooobbbbbbiijjqjiiiiibbbbbbbbboooo.......................",
+          "....................ooobbbdbbbbiiijjqjiiiibbbbbbbbbbbbbbbooo....................",
+          ".................ooobbbbbbbbbbiiiijqjjibbbbbbbbbbbbbbmmabbbbooo.................",
+          "...............oobbbbbbbbbbbiiiiijqjjccccccccccbbbbbbbbbbbbbbbboo...............",
+          ".............oobbbbbbbbbbbbdciiijjqjiccccccccccccaccbbbbbbbbbbbbboo.............",
+          "............obbbbbbmbbbbcccccciijqjjiicccccccccaccccmcccbbbbbbbdmbgo............",
+          "..........oobabbbbbbbbcccccccccjjqjiiiccccccmcccccccccccccbbbbbbbfhgoo..........",
+          ".........obbbbbbbabbccgccccccccijqjjiiicccmccccccdccccccacccbbbbbffgggo.........",
+          "........obmbbbbbbbcmcfhgcccacciijjqjiiiimccmcaaccccccmmcccccccbbfffgfbbo........",
+          ".......obbbbbbbbcacccffgggcccciiijqjjiiiiccaccccccdcccccccccccccbffffbbbo.......",
+          "......obbbbbbbbcccccfffgfcmciiiijqjjiiiccccccccccccccccccccccmcccbffbbbbbo......",
+          ".....obbbbbbbbcccccccffffcciiijjqjiicccccacccccccccccacccccccaccccbfbbbbbbo.....",
+          "....obbbbbbbbcccccccccffciiiijjqjicccmcccccdcccccccccccccccccccccccbbbbbbbbo....",
+          "...obbbbgbbbccmcccccaccfccciiijqjjiccccccdccccccccccccccccmcccccccccbbbbbbbbo...",
+          "..obbbbfhgbccccccccccccccccaiijjqjiicccccccccccccccccccccccccccccccccbbbbbbbbo..",
+          "..obbbbffgggcdccccccccccccccccijqjjiiiiiiiiiicccccccccccccccccccccccccbbbbbbbo..",
+          ".obabbfffgfccccccccccacccccccijqjjiiijjjjjjjiccccccccccccccccccdcdccccbdbbbbbbo.",
+          ".obbbbbffffcccccccccccccccciijjqjiiiijjqqqjjiccccccccccccccdccdccccccccbbbbbbbo.",
+          "obbbbbbbffccccccacccccccmdiijjqjiiiiijjqqqjjicccccccccccccaccccccccccccbbbbbbbbo",
+          "obbbbbbbdfcccccccmccccccciiijkkkiiiiijjqqqjjicccckkkcccmccccccccccccccccgbbbbbbo",
+          "obbbbdbbaddcccccccccccccciikkjqjkkkcijjqqqjjickkkccckkccccccccdccmcccccfhgbbbbbo",
+          "bbbbbbbbcccddccccccccccckkkiijqjjcckkjjqqqjjkkcccccccckkkcaccccmmccccccffgggbbbb",
+          "bbmbbbaacccccddccccccckkciiiijqjjiccijjqqqjjicccccccccccckkcccccccccccfffgfbbbbb",
+          "bbbbbbbbcccccccddccckkccccmijjqjiiccijjqqqjjiccccccccccccdckkccccccccmcffffbbbbb",
+          "bbbbbbbbcccccmccccccccccccccjjqjiiicijjqqqjjicacccccccccccccccccccccccccffbbbbbb",
+          "bbbbbbbbccccccdcccccaccccccccccccdccijjqqqjjicccccccccccccccccccdacccccdbfbbabbb",
+          "bbbbbbbbbcccccccccccccccccccccccccccijjqqqjjiccccccccccccccccccccccccccbbbbbbbbb"
+        ]
+      }
+    }
+  }
+}
