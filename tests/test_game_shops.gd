@@ -41,6 +41,7 @@ func _run() -> void:
 	test_towns()
 	test_stock()
 	test_buy_sell()
+	test_sell_out()
 	test_use_and_service()
 	test_hours()
 	test_autopilot_untouched()
@@ -187,6 +188,32 @@ func test_buy_sell() -> void:
 	var p0 := GameShops.price(cheap, "bakery", e0)
 	cheap.gen = 12
 	ok(GameShops.price(cheap, "bakery", e0) > p0, "prices rise with the generations")
+
+
+func test_sell_out() -> void:
+	var d := _fresh("hearthmere")
+	ok(GameShops.entry(d, "bakery", "bread_loaf").size() > 0 and not GameShops.sold_out(d, "bakery", "bread_loaf"), "bread is on the shelf")
+	var n := GameShops.stock(d, "bakery").size()
+	GameShops.buy(d, "bakery", "bread_loaf")
+	ok(GameShops.sold_out(d, "bakery", "bread_loaf") and GameShops.entry(d, "bakery", "bread_loaf").is_empty(), "what was bought is gone from the shelf")
+	ok(GameShops.stock(d, "bakery").size() == n - 1, "one fewer thing on it")
+	ok(GameShopStock.stock(d, "bakery").size() == n, "the generated shelf itself is unchanged (pure)")
+	ok(GameShops.buy(d, "bakery", "bread_loaf").contains("not have"), "it cannot be bought twice")
+	ok(not GameShops.sold_out(d, "forge", "bread_loaf") and not d.shop_sold.is_empty(), "only that shop's shelf")
+	var broke := _fresh("hearthmere")
+	broke.heir.gold = 0
+	GameShops.buy(broke, "bakery", "bread_loaf")
+	ok(not GameShops.sold_out(broke, "bakery", "bread_loaf") and broke.shop_sold.is_empty(), "a purchase that was refused takes nothing off the shelf")
+	# it is saved, and read back clean
+	var back := GameDynasty.from_dict(JSON.parse_string(JSON.stringify(d.to_dict())))
+	ok(GameShops.sold_out(back, "bakery", "bread_loaf"), "the sale survives a save and load")
+	ok(GameShops.load_sold("junk").is_empty() and GameShops.load_sold({"a|b": 3, "c|d": {"period": 4, "keys": []}, "e|f": {"period": "1|x", "keys": [1, "k", "k"]}}) == {"e|f": {"period": "1|x", "keys": ["k"]}}, "damaged records are dropped")
+	ok(not _fresh("hearthmere").to_dict().has("shop_sold"), "nothing is written until something is bought")
+	# the shelf fills again with the season
+	d.world.year += 1.0
+	ok(not GameShops.sold_out(d, "bakery", "bread_loaf"), "a year on the shelf has filled again")
+	GameShops.buy(d, "bakery", GameShops.stock(d, "bakery")[0]["key"])
+	ok(d.shop_sold.size() == 1, "the old season's record is forgotten when a new one is made")
 
 
 func test_use_and_service() -> void:
