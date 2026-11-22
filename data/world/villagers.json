@@ -1,40 +1,731 @@
 {
-  "note": "The people who live in the open world's town buildings (core/game/game_villagers.gd, drawn by the sandbox screen when a house has its roof off; checked by tools/check_data.gd). A plain house holds as many residents as its floor has room for: each needs `area_per_person` tiles times their size squared (`sizes`: a halfling is 0.75 of a human, an orc 1.2; `monsters` are creatures that live beside the people of a town, `monster_percent` of the places, and only in a house with the room for them: an ogre wants 26 tiles), at most `max_residents`; a service building has its one person (`service`, the one GamePeople names for it). Who they are (race from the town's `races`, a calling from `classes`, a shirt from `colors`) and where they stand come from the building's id, never from dice, so the same village always has the same people. By day a resident is in one of the body's cells (not the top row, where the furniture stands) and moves on every `slot_hours` hours; by night they are at their beds. Every house resident has a job (`jobs`, picked by weight from the ones the town has the place for): a farmer walks out to a field at the edge of the town and works there (`field_from`, `field_span` tiles from the anchor), a guard walks the streets to and fro, and the rest go to the service they work for and spend their shift (`hours`) inside it; they leave between `depart_from` and `depart_from` + `depart_span` hours at `tiles_per_hour`, by the way GamePath finds, and come back. Out of doors they are walkers (`walkers_near`) and not in their house; a service person has the service's own job (`service_jobs`). The `post` job (gate guard, weight 0) is nobody's house job: every gate of every town (data/world/walls.json) has `guards`: `per_shift` of them on each of the `shifts` (hours; the night one runs past midnight), a warrior of the town's races in the town's colour, standing at the gate's two guard posts (one each side inside the passage), so at every hour at least `per_shift` stand at every gate.",
-  "settings": {"slot_hours": 2, "area_per_person": 8, "max_residents": 4, "monster_percent": 12},
-  "walk": {"tiles_per_hour": 16, "shift_hours": 6.0, "depart_from": 6.0, "depart_span": 4.0, "max_nodes": 3000, "field_from": 28, "field_span": 8},
-  "jobs": [
-    {"id": "farmer", "name": "Farmer", "work": "field", "weight": 4, "hours": 6.0},
-    {"id": "guard", "name": "Town guard", "work": "patrol", "weight": 3, "hours": 6.0},
-    {"id": "smith_hand", "name": "Smith's hand", "work": "forge", "weight": 2, "hours": 7.0},
-    {"id": "shop_hand", "name": "Shop hand", "work": "store", "weight": 2, "hours": 7.0},
-    {"id": "tavern_hand", "name": "Tavern hand", "work": "tavern", "weight": 2, "hours": 7.0},
-    {"id": "acolyte", "name": "Acolyte", "work": "temple", "weight": 1, "hours": 6.0},
-    {"id": "runner", "name": "Runner", "work": "black_market", "weight": 1, "hours": 6.0},
-    {"id": "homekeeper", "name": "Keeps house", "work": "", "weight": 1, "hours": 1.0},
-    {"id": "gate_guard", "name": "Gate guard", "work": "gate", "weight": 0, "hours": 12.0, "post": true}
-  ],
-  "guards": {"job": "gate_guard", "per_shift": 2, "class": "warrior",
-    "shifts": [{"id": "day", "from": 6.0, "to": 18.0}, {"id": "night", "from": 18.0, "to": 6.0}],
-    "colors": {"hearthmere": "#3f7a4a", "kingshold": "#3a4f8a", "brinehaven": "#2f8a84", "ironford": "#b8403a"}},
-  "service_jobs": {"forge": "Smith", "temple": "Priest", "store": "Storekeeper", "tavern": "Innkeeper", "black_market": "Fence"},
-  "sizes": {"halfling": 0.75, "gnome": 0.75, "dwarf": 0.85, "human": 1.0, "half_elf": 1.0, "elf": 1.05, "half_orc": 1.1, "beastkin": 1.1, "half_dragon": 1.15, "orc": 1.2, "dragonborn": 1.25},
-  "monsters": [
-    {"creature": "goblin", "scale": 0.7, "places": ["brinehaven", "ironford"]},
-    {"creature": "ogre", "scale": 1.8, "places": ["ironford", "kingshold", "brinehaven"]}
-  ],
-  "classes": ["warrior", "ranger", "monk", "druid", "cleric", "rogue", "mage"],
-  "races": {
-    "hearthmere": ["human", "halfling", "human"],
-    "kingshold": ["human", "half_elf", "human", "elf"],
-    "brinehaven": ["human", "half_orc", "beastkin", "human"],
-    "ironford": ["dwarf", "dwarf", "human", "gnome"]
+ "note": "The people who live in the open world's town buildings (core/game/game_villagers.gd, drawn by the sandbox screen when a house has its roof off; checked by tools/check_data.gd). A plain house holds as many residents as its floor has room for: each needs `area_per_person` tiles times their size squared (`sizes`: a halfling is 0.75 of a human, an orc 1.2; `monsters` are creatures that live beside the people of a town, `monster_percent` of the places, and only in a house with the room for them: an ogre wants 26 tiles), at most `max_residents`; a service building has its one person (`service`, the one GamePeople names for it). Who they are (race from the town's `races`, a calling from `classes`, a shirt from `colors`) and where they stand come from the building's id, never from dice, so the same village always has the same people. By day a resident is in one of the body's cells (not the top row, where the furniture stands) and moves on every `slot_hours` hours; by night they are at their beds. Every house resident has a job (`jobs`, picked by weight from the ones the town has the place for): a farmer walks out to a field at the edge of the town and works there (`field_from`, `field_span` tiles from the anchor), a guard walks the streets to and fro, and the rest go to the service they work for and spend their shift (`hours`) inside it; they leave between `depart_from` and `depart_from` + `depart_span` hours at `tiles_per_hour`, by the way GamePath finds, and come back. Out of doors they are walkers (`walkers_near`) and not in their house; a service person has the service's own job (`service_jobs`). A shop of data/shops/shops.json has its keeper (`service`), who stands inside by day and is gone at night (`GameShops.open_at`), and a house resident of the same town may have the shop's job (`jobs`: the keeper's name, e.g. Baker): they walk to the shop in the morning and spend the shift inside.",
+ "settings": {
+  "slot_hours": 2,
+  "area_per_person": 8,
+  "max_residents": 4,
+  "monster_percent": 12
+ },
+ "walk": {
+  "tiles_per_hour": 16,
+  "shift_hours": 6.0,
+  "depart_from": 6.0,
+  "depart_span": 4.0,
+  "max_nodes": 3000,
+  "field_from": 36,
+  "field_span": 8
+ },
+ "jobs": [
+  {
+   "id": "farmer",
+   "name": "Farmer",
+   "work": "field",
+   "weight": 4,
+   "hours": 6.0
   },
-  "colors": ["#b8403a", "#b8653a", "#c49a3c", "#6e8a3c", "#3f7a4a", "#2f8a84", "#4a86c0", "#3a4f8a", "#7048a0", "#8a3a6e"],
-  "service": {
-    "forge": {"class": "warrior", "race": "dwarf", "color": "#8a5a2a"},
-    "temple": {"class": "cleric", "race": "human", "color": "#e4dfd0"},
-    "store": {"class": "rogue", "race": "halfling", "color": "#6e8a3c"},
-    "tavern": {"class": "ranger", "race": "human", "color": "#b8653a"},
-    "black_market": {"class": "rogue", "race": "human", "color": "#3b2f52"}
+  {
+   "id": "guard",
+   "name": "Town guard",
+   "work": "patrol",
+   "weight": 3,
+   "hours": 6.0
+  },
+  {
+   "id": "smith_hand",
+   "name": "Smith's hand",
+   "work": "forge",
+   "weight": 2,
+   "hours": 7.0
+  },
+  {
+   "id": "shop_hand",
+   "name": "Shop hand",
+   "work": "store",
+   "weight": 2,
+   "hours": 7.0
+  },
+  {
+   "id": "tavern_hand",
+   "name": "Tavern hand",
+   "work": "tavern",
+   "weight": 2,
+   "hours": 7.0
+  },
+  {
+   "id": "acolyte",
+   "name": "Acolyte",
+   "work": "temple",
+   "weight": 1,
+   "hours": 6.0
+  },
+  {
+   "id": "runner",
+   "name": "Runner",
+   "work": "black_market",
+   "weight": 1,
+   "hours": 6.0
+  },
+  {
+   "id": "bakery_keeper",
+   "name": "Baker",
+   "work": "bakery",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "greengrocer_keeper",
+   "name": "Greengrocer",
+   "work": "greengrocer",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "butcher_keeper",
+   "name": "Butcher",
+   "work": "butcher",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "fishmonger_keeper",
+   "name": "Fishmonger",
+   "work": "fishmonger",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "dairy_keeper",
+   "name": "Dairymaid",
+   "work": "dairy",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "herbalist_keeper",
+   "name": "Herbalist",
+   "work": "herbalist",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "apothecary_keeper",
+   "name": "Apothecary",
+   "work": "apothecary",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "alchemist_keeper",
+   "name": "Alchemist",
+   "work": "alchemist",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "armourer_keeper",
+   "name": "Armourer",
+   "work": "armourer",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "bowyer_keeper",
+   "name": "Bowyer",
+   "work": "bowyer",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "tailor_keeper",
+   "name": "Tailor",
+   "work": "tailor",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "cobbler_keeper",
+   "name": "Cobbler",
+   "work": "cobbler",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "leatherworker_keeper",
+   "name": "Tanner",
+   "work": "leatherworker",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "stables_keeper",
+   "name": "Stablemaster",
+   "work": "stables",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "stockyard_keeper",
+   "name": "Drover",
+   "work": "stockyard",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "hunters_lodge_keeper",
+   "name": "Huntsman",
+   "work": "hunters_lodge",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "jeweller_keeper",
+   "name": "Jeweller",
+   "work": "jeweller",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "gem_cutter_keeper",
+   "name": "Gem-cutter",
+   "work": "gem_cutter",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "scribe_keeper",
+   "name": "Scribe",
+   "work": "scribe",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "bookseller_keeper",
+   "name": "Bookseller",
+   "work": "bookseller",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "spell_shop_keeper",
+   "name": "Scrollwright",
+   "work": "spell_shop",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "enchanter_keeper",
+   "name": "Enchanter",
+   "work": "enchanter",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "cartographer_keeper",
+   "name": "Cartographer",
+   "work": "cartographer",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "chandler_keeper",
+   "name": "Chandler",
+   "work": "chandler",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "potter_keeper",
+   "name": "Potter",
+   "work": "potter",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "glassblower_keeper",
+   "name": "Glassblower",
+   "work": "glassblower",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "carpenter_keeper",
+   "name": "Carpenter",
+   "work": "carpenter",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "mason_keeper",
+   "name": "Mason",
+   "work": "mason",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "miller_keeper",
+   "name": "Miller",
+   "work": "miller",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "smelter_keeper",
+   "name": "Smelter",
+   "work": "smelter",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "shipwright_keeper",
+   "name": "Shipwright",
+   "work": "shipwright",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "nursery_keeper",
+   "name": "Gardener",
+   "work": "nursery",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "barber_keeper",
+   "name": "Barber",
+   "work": "barber",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "bathhouse_keeper",
+   "name": "Bath-keeper",
+   "work": "bathhouse",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "brewery_keeper",
+   "name": "Brewer",
+   "work": "brewery",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "bank_keeper",
+   "name": "Banker",
+   "work": "bank",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "pawnbroker_keeper",
+   "name": "Pawnbroker",
+   "work": "pawnbroker",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "guild_hall_keeper",
+   "name": "Guildmaster",
+   "work": "guild_hall",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "barracks_keeper",
+   "name": "Sergeant",
+   "work": "barracks",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "shrine_keeper",
+   "name": "Priest",
+   "work": "shrine",
+   "weight": 1,
+   "hours": 5.0
+  },
+  {
+   "id": "homekeeper",
+   "name": "Keeps house",
+   "work": "",
+   "weight": 1,
+   "hours": 1.0
+  },
+  {
+   "id": "gate_guard",
+   "name": "Gate guard",
+   "work": "gate",
+   "weight": 0,
+   "hours": 12.0,
+   "post": true
   }
+ ],
+ "guards": {
+  "job": "gate_guard",
+  "per_shift": 2,
+  "class": "warrior",
+  "shifts": [
+   {"id": "day", "from": 6.0, "to": 18.0},
+   {"id": "night", "from": 18.0, "to": 6.0}
+  ],
+  "colors": {
+   "hearthmere": "#3f7a4a",
+   "kingshold": "#3a4f8a",
+   "brinehaven": "#2f8a84",
+   "ironford": "#b8403a"
+  }
+ },
+ "service_jobs": {
+  "forge": "Blacksmith",
+  "temple": "Priest",
+  "store": "Storekeeper",
+  "tavern": "Innkeeper",
+  "black_market": "Fence",
+  "bakery": "Baker",
+  "greengrocer": "Greengrocer",
+  "butcher": "Butcher",
+  "fishmonger": "Fishmonger",
+  "dairy": "Dairymaid",
+  "herbalist": "Herbalist",
+  "apothecary": "Apothecary",
+  "alchemist": "Alchemist",
+  "armourer": "Armourer",
+  "bowyer": "Bowyer",
+  "tailor": "Tailor",
+  "cobbler": "Cobbler",
+  "leatherworker": "Tanner",
+  "stables": "Stablemaster",
+  "stockyard": "Drover",
+  "hunters_lodge": "Huntsman",
+  "jeweller": "Jeweller",
+  "gem_cutter": "Gem-cutter",
+  "scribe": "Scribe",
+  "bookseller": "Bookseller",
+  "spell_shop": "Scrollwright",
+  "enchanter": "Enchanter",
+  "cartographer": "Cartographer",
+  "chandler": "Chandler",
+  "potter": "Potter",
+  "glassblower": "Glassblower",
+  "carpenter": "Carpenter",
+  "mason": "Mason",
+  "miller": "Miller",
+  "smelter": "Smelter",
+  "shipwright": "Shipwright",
+  "nursery": "Gardener",
+  "barber": "Barber",
+  "bathhouse": "Bath-keeper",
+  "brewery": "Brewer",
+  "bank": "Banker",
+  "pawnbroker": "Pawnbroker",
+  "guild_hall": "Guildmaster",
+  "barracks": "Sergeant",
+  "shrine": "Priest"
+ },
+ "sizes": {
+  "halfling": 0.75,
+  "gnome": 0.75,
+  "dwarf": 0.85,
+  "human": 1.0,
+  "half_elf": 1.0,
+  "elf": 1.05,
+  "half_orc": 1.1,
+  "beastkin": 1.1,
+  "half_dragon": 1.15,
+  "orc": 1.2,
+  "dragonborn": 1.25
+ },
+ "monsters": [
+  {
+   "creature": "goblin",
+   "scale": 0.7,
+   "places": [
+    "brinehaven",
+    "ironford"
+   ]
+  },
+  {
+   "creature": "ogre",
+   "scale": 1.8,
+   "places": [
+    "ironford",
+    "kingshold",
+    "brinehaven"
+   ]
+  }
+ ],
+ "classes": [
+  "warrior",
+  "ranger",
+  "monk",
+  "druid",
+  "cleric",
+  "rogue",
+  "mage"
+ ],
+ "races": {
+  "hearthmere": [
+   "human",
+   "halfling",
+   "human"
+  ],
+  "kingshold": [
+   "human",
+   "half_elf",
+   "human",
+   "elf"
+  ],
+  "brinehaven": [
+   "human",
+   "half_orc",
+   "beastkin",
+   "human"
+  ],
+  "ironford": [
+   "dwarf",
+   "dwarf",
+   "human",
+   "gnome"
+  ]
+ },
+ "colors": [
+  "#b8403a",
+  "#b8653a",
+  "#c49a3c",
+  "#6e8a3c",
+  "#3f7a4a",
+  "#2f8a84",
+  "#4a86c0",
+  "#3a4f8a",
+  "#7048a0",
+  "#8a3a6e"
+ ],
+ "service": {
+  "forge": {
+   "class": "warrior",
+   "race": "dwarf",
+   "color": "#8a5a2a"
+  },
+  "temple": {
+   "class": "cleric",
+   "race": "human",
+   "color": "#e4dfd0"
+  },
+  "store": {
+   "class": "rogue",
+   "race": "halfling",
+   "color": "#6e8a3c"
+  },
+  "tavern": {
+   "class": "ranger",
+   "race": "human",
+   "color": "#b8653a"
+  },
+  "black_market": {
+   "class": "rogue",
+   "race": "human",
+   "color": "#3b2f52"
+  },
+  "bakery": {
+   "class": "monk",
+   "race": "human",
+   "color": "#d8b46a"
+  },
+  "greengrocer": {
+   "class": "druid",
+   "race": "halfling",
+   "color": "#6e9a3c"
+  },
+  "butcher": {
+   "class": "warrior",
+   "race": "human",
+   "color": "#b04a3a"
+  },
+  "fishmonger": {
+   "class": "ranger",
+   "race": "human",
+   "color": "#3f8aa0"
+  },
+  "dairy": {
+   "class": "druid",
+   "race": "human",
+   "color": "#e0e0d0"
+  },
+  "herbalist": {
+   "class": "druid",
+   "race": "human",
+   "color": "#4f8a4a"
+  },
+  "apothecary": {
+   "class": "cleric",
+   "race": "human",
+   "color": "#7aa08a"
+  },
+  "alchemist": {
+   "class": "mage",
+   "race": "gnome",
+   "color": "#8a5ac0"
+  },
+  "armourer": {
+   "class": "warrior",
+   "race": "dwarf",
+   "color": "#8a8a96"
+  },
+  "bowyer": {
+   "class": "ranger",
+   "race": "elf",
+   "color": "#7a9a5a"
+  },
+  "tailor": {
+   "class": "rogue",
+   "race": "human",
+   "color": "#9a6ab0"
+  },
+  "cobbler": {
+   "class": "rogue",
+   "race": "halfling",
+   "color": "#8a6a4a"
+  },
+  "leatherworker": {
+   "class": "ranger",
+   "race": "half_orc",
+   "color": "#8a5a38"
+  },
+  "stables": {
+   "class": "ranger",
+   "race": "human",
+   "color": "#7a5a3a"
+  },
+  "stockyard": {
+   "class": "ranger",
+   "race": "human",
+   "color": "#8a7a4a"
+  },
+  "hunters_lodge": {
+   "class": "ranger",
+   "race": "half_elf",
+   "color": "#5a7a4a"
+  },
+  "jeweller": {
+   "class": "rogue",
+   "race": "half_elf",
+   "color": "#c0a050"
+  },
+  "gem_cutter": {
+   "class": "warrior",
+   "race": "dwarf",
+   "color": "#a07050"
+  },
+  "scribe": {
+   "class": "mage",
+   "race": "half_elf",
+   "color": "#6a7aa8"
+  },
+  "bookseller": {
+   "class": "mage",
+   "race": "human",
+   "color": "#8a4a5a"
+  },
+  "spell_shop": {
+   "class": "mage",
+   "race": "elf",
+   "color": "#6a8ad0"
+  },
+  "enchanter": {
+   "class": "mage",
+   "race": "half_elf",
+   "color": "#a060c0"
+  },
+  "cartographer": {
+   "class": "ranger",
+   "race": "human",
+   "color": "#6a8a9a"
+  },
+  "chandler": {
+   "class": "monk",
+   "race": "gnome",
+   "color": "#e0b050"
+  },
+  "potter": {
+   "class": "monk",
+   "race": "dwarf",
+   "color": "#b86a4a"
+  },
+  "glassblower": {
+   "class": "mage",
+   "race": "elf",
+   "color": "#60b0c0"
+  },
+  "carpenter": {
+   "class": "warrior",
+   "race": "human",
+   "color": "#a07840"
+  },
+  "mason": {
+   "class": "warrior",
+   "race": "dwarf",
+   "color": "#8a8a80"
+  },
+  "miller": {
+   "class": "monk",
+   "race": "human",
+   "color": "#e0d0b0"
+  },
+  "smelter": {
+   "class": "warrior",
+   "race": "dwarf",
+   "color": "#b0603a"
+  },
+  "shipwright": {
+   "class": "ranger",
+   "race": "half_orc",
+   "color": "#4a7a9a"
+  },
+  "nursery": {
+   "class": "druid",
+   "race": "halfling",
+   "color": "#7aaa4a"
+  },
+  "barber": {
+   "class": "rogue",
+   "race": "human",
+   "color": "#c0a08a"
+  },
+  "bathhouse": {
+   "class": "monk",
+   "race": "human",
+   "color": "#80b0c0"
+  },
+  "brewery": {
+   "class": "warrior",
+   "race": "dwarf",
+   "color": "#c0883a"
+  },
+  "bank": {
+   "class": "rogue",
+   "race": "human",
+   "color": "#c0a850"
+  },
+  "pawnbroker": {
+   "class": "rogue",
+   "race": "human",
+   "color": "#8a7a6a"
+  },
+  "guild_hall": {
+   "class": "warrior",
+   "race": "half_orc",
+   "color": "#a85a3a"
+  },
+  "barracks": {
+   "class": "warrior",
+   "race": "human",
+   "color": "#6a7a9a"
+  },
+  "shrine": {
+   "class": "cleric",
+   "race": "dwarf",
+   "color": "#d8d0c0"
+  }
+ }
 }

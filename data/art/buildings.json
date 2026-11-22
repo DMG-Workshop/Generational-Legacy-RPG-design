@@ -1,22 +1,1490 @@
 {
-  "note": "The buildings of the open world's towns (ui/play/building_art.gd paints them, core/game/game_town.gd says where they stand; checked by tools/check_data.gd). Each is 48 by 32 pixels, three tiles by two: a roof over a wall with a door and windows, then the `features` of its kind. A kind has its own `roof` and `wall` colours ([light, dark]) or is `styled` (a plain house or the family house takes one of `styles`, picked from the place's name). `board` is the notice board, a shape of its own. Nothing is random: the same kind and style paint the same pixels.",
-  "outline": "#1b1626",
-  "colors": {"door": "#6b4a2a", "door_dark": "#3f2a16", "glass": "#a9d4e8", "glass_dark": "#4f7688", "shutter": "#4f6f4a", "gold": "#e0b84a", "flag": "#b8312f", "stone": "#8a8a92", "stone_dark": "#5e5e66", "glow": "#f09a3a", "iron": "#3a3d46", "crate": "#a8783c", "crate_dark": "#7a5628", "sign": "#7a5628", "mug": "#e8d8a0", "wood": "#8a6238", "wood_dark": "#5a3f22", "paper": "#ece2c0", "paper2": "#d8c690", "lamp": "#f6e27a", "white": "#f0eee6"},
-  "styles": [
-    {"roof": ["#b5533a", "#85381f"], "wall": ["#d8c39a", "#b09a70"]},
-    {"roof": ["#4f7ea3", "#33566f"], "wall": ["#cfc7b5", "#a59d8c"]},
-    {"roof": ["#6e8f45", "#4c672c"], "wall": ["#d1b98a", "#a88f60"]},
-    {"roof": ["#8a6a3a", "#5f4724"], "wall": ["#c9b8a0", "#9d8c75"]}
-  ],
-  "inside": {"floor": ["#a88655", "#8e7046"], "wall": "#6b6258", "rug": "#8a3a3a", "cloth": "#d8d0c0", "blanket": "#b04a58", "wood": "#6a4a2a", "fire": ["#e06a1a", "#f6d048"], "ember": "#8a2a14"},
-  "kinds": {
-    "house": {"furniture": ["bed", "table", "hearth"], "styled": true, "features": ["chimney"]},
-    "family": {"furniture": ["bed", "table", "hearth", "chest"], "styled": true, "features": ["chimney", "banner", "gold_trim"]},
-    "forge": {"furniture": ["anvil_floor", "forge_fire", "rack"], "roof": ["#6b6f78", "#474b53"], "wall": ["#9a9288", "#756e65"], "features": ["chimney", "glow", "anvil"]},
-    "temple": {"furniture": ["altar", "pews"], "roof": ["#c9ccd6", "#9a9fb0"], "wall": ["#ebe4d2", "#c4bba5"], "features": ["cross", "round_window"]},
-    "store": {"furniture": ["counter", "shelves", "crates"], "roof": ["#a8553a", "#7a3a26"], "wall": ["#d8c39a", "#b09a70"], "features": ["awning", "crate"], "awning": ["#e4dfd0", "#b8483a"]},
-    "tavern": {"furniture": ["bar", "tables"], "roof": ["#7a5a34", "#563d20"], "wall": ["#cfb48a", "#a58d63"], "features": ["chimney", "sign"]},
-    "board": {"shape": "board"},
-    "black_market": {"furniture": ["crates", "rug", "lamp_floor"], "roof": ["#5b4a78", "#3b2f52"], "wall": ["#4a4458", "#352f42"], "features": ["awning", "lantern"], "awning": ["#3b2f52", "#8a4a9a"]}
+ "note": "The buildings of the open world's towns (ui/play/building_art.gd paints them, core/game/game_town.gd says where they stand; checked by tools/check_data.gd). Each is 48 by 32 pixels, three tiles by two: a roof over a wall with a door and windows, then the `features` of its kind. A kind has its own `roof` and `wall` colours ([light, dark]) or is `styled` (a plain house or the family house takes one of `styles`, picked from the place's name). `board` is the notice board, a shape of its own. Nothing is random: the same kind and style paint the same pixels. Shops (data/shops/shops.json) are kinds of their own: a sign with an icon from `icons` (8 by 8: x the colour, o its shade), and the furniture and features of the trade.",
+ "outline": "#1b1626",
+ "colors": {
+  "door": "#6b4a2a",
+  "door_dark": "#3f2a16",
+  "glass": "#a9d4e8",
+  "glass_dark": "#4f7688",
+  "shutter": "#4f6f4a",
+  "gold": "#e0b84a",
+  "flag": "#b8312f",
+  "stone": "#8a8a92",
+  "stone_dark": "#5e5e66",
+  "glow": "#f09a3a",
+  "iron": "#3a3d46",
+  "crate": "#a8783c",
+  "crate_dark": "#7a5628",
+  "sign": "#7a5628",
+  "mug": "#e8d8a0",
+  "wood": "#8a6238",
+  "wood_dark": "#5a3f22",
+  "paper": "#ece2c0",
+  "paper2": "#d8c690",
+  "lamp": "#f6e27a",
+  "white": "#f0eee6",
+  "barrel": "#7a5a30",
+  "hoop": "#3a3d46",
+  "stripe_red": "#c0302e",
+  "stripe_blue": "#3a5fb0"
+ },
+ "styles": [
+  {
+   "roof": [
+    "#b5533a",
+    "#85381f"
+   ],
+   "wall": [
+    "#d8c39a",
+    "#b09a70"
+   ]
+  },
+  {
+   "roof": [
+    "#4f7ea3",
+    "#33566f"
+   ],
+   "wall": [
+    "#cfc7b5",
+    "#a59d8c"
+   ]
+  },
+  {
+   "roof": [
+    "#6e8f45",
+    "#4c672c"
+   ],
+   "wall": [
+    "#d1b98a",
+    "#a88f60"
+   ]
+  },
+  {
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9b8a0",
+    "#9d8c75"
+   ]
   }
+ ],
+ "inside": {
+  "floor": [
+   "#a88655",
+   "#8e7046"
+  ],
+  "wall": "#6b6258",
+  "rug": "#8a3a3a",
+  "cloth": "#d8d0c0",
+  "blanket": "#b04a58",
+  "wood": "#6a4a2a",
+  "fire": [
+   "#e06a1a",
+   "#f6d048"
+  ],
+  "ember": "#8a2a14"
+ },
+ "kinds": {
+  "house": {
+   "furniture": [
+    "bed",
+    "table",
+    "hearth"
+   ],
+   "styled": true,
+   "features": [
+    "chimney"
+   ]
+  },
+  "family": {
+   "furniture": [
+    "bed",
+    "table",
+    "hearth",
+    "chest"
+   ],
+   "styled": true,
+   "features": [
+    "chimney",
+    "banner",
+    "gold_trim"
+   ]
+  },
+  "forge": {
+   "furniture": [
+    "anvil_floor",
+    "forge_fire",
+    "rack"
+   ],
+   "roof": [
+    "#6b6f78",
+    "#474b53"
+   ],
+   "wall": [
+    "#9a9288",
+    "#756e65"
+   ],
+   "features": [
+    "chimney",
+    "glow",
+    "anvil",
+    "sign_icon"
+   ],
+   "icon": "anvil",
+   "icon_color": "#c8c8d0"
+  },
+  "temple": {
+   "furniture": [
+    "altar",
+    "pews"
+   ],
+   "roof": [
+    "#c9ccd6",
+    "#9a9fb0"
+   ],
+   "wall": [
+    "#ebe4d2",
+    "#c4bba5"
+   ],
+   "features": [
+    "cross",
+    "round_window"
+   ]
+  },
+  "store": {
+   "furniture": [
+    "counter",
+    "shelves",
+    "crates"
+   ],
+   "roof": [
+    "#a8553a",
+    "#7a3a26"
+   ],
+   "wall": [
+    "#d8c39a",
+    "#b09a70"
+   ],
+   "features": [
+    "awning",
+    "crate"
+   ],
+   "awning": [
+    "#e4dfd0",
+    "#b8483a"
+   ]
+  },
+  "tavern": {
+   "furniture": [
+    "bar",
+    "tables"
+   ],
+   "roof": [
+    "#7a5a34",
+    "#563d20"
+   ],
+   "wall": [
+    "#cfb48a",
+    "#a58d63"
+   ],
+   "features": [
+    "chimney",
+    "sign"
+   ]
+  },
+  "board": {
+   "shape": "board"
+  },
+  "black_market": {
+   "furniture": [
+    "crates",
+    "rug",
+    "lamp_floor"
+   ],
+   "roof": [
+    "#5b4a78",
+    "#3b2f52"
+   ],
+   "wall": [
+    "#4a4458",
+    "#352f42"
+   ],
+   "features": [
+    "awning",
+    "lantern"
+   ],
+   "awning": [
+    "#3b2f52",
+    "#8a4a9a"
+   ]
+  },
+  "bakery": {
+   "furniture": [
+    "oven",
+    "counter",
+    "sacks"
+   ],
+   "roof": [
+    "#b87a3a",
+    "#865422"
+   ],
+   "wall": [
+    "#e6d2a2",
+    "#bba477"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "loaf",
+   "icon_color": "#e6b25a"
+  },
+  "greengrocer": {
+   "furniture": [
+    "stalls",
+    "crates",
+    "counter"
+   ],
+   "roof": [
+    "#5f8a47",
+    "#436530"
+   ],
+   "wall": [
+    "#d6caa0",
+    "#aa9d72"
+   ],
+   "features": [
+    "awning",
+    "crate",
+    "sign_icon"
+   ],
+   "icon": "apple",
+   "icon_color": "#d8503a",
+   "awning": [
+    "#e4dfd0",
+    "#5f8a47"
+   ]
+  },
+  "butcher": {
+   "furniture": [
+    "hooks",
+    "counter",
+    "crates"
+   ],
+   "roof": [
+    "#a8403a",
+    "#7a2a26"
+   ],
+   "wall": [
+    "#dcc9a8",
+    "#b0a07e"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon"
+   ],
+   "icon": "cleaver",
+   "icon_color": "#e8d8c8"
+  },
+  "fishmonger": {
+   "furniture": [
+    "stalls",
+    "barrels",
+    "counter"
+   ],
+   "roof": [
+    "#3f7f8a",
+    "#2b5b64"
+   ],
+   "wall": [
+    "#d4d8cc",
+    "#a2a898"
+   ],
+   "features": [
+    "awning",
+    "sign_icon",
+    "barrels"
+   ],
+   "icon": "fish",
+   "icon_color": "#9ad0e0",
+   "awning": [
+    "#e4dfd0",
+    "#3f7f8a"
+   ]
+  },
+  "dairy": {
+   "furniture": [
+    "counter",
+    "shelves",
+    "barrels"
+   ],
+   "roof": [
+    "#b87a3a",
+    "#865422"
+   ],
+   "wall": [
+    "#e6d2a2",
+    "#bba477"
+   ],
+   "features": [
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "cheese",
+   "icon_color": "#f0d060"
+  },
+  "herbalist": {
+   "furniture": [
+    "hooks",
+    "shelves",
+    "counter"
+   ],
+   "roof": [
+    "#5f8a47",
+    "#436530"
+   ],
+   "wall": [
+    "#d6caa0",
+    "#aa9d72"
+   ],
+   "features": [
+    "sign_icon",
+    "chimney"
+   ],
+   "icon": "leaf",
+   "icon_color": "#7ad06a"
+  },
+  "apothecary": {
+   "furniture": [
+    "counter",
+    "shelves",
+    "cauldron"
+   ],
+   "roof": [
+    "#5f8a47",
+    "#436530"
+   ],
+   "wall": [
+    "#d6caa0",
+    "#aa9d72"
+   ],
+   "features": [
+    "sign_icon",
+    "lantern"
+   ],
+   "icon": "flask",
+   "icon_color": "#d86aa0"
+  },
+  "alchemist": {
+   "furniture": [
+    "cauldron",
+    "shelves",
+    "workbench"
+   ],
+   "roof": [
+    "#6a4f9a",
+    "#47336f"
+   ],
+   "wall": [
+    "#cfc4d8",
+    "#a095b0"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "lantern"
+   ],
+   "icon": "flask",
+   "icon_color": "#7ae0d8"
+  },
+  "armourer": {
+   "furniture": [
+    "armour_stand",
+    "rack",
+    "workbench"
+   ],
+   "roof": [
+    "#6b6f78",
+    "#474b53"
+   ],
+   "wall": [
+    "#a39a8e",
+    "#7a7268"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "banner"
+   ],
+   "icon": "helm",
+   "icon_color": "#c8c8d0"
+  },
+  "bowyer": {
+   "furniture": [
+    "rack",
+    "workbench",
+    "counter"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "bow",
+   "icon_color": "#d8b878"
+  },
+  "tailor": {
+   "furniture": [
+    "loom",
+    "counter",
+    "shelves"
+   ],
+   "roof": [
+    "#4f6aa0",
+    "#344a74"
+   ],
+   "wall": [
+    "#d8cfbe",
+    "#a79d8a"
+   ],
+   "features": [
+    "awning",
+    "sign_icon"
+   ],
+   "icon": "spool",
+   "icon_color": "#e0c0f0",
+   "awning": [
+    "#e4dfd0",
+    "#4f6aa0"
+   ]
+  },
+  "cobbler": {
+   "furniture": [
+    "workbench",
+    "shelves",
+    "counter"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "sign_icon"
+   ],
+   "icon": "boot",
+   "icon_color": "#a8784a"
+  },
+  "leatherworker": {
+   "furniture": [
+    "pelts",
+    "workbench",
+    "barrels"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "hide",
+   "icon_color": "#c89a60"
+  },
+  "stables": {
+   "furniture": [
+    "stalls",
+    "hay",
+    "counter"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "sign_icon",
+    "crate",
+    "barrels"
+   ],
+   "icon": "horseshoe",
+   "icon_color": "#c8c8d0"
+  },
+  "stockyard": {
+   "furniture": [
+    "stalls",
+    "hay",
+    "counter"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "hoof",
+   "icon_color": "#e8d8a8"
+  },
+  "hunters_lodge": {
+   "furniture": [
+    "pelts",
+    "rack",
+    "counter"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "banner"
+   ],
+   "icon": "antler",
+   "icon_color": "#e8d8a8"
+  },
+  "jeweller": {
+   "furniture": [
+    "display",
+    "counter",
+    "vault"
+   ],
+   "roof": [
+    "#a8832f",
+    "#7a5c1c"
+   ],
+   "wall": [
+    "#e4d8b0",
+    "#b9ac80"
+   ],
+   "features": [
+    "awning",
+    "sign_icon",
+    "gold_trim"
+   ],
+   "icon": "gem",
+   "icon_color": "#80e0f0",
+   "awning": [
+    "#e4dfd0",
+    "#a8832f"
+   ]
+  },
+  "gem_cutter": {
+   "furniture": [
+    "workbench",
+    "display",
+    "counter"
+   ],
+   "roof": [
+    "#7c8088",
+    "#555960"
+   ],
+   "wall": [
+    "#b4b2ac",
+    "#8b8982"
+   ],
+   "features": [
+    "sign_icon",
+    "chimney"
+   ],
+   "icon": "gem",
+   "icon_color": "#f08090"
+  },
+  "scribe": {
+   "furniture": [
+    "desk",
+    "bookcases",
+    "counter"
+   ],
+   "roof": [
+    "#4f6aa0",
+    "#344a74"
+   ],
+   "wall": [
+    "#d8cfbe",
+    "#a79d8a"
+   ],
+   "features": [
+    "sign_icon",
+    "chimney"
+   ],
+   "icon": "quill",
+   "icon_color": "#f0f0e0"
+  },
+  "bookseller": {
+   "furniture": [
+    "bookcases",
+    "desk",
+    "counter"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "sign_icon",
+    "lantern"
+   ],
+   "icon": "book",
+   "icon_color": "#c85a4a"
+  },
+  "spell_shop": {
+   "furniture": [
+    "bookcases",
+    "display",
+    "counter"
+   ],
+   "roof": [
+    "#6a4f9a",
+    "#47336f"
+   ],
+   "wall": [
+    "#cfc4d8",
+    "#a095b0"
+   ],
+   "features": [
+    "sign_icon",
+    "lantern",
+    "round_window"
+   ],
+   "icon": "scroll",
+   "icon_color": "#e0d0f0"
+  },
+  "enchanter": {
+   "furniture": [
+    "display",
+    "workbench",
+    "rug"
+   ],
+   "roof": [
+    "#6a4f9a",
+    "#47336f"
+   ],
+   "wall": [
+    "#cfc4d8",
+    "#a095b0"
+   ],
+   "features": [
+    "sign_icon",
+    "lantern",
+    "chimney"
+   ],
+   "icon": "star",
+   "icon_color": "#e8a0f8"
+  },
+  "cartographer": {
+   "furniture": [
+    "mapboard",
+    "desk",
+    "shelves"
+   ],
+   "roof": [
+    "#3f7f8a",
+    "#2b5b64"
+   ],
+   "wall": [
+    "#d4d8cc",
+    "#a2a898"
+   ],
+   "features": [
+    "sign_icon",
+    "round_window"
+   ],
+   "icon": "map",
+   "icon_color": "#e8d8a0"
+  },
+  "chandler": {
+   "furniture": [
+    "shelves",
+    "counter",
+    "barrels"
+   ],
+   "roof": [
+    "#a8832f",
+    "#7a5c1c"
+   ],
+   "wall": [
+    "#e4d8b0",
+    "#b9ac80"
+   ],
+   "features": [
+    "sign_icon",
+    "chimney",
+    "lantern"
+   ],
+   "icon": "candle",
+   "icon_color": "#fff0a0"
+  },
+  "potter": {
+   "furniture": [
+    "kiln",
+    "shelves",
+    "counter"
+   ],
+   "roof": [
+    "#c0663a",
+    "#8f4524"
+   ],
+   "wall": [
+    "#e0cfa0",
+    "#b8a474"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "pot",
+   "icon_color": "#e08a5a"
+  },
+  "glassblower": {
+   "furniture": [
+    "kiln",
+    "shelves",
+    "counter"
+   ],
+   "roof": [
+    "#3f7f8a",
+    "#2b5b64"
+   ],
+   "wall": [
+    "#d4d8cc",
+    "#a2a898"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "glow"
+   ],
+   "icon": "bottle",
+   "icon_color": "#a0f0e0"
+  },
+  "carpenter": {
+   "furniture": [
+    "workbench",
+    "crates",
+    "rack"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "saw",
+   "icon_color": "#e8c890"
+  },
+  "mason": {
+   "furniture": [
+    "slab",
+    "workbench",
+    "crates"
+   ],
+   "roof": [
+    "#7c8088",
+    "#555960"
+   ],
+   "wall": [
+    "#b4b2ac",
+    "#8b8982"
+   ],
+   "features": [
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "chisel",
+   "icon_color": "#d8d8d0"
+  },
+  "miller": {
+   "furniture": [
+    "millstone",
+    "sacks",
+    "counter"
+   ],
+   "roof": [
+    "#b87a3a",
+    "#865422"
+   ],
+   "wall": [
+    "#e6d2a2",
+    "#bba477"
+   ],
+   "features": [
+    "sails",
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "sheaf",
+   "icon_color": "#f0d890"
+  },
+  "smelter": {
+   "furniture": [
+    "forge_fire",
+    "crates",
+    "anvil_floor"
+   ],
+   "roof": [
+    "#6b6f78",
+    "#474b53"
+   ],
+   "wall": [
+    "#a39a8e",
+    "#7a7268"
+   ],
+   "features": [
+    "chimney",
+    "glow",
+    "sign_icon"
+   ],
+   "icon": "ingot",
+   "icon_color": "#e0e0f0"
+  },
+  "shipwright": {
+   "furniture": [
+    "workbench",
+    "crates",
+    "barrels"
+   ],
+   "roof": [
+    "#3f7f8a",
+    "#2b5b64"
+   ],
+   "wall": [
+    "#d4d8cc",
+    "#a2a898"
+   ],
+   "features": [
+    "sign_icon",
+    "crate",
+    "barrels"
+   ],
+   "icon": "anchor",
+   "icon_color": "#a0c8e8"
+  },
+  "nursery": {
+   "furniture": [
+    "stalls",
+    "crates",
+    "counter"
+   ],
+   "roof": [
+    "#5f8a47",
+    "#436530"
+   ],
+   "wall": [
+    "#d6caa0",
+    "#aa9d72"
+   ],
+   "features": [
+    "awning",
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "sprout",
+   "icon_color": "#a0e060",
+   "awning": [
+    "#e4dfd0",
+    "#7aaa4a"
+   ]
+  },
+  "barber": {
+   "furniture": [
+    "chair",
+    "counter",
+    "shelves"
+   ],
+   "roof": [
+    "#a8403a",
+    "#7a2a26"
+   ],
+   "wall": [
+    "#dcc9a8",
+    "#b0a07e"
+   ],
+   "features": [
+    "pole",
+    "sign_icon"
+   ],
+   "icon": "razor",
+   "icon_color": "#e8e8f0"
+  },
+  "bathhouse": {
+   "furniture": [
+    "tubs",
+    "benches",
+    "counter"
+   ],
+   "roof": [
+    "#3f7f8a",
+    "#2b5b64"
+   ],
+   "wall": [
+    "#d4d8cc",
+    "#a2a898"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "lantern"
+   ],
+   "icon": "drop",
+   "icon_color": "#a0e0f0"
+  },
+  "brewery": {
+   "furniture": [
+    "barrels",
+    "kiln",
+    "counter"
+   ],
+   "roof": [
+    "#8a6a3a",
+    "#5f4724"
+   ],
+   "wall": [
+    "#c9aa7c",
+    "#9d8156"
+   ],
+   "features": [
+    "chimney",
+    "sign_icon",
+    "barrels"
+   ],
+   "icon": "mug",
+   "icon_color": "#f0d060"
+  },
+  "bank": {
+   "furniture": [
+    "vault",
+    "desk",
+    "counter"
+   ],
+   "roof": [
+    "#a8832f",
+    "#7a5c1c"
+   ],
+   "wall": [
+    "#e4d8b0",
+    "#b9ac80"
+   ],
+   "features": [
+    "gold_trim",
+    "sign_icon",
+    "banner"
+   ],
+   "icon": "coin",
+   "icon_color": "#ffe070"
+  },
+  "pawnbroker": {
+   "furniture": [
+    "crates",
+    "vault",
+    "counter"
+   ],
+   "roof": [
+    "#4a4458",
+    "#2f2b3a"
+   ],
+   "wall": [
+    "#8d8798",
+    "#665f72"
+   ],
+   "features": [
+    "lantern",
+    "sign_icon"
+   ],
+   "icon": "ball",
+   "icon_color": "#e0b050"
+  },
+  "guild_hall": {
+   "furniture": [
+    "mapboard",
+    "benches",
+    "rack"
+   ],
+   "roof": [
+    "#a8403a",
+    "#7a2a26"
+   ],
+   "wall": [
+    "#dcc9a8",
+    "#b0a07e"
+   ],
+   "features": [
+    "banner",
+    "sign_icon",
+    "lantern"
+   ],
+   "icon": "sword",
+   "icon_color": "#f0f0f0"
+  },
+  "barracks": {
+   "furniture": [
+    "rack",
+    "armour_stand",
+    "benches"
+   ],
+   "roof": [
+    "#7c8088",
+    "#555960"
+   ],
+   "wall": [
+    "#b4b2ac",
+    "#8b8982"
+   ],
+   "features": [
+    "banner",
+    "sign_icon",
+    "crate"
+   ],
+   "icon": "shield",
+   "icon_color": "#d8d8e0"
+  },
+  "shrine": {
+   "furniture": [
+    "altar",
+    "pews",
+    "chest"
+   ],
+   "roof": [
+    "#7c8088",
+    "#555960"
+   ],
+   "wall": [
+    "#b4b2ac",
+    "#8b8982"
+   ],
+   "features": [
+    "cross",
+    "round_window",
+    "sign_icon"
+   ],
+   "icon": "candle",
+   "icon_color": "#fff0b0"
+  }
+ },
+ "icons": {
+  "loaf": [
+   "........",
+   "..xxxx..",
+   ".xxoxxx.",
+   "xxxxxoxx",
+   "xxoxxxxx",
+   "xxxxxxxx",
+   ".xxxxxx.",
+   "........"
+  ],
+  "apple": [
+   "....o...",
+   "...oo...",
+   ".xx.xx..",
+   "xxxxxxx.",
+   "xxxxxxx.",
+   "xxxxxxx.",
+   ".xxxxx..",
+   "........"
+  ],
+  "cleaver": [
+   "..xxxxx.",
+   "..xxxxxx",
+   "..xxxxxx",
+   "..xxxxxx",
+   "..xxxxx.",
+   "...oo...",
+   "...oo...",
+   "...oo..."
+  ],
+  "fish": [
+   "........",
+   ".....xx.",
+   "..xxxxxx",
+   ".xxxxoxx",
+   "..xxxxxx",
+   ".....xx.",
+   "........",
+   "........"
+  ],
+  "cheese": [
+   "........",
+   "...xxxx.",
+   "..xoxxxx",
+   ".xxxxxox",
+   "xxxxxxxx",
+   "xxoxxxxx",
+   "xxxxxxxx",
+   "........"
+  ],
+  "leaf": [
+   "......xx",
+   ".....xxx",
+   "....xxxo",
+   "...xxxo.",
+   "..xxxo..",
+   ".xxxo...",
+   "xxo.....",
+   "o......."
+  ],
+  "flask": [
+   "..xxxx..",
+   "...xx...",
+   "...xx...",
+   "..xxxx..",
+   ".xxxxxx.",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   ".xxxxxx."
+  ],
+  "helm": [
+   "..xxxx..",
+   ".xxxxxx.",
+   "xxxxxxxx",
+   "xxoooxxx",
+   "xxxxxxxx",
+   "xx.xx.xx",
+   "xx.xx.xx",
+   "........"
+  ],
+  "bow": [
+   "..xx....",
+   "..x.x...",
+   "..x..x..",
+   "..x...x.",
+   "..x..x..",
+   "..x.x...",
+   "..xx....",
+   "........"
+  ],
+  "spool": [
+   "xxxxxxxx",
+   ".oxxxxo.",
+   ".oxxxxo.",
+   ".oxxxxo.",
+   ".oxxxxo.",
+   ".oxxxxo.",
+   "xxxxxxxx",
+   "........"
+  ],
+  "boot": [
+   "..xxxx..",
+   "..xxxx..",
+   "..xxxx..",
+   "..xxxx..",
+   "xxxxxxx.",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   "........"
+  ],
+  "hide": [
+   "x.xxxx.x",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   ".xxxxxx.",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   "x.xxxx.x",
+   "........"
+  ],
+  "horseshoe": [
+   ".xxxxxx.",
+   "xx....xx",
+   "x......x",
+   "xo....ox",
+   "xo....ox",
+   "xx....xx",
+   "........",
+   "........"
+  ],
+  "hoof": [
+   "..xxxx..",
+   ".xxxxxx.",
+   "xxxoxxxx",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   ".xxxxxx.",
+   "..x..x..",
+   "..x..x.."
+  ],
+  "antler": [
+   "x..xx..x",
+   "x..xx..x",
+   "xx.xx.xx",
+   ".xxxxxx.",
+   "..xxxx..",
+   "...xx...",
+   "...xx...",
+   "........"
+  ],
+  "gem": [
+   "..xxxx..",
+   ".xxxxxx.",
+   "xxxxxxxx",
+   ".xxxxxx.",
+   "..xxxx..",
+   "...xx...",
+   "........",
+   "........"
+  ],
+  "quill": [
+   ".......x",
+   "......xx",
+   ".....xx.",
+   "....xx..",
+   "...xx...",
+   "..xx....",
+   ".xo.....",
+   "o......."
+  ],
+  "book": [
+   "xxxxxxx.",
+   "xooooox.",
+   "xxxxxxx.",
+   "xooooox.",
+   "xxxxxxx.",
+   "xooooox.",
+   "xxxxxxx.",
+   "........"
+  ],
+  "scroll": [
+   ".xxxxxx.",
+   "xooooox.",
+   ".xxxxxx.",
+   ".xooox..",
+   ".xxxxx..",
+   ".xooox..",
+   "xooooox.",
+   ".xxxxxx."
+  ],
+  "star": [
+   "...xx...",
+   "...xx...",
+   "xxxxxxxx",
+   ".xxxxxx.",
+   "..xxxx..",
+   "..xxxx..",
+   ".xx..xx.",
+   "x......x"
+  ],
+  "map": [
+   "xxxxxxxx",
+   "xooxxxox",
+   "xxxoxxxx",
+   "xxxxoxxx",
+   "xoxxxxox",
+   "xxxoxxxx",
+   "xxxxxxxx",
+   "........"
+  ],
+  "candle": [
+   "...x....",
+   "..xx....",
+   "...o....",
+   "..xxx...",
+   "..xxx...",
+   "..xxx...",
+   "..xxx...",
+   "..xxx..."
+  ],
+  "pot": [
+   "..xxxx..",
+   ".xxxxxx.",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   ".xxxxxx.",
+   "..xxxx..",
+   "........"
+  ],
+  "bottle": [
+   "...xx...",
+   "...xx...",
+   "..xxxx..",
+   ".xxxxxx.",
+   ".xxxxxx.",
+   ".xxxxxx.",
+   ".xxxxxx.",
+   "..xxxx.."
+  ],
+  "saw": [
+   "........",
+   "oxxxxxxx",
+   "xxxxxxxx",
+   "x.x.x.x.",
+   "........",
+   "........",
+   "........",
+   "........"
+  ],
+  "chisel": [
+   "......xx",
+   ".....xx.",
+   "....xx..",
+   "...xx...",
+   "..xo....",
+   ".xo.....",
+   "xo......",
+   "o......."
+  ],
+  "sheaf": [
+   "...xx...",
+   "..x.x.x.",
+   "...xxx..",
+   "..xxxxx.",
+   "...xxx..",
+   "....o...",
+   "...ooo..",
+   "........"
+  ],
+  "ingot": [
+   "........",
+   "..xxxxxx",
+   ".xxxxxxx",
+   "xxxxxxxx",
+   "xoooooox",
+   "xxxxxxxx",
+   "........",
+   "........"
+  ],
+  "anchor": [
+   "...xx...",
+   "...xx...",
+   "xxxxxxxx",
+   "...xx...",
+   "...xx...",
+   "x..xx..x",
+   "xx.xx.xx",
+   ".xxxxxx."
+  ],
+  "sprout": [
+   "..xx.xx.",
+   ".xxxxxx.",
+   ".xxxxx..",
+   "..xx....",
+   "..xo....",
+   "..xo....",
+   "..xo....",
+   ".ooooo.."
+  ],
+  "razor": [
+   "xxxxxxx.",
+   "xxxxxxxx",
+   ".ooooooo",
+   "....oo..",
+   "....oo..",
+   "....oo..",
+   "....oo..",
+   "........"
+  ],
+  "drop": [
+   "...xx...",
+   "...xx...",
+   "..xxxx..",
+   "..xxxx..",
+   ".xxxxxx.",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   ".xxxxxx."
+  ],
+  "mug": [
+   "xxxxxx..",
+   "xooooxxx",
+   "xxxxxx.x",
+   "xxxxxx.x",
+   "xxxxxx.x",
+   "xxxxxxxx",
+   ".xxxxx..",
+   "........"
+  ],
+  "coin": [
+   "..xxxx..",
+   ".xxxxxx.",
+   "xxxoxxxx",
+   "xxoxxxxx",
+   "xxxxoxxx",
+   "xxxoxxxx",
+   ".xxxxxx.",
+   "..xxxx.."
+  ],
+  "ball": [
+   "..xx....",
+   ".xxxx...",
+   "..xx.xx.",
+   "....xxxx",
+   ".xx..xx.",
+   "xxxx....",
+   ".xx.....",
+   "........"
+  ],
+  "sword": [
+   "......xx",
+   ".....xxx",
+   "....xxx.",
+   "...xxx..",
+   "x.xxx...",
+   "xxxx....",
+   ".xx.....",
+   "x.xx...."
+  ],
+  "shield": [
+   "xxxxxxxx",
+   "xoxxxxox",
+   "xxxxxxxx",
+   "xxxxxxxx",
+   ".xxxxxx.",
+   ".xxxxxx.",
+   "..xxxx..",
+   "...xx..."
+  ],
+  "anvil": [
+   "xxxxxxxx",
+   "xxxxxxxx",
+   ".xxxxxx.",
+   "..xxxx..",
+   "..xxxx..",
+   ".xxxxxx.",
+   "xxxxxxxx",
+   "........"
+  ]
+ }
 }

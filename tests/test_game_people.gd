@@ -68,7 +68,7 @@ func _space_of(layout: String) -> String:
 
 func test_data() -> void:
 	ok(GamePeople.validate().is_empty(), "the shipped data passes: %s" % str(GamePeople.validate()))
-	ok(GamePeople.data()["people"].size() == 6, "six people, one for each service interior")
+	ok(GamePeople.data()["people"].size() == 6 + GameShops.ids().size(), "a person for each service interior: the six old services and the shops")
 	var rows: Array = GamePeople.data()["people"]
 	var keep: Variant = rows[0]["at"]
 	rows[0]["at"] = [0, 0]
@@ -131,6 +131,7 @@ func test_talk() -> void:
 	# each person opens what the data says
 	for p in GamePeople.data()["people"]:
 		var dd := _fresh()
+		dd.world_seconds = (0.5 - float(GameDay.setting("start_phase"))) * float(GameDay.setting("day_seconds"))   # noon: every shop is open
 		var sid := _space_of(str(p["layout"]))
 		dd.world.location = str(GameSpaces.space(sid)["place"])
 		var ss := _inside(dd, sid)

@@ -26,7 +26,8 @@ var tab: String = ""
 var gold_label: Label
 var price_label: Label
 var note: Label
-var tabs: HBoxContainer
+var tab_scroll: ScrollContainer
+var tabs: HFlowContainer
 var tab_note: Label
 var scroll: ScrollContainer
 var rows: VBoxContainer
@@ -64,9 +65,16 @@ func _ready() -> void:
 	var tab_row := HBoxContainer.new()
 	tab_row.add_theme_constant_override("separation", 8)
 	v.add_child(tab_row)
-	tabs = HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 8)
-	tab_row.add_child(tabs)
+	tabs = HFlowContainer.new()   # a big town has many shops: the tabs wrap
+	tabs.add_theme_constant_override("h_separation", 8)
+	tabs.add_theme_constant_override("v_separation", 4)
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_scroll = ScrollContainer.new()   # many tabs wrap in a box of two rows that scrolls, so a big town never pushes the page off the screen
+	tab_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	tab_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_scroll.custom_minimum_size = Vector2(120, 42)
+	tab_scroll.add_child(tabs)
+	tab_row.add_child(tab_scroll)
 	tab_note = Kit.label("", 14, Kit.dim())
 	tab_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	tab_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -102,11 +110,28 @@ func _ready() -> void:
 	side.add_theme_constant_override("separation", 4)
 	side_scroll.add_child(side)
 
-	var shops := GameItems.shops_here(dynasty)
+	var shops := _shops()
 	tab = shops[0] if not shops.is_empty() and not gear_only else "gear"
-	if start_tab != "" and start_tab in shops and not gear_only:
+	if start_tab != "" and start_tab in shops and not gear_only and not GameShops.is_shop(start_tab):
 		tab = start_tab
 	_rebuild()
+
+
+## Every shop of the town: the six old services, then the new shops. Opened by a shopkeeper of a new shop, just that shop.
+func _shops() -> Array:
+	if start_tab != "" and GameShops.is_shop(start_tab) and dynasty.world.has_service(start_tab) and not gear_only:
+		return [start_tab]
+	var all: Array = GameItems.shops_here(dynasty)
+	all.append_array(GameShops.here(dynasty))
+	return all
+
+
+func _tab_name(t: String) -> String:
+	return GameShops.tab_of(t) if GameShops.is_shop(t) else str(TAB_NAMES[t])
+
+
+func _tab_note(t: String) -> String:
+	return str(GameShops.def(t)["note"]) if GameShops.is_shop(t) else str(TAB_NOTES[t])
 
 
 func _show(t: String) -> void:
@@ -122,13 +147,15 @@ func _rebuild() -> void:
 	price_label.text = _price_text()
 	Kit.clear(tabs)
 	tabs.visible = not gear_only
-	for t in ([] if gear_only else GameItems.shops_here(dynasty)) + ["gear"]:
+	for t in ([] if gear_only else _shops()) + ["gear"]:
 		var tt: String = t
-		var b := Kit.button(TAB_NAMES[tt], func(): _show(tt), Vector2(110 if not compact else 92, 34))
+		var b := Kit.button(_tab_name(tt), func(): _show(tt), Vector2(110 if not compact else 92, 34))
 		b.toggle_mode = true
 		b.button_pressed = tt == tab
 		tabs.add_child(b)
-	tab_note.text = TAB_NOTES[tab]
+	tab_note.text = _tab_note(tab)
+	tab_scroll.custom_minimum_size.y = 42.0 if tabs.get_child_count() <= 5 else 88.0
+	tab_scroll.visible = not gear_only
 	var keep := scroll.scroll_vertical
 	Kit.clear(rows)
 	match tab:
@@ -142,7 +169,10 @@ func _rebuild() -> void:
 			_build_potions()
 			_build_wares(tab)
 		_:
-			_build_wares(tab)
+			if GameShops.is_shop(tab):
+				_build_shop(tab)
+			else:
+				_build_wares(tab)
 	_build_side()
 	_restore_scroll.call_deferred(keep)
 
@@ -154,7 +184,7 @@ func _restore_scroll(v: int) -> void:
 
 
 func _price_text() -> String:
-	if GameItems.shops_here(dynasty).is_empty():
+	if _shops().is_empty():
 		return "no merchants in %s" % dynasty.world.here()["name"]
 	var parts: Array = ["shop tier %d" % GameItems.shop_tier(dynasty)]
 	var persuasion := GameItems.persuasion(dynasty)
@@ -226,6 +256,57 @@ func _build_wares(service: String) -> void:
 		if not owned and h.gold < cost:
 			b.tooltip_text = "You need %s more gold." % GameText.num(cost - h.gold)
 		rows.add_child(_item_row(iid, "%sg" % GameText.num(cost), [b], "", Kit.ACCENT if owned else _afford(cost)))
+
+
+## One of the new shops: what is on its shelves today, its services, and what it buys from the pack and the stores.
+func _build_shop(shop: String) -> void:
+	var h := dynasty.heir
+	var sdef := GameShops.def(shop)
+	rows.add_child(_section("%s - %s" % [GameShops.name_of(shop), "open until %02d:00" % int(sdef["hours"][1])]))
+	var shelf := GameShops.stock(dynasty, shop)
+	if shelf.is_empty():
+		rows.add_child(Kit.label(GameShops.text("no_stock", {"shop": GameShops.name_of(shop)}), 15, Kit.dim()))
+	for e in shelf:
+		var ent: Dictionary = e
+		var key := str(ent["key"])
+		var cost := GameShops.price(dynasty, shop, ent)
+		match str(ent["kind"]):
+			"item":
+				var iid := str(ent["id"])
+				var stack := GameItems.stack_max(iid)
+				var owned := GameItems.owns(h, iid) if stack <= 0 else GameItems.count(h, iid) >= stack
+				var b := Kit.button(("Owned" if stack <= 0 else "Full") if owned else "Buy", func(): _act(GameShops.buy(dynasty, shop, key)), Vector2(96, 34))
+				b.disabled = owned or h.gold < cost
+				if not owned and h.gold < cost:
+					b.tooltip_text = "You need %s more gold." % GameText.num(cost - h.gold)
+				rows.add_child(_item_row(iid, "%sg" % GameText.num(cost), [b], "", Kit.ACCENT if owned else _afford(cost)))
+			_:
+				var b2 := Kit.button("Buy", func(): _act(GameShops.buy(dynasty, shop, key)), Vector2(96, 34))
+				var why := GameFarm.why_not_buy(dynasty, str(ent["id"])) if str(ent["kind"]) == "animal" else ""
+				b2.disabled = h.gold < cost or why != ""
+				if why != "":
+					b2.tooltip_text = why
+				var what := "Raw material for crafting" if str(ent["kind"]) == "material" else "Kept at the family's ranch"
+				rows.add_child(_service_row(GameShops.entry_name(ent).capitalize() if str(ent["kind"]) == "material" else GameShops.entry_name(ent), what, "", "%sg" % GameText.num(cost), Kit.TEXT, "", b2, _afford(cost)))
+	for sv in sdef.get("services", []):
+		var sid := str(sv["id"])
+		var sc := GameShops.service_price(dynasty, sv)
+		var sb := Kit.button("Pay", func(): _act(GameShops.serve(dynasty, shop, sid)), Vector2(96, 34))
+		sb.disabled = h.gold < sc
+		rows.add_child(_service_row(str(sv["name"]), str(sv["desc"]), "", "%sg" % GameText.num(sc), Kit.TEXT, "", sb, _afford(sc)))
+	var sell_items := GameShops.sellable(dynasty, shop)
+	var sell_mats := GameShops.sellable_materials(dynasty, shop)
+	rows.add_child(_section("Sell to %s" % GameShops.name_of(shop)))
+	if sell_items.is_empty() and sell_mats.is_empty():
+		rows.add_child(Kit.label("Nothing in the pack or the stores that this shop buys.", 14, Kit.dim()))
+	for id in sell_items:
+		var iid2: String = id
+		var bsell := Kit.button("Sell", func(): _act(GameShops.sell(dynasty, shop, iid2)), Vector2(96, 34))
+		rows.add_child(_item_row(iid2, "sells %sg" % GameText.num(GameShops.sell_price(dynasty, shop, iid2)), [bsell]))
+	for m in sell_mats:
+		var mid := str(m["id"])
+		var mb := Kit.button("Sell all", func(): _act(GameShops.sell_material(dynasty, shop, mid, 9999)), Vector2(96, 34))
+		rows.add_child(_service_row("%s x%d" % [GameMaterials.name_of(mid), int(m["have"])], "From the family's stores.", "", "%sg each" % GameText.num(int(m["price"])), Kit.TEXT, "", mb))
 
 
 ## The store sells healing potions too (the same `GameDynasty.buy_potion` as the life screen's Potion button, at the same price).
@@ -317,7 +398,7 @@ func _build_gear() -> void:
 	rows.add_child(_section("Pack"))
 	if h.inventory.is_empty():
 		rows.add_child(Kit.label("The pack is empty.", 15, Kit.dim()))
-	var can_sell := not GameItems.shops_here(dynasty).is_empty()
+	var can_sell := not GameItems.shops_here(dynasty).is_empty()   # (the old shops buy gear; a new shop buys its own goods)
 	var listed := {}
 	for id in h.inventory:
 		var iid: String = id
@@ -349,8 +430,10 @@ func _build_gear() -> void:
 ## toxins and vials are for battle.
 func _consumable_row(id: String, can_sell: bool) -> PanelContainer:
 	var h := dynasty.heir
-	var ub := Kit.button("Use", func(): _act(GameDisease.use_remedy(dynasty, id)), Vector2(60, 34))
-	if GameDisease.remedy_power(id) > 0:
+	var ub := Kit.button("Use", func(): _act(GameShops.use(dynasty, id) if GameShops.usable(id) else GameDisease.use_remedy(dynasty, id)), Vector2(60, 34))
+	if GameShops.usable(id):
+		ub.tooltip_text = GameItems.describe(id)
+	elif GameDisease.remedy_power(id) > 0:
 		var cures: String = ", ".join(GameDisease.treatable_by(id).map(func(x): return GameDisease.disease_name(x)))
 		ub.disabled = GameDisease.remedy_target(h, id) == ""
 		ub.tooltip_text = ("Nothing it treats ails %s. " % h.name if ub.disabled else "") + "Treats %s." % cures

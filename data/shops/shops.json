@@ -1,0 +1,3161 @@
+{
+ "note": "The shops of the towns beyond the six old services (core/game/game_shops.gd, core/game/game_shop_stock.gd, checked by tools/check_data.gd). Each is a service a town lists in world.json, with a building behind a door (spaces.json `town_doors`, towns.json `sizes`, buildings.json art), a keeper (people.json, villagers.json) and a shelf of goods that is GENERATED, never listed: `stock` is a list of pools drawn from `items.json` by kinds, tags or ids (and `seasons`), from the loot generator (made-up gear), from the materials list and from the farm market, on dice keyed on the seed, the town, the shop and the year and season, so shelves differ between towns and change with the seasons and the dynasty's dice are untouched. `buys` is what the shop will buy (items by kind, tag or id; materials from the family's stores by id or tag; `all` for a pawnbroker) at `buy` of its value; `markup` is what it sells at over an item's price; `hours` are when it is open ([open, close] on the 24-hour clock); `tier_bonus` lets a rich shop stock items of a tier above the town's. None of these shops is a service the autopilot knows (GameItems.SHOPS is still the six), so autopilot lives are exactly what they were.",
+ "settings": {
+  "material_unit": 6.0,
+  "bundle_markup": 1.15,
+  "animal_markup": 1.0,
+  "max_loot_tries": 12,
+  "quality_floor": 0
+ },
+ "text": {
+  "bought": "{name} buys {item} for {price} gold.",
+  "bought_wear": "{name} buys {item} for {price} gold and puts it on.",
+  "sold": "{name} sells {item} to {shop} for {price} gold.",
+  "bought_material": "{name} buys {n} {material} for {price} gold.",
+  "sold_material": "{name} sells {n} {material} for {price} gold.",
+  "not_open": "{shop} is shut.",
+  "not_here": "There is no {shop} here.",
+  "not_on_shelf": "{shop} does not have that.",
+  "no_gold": "{name} cannot afford {item}: it costs {price} gold.",
+  "no_trade": "{shop} does not buy {item}.",
+  "not_in_pack": "{name} has no {item}.",
+  "no_stock": "{shop} has nothing on the shelves today.",
+  "used": "{name} uses {item}.",
+  "no_use": "{item} cannot be used.",
+  "no_need": "{name} needs nothing from {item}.",
+  "service_done": "{name} pays {price} gold at {shop}: {what}.",
+  "no_service": "{shop} offers no such service."
+ },
+ "shops": [
+  {
+   "id": "bakery",
+   "name": "Bakery",
+   "tab": "Bakery",
+   "note": "Bread, buns and pies, baked before dawn.",
+   "job": "Baker",
+   "towns": [
+    "hearthmere",
+    "kingshold",
+    "ironford",
+    "brinehaven"
+   ],
+   "hours": [
+    5,
+    17
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "grain",
+     "flour",
+     "baked"
+    ],
+    "ids": [],
+    "materials": [
+     "wheat",
+     "honey"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "bread_loaf",
+      "hard_biscuit"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "baked"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "flour_sack",
+      "honey_cake",
+      "meat_pie"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "greengrocer",
+   "name": "Greengrocer",
+   "tab": "Greengrocer",
+   "note": "Fruit and vegetables in season, from the farms round about.",
+   "job": "Greengrocer",
+   "towns": [
+    "hearthmere",
+    "kingshold",
+    "ironford",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "fruit",
+     "vegetable",
+     "seed",
+     "honey"
+    ],
+    "ids": [],
+    "materials": [
+     "produce",
+     "honey"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "carrots",
+      "onion_string",
+      "cabbage"
+     ],
+     "count": [
+      3,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "fruit",
+      "vegetable"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "seed",
+      "honey"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "butcher",
+   "name": "Butcher",
+   "tab": "Butcher",
+   "note": "Cuts and cured meat, hung in the cold room.",
+   "job": "Butcher",
+   "towns": [
+    "hearthmere",
+    "ironford",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "meat",
+     "bone",
+     "preserved",
+     "salt"
+    ],
+    "ids": [],
+    "materials": [
+     "meat",
+     "salt",
+     "bone"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "dried_meat",
+      "smoked_sausage"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "meat"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "sack_of_bones",
+      "salt_sack"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "fishmonger",
+   "name": "Fishmonger",
+   "tab": "Fishmonger",
+   "note": "The morning's catch, fresh and salted.",
+   "job": "Fishmonger",
+   "towns": [
+    "brinehaven"
+   ],
+   "hours": [
+    5,
+    16
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "fish",
+     "salt",
+     "ship"
+    ],
+    "ids": [],
+    "materials": [
+     "fish",
+     "salt"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "fresh_catch",
+      "salt_cod"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "fish"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "salt_sack",
+      "fishing_net",
+      "fishing_rod"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "dairy",
+   "name": "Dairy",
+   "tab": "Dairy",
+   "note": "Milk, butter and cheese from the hill farms.",
+   "job": "Dairymaid",
+   "towns": [
+    "hearthmere"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "dairy",
+     "farm"
+    ],
+    "ids": [],
+    "materials": [
+     "dairy"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "milk_jug",
+      "butter_crock"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "dairy"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "milk_pail",
+      "honey_pot"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "herbalist",
+   "name": "Herbalist",
+   "tab": "Herbalist",
+   "note": "Dried herbs, roots and teas, gathered from hedge and meadow.",
+   "job": "Herbalist",
+   "towns": [
+    "hearthmere"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "herb",
+     "dried",
+     "tea"
+    ],
+    "ids": [],
+    "materials": [
+     "herb"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "feverfew_tea",
+      "dried_sage"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "herb"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [],
+     "tags": [
+      "herb"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "bundle": 4
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "apothecary",
+   "name": "Apothecary",
+   "tab": "Apothecary",
+   "note": "Remedies, salves and cordials, made up to the physician's measure.",
+   "job": "Apothecary",
+   "towns": [
+    "hearthmere",
+    "kingshold",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 1,
+   "buys": {
+    "kinds": [
+     "potion",
+     "remedy"
+    ],
+    "tags": [
+     "herb",
+     "reagent",
+     "apothecary"
+    ],
+    "ids": [],
+    "materials": [
+     "herb",
+     "venom"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "comfrey_salve",
+      "restorative_cordial"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "willowbark_tonic",
+      "physicians_draught",
+      "gravewort_poultice",
+      "saints_salts"
+     ],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "clarity_draught",
+      "mortar_pestle",
+      "holy_water"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 2
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "alchemist",
+   "name": "Alchemist",
+   "tab": "Alchemist",
+   "note": "Elixirs, reagents and glassware, no refunds on smoke.",
+   "job": "Alchemist",
+   "towns": [
+    "kingshold"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.1,
+   "buy": 0.5,
+   "tier_bonus": 1,
+   "buys": {
+    "kinds": [
+     "potion",
+     "vial",
+     "toxin"
+    ],
+    "tags": [
+     "reagent",
+     "glass",
+     "ink",
+     "mana"
+    ],
+    "ids": [],
+    "materials": [
+     "glass",
+     "venom",
+     "crystal",
+     "herb"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "elixir_of_vigour",
+      "mana_draught"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "reagent",
+      "potion",
+      "glass"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "glass",
+      "venom",
+      "crystal"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      2
+     ],
+     "bundle": 3
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "armourer",
+   "name": "Armourer",
+   "tab": "Armourer",
+   "note": "Mail, plate and shields fitted on the spot.",
+   "job": "Armourer",
+   "towns": [
+    "kingshold",
+    "ironford",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.1,
+   "buy": 0.5,
+   "tier_bonus": 1,
+   "buys": {
+    "kinds": [
+     "armor"
+    ],
+    "tags": [
+     "metal",
+     "iron"
+    ],
+    "ids": [],
+    "materials": [
+     "iron",
+     "steel",
+     "copper",
+     "scale"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "loot",
+     "slot": "armor",
+     "forms": [
+      "mail",
+      "plate",
+      "scale"
+     ],
+     "count": [
+      3,
+      4
+     ],
+     "rarity_max": "rare",
+     "rarity_min": "common"
+    },
+    {
+     "type": "loot",
+     "slot": "armor",
+     "forms": [
+      "leathers"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "rarity_max": "fine",
+     "rarity_min": "common"
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "whetstone_charm"
+     ],
+     "count": [
+      0,
+      1
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "bowyer",
+   "name": "Bowyer and Fletcher",
+   "tab": "Bowyer",
+   "note": "Bows, bowstrings and arrows, cut and fletched in the back.",
+   "job": "Bowyer",
+   "towns": [
+    "hearthmere"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "hunt",
+     "arrows",
+     "bowyer"
+    ],
+    "ids": [],
+    "materials": [
+     "yew",
+     "hemp"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "loot",
+     "slot": "weapon",
+     "forms": [
+      "bow"
+     ],
+     "count": [
+      1,
+      3
+     ],
+     "rarity_max": "fine",
+     "rarity_min": "common"
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "arrow_bundle",
+      "bowstring"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "quiver",
+      "hunting_horn"
+     ],
+     "count": [
+      0,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "tailor",
+   "name": "Tailor",
+   "tab": "Tailor",
+   "note": "Clothes, cloaks and cloth by the bolt.",
+   "job": "Tailor",
+   "towns": [
+    "hearthmere",
+    "kingshold",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "cloth",
+     "fabric",
+     "clothing",
+     "fibre"
+    ],
+    "ids": [],
+    "materials": [
+     "linen",
+     "silk",
+     "wool",
+     "shadowsilk"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "linen_shirt",
+      "wool_tunic",
+      "travel_cloak"
+     ],
+     "count": [
+      3,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "clothing",
+      "fabric"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "loot",
+     "slot": "armor",
+     "forms": [
+      "robe"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "rarity_max": "fine",
+     "rarity_min": "common"
+    },
+    {
+     "type": "materials",
+     "ids": [],
+     "tags": [
+      "cloth",
+      "fibre"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "bundle": 4
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "cobbler",
+   "name": "Cobbler",
+   "tab": "Cobbler",
+   "note": "Boots and shoes, mended while you wait.",
+   "job": "Cobbler",
+   "towns": [
+    "hearthmere"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "footwear",
+     "leather"
+    ],
+    "ids": [],
+    "materials": [
+     "leather"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "leather_boots",
+      "leather_belt"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "footwear",
+      "leather"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "tanned_hide"
+     ],
+     "count": [
+      0,
+      1
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "leatherworker",
+   "name": "Tanner and Leatherworker",
+   "tab": "Tannery",
+   "note": "Hides, tack and leatherwork from the vats out back.",
+   "job": "Tanner",
+   "towns": [
+    "hearthmere",
+    "ironford",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "leather",
+     "hide",
+     "pelt",
+     "tack"
+    ],
+    "ids": [],
+    "materials": [
+     "leather",
+     "bone"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "tanned_hide"
+     ],
+     "count": [
+      1,
+      1
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "leather"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      1
+     ],
+     "bundle": 5
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "leather",
+      "tack"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "loot",
+     "slot": "armor",
+     "forms": [
+      "leathers"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "rarity_max": "fine",
+     "rarity_min": "common"
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "stables",
+   "name": "Stables and Farrier",
+   "tab": "Stables",
+   "note": "Horses, tack and a farrier's forge.",
+   "job": "Stablemaster",
+   "towns": [
+    "hearthmere"
+   ],
+   "hours": [
+    6,
+    19
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "tack",
+     "feed"
+    ],
+    "ids": [],
+    "materials": [
+     "leather"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "animals",
+     "species": [
+      "horse"
+     ],
+     "count": [
+      1,
+      1
+     ]
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "saddle",
+      "bridle",
+      "horseshoes"
+     ],
+     "count": [
+      3,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "tack",
+      "feed"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "stockyard",
+   "name": "Stockyard",
+   "tab": "Stockyard",
+   "note": "Sheep, cattle, pigs and fowl, young and sound.",
+   "job": "Drover",
+   "towns": [
+    "hearthmere"
+   ],
+   "hours": [
+    6,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "feed",
+     "farm"
+    ],
+    "ids": [],
+    "materials": [
+     "wheat"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "animals",
+     "species": [
+      "sheep",
+      "cattle",
+      "pig",
+      "chicken",
+      "goat",
+      "goose",
+      "bee"
+     ],
+     "count": [
+      7,
+      7
+     ]
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "feed_sack"
+     ],
+     "count": [
+      1,
+      1
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "hay_bale",
+      "milk_pail",
+      "egg_basket",
+      "sickle"
+     ],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "hunters_lodge",
+   "name": "Hunter's Lodge",
+   "tab": "Hunters",
+   "note": "Snares, bows and pelts, and the news of the wild.",
+   "job": "Huntsman",
+   "towns": [
+    "hearthmere",
+    "ironford"
+   ],
+   "hours": [
+    5,
+    19
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "hunt",
+     "pelt",
+     "trophy",
+     "bone",
+     "meat"
+    ],
+    "ids": [],
+    "materials": [
+     "bone",
+     "leather",
+     "venom"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "snare_set",
+      "skinning_knife"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "hunt",
+      "pelt",
+      "trophy"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "loot",
+     "slot": "weapon",
+     "forms": [
+      "bow",
+      "dagger"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "rarity_max": "fine",
+     "rarity_min": "common"
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "jeweller",
+   "name": "Jeweller",
+   "tab": "Jeweller",
+   "note": "Gems, rings and chains, set under a loupe.",
+   "job": "Jeweller",
+   "towns": [
+    "kingshold"
+   ],
+   "hours": [
+    9,
+    17
+   ],
+   "markup": 1.15,
+   "buy": 0.6,
+   "tier_bonus": 1,
+   "buys": {
+    "kinds": [
+     "gem"
+    ],
+    "tags": [
+     "jewellery",
+     "gem"
+    ],
+    "ids": [],
+    "materials": [
+     "gold",
+     "silver",
+     "garnet",
+     "amber",
+     "ruby",
+     "sapphire",
+     "emerald",
+     "diamond"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "cut_garnet"
+     ],
+     "count": [
+      1,
+      1
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [
+      "gem"
+     ],
+     "tags": [],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "silver_chain",
+      "gold_band",
+      "jewel_casket"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "loot",
+     "slot": "trinket",
+     "forms": [
+      "ring",
+      "amulet",
+      "brooch"
+     ],
+     "count": [
+      2,
+      3
+     ],
+     "rarity_max": "rare",
+     "rarity_min": "common"
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "gem_cutter",
+   "name": "Gem-cutter",
+   "tab": "Gem-cutter",
+   "note": "Rough stones cut and polished the dwarven way.",
+   "job": "Gem-cutter",
+   "towns": [
+    "ironford"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.6,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [
+     "gem"
+    ],
+    "tags": [],
+    "ids": [],
+    "materials": [
+     "garnet",
+     "amber",
+     "ruby",
+     "sapphire",
+     "emerald",
+     "diamond",
+     "crystal"
+    ],
+    "material_tags": [
+     "jewel"
+    ],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "cut_garnet",
+      "amber_bead"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [
+      "gem"
+     ],
+     "tags": [],
+     "ids": [],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [],
+     "tags": [
+      "jewel"
+     ],
+     "count": [
+      2,
+      3
+     ],
+     "bundle": 2
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "scribe",
+   "name": "Scribe and Stationer",
+   "tab": "Stationer",
+   "note": "Pens, ink, parchment and letters written to order.",
+   "job": "Scribe",
+   "towns": [
+    "kingshold",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "writing",
+     "paper",
+     "ink"
+    ],
+    "ids": [],
+    "materials": [
+     "paper",
+     "vellum",
+     "wax"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "quill_pen",
+      "parchment_sheets",
+      "ink_pot"
+     ],
+     "count": [
+      3,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "writing"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "paper",
+      "vellum",
+      "wax"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      2
+     ],
+     "bundle": 4
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "bookseller",
+   "name": "Bookseller",
+   "tab": "Books",
+   "note": "Printed and hand-copied books, shelved by a system only she understands.",
+   "job": "Bookseller",
+   "towns": [
+    "kingshold"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.1,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [
+     "book"
+    ],
+    "tags": [
+     "writing"
+    ],
+    "ids": [],
+    "materials": [
+     "paper",
+     "vellum"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "primer_of_letters",
+      "songbook"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [
+      "book"
+     ],
+     "tags": [],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "spell_shop",
+   "name": "Scroll and Spell Shop",
+   "tab": "Scrolls",
+   "note": "Spell scrolls, components and blank vellum.",
+   "job": "Scrollwright",
+   "towns": [
+    "kingshold"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.1,
+   "buy": 0.5,
+   "tier_bonus": 1,
+   "buys": {
+    "kinds": [
+     "scroll",
+     "book"
+    ],
+    "tags": [
+     "spell",
+     "rune",
+     "crystal"
+    ],
+    "ids": [],
+    "materials": [
+     "crystal",
+     "vellum"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "scroll_of_mending",
+      "blank_scroll"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [
+      "scroll"
+     ],
+     "tags": [],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "spell"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "enchanter",
+   "name": "Enchanter",
+   "tab": "Enchanter",
+   "note": "Bound charms, wands and trinkets, each with a story attached.",
+   "job": "Enchanter",
+   "towns": [
+    "kingshold"
+   ],
+   "hours": [
+    10,
+    20
+   ],
+   "markup": 1.25,
+   "buy": 0.55,
+   "tier_bonus": 1,
+   "buys": {
+    "kinds": [
+     "gem"
+    ],
+    "tags": [
+     "spell",
+     "rune",
+     "crystal"
+    ],
+    "ids": [],
+    "materials": [
+     "crystal",
+     "relic"
+    ],
+    "material_tags": [
+     "magic"
+    ],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "loot",
+     "slot": "trinket",
+     "forms": [
+      "charm",
+      "amulet",
+      "ring"
+     ],
+     "count": [
+      2,
+      3
+     ],
+     "rarity_max": "rare",
+     "rarity_min": "common"
+    },
+    {
+     "type": "loot",
+     "slot": "weapon",
+     "forms": [
+      "wand",
+      "staff"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "rarity_max": "rare",
+     "rarity_min": "common"
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "crystal_focus",
+      "rune_stone"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "cartographer",
+   "name": "Cartographer",
+   "tab": "Maps",
+   "note": "Maps of the roads, the coast and the stars, drawn from travellers' reports.",
+   "job": "Cartographer",
+   "towns": [
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [
+     "map"
+    ],
+    "tags": [
+     "map"
+    ],
+    "ids": [],
+    "materials": [
+     "paper",
+     "vellum"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "map_of_region"
+     ],
+     "count": [
+      1,
+      1
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [
+      "map"
+     ],
+     "tags": [],
+     "ids": [],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "map",
+      "tool"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "chandler",
+   "name": "Chandler",
+   "tab": "Chandler",
+   "note": "Candles, lamps and oil, to see by.",
+   "job": "Chandler",
+   "towns": [
+    "hearthmere",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "candle",
+     "light",
+     "wax",
+     "lamp"
+    ],
+    "ids": [],
+    "materials": [
+     "wax"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "tallow_candle",
+      "beeswax_candle"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "light"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "wax"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      1
+     ],
+     "bundle": 4
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "potter",
+   "name": "Potter",
+   "tab": "Potter",
+   "note": "Pots, jugs and tiles from the kiln.",
+   "job": "Potter",
+   "towns": [
+    "hearthmere"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "pottery"
+    ],
+    "ids": [],
+    "materials": [
+     "clay"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "clay_pot",
+      "water_jug"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "pottery"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "clay"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      1
+     ],
+     "bundle": 5
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "glassblower",
+   "name": "Glassblower",
+   "tab": "Glassblower",
+   "note": "Bottles, panes and lenses blown at the furnace.",
+   "job": "Glassblower",
+   "towns": [
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.1,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "glass",
+     "bottle",
+     "bead"
+    ],
+    "ids": [],
+    "materials": [
+     "glass"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "empty_flask",
+      "glass_bottles"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "glass"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "glass"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      1
+     ],
+     "bundle": 4
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "carpenter",
+   "name": "Carpenter and Lumberyard",
+   "tab": "Carpenter",
+   "note": "Timber by the plank and furniture by the piece.",
+   "job": "Carpenter",
+   "towns": [
+    "hearthmere",
+    "ironford",
+    "brinehaven"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "carpenter",
+     "wood",
+     "building"
+    ],
+    "ids": [],
+    "materials": [
+     "oak",
+     "yew"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "carpenters_hammer",
+      "nail_bag"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "carpenter",
+      "wood"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "oak",
+      "yew"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      2
+     ],
+     "bundle": 6
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "mason",
+   "name": "Mason",
+   "tab": "Mason",
+   "note": "Dressed stone, marble and the tools to work it.",
+   "job": "Mason",
+   "towns": [
+    "ironford"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "stone",
+     "mason",
+     "building"
+    ],
+    "ids": [],
+    "materials": [
+     "stone",
+     "marble"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "masons_chisel",
+      "granite_block"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "stone",
+      "mason"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "stone",
+      "marble"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      2
+     ],
+     "bundle": 4
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "miller",
+   "name": "Mill",
+   "tab": "Miller",
+   "note": "Flour, meal and bran, ground by the sails.",
+   "job": "Miller",
+   "towns": [
+    "hearthmere",
+    "brinehaven"
+   ],
+   "hours": [
+    5,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.6,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "grain",
+     "flour",
+     "feed"
+    ],
+    "ids": [],
+    "materials": [
+     "wheat"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "flour_sack",
+      "oat_sack",
+      "bran_bag"
+     ],
+     "count": [
+      3,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "grain"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "feed_sack"
+     ],
+     "count": [
+      0,
+      1
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "smelter",
+   "name": "Smelter",
+   "tab": "Smelter",
+   "note": "Ore bought, ingots cast, and coal by the sack.",
+   "job": "Smelter",
+   "towns": [
+    "ironford"
+   ],
+   "hours": [
+    6,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.6,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "ore",
+     "metal",
+     "ingot",
+     "fuel"
+    ],
+    "ids": [],
+    "materials": [
+     "iron",
+     "copper",
+     "steel",
+     "silver",
+     "gold"
+    ],
+    "material_tags": [
+     "ore"
+    ],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "iron_bar",
+      "coal_sack"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "ingot",
+      "ore"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "iron",
+      "copper",
+      "steel",
+      "silver"
+     ],
+     "tags": [],
+     "count": [
+      2,
+      3
+     ],
+     "bundle": 4
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "shipwright",
+   "name": "Shipwright and Rope-walk",
+   "tab": "Shipwright",
+   "note": "Ropes, sailcloth, pitch and timber for the harbour trade.",
+   "job": "Shipwright",
+   "towns": [
+    "brinehaven"
+   ],
+   "hours": [
+    5,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "ship",
+     "rope",
+     "fabric",
+     "carpenter"
+    ],
+    "ids": [],
+    "materials": [
+     "hemp",
+     "oak",
+     "wax"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "hemp_rope",
+      "sailcloth"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "ship"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "hemp",
+      "oak"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      2
+     ],
+     "bundle": 5
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "nursery",
+   "name": "Nursery",
+   "tab": "Nursery",
+   "note": "Seeds, seedlings and garden tools for the home plot.",
+   "job": "Gardener",
+   "towns": [
+    "hearthmere"
+   ],
+   "hours": [
+    7,
+    18
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "plant",
+     "seed",
+     "farm"
+    ],
+    "ids": [],
+    "materials": [
+     "herb",
+     "produce"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "seed_packet",
+      "garden_spade"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "plant",
+      "seed",
+      "farm"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "herb"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      1
+     ],
+     "bundle": 4
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "barber",
+   "name": "Barber-surgeon",
+   "tab": "Barber",
+   "note": "A shave, a trim and a bit of leechcraft.",
+   "job": "Barber",
+   "towns": [
+    "hearthmere",
+    "brinehaven"
+   ],
+   "hours": [
+    8,
+    19
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "barber",
+     "bath"
+    ],
+    "ids": [],
+    "materials": [
+     "bone"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "razor",
+      "comb_horn",
+      "hair_oil"
+     ],
+     "count": [
+      3,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "bath",
+      "barber"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "bathhouse",
+   "name": "Bathhouse",
+   "tab": "Bathhouse",
+   "note": "Hot water, soap and a long soak. A bath eases aches.",
+   "job": "Bath-keeper",
+   "towns": [
+    "kingshold",
+    "ironford"
+   ],
+   "hours": [
+    9,
+    21
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "bath",
+     "salt"
+    ],
+    "ids": [],
+    "materials": [
+     "salt"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "soap_bar",
+      "linen_towel"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "bath"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": [
+    {
+     "id": "bath",
+     "name": "A hot bath",
+     "desc": "Eases the heir's aches.",
+     "price": 30,
+     "heal": 0.25,
+     "mp": 0.0
+    }
+   ]
+  },
+  {
+   "id": "brewery",
+   "name": "Brewery",
+   "tab": "Brewery",
+   "note": "Ale, stout and mead, brewed on the premises.",
+   "job": "Brewer",
+   "towns": [
+    "ironford",
+    "brinehaven"
+   ],
+   "hours": [
+    10,
+    23
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "ale",
+     "drink",
+     "brewing",
+     "mead",
+     "cider",
+     "wine"
+    ],
+    "ids": [],
+    "materials": [
+     "wheat",
+     "honey",
+     "produce"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "ale_flagon",
+      "ale_keg"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "drink",
+      "brewing"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "wheat"
+     ],
+     "tags": [],
+     "count": [
+      0,
+      1
+     ],
+     "bundle": 5
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "bank",
+   "name": "Bank and Moneychanger",
+   "tab": "Bank",
+   "note": "Strongboxes, ingots and fair exchange on gems and metal.",
+   "job": "Banker",
+   "towns": [
+    "kingshold"
+   ],
+   "hours": [
+    9,
+    16
+   ],
+   "markup": 1.2,
+   "buy": 0.7,
+   "tier_bonus": 1,
+   "buys": {
+    "kinds": [
+     "gem"
+    ],
+    "tags": [
+     "jewellery",
+     "metal",
+     "ingot"
+    ],
+    "ids": [],
+    "materials": [
+     "gold",
+     "silver",
+     "garnet",
+     "amber",
+     "ruby",
+     "sapphire",
+     "emerald",
+     "diamond"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "strongbox",
+      "ledger"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "metal",
+      "ingot",
+      "jewellery"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "materials",
+     "ids": [
+      "silver",
+      "gold"
+     ],
+     "tags": [],
+     "count": [
+      1,
+      2
+     ],
+     "bundle": 2
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "pawnbroker",
+   "name": "Pawnbroker",
+   "tab": "Pawnbroker",
+   "note": "Takes anything, asks nothing, pays little.",
+   "job": "Pawnbroker",
+   "towns": [
+    "ironford",
+    "brinehaven"
+   ],
+   "hours": [
+    10,
+    22
+   ],
+   "markup": 0.85,
+   "buy": 0.35,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [],
+    "ids": [],
+    "materials": [],
+    "material_tags": [],
+    "all": true
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "pawn"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "loot",
+     "slot": "trinket",
+     "forms": [
+      "ring",
+      "brooch",
+      "charm"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "rarity_max": "common",
+     "rarity_min": "common"
+    },
+    {
+     "type": "loot",
+     "slot": "weapon",
+     "forms": [
+      "sword",
+      "mace",
+      "dagger"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "rarity_max": "common",
+     "rarity_min": "common"
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "guild_hall",
+   "name": "Adventurers' Guild Hall",
+   "tab": "Guild",
+   "note": "Kit, rations and rumours for those who go where the roads end.",
+   "job": "Guildmaster",
+   "towns": [
+    "kingshold",
+    "ironford"
+   ],
+   "hours": [
+    6,
+    22
+   ],
+   "markup": 1.0,
+   "buy": 0.55,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "adventurer",
+     "trophy",
+     "bone",
+     "travel"
+    ],
+    "ids": [],
+    "materials": [
+     "bone",
+     "venom",
+     "herb"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "trail_rations",
+      "hemp_rope",
+      "tinderbox"
+     ],
+     "count": [
+      3,
+      3
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "adventurer",
+      "travel"
+     ],
+     "ids": [],
+     "count": [
+      2,
+      4
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [
+      "map",
+      "light"
+     ],
+     "ids": [],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "loot",
+     "slot": "weapon",
+     "forms": [
+      "sword",
+      "mace",
+      "dagger"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "rarity_max": "fine",
+     "rarity_min": "common"
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "barracks",
+   "name": "Guard Barracks and Armoury",
+   "tab": "Barracks",
+   "note": "The watch's spare arms, sold on to the respectable.",
+   "job": "Sergeant",
+   "towns": [
+    "kingshold",
+    "brinehaven"
+   ],
+   "hours": [
+    0,
+    24
+   ],
+   "markup": 1.0,
+   "buy": 0.45,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [
+     "weapon",
+     "armor"
+    ],
+    "tags": [],
+    "ids": [],
+    "materials": [
+     "iron",
+     "steel"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "loot",
+     "slot": "weapon",
+     "forms": [
+      "sword",
+      "mace",
+      "warhammer"
+     ],
+     "count": [
+      2,
+      3
+     ],
+     "rarity_max": "fine",
+     "rarity_min": "common"
+    },
+    {
+     "type": "loot",
+     "slot": "armor",
+     "forms": [
+      "mail",
+      "plate"
+     ],
+     "count": [
+      2,
+      3
+     ],
+     "rarity_max": "fine",
+     "rarity_min": "common"
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "whetstone_charm",
+      "hammer_mark_brooch"
+     ],
+     "count": [
+      0,
+      1
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  },
+  {
+   "id": "shrine",
+   "name": "Shrine",
+   "tab": "Shrine",
+   "note": "A dwarven shrine to the hearth and the hammer, with candles and tokens.",
+   "job": "Priest",
+   "towns": [
+    "ironford"
+   ],
+   "hours": [
+    5,
+    21
+   ],
+   "markup": 1.0,
+   "buy": 0.5,
+   "tier_bonus": 0,
+   "buys": {
+    "kinds": [],
+    "tags": [
+     "holy",
+     "candle"
+    ],
+    "ids": [],
+    "materials": [
+     "relic",
+     "wax"
+    ],
+    "material_tags": [],
+    "all": false
+   },
+   "stock": [
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "shrine_candle",
+      "pilgrim_token"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "holy_water",
+      "prayer_beads",
+      "book_of_hours"
+     ],
+     "count": [
+      1,
+      2
+     ],
+     "tier_max": 9
+    }
+   ],
+   "services": []
+  }
+ ]
+}

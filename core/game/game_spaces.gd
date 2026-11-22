@@ -55,7 +55,7 @@ static func _build() -> void:
 			"door": {"space": root, "x": int(a["x"]), "z": int(a["z"])}, "radius": int(a.get("radius", 0)),
 			"layout": pid if kind == "interior" else ""})
 		for service in l.get("services", []):
-			var off: Array = dat["service_doors"].get(str(service), [0, 0])
+			var off: Array = door_offset(pid, str(service), [0, 0])
 			_add({"id": id + "/" + str(service), "kind": "interior", "name": str(dat["service_names"].get(str(service), str(service).capitalize())), "parent": id, "place": pid,
 				"service": str(service), "door": {"space": id, "x": int(a["x"]) + int(off[0]), "z": int(a["z"]) + int(off[1])}, "radius": 0,
 				"layout": str(service)})
@@ -66,6 +66,16 @@ static func _build() -> void:
 				"layout": str(h["id"])})
 	_build_underworld(dat)
 	_build_realms(dat)
+
+
+## Where a service's door is, [east, south] of the town's anchor: the town's own entry in `town_doors` (the shops of
+## data/shops/shops.json are placed town by town), else the one door `service_doors` gives the six old services in every town.
+static func door_offset(place: String, service: String, fallback: Variant) -> Variant:
+	var dat := data()
+	var own: Variant = dat.get("town_doors", {}).get(place, {}).get(service, null)
+	if own != null:
+		return own
+	return dat["service_doors"].get(service, fallback)
 
 
 static func _build_underworld(dat: Dictionary) -> void:
@@ -514,7 +524,7 @@ static func validate() -> Array:
 		var radius := float(a.get("radius", 0))
 		var inside: Array = []
 		for service in l.get("services", []):
-			inside.append([str(service), dat["service_doors"].get(str(service), null)])
+			inside.append([str(service), door_offset(pid, str(service), null)])
 			if not dat["service_names"].has(str(service)):
 				bad.append("spaces.json: service '%s' (in %s) has no name" % [service, pid])
 		if pid == home:
@@ -538,6 +548,14 @@ static func validate() -> Array:
 		bad.append("spaces.json: the family house needs a home town (world.json start '%s' is not a town)" % home)
 	if str(dat["house"].get("id", "")) == "" or dat["service_doors"].has(str(dat["house"].get("id", ""))):
 		bad.append("spaces.json: the house needs an id that is not a service's")
+	for town in dat.get("town_doors", {}):
+		var place := GameWorld.place(str(town))
+		if place.is_empty():
+			bad.append("spaces.json: town_doors names '%s', which is no place" % town)
+			continue
+		for service in dat["town_doors"][town]:
+			if str(service) not in place.get("services", []):
+				bad.append("spaces.json: town_doors gives '%s' a door for '%s', a service it does not have" % [town, service])
 	bad.append_array(_validate_underworld(dat))
 	bad.append_array(_validate_realms(dat))
 	bad.append_array(_validate_rooms(dat))

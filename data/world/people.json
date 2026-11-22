@@ -1,17 +1,564 @@
 {
-  "note": "People inside rooms (roadmap item 41; core/game/game_people.gd, checked by tools/check_data.gd). Each service interior (GameSpaces layouts: forge, temple, store, tavern, board, black_market) has one person standing at a fixed cell `at` of its entrance room (a cell of the interior's own floor, x east and z south from the door). The person is a solid cell (GameInterior marks it `person`) and the heir talks to them by standing on a floor cell beside it and using it: a line of greeting, and in the town where the family is the service opens (`open`: shop, workshop, tavern or board; `tab` the shop's tab). Away from that town the person only talks. Nothing here is random or saved, and the autopilot never walks in.",
-  "people": [
-    {"layout": "forge", "id": "smith", "name": "Brann the smith", "at": [-2, -1], "open": "workshop", "tab": "forge", "greet": "Brann looks up from the anvil. \"Metal or mending?\""},
-    {"layout": "temple", "id": "priest", "name": "Sister Ione", "at": [-1, -2], "open": "shop", "tab": "temple", "greet": "Sister Ione folds her hands. \"The temple is open to the weary.\""},
-    {"layout": "store", "id": "keeper", "name": "Odo the storekeeper", "at": [-2, -2], "open": "shop", "tab": "store", "greet": "Odo wipes the counter. \"Anything caught your eye?\""},
-    {"layout": "tavern", "id": "host", "name": "Marta the host", "at": [-3, -2], "open": "tavern", "tab": "", "greet": "Marta sets down a mug. \"Sit, and tell me your news.\""},
-    {"layout": "board", "id": "clerk", "name": "Pell the clerk", "at": [-1, -2], "open": "board", "tab": "", "greet": "Pell taps the notices. \"Work for willing hands.\""},
-    {"layout": "black_market", "id": "fence", "name": "A hooded fence", "at": [-3, -1], "open": "shop", "tab": "black_market", "greet": "The fence says nothing, then, low: \"Quiet prices. Quiet deals.\""}
-  ],
-  "text": {
-    "talk": "{greet}",
-    "only_talk": "{name} has nothing for you here: the family is not in this town.",
-    "near": "{name} stands here. Use to talk.",
-    "nobody": "There is nobody here to talk to."
+ "note": "People inside rooms (roadmap item 41; core/game/game_people.gd, checked by tools/check_data.gd). Each service interior (GameSpaces layouts: forge, temple, store, tavern, board, black_market) has one person standing at a fixed cell `at` of its entrance room (a cell of the interior's own floor, x east and z south from the door). The person is a solid cell (GameInterior marks it `person`) and the heir talks to them by standing on a floor cell beside it and using it: a line of greeting, and in the town where the family is the service opens (`open`: shop, workshop, tavern or board; `tab` the shop's tab). Away from that town the person only talks. Nothing here is random or saved, and the autopilot never walks in. The shop keepers of data/shops/shops.json stand in the entrance room of their shop by day (`GameShops.open_at`); at night the shop is shut and the person is gone.",
+ "people": [
+  {
+   "layout": "forge",
+   "id": "smith",
+   "name": "Brann the smith",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "workshop",
+   "tab": "forge",
+   "greet": "Brann looks up from the anvil. \"Metal or mending?\""
+  },
+  {
+   "layout": "temple",
+   "id": "priest",
+   "name": "Sister Ione",
+   "at": [
+    -1,
+    -2
+   ],
+   "open": "shop",
+   "tab": "temple",
+   "greet": "Sister Ione folds her hands. \"The temple is open to the weary.\""
+  },
+  {
+   "layout": "store",
+   "id": "keeper",
+   "name": "Odo the storekeeper",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "store",
+   "greet": "Odo wipes the counter. \"Anything caught your eye?\""
+  },
+  {
+   "layout": "tavern",
+   "id": "host",
+   "name": "Marta the host",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "tavern",
+   "tab": "",
+   "greet": "Marta sets down a mug. \"Sit, and tell me your news.\""
+  },
+  {
+   "layout": "board",
+   "id": "clerk",
+   "name": "Pell the clerk",
+   "at": [
+    -1,
+    -2
+   ],
+   "open": "board",
+   "tab": "",
+   "greet": "Pell taps the notices. \"Work for willing hands.\""
+  },
+  {
+   "layout": "black_market",
+   "id": "fence",
+   "name": "A hooded fence",
+   "at": [
+    -3,
+    -1
+   ],
+   "open": "shop",
+   "tab": "black_market",
+   "greet": "The fence says nothing, then, low: \"Quiet prices. Quiet deals.\""
+  },
+  {
+   "layout": "bakery",
+   "id": "keeper",
+   "name": "Wenna the baker",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "bakery",
+   "greet": "Wenna dusts off her hands. \"Fresh from the oven, if you hurry.\""
+  },
+  {
+   "layout": "greengrocer",
+   "id": "keeper",
+   "name": "Tobin the greengrocer",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "greengrocer",
+   "greet": "Tobin turns an apple in his fingers. \"What is in season is in season.\""
+  },
+  {
+   "layout": "butcher",
+   "id": "keeper",
+   "name": "Garrick the butcher",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "shop",
+   "tab": "butcher",
+   "greet": "Garrick wipes his cleaver. \"Hung three days and not a day less.\""
+  },
+  {
+   "layout": "fishmonger",
+   "id": "keeper",
+   "name": "Sela the fishmonger",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "fishmonger",
+   "greet": "Sela sluices the slab. \"Ask me what came in with the tide.\""
+  },
+  {
+   "layout": "dairy",
+   "id": "keeper",
+   "name": "Maud the dairymaid",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "dairy",
+   "greet": "Maud skims the pail. \"Still warm, if you are not dawdling.\""
+  },
+  {
+   "layout": "herbalist",
+   "id": "keeper",
+   "name": "Old Hester",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "shop",
+   "tab": "herbalist",
+   "greet": "Hester sniffs. \"You have a look of someone who ought to be drinking something.\""
+  },
+  {
+   "layout": "apothecary",
+   "id": "keeper",
+   "name": "Master Lorne",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "apothecary",
+   "greet": "Lorne peers over his spectacles. \"Describe the symptoms. Slowly.\""
+  },
+  {
+   "layout": "alchemist",
+   "id": "keeper",
+   "name": "Fenwick the alchemist",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "alchemist",
+   "greet": "Fenwick looks up, singed. \"Do not touch the green one. Or the blue one.\""
+  },
+  {
+   "layout": "armourer",
+   "id": "keeper",
+   "name": "Hild the armourer",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "shop",
+   "tab": "armourer",
+   "greet": "Hild taps a breastplate. \"Stand still. I measure once.\""
+  },
+  {
+   "layout": "bowyer",
+   "id": "keeper",
+   "name": "Aldric the bowyer",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "shop",
+   "tab": "bowyer",
+   "greet": "Aldric runs a thumb down the limb. \"Draw it. Slowly. Feel her answer.\""
+  },
+  {
+   "layout": "tailor",
+   "id": "keeper",
+   "name": "Marit the tailor",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "tailor",
+   "greet": "Marit pins a hem. \"Hold still. Lift your arm. No, the other one.\""
+  },
+  {
+   "layout": "cobbler",
+   "id": "keeper",
+   "name": "Piet the cobbler",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "cobbler",
+   "greet": "Piet taps a sole with his hammer. \"Boots are a promise to your feet.\""
+  },
+  {
+   "layout": "leatherworker",
+   "id": "keeper",
+   "name": "Brisa the tanner",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "shop",
+   "tab": "leatherworker",
+   "greet": "Brisa wrinkles her nose, from habit. \"You get used to the smell. Mostly.\""
+  },
+  {
+   "layout": "stables",
+   "id": "keeper",
+   "name": "Garth the stablemaster",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "stables",
+   "greet": "Garth strokes a nose. \"She would carry a family, if the family would stop arguing.\""
+  },
+  {
+   "layout": "stockyard",
+   "id": "keeper",
+   "name": "Hob the drover",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "stockyard",
+   "greet": "Hob leans on the rail. \"Pick any that will pick you.\""
+  },
+  {
+   "layout": "hunters_lodge",
+   "id": "keeper",
+   "name": "Rurik the huntsman",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "hunters_lodge",
+   "greet": "Rurik rubs his beard. \"Anything bigger than a wolf, bring a friend.\""
+  },
+  {
+   "layout": "jeweller",
+   "id": "keeper",
+   "name": "Sir Aurel, jeweller",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "jeweller",
+   "greet": "Aurel screws a loupe into his eye. \"Tell me what you have. Do not tell me what it is worth.\""
+  },
+  {
+   "layout": "gem_cutter",
+   "id": "keeper",
+   "name": "Brokk the gem-cutter",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "gem_cutter",
+   "greet": "Brokk holds a stone to the light. \"Rough. Honest. Give me a day and she will sing.\""
+  },
+  {
+   "layout": "scribe",
+   "id": "keeper",
+   "name": "Ysolde the scribe",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "scribe",
+   "greet": "Ysolde blots a page. \"Letters, deeds, love notes. All in the same hand.\""
+  },
+  {
+   "layout": "bookseller",
+   "id": "keeper",
+   "name": "Cecily the bookseller",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "shop",
+   "tab": "bookseller",
+   "greet": "Cecily does not look up. \"Please do not read the books without buying them.\""
+  },
+  {
+   "layout": "spell_shop",
+   "id": "keeper",
+   "name": "Zephyra the scrollwright",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "spell_shop",
+   "greet": "Zephyra smiles thinly. \"Everything is a spell if you read it aloud.\""
+  },
+  {
+   "layout": "enchanter",
+   "id": "keeper",
+   "name": "Orsolya the enchanter",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "enchanter",
+   "greet": "Orsolya turns a ring. \"Everything is already enchanted. I just ask nicely.\""
+  },
+  {
+   "layout": "cartographer",
+   "id": "keeper",
+   "name": "Pellam the cartographer",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "cartographer",
+   "greet": "Pellam unrolls a chart. \"Here be roads. Here be, regrettably, dragons.\""
+  },
+  {
+   "layout": "chandler",
+   "id": "keeper",
+   "name": "Bryn the chandler",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "chandler",
+   "greet": "Bryn trims a wick. \"A good light costs little. A dark night costs more.\""
+  },
+  {
+   "layout": "potter",
+   "id": "keeper",
+   "name": "Dorrin the potter",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "shop",
+   "tab": "potter",
+   "greet": "Dorrin looks up, floury with clay. \"It will hold water. Eventually.\""
+  },
+  {
+   "layout": "glassblower",
+   "id": "keeper",
+   "name": "Ilvane the glassblower",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "glassblower",
+   "greet": "Ilvane gathers a molten glob. \"Stand clear. Breathing near it is bad luck.\""
+  },
+  {
+   "layout": "carpenter",
+   "id": "keeper",
+   "name": "Osric the carpenter",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "carpenter",
+   "greet": "Osric sights along a plank. \"Straight as the day is long.\""
+  },
+  {
+   "layout": "mason",
+   "id": "keeper",
+   "name": "Thora the mason",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "mason",
+   "greet": "Thora raps a block with her knuckle. \"Hear that? That is a good note.\""
+  },
+  {
+   "layout": "miller",
+   "id": "keeper",
+   "name": "Edda the miller",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "miller",
+   "greet": "Edda brushes flour from her sleeves. \"Bring me wheat and I will bring you bread.\""
+  },
+  {
+   "layout": "smelter",
+   "id": "keeper",
+   "name": "Durgan the smelter",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "smelter",
+   "greet": "Durgan roars over the furnace. \"Ore in, iron out. That is the whole art!\""
+  },
+  {
+   "layout": "shipwright",
+   "id": "keeper",
+   "name": "Captain Marn",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "shipwright",
+   "greet": "Marn lifts a coil of rope. \"The sea does not care. The rope must.\""
+  },
+  {
+   "layout": "nursery",
+   "id": "keeper",
+   "name": "Pippa the gardener",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "nursery",
+   "greet": "Pippa pats the soil. \"Everything wants to grow. Mostly it wants to be left alone.\""
+  },
+  {
+   "layout": "barber",
+   "id": "keeper",
+   "name": "Ned the barber",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "barber",
+   "greet": "Ned waves a razor. \"A little off the top? Or the leg?\""
+  },
+  {
+   "layout": "bathhouse",
+   "id": "keeper",
+   "name": "Mirela the bath-keeper",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "bathhouse",
+   "greet": "Mirela hums over the kettle. \"The water is hot. The gossip is hotter.\""
+  },
+  {
+   "layout": "brewery",
+   "id": "keeper",
+   "name": "Hrodgar the brewer",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "brewery",
+   "greet": "Hrodgar wipes foam from his beard. \"Taste before you pay. Pay after you taste.\""
+  },
+  {
+   "layout": "bank",
+   "id": "keeper",
+   "name": "Lady Isaura, banker",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "bank",
+   "greet": "Isaura steeples her fingers. \"Everything has its price. Let us find yours.\""
+  },
+  {
+   "layout": "pawnbroker",
+   "id": "keeper",
+   "name": "Slim the pawnbroker",
+   "at": [
+    -2,
+    -2
+   ],
+   "open": "shop",
+   "tab": "pawnbroker",
+   "greet": "Slim eyes you over his spectacles. \"Everything is worth something. Not much, mind.\""
+  },
+  {
+   "layout": "guild_hall",
+   "id": "keeper",
+   "name": "Guildmaster Torv",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "guild_hall",
+   "greet": "Torv slaps the bench. \"Sign the book, or buy a round. Either way.\""
+  },
+  {
+   "layout": "barracks",
+   "id": "keeper",
+   "name": "Sergeant Cael",
+   "at": [
+    -3,
+    -2
+   ],
+   "open": "shop",
+   "tab": "barracks",
+   "greet": "Cael does not salute. \"State your business. Briefly.\""
+  },
+  {
+   "layout": "shrine",
+   "id": "keeper",
+   "name": "Brother Harn",
+   "at": [
+    -2,
+    -1
+   ],
+   "open": "shop",
+   "tab": "shrine",
+   "greet": "Brother Harn bows his head. \"The hearth is warm for any who come in good faith.\""
   }
+ ],
+ "text": {
+  "talk": "{greet}",
+  "only_talk": "{name} has nothing for you here: the family is not in this town.",
+  "near": "{name} stands here. Use to talk.",
+  "nobody": "There is nobody here to talk to.",
+  "shut": "{name} is not here: {shop} is shut, and opens at {open}."
+ }
 }

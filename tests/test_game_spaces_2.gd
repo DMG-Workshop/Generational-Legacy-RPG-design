@@ -105,7 +105,7 @@ func test_rooms() -> void:
 		elif GameSpaces.room_at(id, 0, 0) != entrance:
 			all_ok = false
 			print("  the door tile is not in the entrance: ", id)
-	ok(interiors == 28 and all_ok, "all %d interiors have one to four rooms (a dungeon up to ten) and an entrance, and the door's tile is in it" % interiors)
+	ok(interiors == 96 and all_ok, "all %d interiors have one to four rooms (a dungeon up to ten) and an entrance, and the door's tile is in it" % interiors)
 	ok(GameSpaces.rooms("world/hearthmere").is_empty() and GameSpaces.rooms("world/hearthmere/forge").size() == 3, "an area has no rooms; the forge has its three")
 	ok(GameSpaces.room_at("world/hearthmere/forge", 0, 0) == "yard" and GameSpaces.room_at("world/hearthmere/forge", 4, 0) == "smithy", "the forge's yard is at its door and the smithy to the east")
 	ok(GameSpaces.room_at("world/hearthmere/forge", 2, 0) == "" and GameSpaces.room_at("world/hearthmere/forge", 90, 90) == "", "a door gap is in no room, and far from the floor none")

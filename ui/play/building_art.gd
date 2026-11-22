@@ -160,6 +160,42 @@ static func _feature(img: Image, f: String, def: Dictionary, wall_d: Color, roof
 		"gold_trim":
 			_r(img, 1, re - 1, cw - 2, 1, _col("gold"))
 			_r(img, dcx - 4, wt + 3, 8, 1, _col("gold"))
+		"sign_icon":
+			var sx := maxi(1, dcx - 17)
+			var icon: Array = data().get("icons", {}).get(str(def.get("icon", "")), [])
+			_r(img, sx + 4, wt, 1, 3, _col("iron"))
+			_r(img, sx, wt + 2, 11, 12, _col("sign"))
+			_r(img, sx, wt + 2, 11, 1, _col("sign").lightened(0.25))
+			var main := Color.html(str(def.get("icon_color", "#f0e6c8")))
+			for row in icon.size():
+				for col in str(icon[row]).length():
+					var ch := str(icon[row])[col]
+					if ch == "x":
+						_dot(img, sx + 1 + col + (1 if col > 6 else 0) * 0, wt + 4 + row, main)
+					elif ch == "o":
+						_dot(img, sx + 1 + col, wt + 4 + row, main.darkened(0.45))
+		"barrels":
+			var ch2: int = at["h"]
+			for k in 2:
+				var bx := dcx + 10 + k * 7
+				_r(img, bx, ch2 - 11, 6, 8, _col("barrel"))
+				_r(img, bx, ch2 - 9, 6, 1, _col("hoop"))
+				_r(img, bx, ch2 - 6, 6, 1, _col("hoop"))
+				_r(img, bx + 1, ch2 - 11, 4, 1, _col("barrel").lightened(0.3))
+		"sails":
+			var mx := cw / 2
+			_r(img, mx - 1, 2, 3, 14, _col("wood_dark"))
+			_r(img, mx - 14, 7, 28, 3, _col("wood_dark"))
+			_r(img, mx - 13, 4, 8, 3, _col("paper"))
+			_r(img, mx + 5, 10, 8, 3, _col("paper"))
+			_r(img, mx - 4, 2, 3, 6, _col("paper2"))
+			_r(img, mx + 2, 9, 3, 6, _col("paper2"))
+		"pole":
+			var px := cw - 8
+			for k in 6:
+				var c := _col("stripe_red") if k % 3 == 0 else (_col("white") if k % 3 == 1 else _col("stripe_blue"))
+				_r(img, px, wt + 2 + k * 3, 3, 3, c)
+			_r(img, px - 1, wt + 1, 5, 1, _col("gold"))
 		"lantern":
 			var lx := dcx - 8
 			_r(img, lx, wt + 1, 1, 2, _col("iron"))
@@ -286,6 +322,101 @@ static func _furniture(img: Image, f: String, ins: Dictionary, cw: int, ch: int)
 			var rh := maxi(8, ch - 44)
 			_r(img, (cw - rw) / 2, (ch - rh) / 2, rw, rh, Color.html(str(ins["rug"])))
 			_r(img, (cw - rw) / 2 + 2, (ch - rh) / 2 + 2, rw - 4, rh - 4, Color.html(str(ins["rug"])).darkened(0.25))
+		"oven":
+			_r(img, cw / 2 - 14, 4, 28, 14, _col("stone"))
+			_r(img, cw / 2 - 9, 8, 18, 9, Color.html(str(ins["ember"])))
+			_r(img, cw / 2 - 6, 11, 12, 5, Color.html(str(ins["fire"][0])))
+		"stalls":
+			for x in range(8, cw - 20, 22):
+				_r(img, x, 6, 18, 10, wood)
+				_r(img, x + 2, 8, 14, 6, _col("crate"))
+				_dot(img, x + 5, 10, _col("flag"))
+				_dot(img, x + 11, 11, _col("gold"))
+		"hooks":
+			_r(img, 8, 5, cw - 16, 2, _col("iron"))
+			for x in range(12, cw - 12, 9):
+				_r(img, x, 7, 3, 8, Color.html("#b0504a"))
+		"cauldron":
+			_r(img, cw - 36, 6, 22, 14, _col("iron"))
+			_r(img, cw - 34, 8, 18, 4, Color.html(str(ins["fire"][0])).darkened(0.2))
+			_r(img, cw - 30, 20, 10, 3, Color.html(str(ins["ember"])))
+		"workbench":
+			_r(img, 8, my + 2, cw - 16, 9, wood)
+			_r(img, 8, my + 2, cw - 16, 2, wood.lightened(0.3))
+			for x in range(14, cw - 14, 14):
+				_r(img, x, my + 4, 5, 2, _col("iron"))
+		"loom":
+			_r(img, 10, 6, 26, 18, wood)
+			for x in range(13, 34, 3):
+				_r(img, x, 8, 1, 14, cloth)
+			_r(img, 10, 6, 26, 2, wood.darkened(0.2))
+		"bookcases":
+			_r(img, 6, 4, cw - 12, 10, wood.darkened(0.15))
+			for x in range(8, cw - 10, 4):
+				_r(img, x, 5, 3, 8, [Color.html("#a84a4a"), Color.html("#4a6aa8"), Color.html("#4a8a5a"), Color.html("#c0a04a")][(x / 4) % 4])
+		"display":
+			_r(img, 10, my - 4, cw - 20, 10, wood)
+			_r(img, 12, my - 3, cw - 24, 6, _col("glass"))
+			for x in range(16, cw - 18, 9):
+				_dot(img, x, my, _col("flag") if (x / 9) % 2 == 0 else _col("lamp"))
+		"tubs":
+			for x in [14, cw - 40]:
+				_r(img, x, 6, 26, 16, wood.darkened(0.1))
+				_r(img, x + 2, 8, 22, 12, _col("glass"))
+		"hay":
+			_r(img, 8, ch - 22, 22, 14, Color.html("#c8a850"))
+			_r(img, cw - 30, ch - 22, 22, 14, Color.html("#c8a850"))
+			_r(img, 12, ch - 20, 14, 2, Color.html("#e0c870"))
+		"desk":
+			_r(img, mx - 14, 6, 28, 10, wood)
+			_r(img, mx - 14, 6, 28, 2, wood.lightened(0.3))
+			_r(img, mx - 6, 9, 8, 5, _col("paper"))
+			_dot(img, mx + 6, 10, _col("iron"))
+		"mapboard":
+			_r(img, mx - 18, my - 8, 36, 18, wood)
+			_r(img, mx - 16, my - 6, 32, 14, _col("paper"))
+			_r(img, mx - 10, my - 2, 12, 2, _col("glass_dark"))
+			_dot(img, mx + 6, my + 3, _col("flag"))
+		"kiln":
+			_r(img, cw - 38, 4, 26, 18, _col("stone"))
+			_r(img, cw - 32, 10, 14, 8, Color.html(str(ins["ember"])))
+			_r(img, cw - 29, 12, 8, 4, Color.html(str(ins["fire"][1])))
+		"vault":
+			_r(img, cw - 36, 4, 26, 18, _col("iron"))
+			_r(img, cw - 32, 7, 18, 12, _col("stone_dark"))
+			_dot(img, cw - 23, 13, _col("gold"))
+		"armour_stand":
+			for x in [10, cw - 22]:
+				_r(img, x, 6, 12, 16, _col("iron"))
+				_r(img, x + 3, 3, 6, 4, _col("stone"))
+				_r(img, x + 2, 22, 8, 3, wood)
+		"millstone":
+			_r(img, mx - 14, my - 10, 28, 20, _col("stone"))
+			_r(img, mx - 10, my - 6, 20, 12, _col("stone_dark"))
+			_r(img, mx - 2, my - 2, 4, 4, wood)
+		"sacks":
+			for x in range(8, cw - 20, 14):
+				_r(img, x, ch - 22, 11, 12, cloth.darkened(0.15))
+				_r(img, x + 2, ch - 24, 7, 3, cloth.darkened(0.3))
+		"pelts":
+			for x in range(10, cw - 16, 14):
+				_r(img, x, 5, 9, 14, Color.html("#8a6a4a"))
+				_r(img, x + 2, 7, 5, 8, Color.html("#a8845a"))
+		"chair":
+			_r(img, mx - 6, my - 6, 12, 14, wood.darkened(0.25))
+			_r(img, mx - 5, my - 5, 10, 8, Color.html("#8a3a3a"))
+		"benches":
+			for y in [my - 6, my + 8]:
+				_r(img, 14, y, cw - 28, 4, wood)
+		"slab":
+			_r(img, mx - 16, my - 8, 32, 14, _col("stone"))
+			_r(img, mx - 16, my - 8, 32, 2, _col("white"))
+			_r(img, mx - 4, my - 2, 8, 6, _col("stone_dark"))
+		"barrels":
+			for x in range(10, cw - 18, 14):
+				_r(img, x, 6, 10, 12, _col("barrel"))
+				_r(img, x, 9, 10, 1, _col("hoop"))
+				_r(img, x, 14, 10, 1, _col("hoop"))
 		"lamp_floor":
 			_r(img, mx - 8, 6, 16, 8, _col("lamp"))
 			_r(img, mx - 4, 8, 8, 4, _col("lamp").lightened(0.4))
@@ -363,7 +494,7 @@ static func validate() -> Array:
 		return bad
 	if not Color.html_is_valid(str(dat["outline"])):
 		bad.append("buildings.json: outline is not a colour")
-	var needed := ["door", "door_dark", "glass", "glass_dark", "shutter", "gold", "flag", "stone", "stone_dark", "glow", "iron", "crate", "crate_dark", "sign", "mug", "wood", "wood_dark", "paper", "paper2", "lamp", "white"]
+	var needed := ["door", "door_dark", "glass", "glass_dark", "shutter", "gold", "flag", "stone", "stone_dark", "glow", "iron", "crate", "crate_dark", "sign", "mug", "wood", "wood_dark", "paper", "paper2", "lamp", "white", "barrel", "hoop", "stripe_red", "stripe_blue"]
 	for k in needed:
 		if not dat["colors"].has(k) or not Color.html_is_valid(str(dat["colors"][k])):
 			bad.append("buildings.json: colors.%s is missing or not a colour" % k)
@@ -371,12 +502,13 @@ static func validate() -> Array:
 		for part in ["roof", "wall"]:
 			if not s.has(part) or typeof(s[part]) != TYPE_ARRAY or s[part].size() != 2 or not Color.html_is_valid(str(s[part][0])) or not Color.html_is_valid(str(s[part][1])):
 				bad.append("buildings.json: a style needs a roof and a wall of two colours")
-	var furniture := ["bed", "table", "hearth", "chest", "anvil_floor", "forge_fire", "rack", "altar", "pews", "counter", "shelves", "crates", "bar", "tables", "rug", "lamp_floor"]
+	var furniture := ["bed", "table", "hearth", "chest", "anvil_floor", "forge_fire", "rack", "altar", "pews", "counter", "shelves", "crates", "bar", "tables", "rug", "lamp_floor",
+			"oven", "stalls", "hooks", "cauldron", "workbench", "loom", "bookcases", "display", "tubs", "hay", "desk", "mapboard", "kiln", "vault", "armour_stand", "millstone", "sacks", "pelts", "chair", "benches", "slab", "barrels"]
 	var ins: Dictionary = dat.get("inside", {})
 	for k in ["floor", "wall", "rug", "cloth", "blanket", "wood", "fire", "ember"]:
 		if not ins.has(k):
 			bad.append("buildings.json: inside.%s is missing" % k)
-	var features := ["chimney", "glow", "anvil", "cross", "round_window", "awning", "crate", "sign", "banner", "gold_trim", "lantern"]
+	var features := ["chimney", "glow", "anvil", "cross", "round_window", "awning", "crate", "sign", "banner", "gold_trim", "lantern", "sign_icon", "barrels", "sails", "pole"]
 	for kind in dat["kinds"]:
 		var def: Dictionary = dat["kinds"][kind]
 		if str(def.get("shape", "")) == "board":
@@ -390,6 +522,13 @@ static func validate() -> Array:
 		for f in def.get("furniture", []):
 			if not furniture.has(str(f)):
 				bad.append("buildings.json: '%s' has the unknown furniture '%s'" % [kind, f])
+		if def.get("features", []).has("sign_icon"):
+			var rows: Array = dat.get("icons", {}).get(str(def.get("icon", "")), [])
+			var okrows := rows.size() == 8
+			for rw in rows:
+				okrows = okrows and str(rw).length() == 8
+			if not okrows or not Color.html_is_valid(str(def.get("icon_color", ""))):
+				bad.append("buildings.json: '%s' needs an `icon` of 8 rows of 8 in `icons` and an `icon_color`" % kind)
 		for f in def.get("features", []):
 			if not features.has(str(f)):
 				bad.append("buildings.json: '%s' has the unknown feature '%s'" % [kind, f])

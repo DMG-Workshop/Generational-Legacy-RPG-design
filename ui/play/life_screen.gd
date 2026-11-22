@@ -296,7 +296,7 @@ func _build_actions() -> void:
 	_act("Travel / Map", func(): _map())
 	_act("Explore", func(): _do(func(): return d.explore()))
 	var w := d.world
-	if w.has_service("forge") or w.has_service("store") or w.has_service("temple"):
+	if w.has_service("forge") or w.has_service("store") or w.has_service("temple") or not GameShops.here(d).is_empty():
 		_act("Shops", func(): _open(ShopPanel))
 	if w.has_service("tavern"):
 		_act("Tavern", func(): _open(TavernPanel))
