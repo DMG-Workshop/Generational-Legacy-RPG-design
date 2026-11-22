@@ -10,35 +10,55 @@ const SLAIN := "slain in battle"   # the cause GameDynasty._die is given when a 
 
 ## One dynasty per race given, the founder's class rotating through the starting classes. Returns
 ## {"total": totals, "by_race": {race id: totals}}, where totals are {lives, slain, level, age} and
-## `by_race` is keyed by the race of each heir (hybrids appear through marriages).
-static func play_batch(base: int, races: Array, gens: int) -> Dictionary:
+## `by_race` is keyed by the race of each heir (hybrids appear through marriages). Totals also hold the gold,
+## kills and battles won at death (sums), the lives that `carried` a subclass, and the dynasties played and ended.
+## `subclass` founds each dynasty in that calling ("" for none, which plays exactly as before); it passes down at
+## the game's own inheritance chance. With `keep` every new heir is also founded in it, so every life carries it.
+static func play_batch(base: int, races: Array, gens: int, subclass: String = "", keep: bool = false) -> Dictionary:
 	GameData.load_all()
 	var total := blank()
 	var by_race := {}
 	var classes := GameData.starting_ids(GameData.classes)
 	for ri in races.size():
-		var d := GameDynasty.new_game(base * 1000 + ri, "", classes[(ri + base) % classes.size()], BLOODLINE, str(races[ri]))
+		var d := GameDynasty.new_game(base * 1000 + ri, "", classes[(ri + base) % classes.size()], BLOODLINE, str(races[ri]), GameSex.MALE, subclass)
+		total["dynasties"] += 1
 		for g in gens:
+			var carried := 1 if d.heir != null and d.heir.subclass != "" else 0
 			GameBot.live_life(d)
 			var rec: Dictionary = d.last_death
 			var race := str(rec.get("race_id", races[ri]))
 			if not by_race.has(race):
 				by_race[race] = blank()
-			record(total, rec)
-			record(by_race[race], rec)
+			record(total, rec, carried)
+			record(by_race[race], rec, carried)
 			if d.state != "succession":
+				total["ended"] += 1
 				break
 			GameBot.choose_best(d)
+			if keep and subclass != "" and d.heir != null:
+				GameSubclass.found(d.heir, subclass)
 	return {"total": total, "by_race": by_race}
 
 
-## Counts one finished life (a GameDynasty death record) into `totals`.
-static func record(totals: Dictionary, rec: Dictionary) -> void:
+## Counts one finished life (a GameDynasty death record) into `totals`; `carried` is 1 when that heir had a subclass.
+static func record(totals: Dictionary, rec: Dictionary, carried: int = 0) -> void:
 	totals["lives"] += 1
 	totals["level"] += float(rec.get("level", 0))
 	totals["age"] += float(rec.get("age", 0))
+	totals["gold"] += float(rec.get("gold", 0))
+	totals["wins"] += float(rec.get("battles_won", 0))
+	var kills: Variant = rec.get("kills", {})
+	if typeof(kills) == TYPE_DICTIONARY:
+		for k in kills:
+			totals["kills"] += float(kills[k])
+	totals["carried"] += carried
 	if str(rec.get("cause", "")) == SLAIN:
 		totals["slain"] += 1
+
+
+## A subclass argument the harness accepts: "" (none), one of the twenty ids, or "all" (the sweep, read by the harness).
+static func valid_subclass(id: String) -> bool:
+	return id == "" or id == "all" or GameSubclass.has(id)
 
 
 ## "1-12" or "1,5,9" or a mix such as "1-3,9".
@@ -62,12 +82,19 @@ static func seed_range(first: int, last: int) -> Array:
 
 
 static func blank() -> Dictionary:
-	return {"lives": 0, "slain": 0, "level": 0.0, "age": 0.0}
+	return {"lives": 0, "slain": 0, "level": 0.0, "age": 0.0, "gold": 0.0, "kills": 0.0, "wins": 0.0, "carried": 0, "dynasties": 0, "ended": 0}
 
 
 static func add(into: Dictionary, from: Dictionary) -> void:
 	for k in into:
 		into[k] += from[k]
+
+
+## The means that go with a share: gold at death, kills and battles won per life, the share of lives that
+## carried a subclass and the generations reached per dynasty.
+static func detail(t: Dictionary) -> String:
+	var n := maxf(1.0, float(t["lives"]))
+	return "gold %6.0f, kills %5.1f, wins %5.1f, carried %3.0f%%, %4.1f gens/dynasty" % [float(t["gold"]) / n, float(t["kills"]) / n, float(t["wins"]) / n, 100.0 * float(t["carried"]) / n, float(t["lives"]) / maxf(1.0, float(t["dynasties"]))]
 
 
 ## Percent of lives that ended slain in battle.

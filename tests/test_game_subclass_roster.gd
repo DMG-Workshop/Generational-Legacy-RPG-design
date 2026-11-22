@@ -28,6 +28,7 @@ func _run() -> void:
 	GameData.load_all()
 	test_roster()
 	test_perks_are_read()
+	test_strength_bands()
 	test_works()
 	test_no_shop_sells_them()
 	test_breaks()
@@ -97,6 +98,21 @@ func test_perks_are_read() -> void:
 		for k in s["perks"]:
 			used[k] = (int(used.get(k, 0)) + 1)
 	ok(used.size() == catalog.size(), "every perk in the catalog is given by a calling")
+
+
+## Strength bands from the balance pass (docs/BALANCE.md, Subclasses): no founded perk moves a number by more
+## than 2x either way, a perk that acts in the heir's fights or training stays within 25% (founded), and a
+## calling's price stays in the shop-like range. A new calling or retune that breaks one needs a harness run.
+func test_strength_bands() -> void:
+	var fs := float(GameSubclass.setting("founder_scale"))
+	var fight := ["attack_mult", "spell_mult", "defense_mult", "train_mult", "hunt_gold_mult", "hunt_xp_mult"]
+	for s in GameSubclass.defs():
+		ok(float(s.get("price_mult", 1.0)) >= 0.5 and float(s.get("price_mult", 1.0)) <= 1.5, "%s: price in range" % s["id"])
+		for k in s["perks"]:
+			var founded := 1.0 + (float(s["perks"][k]) - 1.0) * fs
+			ok(founded >= 0.4 and founded <= 2.0, "%s: founded %s %.2f within 0.4-2.0" % [s["id"], k, founded])
+			if k in fight:
+				ok(absf(founded - 1.0) <= 0.25, "%s: founded %s %.2f within 25%% of 1 (it acts in the autopilot's life)" % [s["id"], k, founded])
 
 
 func test_works() -> void:
