@@ -651,8 +651,9 @@ static func _check_layout(key: String, lay: Variant) -> Array:
 		bad.append("%s need a rooms list and a doors list" % tag)
 		return bad
 	var rooms_list: Array = lay["rooms"]
-	if rooms_list.is_empty() or rooms_list.size() > 4:
-		bad.append("%s must be one to four rooms" % tag)
+	var most := 10 if _is_dungeon_layout(key) else 4   # a dungeon's floor plan has up to ten rooms (data/world/dungeons.json gives them roles)
+	if rooms_list.is_empty() or rooms_list.size() > most:
+		bad.append("%s must be one to %d rooms" % [tag, most])
 	var by_id := {}
 	var entrances := 0
 	var overlaps := false
@@ -730,6 +731,14 @@ static func _check_layout(key: String, lay: Variant) -> Array:
 			if not seen.has(rid):
 				bad.append("%s: room '%s' cannot be reached from the entrance" % [tag, rid])
 	return bad
+
+
+## Whether a layout key is a dungeon's place id.
+static func _is_dungeon_layout(key: String) -> bool:
+	for l in GameData.world["locations"]:
+		if str(l["id"]) == key and str(l["type"]) == "dungeon":
+			return true
+	return false
 
 
 ## Whether a tile is next to a room's floor (one step north, south, east or west of one of its tiles).

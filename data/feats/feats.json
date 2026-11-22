@@ -28,10 +28,10 @@
     "primal": {"name": "Primal", "color": "#c9a35a", "text": "The wild in the blood: beast shapes, roots and storms."}
   },
   "weapon_kinds": {
-    "blade": {"noun": "blade", "name": "Blades", "items": ["iron_sword", "steel_sword", "mithril_blade", "sunblade", "spell_saber", "notched_falchion", "wrights_edge", "harvest_scythe", "venomfang_dirk"]},
-    "blunt": {"noun": "mace", "name": "Maces and hammers", "items": ["iron_mace", "warhammer", "holy_mace", "springhammer", "delvers_pick", "masons_maul"]},
+    "blade": {"noun": "blade", "name": "Blades", "items": ["iron_sword", "steel_sword", "mithril_blade", "sunblade", "spell_saber", "notched_falchion", "wrights_edge", "harvest_scythe", "venomfang_dirk", "warchiefs_cleaver"]},
+    "blunt": {"noun": "mace", "name": "Maces and hammers", "items": ["iron_mace", "warhammer", "holy_mace", "springhammer", "delvers_pick", "masons_maul", "stonefathers_rune_maul"]},
     "bow": {"noun": "bow", "name": "Bows", "items": ["hunting_bow", "longbow", "elven_bow"]},
-    "staff": {"noun": "staff", "name": "Staves", "items": ["oak_staff", "runed_staff", "archmage_staff", "staff_of_ages", "drowned_staff", "enchanters_wand", "soulbound_staff"]}
+    "staff": {"noun": "staff", "name": "Staves", "items": ["oak_staff", "runed_staff", "archmage_staff", "staff_of_ages", "drowned_staff", "enchanters_wand", "soulbound_staff", "tidecaller_trident"]}
   },
   "statuses": [
     {

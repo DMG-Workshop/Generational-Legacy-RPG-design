@@ -593,6 +593,8 @@ func _paint(c: Control) -> void:
 		c.draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
 	if outdoors:
 		_paint_standing(c, origin, area, centre, cell, colors, float(look["light"]))
+	elif GameDungeons.is_dungeon(sb.space):
+		_paint_dungeon(c, origin, area, centre, cell, colors)
 	else:
 		var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 		c.draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
@@ -625,6 +627,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 		items.append([float(b["z"] + b["h"]), "building", b])
 	for w in GameVillagers.walkers_near(d, centre.x, centre.y, half.length(), GameDay.hour(d)):
 		items.append([float(w["z"]), "villager", w])
+	for e in GameDungeonArt.entrances_in(view):
+		items.append([float(e["rect"].end.y) - 0.1, "entrance", e])
 	for a in sb.creatures:
 		items.append([float(a["z"]) + 0.5, "creature", a])
 	for a in sb.companions:
@@ -643,6 +647,11 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_texture_rect(inside, box, false, dim)
 					_paint_residents(c, b, at, cell, dim)
 				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"]), GameVillagers.door_scale(b)), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
+			"entrance":
+				var e: Dictionary = it[2]
+				var er: Rect2i = e["rect"]
+				var eat := origin + (Vector2(er.position) - centre) * cell + area * 0.5
+				c.draw_texture_rect(DungeonEntranceArt.texture(str(e["place"])), Rect2(eat, Vector2(er.size) * cell), false, dim)
 			"villager":
 				var w: Dictionary = it[2]
 				var p := origin + (Vector2(float(w["x"]), float(w["z"])) - centre) * cell + area * 0.5
@@ -679,6 +688,49 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 				else:
 					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
+
+
+## A dungeon's floor seen by the heir: its creatures and the heir as sprites (a circle where there is none), then the dark over
+## it all: each tile as dark as GameDungeonArt.darkness says (the heir's own light, torches, braziers and lava lighten it).
+func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2, cell: float, colors: Dictionary) -> void:
+	var d: GameDynasty = app.dynasty
+	var items: Array = []
+	for a in sb.denizens:
+		items.append([float(a["z"]) + 0.5, "foe", a])
+	items.append([float(sb.heir.y) + 1.0, "heir", null])
+	items.sort_custom(func(p, q): return p[0] < q[0])
+	for it in items:
+		if str(it[1]) == "foe":
+			var a: Dictionary = it[2]
+			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
+			var tex: Texture2D = SpriteArt.creature(str(a["id"]))
+			if tex == null:
+				c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
+			else:
+				var s := cell / 16.0 * float(setting("creature_pixel"))
+				var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
+				var h := w * float(tex.get_height()) / float(tex.get_width())
+				_stand(c, tex, p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), Color.WHITE, cell)
+		else:
+			var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
+			var tex: Texture2D = SpriteArt.figure(d.heir)
+			if tex == null:
+				c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+			else:
+				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell)
+	var th := GameDungeonArt.theme(sb.space)
+	if th.is_empty():
+		return
+	var tint: Array = th["light"]["tint"]
+	var lights := GameDungeonArt.lights(sb.space)
+	for k in sb.interior:
+		var t := GameInterior._parse(k)
+		var at := origin + (Vector2(t) - centre) * cell + area * 0.5
+		if at.x > origin.x + area.x or at.y > origin.y + area.y or at.x + cell < origin.x or at.y + cell < origin.y:
+			continue
+		var dark := GameDungeonArt.darkness(sb.space, t.x, t.y, sb.heir.x, sb.heir.y, lights)
+		if dark > 0.01:
+			c.draw_rect(Rect2(at, Vector2(cell, cell)).grow(0.5), Color(float(tint[0]), float(tint[1]), float(tint[2]), dark))
 
 
 ## Makes the figures of everyone who may be drawn now, together: the villagers, the heir and the companions (a figure first made while
