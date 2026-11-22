@@ -50,6 +50,10 @@ const SHOTS := [
 	["gate", DESKTOP, false, "gate"],
 	["homestead", DESKTOP, false, "homestead"],
 	["dollhouse", DESKTOP, false, "dollhouse"],
+	["dungeon_barrow", DESKTOP, false, "dungeon:hollow_barrow:0,3"],
+	["dungeon_ember", DESKTOP, false, "dungeon:emberpeak:4,0"],
+	["dungeon_warren", DESKTOP, false, "dungeon:goblin_warrens:5,-1"],
+	["dungeon_entrance", DESKTOP, false, "entrance:the_rift"],
 	["phone_life", PHONE, true, "life"],
 	["phone_battle", PHONE, true, "battle:kingshold"],
 ]
@@ -211,6 +215,9 @@ func _game() -> void:
 func _screen(what: String) -> void:
 	app.show_state()
 	await _frames(3)
+	if what.begins_with("dungeon:") or what.begins_with("entrance:"):
+		await _dungeon(what)
+		return
 	match what:
 		"town", "river", "homestead", "dollhouse", "gate":
 			await _open_world(what)
@@ -341,6 +348,40 @@ func _open_world(what: String) -> void:
 	scr._process(0.0)
 	scr.queue_redraw()
 	await _frames(2)   # (the world is held still, so the map is drawn again by hand once everything is made: a figure made while drawing blanks those drawn before it in that frame)
+	scr.overlay.queue_redraw()
+	await _frames(2)
+
+
+## A dungeon seen from inside (`dungeon:<place>:<x>,<z>`: the heir at that cell of its floor, in the dark of its theme, creatures
+## standing still) or its entrance seen from the open world (`entrance:<place>`).
+func _dungeon(what: String) -> void:
+	var parts := what.split(":")
+	var place := parts[1]
+	d.gen = 60
+	d.world.visit("hearthmere")
+	app.show_sandbox()
+	await _frames(3)
+	var scr: Control = app.current
+	scr.set_process(false)
+	d.world_seconds = 0.0
+	d.clock_carry = 0.0
+	var door: Dictionary = GameSpaces.space("world/" + place)["door"]
+	scr.sb.creatures.clear()
+	scr.sb.companions = []
+	if what.begins_with("entrance:"):
+		scr.sb.heir = Vector2i(int(door["x"]), int(door["z"]) + 3)
+		scr.zoom = 1.6
+	else:
+		scr.sb.heir = Vector2i(int(door["x"]), int(door["z"]))
+		scr.sb.use()
+		var xz := parts[2].split(",")
+		scr.sb.heir = Vector2i(int(xz[0]), int(xz[1]))
+		scr.zoom = 1.8
+	scr._warm_figures()
+	scr.cam = Vector2.ZERO
+	scr._process(0.0)
+	scr.queue_redraw()
+	await _frames(2)
 	scr.overlay.queue_redraw()
 	await _frames(2)
 

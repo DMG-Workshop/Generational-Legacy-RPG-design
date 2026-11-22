@@ -1,0 +1,2224 @@
+{
+ "note": "What is in each dungeon (core/game/game_dungeons.gd, checked by tools/check_data.gd). A dungeon's rooms have a `role` in spaces.json `rooms`; here each dungeon says, per role, who lives in such a room (`foes`: how many, from a weighted pool; a creature appears only in its own era, and the dungeon's `fallback` pool is used when none of the pool is of the era), what stands in it (`containers`: a kind and a loot tier from data/items/dungeon_loot.json), what is hidden in it (`traps`, from `traps` below) and `features` (a prop of the theme the heir can use: a shrine that heals, or an inscription). The lair boss of a dungeon is the creature world.json gives as its `lair`, put in its boss_lair room when it is stirring. Where things stand is worked out from the dungeon's id alone (the same every game); who is met and what is found use dice keyed on the seed, never the dynasty's. What the heir has opened, sprung, used or killed is saved in the dynasty's `dungeon_marks` (only once something is) and comes back after `refill_years` or `foe_years` of the world's calendar.",
+ "settings": {
+  "refill_years": 30.0,
+  "foe_years": 12.0,
+  "min_foe_distance": 3.0,
+  "reach": 1
+ },
+ "roles": {
+  "entrance_hall": "entrance hall",
+  "guard_room": "guard room",
+  "barracks": "barracks",
+  "armoury": "armoury",
+  "treasure_vault": "treasure vault",
+  "boss_lair": "lair",
+  "shrine": "shrine",
+  "prison": "prison",
+  "nest": "nest",
+  "forge": "forge",
+  "crypt": "crypt",
+  "cistern": "cistern"
+ },
+ "kinds": {
+  "chest": {
+   "name": "chest"
+  },
+  "crate": {
+   "name": "crate"
+  },
+  "rack": {
+   "name": "weapon rack"
+  },
+  "hoard": {
+   "name": "hoard"
+  },
+  "urn": {
+   "name": "urn"
+  },
+  "sarcophagus": {
+   "name": "sarcophagus"
+  }
+ },
+ "traps": {
+  "tripwire": {
+   "name": "tripwire",
+   "hp_pct": 0.06,
+   "text": "{h} catches a tripwire and a weight swings out of the dark: {n} damage."
+  },
+  "spikes": {
+   "name": "spike trap",
+   "hp_pct": 0.1,
+   "text": "Spikes shoot up through the floor under {h}: {n} damage."
+  },
+  "darts": {
+   "name": "dart trap",
+   "hp_pct": 0.08,
+   "text": "A hidden dart finds {h}: {n} damage."
+  },
+  "rune": {
+   "name": "ward rune",
+   "hp_pct": 0.1,
+   "text": "A ward rune flares under {h}'s foot: {n} damage."
+  },
+  "vent": {
+   "name": "fire vent",
+   "hp_pct": 0.12,
+   "text": "A vent breathes fire across {h}: {n} damage."
+  },
+  "collapse": {
+   "name": "rockfall",
+   "hp_pct": 0.14,
+   "text": "The roof lets go a little over {h}: {n} damage."
+  },
+  "surge": {
+   "name": "flood surge",
+   "hp_pct": 0.09,
+   "text": "A surge of black water slams into {h}: {n} damage."
+  },
+  "tear": {
+   "name": "tear in the air",
+   "hp_pct": 0.12,
+   "text": "The air tears and something cold goes through {h}: {n} damage."
+  }
+ },
+ "dungeons": {
+  "goblin_warrens": {
+   "fallback": [
+    {
+     "id": "goblin",
+     "weight": 3
+    },
+    {
+     "id": "plague_rat",
+     "weight": 2
+    }
+   ],
+   "roles": {
+    "entrance_hall": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 3
+       },
+       {
+        "id": "plague_rat",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tripwire",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ]
+    },
+    "guard_room": {
+     "foes": {
+      "count": [
+       2,
+       3
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 4
+       },
+       {
+        "id": "bandit",
+        "weight": 1
+       },
+       {
+        "id": "ogre",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "spikes",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ]
+    },
+    "barracks": {
+     "foes": {
+      "count": [
+       3,
+       4
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 5
+       },
+       {
+        "id": "bandit",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": []
+    },
+    "armoury": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 3
+       },
+       {
+        "id": "ogre",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "rack",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tripwire",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "treasure_vault": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 3
+       },
+       {
+        "id": "ogre",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "hoard",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "darts",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "nest": {
+     "foes": {
+      "count": [
+       3,
+       5
+      ],
+      "pool": [
+       {
+        "id": "plague_rat",
+        "weight": 4
+       },
+       {
+        "id": "slime",
+        "weight": 2
+       },
+       {
+        "id": "goblin",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": []
+    },
+    "prison": {
+     "foes": {
+      "count": [
+       1,
+       1
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": []
+    },
+    "shrine": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 2
+       },
+       {
+        "id": "slime",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tripwire",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "features": [
+      {
+       "prop": "skull_stake",
+       "kind": "lore",
+       "name": "totem of skulls",
+       "text": "A totem of skulls, each marked with a tally of raids. The last tally is fresh."
+      }
+     ]
+    }
+   }
+  },
+  "hollow_barrow": {
+   "fallback": [
+    {
+     "id": "plague_rat",
+     "weight": 3
+    },
+    {
+     "id": "bandit",
+     "weight": 1
+    }
+   ],
+   "roles": {
+    "entrance_hall": {
+     "foes": {
+      "count": [
+       0,
+       1
+      ],
+      "pool": [
+       {
+        "id": "skeleton",
+        "weight": 3
+       },
+       {
+        "id": "plague_rat",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "urn",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "rune",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ]
+    },
+    "guard_room": {
+     "foes": {
+      "count": [
+       2,
+       3
+      ],
+      "pool": [
+       {
+        "id": "skeleton",
+        "weight": 4
+       },
+       {
+        "id": "ghoul",
+        "weight": 3
+       },
+       {
+        "id": "wraith",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "urn",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "spikes",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "armoury": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "skeleton",
+        "weight": 3
+       },
+       {
+        "id": "lich_acolyte",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "rack",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "rune",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "crypt": {
+     "foes": {
+      "count": [
+       2,
+       4
+      ],
+      "pool": [
+       {
+        "id": "skeleton",
+        "weight": 4
+       },
+       {
+        "id": "ghoul",
+        "weight": 4
+       },
+       {
+        "id": "wraith",
+        "weight": 2
+       },
+       {
+        "id": "lich_acolyte",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "sarcophagus",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "spikes",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "rune",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "treasure_vault": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "ghoul",
+        "weight": 3
+       },
+       {
+        "id": "wraith",
+        "weight": 3
+       },
+       {
+        "id": "lich_acolyte",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "hoard",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "rune",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ]
+    },
+    "shrine": {
+     "foes": {
+      "count": [
+       0,
+       1
+      ],
+      "pool": [
+       {
+        "id": "wraith",
+        "weight": 3
+       },
+       {
+        "id": "skeleton",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "urn",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [],
+     "features": [
+      {
+       "prop": "altar",
+       "kind": "shrine",
+       "name": "barrow altar",
+       "effect": "heal",
+       "pct": 0.5,
+       "text": "{h} lays a hand on the cold altar. Warmth, for a moment, runs back into {h}.",
+       "spent": "The altar is cold. It has given what it had."
+      }
+     ]
+    },
+    "nest": {
+     "foes": {
+      "count": [
+       3,
+       5
+      ],
+      "pool": [
+       {
+        "id": "ghoul",
+        "weight": 4
+       },
+       {
+        "id": "plague_rat",
+        "weight": 3
+       },
+       {
+        "id": "skeleton",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [],
+     "traps": []
+    },
+    "boss_lair": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "skeleton",
+        "weight": 3
+       },
+       {
+        "id": "ghoul",
+        "weight": 2
+       },
+       {
+        "id": "lich_acolyte",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "sarcophagus",
+       "tier": "hoard",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "rune",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "features": [
+      {
+       "prop": "altar",
+       "kind": "lore",
+       "name": "king's bier",
+       "text": "Grave-goods lie round an empty bier. A crown was meant to rest here."
+      }
+     ]
+    }
+   }
+  },
+  "emberpeak": {
+   "fallback": [
+    {
+     "id": "goblin",
+     "weight": 2
+    },
+    {
+     "id": "plague_rat",
+     "weight": 1
+    }
+   ],
+   "roles": {
+    "entrance_hall": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "fire_imp",
+        "weight": 3
+       },
+       {
+        "id": "goblin",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "vent",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ]
+    },
+    "forge": {
+     "foes": {
+      "count": [
+       2,
+       3
+      ],
+      "pool": [
+       {
+        "id": "fire_imp",
+        "weight": 4
+       },
+       {
+        "id": "ogre",
+        "weight": 1
+       },
+       {
+        "id": "stone_golem",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "vent",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ]
+    },
+    "armoury": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "fire_imp",
+        "weight": 3
+       },
+       {
+        "id": "drake",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "rack",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "vent",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "treasure_vault": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "drake",
+        "weight": 3
+       },
+       {
+        "id": "fire_imp",
+        "weight": 2
+       },
+       {
+        "id": "ash_wyrm",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "hoard",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "vent",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "collapse",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "guard_room": {
+     "foes": {
+      "count": [
+       2,
+       3
+      ],
+      "pool": [
+       {
+        "id": "fire_imp",
+        "weight": 4
+       },
+       {
+        "id": "drake",
+        "weight": 2
+       },
+       {
+        "id": "ash_wyrm",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "vent",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ]
+    },
+    "shrine": {
+     "foes": {
+      "count": [
+       0,
+       1
+      ],
+      "pool": [
+       {
+        "id": "fire_imp",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [],
+     "features": [
+      {
+       "prop": "brazier",
+       "kind": "shrine",
+       "name": "ember shrine",
+       "effect": "heal",
+       "pct": 0.4,
+       "text": "{h} warms their hands at the shrine's flame, and the aches ease.",
+       "spent": "The flame has sunk to embers."
+      }
+     ]
+    },
+    "nest": {
+     "foes": {
+      "count": [
+       2,
+       4
+      ],
+      "pool": [
+       {
+        "id": "drake",
+        "weight": 3
+       },
+       {
+        "id": "ash_wyrm",
+        "weight": 2
+       },
+       {
+        "id": "fire_imp",
+        "weight": 3
+       },
+       {
+        "id": "elder_dragon",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "hoard",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "vent",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ]
+    },
+    "boss_lair": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "drake",
+        "weight": 3
+       },
+       {
+        "id": "ash_wyrm",
+        "weight": 3
+       },
+       {
+        "id": "elder_dragon",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "hoard",
+       "tier": "hoard",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "vent",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "collapse",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "sunken_temple": {
+   "fallback": [
+    {
+     "id": "slime",
+     "weight": 3
+    },
+    {
+     "id": "plague_rat",
+     "weight": 2
+    }
+   ],
+   "roles": {
+    "entrance_hall": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "slime",
+        "weight": 3
+       },
+       {
+        "id": "skeleton",
+        "weight": 2
+       },
+       {
+        "id": "plague_rat",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "urn",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "surge",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ]
+    },
+    "shrine": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "wraith",
+        "weight": 3
+       },
+       {
+        "id": "ghoul",
+        "weight": 2
+       },
+       {
+        "id": "time_wraith",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "urn",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "surge",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "features": [
+      {
+       "prop": "idol",
+       "kind": "shrine",
+       "name": "idol of the drowned god",
+       "effect": "heal",
+       "pct": 0.6,
+       "text": "{h} touches the wet idol. Cold water runs over {h}'s hands, and the hurt goes with it.",
+       "spent": "The idol streams with water and gives nothing more."
+      }
+     ]
+    },
+    "armoury": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "skeleton",
+        "weight": 3
+       },
+       {
+        "id": "ghoul",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "rack",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "chest",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": []
+    },
+    "guard_room": {
+     "foes": {
+      "count": [
+       2,
+       3
+      ],
+      "pool": [
+       {
+        "id": "skeleton",
+        "weight": 3
+       },
+       {
+        "id": "bog_troll",
+        "weight": 3
+       },
+       {
+        "id": "ghoul",
+        "weight": 2
+       },
+       {
+        "id": "time_wraith",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "surge",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "cistern": {
+     "foes": {
+      "count": [
+       2,
+       3
+      ],
+      "pool": [
+       {
+        "id": "slime",
+        "weight": 4
+       },
+       {
+        "id": "bog_troll",
+        "weight": 2
+       },
+       {
+        "id": "plague_rat",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "urn",
+       "tier": "plain",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "surge",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ]
+    },
+    "prison": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "ghoul",
+        "weight": 3
+       },
+       {
+        "id": "skeleton",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": []
+    },
+    "nest": {
+     "foes": {
+      "count": [
+       3,
+       4
+      ],
+      "pool": [
+       {
+        "id": "slime",
+        "weight": 4
+       },
+       {
+        "id": "plague_rat",
+        "weight": 3
+       },
+       {
+        "id": "bog_troll",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "urn",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": []
+    },
+    "treasure_vault": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "wraith",
+        "weight": 3
+       },
+       {
+        "id": "time_wraith",
+        "weight": 2
+       },
+       {
+        "id": "bog_troll",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "hoard",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "surge",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "darts",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "deepstone_halls": {
+   "fallback": [
+    {
+     "id": "goblin",
+     "weight": 3
+    },
+    {
+     "id": "plague_rat",
+     "weight": 2
+    },
+    {
+     "id": "slime",
+     "weight": 1
+    }
+   ],
+   "roles": {
+    "entrance_hall": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 3
+       },
+       {
+        "id": "plague_rat",
+        "weight": 1
+       },
+       {
+        "id": "stone_golem",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "collapse",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ]
+    },
+    "guard_room": {
+     "foes": {
+      "count": [
+       2,
+       3
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 3
+       },
+       {
+        "id": "ogre",
+        "weight": 3
+       },
+       {
+        "id": "stone_golem",
+        "weight": 3
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "spikes",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ]
+    },
+    "forge": {
+     "foes": {
+      "count": [
+       1,
+       3
+      ],
+      "pool": [
+       {
+        "id": "ogre",
+        "weight": 2
+       },
+       {
+        "id": "stone_golem",
+        "weight": 3
+       },
+       {
+        "id": "goblin",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "vent",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "armoury": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "stone_golem",
+        "weight": 3
+       },
+       {
+        "id": "ogre",
+        "weight": 2
+       },
+       {
+        "id": "goblin",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "rack",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "rack",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "darts",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "shrine": {
+     "foes": {
+      "count": [
+       0,
+       1
+      ],
+      "pool": [
+       {
+        "id": "stone_golem",
+        "weight": 2
+       },
+       {
+        "id": "goblin",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [],
+     "features": [
+      {
+       "prop": "statue",
+       "kind": "lore",
+       "name": "statue of a dwarf-king",
+       "text": "The statue's plinth reads: Here the Deepstone kings ask nothing of the mountain but silence."
+      }
+     ]
+    },
+    "barracks": {
+     "foes": {
+      "count": [
+       3,
+       4
+      ],
+      "pool": [
+       {
+        "id": "goblin",
+        "weight": 3
+       },
+       {
+        "id": "ogre",
+        "weight": 3
+       },
+       {
+        "id": "stone_golem",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": []
+    },
+    "nest": {
+     "foes": {
+      "count": [
+       3,
+       5
+      ],
+      "pool": [
+       {
+        "id": "plague_rat",
+        "weight": 3
+       },
+       {
+        "id": "slime",
+        "weight": 2
+       },
+       {
+        "id": "goblin",
+        "weight": 3
+       },
+       {
+        "id": "stone_golem",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "collapse",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "treasure_vault": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "stone_golem",
+        "weight": 3
+       },
+       {
+        "id": "ogre",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "hoard",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "darts",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "collapse",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "boss_lair": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "stone_golem",
+        "weight": 4
+       },
+       {
+        "id": "ogre",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "hoard",
+       "tier": "hoard",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "collapse",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "features": [
+      {
+       "prop": "statue",
+       "kind": "lore",
+       "name": "stone throne",
+       "text": "The throne is carved from the mountain's own bone. Something heavy has sat here for a very long time."
+      }
+     ]
+    }
+   }
+  },
+  "the_rift": {
+   "fallback": [],
+   "roles": {
+    "entrance_hall": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "rift_shade",
+        "weight": 3
+       },
+       {
+        "id": "shard_crawler",
+        "weight": 2
+       },
+       {
+        "id": "void_stalker",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tear",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ]
+    },
+    "guard_room": {
+     "foes": {
+      "count": [
+       2,
+       3
+      ],
+      "pool": [
+       {
+        "id": "rift_shade",
+        "weight": 3
+       },
+       {
+        "id": "void_stalker",
+        "weight": 3
+       },
+       {
+        "id": "abyssal_knight",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "plain",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tear",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "shrine": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "void_stalker",
+        "weight": 2
+       },
+       {
+        "id": "time_wraith",
+        "weight": 2
+       },
+       {
+        "id": "star_eater",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [],
+     "features": [
+      {
+       "prop": "obelisk",
+       "kind": "lore",
+       "name": "black obelisk",
+       "text": "The obelisk hums. The marks on it are not writing, but they read as one word: Wait."
+      }
+     ]
+    },
+    "treasure_vault": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "shard_crawler",
+        "weight": 3
+       },
+       {
+        "id": "abyssal_knight",
+        "weight": 2
+       },
+       {
+        "id": "star_eater",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        2
+       ]
+      },
+      {
+       "kind": "hoard",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tear",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ]
+    },
+    "nest": {
+     "foes": {
+      "count": [
+       3,
+       5
+      ],
+      "pool": [
+       {
+        "id": "shard_crawler",
+        "weight": 4
+       },
+       {
+        "id": "rift_shade",
+        "weight": 3
+       },
+       {
+        "id": "void_stalker",
+        "weight": 1
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "crate",
+       "tier": "plain",
+       "count": [
+        0,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tear",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "barracks": {
+     "foes": {
+      "count": [
+       3,
+       4
+      ],
+      "pool": [
+       {
+        "id": "abyssal_knight",
+        "weight": 3
+       },
+       {
+        "id": "void_stalker",
+        "weight": 3
+       },
+       {
+        "id": "rift_shade",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "chest",
+       "tier": "fine",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": []
+    },
+    "armoury": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "rift_shade",
+        "weight": 3
+       },
+       {
+        "id": "void_stalker",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "rack",
+       "tier": "fine",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tear",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ]
+    },
+    "boss_lair": {
+     "foes": {
+      "count": [
+       1,
+       2
+      ],
+      "pool": [
+       {
+        "id": "abyssal_knight",
+        "weight": 3
+       },
+       {
+        "id": "star_eater",
+        "weight": 2
+       },
+       {
+        "id": "time_wraith",
+        "weight": 2
+       }
+      ]
+     },
+     "containers": [
+      {
+       "kind": "hoard",
+       "tier": "hoard",
+       "count": [
+        1,
+        1
+       ]
+      },
+      {
+       "kind": "chest",
+       "tier": "rich",
+       "count": [
+        1,
+        1
+       ]
+      }
+     ],
+     "traps": [
+      {
+       "kind": "tear",
+       "count": [
+        1,
+        2
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ "text": {
+  "opened": "{h} opens the {kind}.",
+  "empty": "The {kind} is empty. It fills again with the years.",
+  "found_gold": "{h} finds {n} gold.",
+  "found_materials": "{h} takes {n} {material}.",
+  "found_nothing": "There is nothing in it.",
+  "found_unique": "{h} finds {name}, a thing with a story.",
+  "spotted": "{h} spots a {trap} and steps round it.",
+  "spent": "Nothing more comes of it for now.",
+  "boss_gone": "{boss} is not here now. The lair is empty.",
+  "boss_stirs": "{boss} rises in the {room}!",
+  "nothing_to_use": "There is nothing here to use.",
+  "healed": "{h} is eased: {n} health."
+ }
+}
