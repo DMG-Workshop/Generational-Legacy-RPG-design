@@ -15,7 +15,7 @@
     "size_gap": 0.15,
     "bubble_seconds": 5.0
   },
-  "rumour": {"min": 30, "max": 70, "tries": 80},
+  "rumour": {"min": 36, "max": 78, "tries": 80},
   "conversations": {
     "farmer": ["news"],
     "guard": ["fear", "news"],

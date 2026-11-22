@@ -500,8 +500,8 @@ func test_breaks() -> void:
 		"a gap in the shifts": func(dd: Dictionary): dd["guards"]["shifts"] = [{"id": "day", "from": 6.0, "to": 18.0}, {"id": "night", "from": 20.0, "to": 6.0}],
 		"a town with no colour": func(dd: Dictionary): dd["guards"]["colors"].erase("ironford"),
 		"a guard with no figure": func(dd: Dictionary): dd["guards"]["class"] = "dragon",
-		"a post job a house may draw": func(dd: Dictionary): dd["jobs"][8]["weight"] = 3,
-		"no post job": func(dd: Dictionary): dd["jobs"].remove_at(8),
+		"a post job a house may draw": func(dd: Dictionary): _gate_job(dd)["weight"] = 3,
+		"no post job": func(dd: Dictionary): dd["jobs"].erase(_gate_job(dd)),
 	}
 	for what in broken:
 		GameVillagers._cache = gv.duplicate(true)
@@ -565,3 +565,11 @@ func test_art() -> void:
 	ok(not WallArt.validate().is_empty(), "a lintel too low for a cart is found")
 	WallArt._data = data_back
 	ok(WallArt.validate().is_empty(), "(whole again)")
+
+
+## The gate guard's entry in the jobs list (not at a fixed place: the shops add jobs before it).
+func _gate_job(dd: Dictionary) -> Dictionary:
+	for j in dd["jobs"]:
+		if str(j["id"]) == str(dd["guards"]["job"]):
+			return j
+	return {}
