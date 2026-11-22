@@ -138,7 +138,8 @@ func test_layer() -> void:
 	ok(v.things.has(c), "each chunk has a layer for what stands on it")
 	var local := Vector2i(site["x"] - c.x * n, site["z"] - c.y * n)
 	var kinds := TileView.kinds()
-	ok((v.things[c] as TileMapLayer).get_cell_atlas_coords(local).x == kinds.find(site["kind"]), "the node is drawn as its kind (%s)" % site["kind"])
+	var look := GameWilds.node_look(d.seed_value, GameWorldGen.tile(d, site["x"], site["z"]))
+	ok((v.things[c] as TileMapLayer).get_cell_atlas_coords(local).x == kinds.find(look), "the node is drawn as its look (%s: %s)" % [site["kind"], look])
 	ok((v.layers[c] as TileMapLayer).get_cell_atlas_coords(local).x == kinds.find(TileView.kind_for(GameWorldGen.tile(d, site["x"], site["z"]), "")), "over the ground it stands on")
 	# no node, nothing
 	var empty := Vector2i(-1, -1)
@@ -182,7 +183,7 @@ func test_changes() -> void:
 	ok((v.things[c] as TileMapLayer).get_cell_source_id(local) == -1, "a gathered node is not drawn")
 	d.world.year += float(GameCompanions.setting("regrow_years")) + 0.1
 	v.refresh_cell(site["x"], site["z"])
-	ok((v.things[c] as TileMapLayer).get_cell_atlas_coords(local).x == kinds.find(site["kind"]), "and is drawn again when it has regrown")
+	ok((v.things[c] as TileMapLayer).get_cell_atlas_coords(local).x == kinds.find(GameWilds.node_look(d.seed_value, GameWorldGen.tile(d, site["x"], site["z"]))), "and is drawn again when it has regrown")
 	# a built piece covers it
 	d.built[GameBuild.key(site["x"], GameBuild.SURFACE, site["z"])] = "floor"
 	v.refresh_cell(site["x"], site["z"])

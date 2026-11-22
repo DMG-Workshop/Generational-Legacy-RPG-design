@@ -90,6 +90,8 @@ func _test_every_item_obtainable() -> void:
 			found[id] = "quest"
 	for ev in GameData.events:
 		_event_items(ev, found)
+	for id in GameWildsLoot.unique_ids():
+		found[id] = "wilds"   # the themed uniques of the wilds' landmarks
 	for id in GameData.items:
 		_check(found.has(id) or GameSubclass.calling_of(str(id)) != "" or GameDungeonLoot.is_unique_found_somewhere(str(id)), "%s can be obtained (shop, quest, event, a calling's work or a dungeon)" % id)
 	# The Crown of Whispers comes from Lady Orsenne's table; a second one is sold on, not stacked.

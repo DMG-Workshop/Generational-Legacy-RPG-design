@@ -1,5 +1,5 @@
 {
-  "note": "Spawn tables (roadmap item 47; core/game/game_spawn.gd, checked by tools/check_data.gd). Which creatures appear where and when, as data. WHERE is a surface biome (the world generator's eight), a depth underground (the mining ground's zones), or an authored place (a dungeon mouth, which uses the same pool a hunt there always has); WHEN is the era within the Age (each creature's min_gen and max_gen), the season, the weather and the night (a flag the caller gives: the world has no clock of the day yet, that is item 51). A hunt in the text game picks from `hunt_pool`, which is exactly the pool it always used (creatures of the era whose biomes meet the place's), now computed here, so nothing a seeded fight draws has changed. The weighted table below is for the world: a creature's `surface` lists the surface biomes it roams (each must be a surface of one of its own place biomes in creatures.json, so the sandbox never contradicts the text game's map), its `depth` band is where it lives underground (only for creatures that have an underground biome), and its weight is multiplied by the season, weather and night it likes. Rolls are keyed on the seed and the place, never the dynasty's dice.",
+  "note": "Spawn tables (roadmap item 47; core/game/game_spawn.gd, checked by tools/check_data.gd). Which creatures appear where and when, as data. WHERE is a surface biome (the world generator's eight), a depth underground (the mining ground's zones), or an authored place (a dungeon mouth, which uses the same pool a hunt there always has); WHEN is the era within the Age (each creature's min_gen and max_gen), the season, the weather and the night (a flag the caller gives: the world has no clock of the day yet, that is item 51). A hunt in the text game picks from `hunt_pool`, which is exactly the pool it always used (creatures of the era whose biomes meet the place's), now computed here, so nothing a seeded fight draws has changed. The weighted table below is for the world: a creature's `surface` lists the surface biomes it roams (each must be a surface of one of its own place biomes in creatures.json, so the sandbox never contradicts the text game's map), its `depth` band is where it lives underground (only for creatures that have an underground biome), and its weight is multiplied by the season, weather and night it likes. Rolls are keyed on the seed and the place, never the dynasty's dice. AREAS: each wilds place of world.json has its own table (`areas`): `weights` multiply the creatures its biome already has, `add` lets in creatures of the place's own biome (by that weight) and `density` scales the spawns, within the place's radius (wilds.json); no two places share a table (the validator checks).",
   "settings": {
     "underground_biomes": [
       "cave",
@@ -346,6 +346,73 @@
       "weather": {
         "clear": 1.3,
         "rain": 0.4
+      }
+    }
+  },
+  "areas": {
+    "greenvale": {
+      "density": 1.1,
+      "weights": {
+        "bandit": 3.0,
+        "wolf": 0.5,
+        "slime": 0.6
+      }
+    },
+    "whisperwood": {
+      "density": 1.2,
+      "weights": {
+        "wolf": 3.0,
+        "goblin": 0.6,
+        "thornhound": 1.6,
+        "moss_stag": 0.6,
+        "glimmer_moth": 0.2
+      }
+    },
+    "elderglade": {
+      "density": 1.1,
+      "weights": {
+        "wolf": 0.2,
+        "goblin": 0.0,
+        "thornhound": 1.2,
+        "moss_stag": 2.5,
+        "glimmer_moth": 3.0
+      },
+      "add": {
+        "wraith": 0.6
+      }
+    },
+    "mirefen": {
+      "density": 1.2,
+      "weights": {
+        "slime": 0.6,
+        "bog_troll": 2.5,
+        "ghoul": 2.0,
+        "plague_rat": 1.5
+      }
+    },
+    "frostreach": {
+      "density": 1.2,
+      "weights": {
+        "wolf": 0.6,
+        "frost_wolf": 3.0
+      }
+    },
+    "highcrag": {
+      "density": 1.1,
+      "weights": {
+        "harpy": 2.5,
+        "stone_golem": 1.5,
+        "ogre": 0.6,
+        "drake": 1.0,
+        "elder_dragon": 1.0
+      }
+    },
+    "stormcoast": {
+      "density": 1.1,
+      "weights": {
+        "harpy": 2.5,
+        "bandit": 0.8,
+        "plague_rat": 2.0
       }
     }
   }

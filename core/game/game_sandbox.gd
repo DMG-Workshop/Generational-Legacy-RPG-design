@@ -24,6 +24,7 @@ var interior: Dictionary = {}      # the cells of the interior the heir is in (G
 var denizens: Array = []           # the creatures of the dungeon the heir is in (GameBehaviour agents with a key, room and boss flag), never saved
 var fight_foes: Array = []         # the dungeon creatures in the fight now on, for after_fight
 var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
+var offer := {}                    # a trader's pending offer at a landmark of the wilds (GameWildsSites), never saved
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
 
 
@@ -128,6 +129,10 @@ func place_line() -> String:
 	if storey() > 0:
 		line = _text("upstairs_at", {"n": storey()}) if line == "" else "%s %s" % [_text("upstairs_at", {"n": storey()}), line]
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
+	if u.is_empty() and storey() == 0:
+		var site := GameWildsSites.hint(d, heir.x, heir.y)
+		if site != "":
+			return site if line == "" else "%s %s" % [line, site]
 	return line if u.is_empty() else "%s %s" % [line, str(u["hint"])]
 
 
@@ -202,6 +207,9 @@ var arrived := ""
 func refresh() -> void:
 	if space != "world":
 		return   # nothing lives or spawns indoors
+	if storey() == 0:
+		for lm in GameWildsSites.discover_near(d, heir.x, heir.y):
+			log.append({"kind": "site", "text": GameWilds.text("found", {"heir": d.heir.name, "name": GameWildsSites.name_of(lm)})})
 	var night := GameDay.is_night(d)
 	var radius := int(setting("radius"))
 	var kept: Array = []
@@ -306,6 +314,12 @@ func use() -> Dictionary:
 			return t
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty():
+		var site := GameWildsSites.near(d, heir.x, heir.y) if storey() == 0 else {}
+		if not site.is_empty():
+			var r := GameWildsSites.use(d, site, offer)
+			offer = r.get("offer", {})
+			log.append({"kind": "site", "text": str(r["text"])})
+			return r
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
 		"keep":

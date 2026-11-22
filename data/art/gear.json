@@ -95,7 +95,18 @@
   "masons_maul": {"metal": "iron"},
   "greenwardens_cloak": {"cape": "#3a6a3a"},
   "harvest_scythe": {"metal": "iron"},
-  "venomfang_dirk": {"metal": "iron"}
+  "venomfang_dirk": {"metal": "iron"},
+  "hedge_wardens_cloak": {"cape": "#2f5a2c"},
+  "highwaymans_dirk": {"metal": "iron"},
+  "whispering_bow": {"wood": "yew", "glow": "#c8ffd8"},
+  "heartwood_jerkin": {"leather": "green"},
+  "peat_black_mail": {"metal": "barrow"},
+  "gossamer_vestment": {"cape": "#6a4a96"},
+  "rimeblade": {"metal": "steel", "glow": "#bfe8ff"},
+  "winterfang_cloak": {"leather": "brown", "cape": "#cfd8e0"},
+  "stormcallers_maul": {"metal": "steel", "glow": "#9fc8ff"},
+  "drowned_captains_cutlass": {"metal": "rust", "glow": "#7fe0c8"},
+  "saltwarden_oilskin": {"cape": "#8a7a3a"}
  },
  "cape": {"size": [24, 40], "palette": {"k": "#1b1626"}, "rows": [
   "........................",

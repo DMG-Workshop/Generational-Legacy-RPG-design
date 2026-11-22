@@ -35,6 +35,7 @@ var roster: Array = []          # eggs and young the family keeps (see GameRoste
 var mine: Dictionary = {}       # the ground dug at each site, its strain and its gateways (see GameMine); saved only when not empty
 var damage: Dictionary = {}     # damaged built pieces, {"x,y,z": level} (see GameRepair); saved only when not empty
 var built: Dictionary = {}      # the pieces the family has built, {"x,y,z": kind} (see GameBuild); saved only when not empty
+var wilds: Dictionary = {}      # the landmarks of the wilds found and used, {found: [ids], used: {id: {gen, n}}} (see GameWildsSites); saved only when set
 var sandbox_at: Dictionary = {} # where the heir last stood in the open world, {x, z, gen, place} (see GameSandbox); saved only when set
 var gathered: Dictionary = {}   # nodes companions have gathered, {"x,z": world year} (see GameCompanions); saved only when not empty
 var dungeon_marks: Dictionary = {}   # what the heir has opened, sprung, used or killed in the dungeons, {"kind:place:key": world year} (see GameDungeons); saved only when not empty
@@ -1062,6 +1063,8 @@ func to_dict() -> Dictionary:
 		out["gathered"] = gathered
 	if not sandbox_at.is_empty():   # and only once the heir has walked the open world
 		out["sandbox_at"] = sandbox_at
+	if not wilds.is_empty():   # and only once a landmark of the wilds is found
+		out["wilds"] = wilds
 	if not dungeon_marks.is_empty():   # and only once something is opened, sprung, used or killed in a dungeon
 		out["dungeon_marks"] = dungeon_marks
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
@@ -1124,6 +1127,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.damage = GameRepair.load_state(d.get("damage", {}), g.built)
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.sandbox_at = GameSandbox.load_at(d.get("sandbox_at", {}))
+	g.wilds = GameWildsSites.load_state(d.get("wilds", {}))
 	g.dungeon_marks = GameDungeons.load_marks(d.get("dungeon_marks", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
 	g.achievements = GameAchievements.load_state(d.get("achievements", {}))

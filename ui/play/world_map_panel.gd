@@ -45,6 +45,10 @@ class MapCanvas extends Control:
 				draw_arc(at, mpx * 1.4, 0.0, TAU, 20, Color.WHITE, 2.0)
 			if bool(m["visited"]):
 				draw_string(font, at + Vector2(mpx * 0.8, -mpx * 0.6), str(m["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+		for m in GameWorldMap.landmark_markers(d):
+			var lp: Vector2 = (Vector2(m["cell"]) + Vector2(0.5, 0.5)) * cell
+			var q := maxf(2.0, mpx * 0.4)
+			draw_colored_polygon(PackedVector2Array([lp + Vector2(0, -q), lp + Vector2(q, 0), lp + Vector2(0, q), lp + Vector2(-q, 0)]), Color(0.95, 0.8, 0.4))
 		if panel.heir_tile.x >= 0:
 			var c := GameWorldMap.cell_of(panel.heir_tile.x, panel.heir_tile.y)
 			var hp := (Vector2(c) + Vector2(0.5, 0.5)) * cell
@@ -96,6 +100,11 @@ func _ready() -> void:
 		var h := Kit.label(GameWorldMap.text("heir", {"heir": dynasty.heir.name, "x": heir_tile.x, "z": heir_tile.y}), 14, Kit.TEXT)
 		h.name = "HeirLine"
 		v.add_child(h)
+	var places := Kit.label(GameWilds.text("map_title") + ": " + ", ".join(GameWorldMap.landmark_lines(dynasty, 6)), 13, Kit.TEXT)
+	places.name = "Landmarks"
+	places.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	places.custom_minimum_size = Vector2(maxf(160.0, minf(room.x - 60.0, room.y - 190.0)), 0)
+	v.add_child(places)
 	var legend := Kit.label(GameWorldMap.text("legend"), 13, Kit.dim())
 	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	legend.custom_minimum_size = Vector2(side, 0)
