@@ -1,0 +1,1043 @@
+{
+  "note": "The wilds: how the open world's land looks and what is in it (roadmap: the wilds; core/game/game_wilds.gd for the look, game_wilds_sites.gd for landmarks, checked by tools/check_data.gd). Everything here is a pure function of the dynasty's seed and a tile: no die of the dynasty's is drawn and the land itself (height, water, nodes) is not touched, so towns, dungeons and the roads keep their guarantees. GROUND: each surface biome has `tones` (a translucent patch over the ground) and `decor` (small things such as tufts, flowers, reeds, boulders), each row a probability for a tile (`clump` makes it come in patches of that many tiles, `near` \"water\" wants water beside, `min_h` and `max_h` bound the height), and `trees`, the look a tree node takes in the biome (a birch, a pine, a willow, a dead tree, a giant fungus: the node is still the same oak or yew to gather). WATER has its own rows by body. AREAS: each `wilds` place of world.json has a signature drawn within its `radius` (full to `area_fade` of it, thinning to nothing at the edge, only on the place's own biome): its own tables, a `ring` of standing stones, a `lattice` of hedged fields, and its landmarks. Decoration thins to `road_floor` along a road and to nothing at a town. LANDMARKS: the world is cut into cells of `cell` tiles and each may hold one place of interest (`placement`: by biome, and by area where an area has its own), plus the `fixed` ones of an area at an offset from its anchor. A landmark is drawn from its `layout` (glyph names across, one row of tiles each, '.' for nothing) round its `center`, is found when the heir comes within `see_range`, and can be used from within `use_reach` tiles: an outcome is drawn from its `outcomes` on dice keyed on the seed and the landmark, once until `renew_gens` generations pass.",
+  "settings": {
+    "town_clear": 3,
+    "town_fade": 22,
+    "road_clear": 1.5,
+    "road_fade": 7.0,
+    "road_floor": 0.2,
+    "dungeon_clear": 7,
+    "area_fade": 0.7,
+    "cell": 24,
+    "margin": 5,
+    "min_gap": 7,
+    "tries": 5,
+    "see_range": 7.0,
+    "use_reach": 2.0,
+    "renew_gens": 6,
+    "dungeon_near": 56,
+    "found_cap": 4000,
+    "markup": 1.15,
+    "offer_reach": 4.0
+  },
+  "ground": {
+    "plains": {
+      "tones": [{"glyph": "grass_patch", "p": 0.3, "clump": 12}],
+      "decor": [
+        {"glyph": "grass_tuft", "p": 0.1},
+        {"glyph": "flowers_yellow", "p": 0.07, "clump": 7},
+        {"glyph": "flowers_red", "p": 0.05, "clump": 9},
+        {"glyph": "boulder", "p": 0.004},
+        {"glyph": "reeds", "p": 0.3, "near": "water"}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "birch_tree", "w": 3}, {"glyph": "oak_tree", "w": 2}],
+        "yew_tree": [{"glyph": "yew_tree", "w": 1}]
+      }
+    },
+    "forest": {
+      "tones": [{"glyph": "moss", "p": 0.3, "clump": 10}],
+      "decor": [
+        {"glyph": "fern", "p": 0.07},
+        {"glyph": "mushrooms", "p": 0.03},
+        {"glyph": "fallen_log", "p": 0.015},
+        {"glyph": "grass_tuft", "p": 0.05},
+        {"glyph": "flowers_yellow", "p": 0.03, "clump": 8},
+        {"glyph": "reeds", "p": 0.25, "near": "water"}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "oak_tree", "w": 6}, {"glyph": "birch_tree", "w": 1}, {"glyph": "dead_tree", "w": 0.4}],
+        "yew_tree": [{"glyph": "yew_tree", "w": 4}, {"glyph": "pine_tree", "w": 1}, {"glyph": "giant_fungus", "w": 0.2}]
+      }
+    },
+    "hills": {
+      "tones": [{"glyph": "dry_patch", "p": 0.3, "clump": 11}],
+      "decor": [
+        {"glyph": "grass_tuft", "p": 0.06},
+        {"glyph": "boulder", "p": 0.035},
+        {"glyph": "scree", "p": 0.02},
+        {"glyph": "flowers_yellow", "p": 0.02, "clump": 8},
+        {"glyph": "reeds", "p": 0.25, "near": "water"}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "oak_tree", "w": 2}, {"glyph": "pine_tree", "w": 3}],
+        "yew_tree": [{"glyph": "pine_tree", "w": 3}, {"glyph": "yew_tree", "w": 1}]
+      }
+    },
+    "mountains": {
+      "tones": [{"glyph": "rock_tone", "p": 0.35, "clump": 9}],
+      "decor": [
+        {"glyph": "boulder", "p": 0.05},
+        {"glyph": "scree", "p": 0.07},
+        {"glyph": "crystal", "p": 0.007, "min_h": 70},
+        {"glyph": "cairn", "p": 0.002},
+        {"glyph": "old_bones", "p": 0.003}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "dead_tree", "w": 1}],
+        "yew_tree": [{"glyph": "pine_tree", "w": 3}, {"glyph": "dead_tree", "w": 2}]
+      }
+    },
+    "swamp": {
+      "tones": [{"glyph": "mud", "p": 0.35, "clump": 8}, {"glyph": "moss", "p": 0.1}],
+      "decor": [
+        {"glyph": "reeds", "p": 0.09},
+        {"glyph": "pool", "p": 0.04},
+        {"glyph": "mushrooms", "p": 0.03},
+        {"glyph": "fallen_log", "p": 0.01},
+        {"glyph": "wisp", "p": 0.004}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "willow_tree", "w": 5}, {"glyph": "dead_tree", "w": 3}],
+        "yew_tree": [{"glyph": "dead_tree", "w": 2}, {"glyph": "giant_fungus", "w": 1}]
+      }
+    },
+    "tundra": {
+      "tones": [{"glyph": "snow_patch", "p": 0.4, "clump": 12}],
+      "decor": [
+        {"glyph": "snowdrift", "p": 0.08},
+        {"glyph": "ice", "p": 0.03},
+        {"glyph": "boulder", "p": 0.01},
+        {"glyph": "old_bones", "p": 0.006}
+      ],
+      "trees": {"oak_tree": [{"glyph": "snow_pine", "w": 1}], "yew_tree": [{"glyph": "snow_pine", "w": 1}]}
+    },
+    "coast": {
+      "tones": [{"glyph": "sand_ripple", "p": 0.35, "clump": 10}],
+      "decor": [
+        {"glyph": "shell", "p": 0.03},
+        {"glyph": "driftwood", "p": 0.02},
+        {"glyph": "grass_tuft", "p": 0.03},
+        {"glyph": "boulder", "p": 0.012},
+        {"glyph": "reeds", "p": 0.3, "near": "water"}
+      ],
+      "trees": {"oak_tree": [{"glyph": "oak_tree", "w": 1}], "yew_tree": [{"glyph": "yew_tree", "w": 1}]}
+    },
+    "volcanic": {
+      "tones": [{"glyph": "scorch", "p": 0.3, "clump": 9}, {"glyph": "ash", "p": 0.15}],
+      "decor": [
+        {"glyph": "lava_crack", "p": 0.05},
+        {"glyph": "boulder", "p": 0.03},
+        {"glyph": "scree", "p": 0.03},
+        {"glyph": "old_bones", "p": 0.006}
+      ],
+      "trees": {"oak_tree": [{"glyph": "dead_tree", "w": 1}], "yew_tree": [{"glyph": "dead_tree", "w": 1}]}
+    }
+  },
+  "water": {
+    "sea": {"tones": [], "decor": [{"glyph": "ripple", "p": 0.1}, {"glyph": "foam", "p": 0.09}]},
+    "lake": {"tones": [], "decor": [{"glyph": "ripple", "p": 0.09}, {"glyph": "lily", "p": 0.05}]},
+    "river": {"tones": [], "decor": [{"glyph": "ripple", "p": 0.12}]},
+    "ford": {"tones": [], "decor": [{"glyph": "scree", "p": 0.14}]}
+  },
+  "areas": {
+    "greenvale": {
+      "radius": 46,
+      "tones": [{"glyph": "grass_patch", "p": 0.25, "clump": 12}],
+      "decor": [
+        {"glyph": "grass_tuft", "p": 0.07},
+        {"glyph": "flowers_yellow", "p": 0.04, "clump": 7},
+        {"glyph": "haystack", "p": 0.006},
+        {"glyph": "scarecrow", "p": 0.002},
+        {"glyph": "reeds", "p": 0.3, "near": "water"}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "oak_tree", "w": 3}, {"glyph": "birch_tree", "w": 2}],
+        "yew_tree": [{"glyph": "yew_tree", "w": 1}]
+      },
+      "lattice": {"cell": 16, "hedge": "hedge", "hedge_p": 0.7, "field": "furrow", "field_p": 0.55, "crop": "wheat", "crop_p": 0.12},
+      "placement": {
+        "p": 0.7,
+        "kinds": {
+          "farm": 4,
+          "bandit_camp": 3,
+          "well": 2,
+          "shrine": 1,
+          "traders_camp": 2,
+          "merchant": 2,
+          "ruin": 1,
+          "battlefield": 1,
+          "hermit": 1
+        }
+      },
+      "fixed": [{"kind": "farm", "at": [8, -7]}, {"kind": "bandit_camp", "at": [-26, 16]}]
+    },
+    "whisperwood": {
+      "radius": 48,
+      "tones": [{"glyph": "fog", "p": 0.4, "clump": 9}, {"glyph": "moss", "p": 0.3, "clump": 7}],
+      "decor": [
+        {"glyph": "fern", "p": 0.08},
+        {"glyph": "mushrooms", "p": 0.045},
+        {"glyph": "fallen_log", "p": 0.025},
+        {"glyph": "wisp", "p": 0.003},
+        {"glyph": "reeds", "p": 0.2, "near": "water"}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "ancient_tree", "w": 6}, {"glyph": "oak_tree", "w": 1}],
+        "yew_tree": [{"glyph": "ancient_tree", "w": 5}, {"glyph": "yew_tree", "w": 2}]
+      },
+      "placement": {
+        "p": 0.65,
+        "kinds": {
+          "hunters_camp": 3,
+          "ruin": 2,
+          "shrine": 1,
+          "hermit": 1,
+          "herb_grove": 2,
+          "standing_stones": 2,
+          "well": 1,
+          "bandit_camp": 1,
+          "battlefield": 1
+        }
+      },
+      "fixed": [
+        {"kind": "lair", "at": [20, -14]},
+        {"kind": "hermit", "at": [-12, 9]},
+        {"kind": "shrine", "at": [8, 10]},
+        {"kind": "standing_stones", "at": [-20, -16]}
+      ]
+    },
+    "mirefen": {
+      "radius": 48,
+      "tones": [{"glyph": "mud", "p": 0.45, "clump": 8}, {"glyph": "fog", "p": 0.12, "clump": 8}],
+      "decor": [
+        {"glyph": "reeds", "p": 0.11},
+        {"glyph": "pool", "p": 0.1, "clump": 6},
+        {"glyph": "wisp", "p": 0.014},
+        {"glyph": "mushrooms", "p": 0.03},
+        {"glyph": "fallen_log", "p": 0.01}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "willow_tree", "w": 4}, {"glyph": "dead_tree", "w": 4}],
+        "yew_tree": [{"glyph": "dead_tree", "w": 3}, {"glyph": "giant_fungus", "w": 2}]
+      },
+      "placement": {
+        "p": 0.65,
+        "kinds": {"herb_grove": 3, "fishing": 3, "hermit": 2, "ruin": 2, "well": 1, "standing_stones": 1, "bandit_camp": 1}
+      },
+      "fixed": [{"kind": "herb_grove", "at": [9, 6]}, {"kind": "fishing", "at": [-11, 5]}, {"kind": "hermit", "at": [15, -10]}]
+    },
+    "elderglade": {
+      "radius": 44,
+      "tones": [{"glyph": "fae_glow", "p": 0.34, "clump": 8}, {"glyph": "moss", "p": 0.15}],
+      "decor": [
+        {"glyph": "flowers_red", "p": 0.05, "clump": 6},
+        {"glyph": "flowers_yellow", "p": 0.04, "clump": 6},
+        {"glyph": "mushrooms", "p": 0.04},
+        {"glyph": "fern", "p": 0.03},
+        {"glyph": "wisp", "p": 0.006},
+        {"glyph": "crystal", "p": 0.003}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "fae_tree", "w": 4}, {"glyph": "giant_fungus", "w": 2}, {"glyph": "birch_tree", "w": 1}],
+        "yew_tree": [{"glyph": "fae_tree", "w": 4}, {"glyph": "giant_fungus", "w": 1}]
+      },
+      "ring": {
+        "center": [0, 0],
+        "rings": [{"radius": 7, "count": 12, "glyph": "standing_stone"}, {"radius": 12, "count": 18, "glyph": "mushrooms"}],
+        "inside": 6.5,
+        "inside_tone": "fae_glow"
+      },
+      "placement": {
+        "p": 0.6,
+        "kinds": {"shrine": 2, "herb_grove": 3, "standing_stones": 3, "hermit": 1, "hunters_camp": 1, "ruin": 1, "well": 1}
+      },
+      "fixed": [
+        {"kind": "fae_ring", "at": [0, 0]},
+        {"kind": "shrine", "at": [10, -9]},
+        {"kind": "hermit", "at": [-14, 10]},
+        {"kind": "merchant", "at": [18, 8]},
+        {"kind": "standing_stones", "at": [-18, -14]}
+      ]
+    },
+    "frostreach": {
+      "radius": 52,
+      "tones": [{"glyph": "snow_patch", "p": 0.6, "clump": 14}],
+      "decor": [
+        {"glyph": "snowdrift", "p": 0.12},
+        {"glyph": "ice", "p": 0.06, "clump": 6},
+        {"glyph": "old_bones", "p": 0.01},
+        {"glyph": "boulder", "p": 0.015},
+        {"glyph": "crystal", "p": 0.004}
+      ],
+      "trees": {"oak_tree": [{"glyph": "snow_pine", "w": 1}], "yew_tree": [{"glyph": "snow_pine", "w": 1}]},
+      "placement": {
+        "p": 0.55,
+        "kinds": {"hunters_camp": 3, "cave": 3, "ruin": 2, "battlefield": 2, "fishing": 1, "shrine": 1, "hermit": 1}
+      },
+      "fixed": [
+        {"kind": "cave", "at": [16, 12]},
+        {"kind": "hunters_camp", "at": [-10, -8]},
+        {"kind": "battlefield", "at": [-26, 11]}
+      ]
+    },
+    "highcrag": {
+      "radius": 48,
+      "tones": [{"glyph": "rock_tone", "p": 0.5, "clump": 10}],
+      "decor": [
+        {"glyph": "boulder", "p": 0.07},
+        {"glyph": "scree", "p": 0.09},
+        {"glyph": "crystal", "p": 0.016, "clump": 8},
+        {"glyph": "cairn", "p": 0.004},
+        {"glyph": "old_bones", "p": 0.004}
+      ],
+      "trees": {
+        "oak_tree": [{"glyph": "dead_tree", "w": 1}],
+        "yew_tree": [{"glyph": "pine_tree", "w": 3}, {"glyph": "dead_tree", "w": 2}]
+      },
+      "placement": {"p": 0.6, "kinds": {"cave": 3, "ore": 5, "ruin": 2, "battlefield": 1, "shrine": 1, "hermit": 1, "hunters_camp": 1}},
+      "fixed": [{"kind": "ore", "at": [8, 6]}, {"kind": "cave", "at": [-14, -11]}, {"kind": "shrine", "at": [18, -12]}]
+    },
+    "stormcoast": {
+      "radius": 46,
+      "tones": [{"glyph": "sand_ripple", "p": 0.4, "clump": 10}],
+      "decor": [
+        {"glyph": "shell", "p": 0.04},
+        {"glyph": "driftwood", "p": 0.035},
+        {"glyph": "boulder", "p": 0.04},
+        {"glyph": "scree", "p": 0.02},
+        {"glyph": "reeds", "p": 0.3, "near": "water"}
+      ],
+      "trees": {"oak_tree": [{"glyph": "oak_tree", "w": 1}], "yew_tree": [{"glyph": "yew_tree", "w": 1}]},
+      "placement": {
+        "p": 0.6,
+        "kinds": {"fishing": 4, "wreck": 4, "ruin": 2, "bandit_camp": 2, "traders_camp": 1, "hermit": 1, "merchant": 1, "well": 1}
+      },
+      "fixed": [
+        {"kind": "wreck", "at": [14, 10]},
+        {"kind": "ruin", "at": [-10, 8]},
+        {"kind": "hermit", "at": [-18, -8]},
+        {"kind": "traders_camp", "at": [8, -14]}
+      ]
+    }
+  },
+  "placement": {
+    "plains": {
+      "p": 0.55,
+      "kinds": {
+        "farm": 3,
+        "well": 2,
+        "shrine": 1,
+        "bandit_camp": 2,
+        "traders_camp": 1,
+        "merchant": 1,
+        "ruin": 1,
+        "standing_stones": 1,
+        "battlefield": 1,
+        "hermit": 1
+      }
+    },
+    "forest": {
+      "p": 0.5,
+      "kinds": {
+        "hunters_camp": 3,
+        "ruin": 2,
+        "shrine": 1,
+        "hermit": 1,
+        "herb_grove": 2,
+        "standing_stones": 1,
+        "well": 1,
+        "bandit_camp": 1,
+        "merchant": 1
+      }
+    },
+    "hills": {
+      "p": 0.5,
+      "kinds": {
+        "cave": 2,
+        "ore": 3,
+        "ruin": 2,
+        "bandit_camp": 2,
+        "hunters_camp": 1,
+        "shrine": 1,
+        "well": 1,
+        "battlefield": 1,
+        "standing_stones": 1,
+        "merchant": 1
+      }
+    },
+    "mountains": {"p": 0.4, "kinds": {"cave": 3, "ore": 4, "ruin": 1, "shrine": 1, "hermit": 1, "hunters_camp": 1, "battlefield": 1}},
+    "swamp": {
+      "p": 0.45,
+      "kinds": {"herb_grove": 3, "hermit": 2, "ruin": 1, "fishing": 3, "well": 1, "standing_stones": 1, "bandit_camp": 1}
+    },
+    "tundra": {
+      "p": 0.35,
+      "kinds": {"hunters_camp": 2, "cave": 2, "ruin": 1, "battlefield": 1, "hermit": 1, "shrine": 1, "fishing": 1}
+    },
+    "coast": {
+      "p": 0.5,
+      "kinds": {
+        "fishing": 4,
+        "wreck": 3,
+        "bandit_camp": 1,
+        "traders_camp": 2,
+        "hermit": 1,
+        "ruin": 1,
+        "well": 1,
+        "shrine": 1,
+        "merchant": 1
+      }
+    },
+    "volcanic": {"p": 0.3, "kinds": {"cave": 2, "ore": 4, "ruin": 1, "battlefield": 1, "hermit": 1}}
+  },
+  "ores": {
+    "plains": [{"id": "copper", "gen": 1}, {"id": "iron", "gen": 1}],
+    "forest": [{"id": "iron", "gen": 1}, {"id": "copper", "gen": 1}],
+    "hills": [{"id": "iron", "gen": 1}, {"id": "copper", "gen": 1}, {"id": "silver", "gen": 6}],
+    "mountains": [{"id": "iron", "gen": 1}, {"id": "silver", "gen": 6}, {"id": "crystal", "gen": 6}, {"id": "gold", "gen": 14}],
+    "swamp": [{"id": "iron", "gen": 1}],
+    "tundra": [{"id": "iron", "gen": 1}, {"id": "silver", "gen": 6}, {"id": "crystal", "gen": 6}],
+    "coast": [{"id": "copper", "gen": 1}, {"id": "iron", "gen": 1}],
+    "volcanic": [{"id": "iron", "gen": 1}, {"id": "steel", "gen": 6}, {"id": "gold", "gen": 14}]
+  },
+  "landmarks": {
+    "ruin": {
+      "name": "Ruin",
+      "verb": "search the ruin",
+      "done": "The ruin has been picked over.",
+      "layout": [["ruin_wall", ".", "ruin_wall"], ["ruin_wall", "rubble", "."], ["rubble", "ruin_wall", "rubble"]],
+      "center": [1, 1],
+      "outcomes": [
+        {"w": 5, "text": "{heir} turns over the rubble and finds {item}.", "loot": 1.5},
+        {"w": 3, "text": "{heir} pries a purse of {gold} gold from behind a loose stone.", "gold": [20, 60]},
+        {"w": 2, "text": "{heir} finds nothing but rubble and old nests."},
+        {"w": 1.5, "text": "A beam gives way over {heir}, who crawls clear, bruised, with {item}.", "hurt": 0.15, "loot": 1.0}
+      ]
+    },
+    "bandit_camp": {
+      "name": "Bandit camp",
+      "verb": "search the camp",
+      "done": "The camp has been stripped.",
+      "layout": [["tent_red", "campfire", "tent_red"], [".", "crate", "."]],
+      "center": [1, 0],
+      "outcomes": [
+        {"w": 3, "text": "{heir} finds the bandits' stash: {item}.", "loot": 1.3},
+        {"w": 4, "text": "{heir} takes {gold} gold from the camp chest.", "gold": [30, 90]},
+        {
+          "w": 2,
+          "text": "The camp is not empty. A lookout's arrow finds {heir} before the bandits flee, leaving {gold} gold.",
+          "hurt": 0.2,
+          "gold": [15, 45]
+        },
+        {"w": 1, "text": "The bandits have cleared out and left nothing."}
+      ]
+    },
+    "hunters_camp": {
+      "name": "Hunters' camp",
+      "verb": "rest at the camp",
+      "done": "The hunters' fire is cold.",
+      "layout": [["tent_green", "campfire", "fallen_log"]],
+      "center": [1, 0],
+      "outcomes": [
+        {"w": 5, "text": "{heir} rests by the hunters' fire and is restored.", "heal": true},
+        {"w": 2, "text": "{heir} rests, and leaves with a flask of the hunters' own draught.", "heal": true, "potion": 1},
+        {"w": 1, "text": "{heir} finds a hunter's spare kit under the tent: {item}.", "heal": true, "loot": 0.8}
+      ]
+    },
+    "traders_camp": {
+      "name": "Traders' camp",
+      "verb": "see what the traders sell",
+      "done": "The traders have nothing more for you.",
+      "trade": true,
+      "layout": [["wagon", "tent_blue", "campfire"]],
+      "center": [0, 0],
+      "stock": {
+        "default": ["willowbark_tonic", "lucky_charm", "leather_armor", "hunting_bow", "iron_sword"],
+        "greenvale": ["willowbark_tonic", "leather_armor", "iron_mace", "copper_ring", "hunting_bow"],
+        "stormcoast": ["scout_leathers", "longbow", "ring_of_vigor", "physicians_draught", "amulet_of_focus"]
+      },
+      "outcomes": []
+    },
+    "merchant": {
+      "name": "Wandering merchant",
+      "verb": "see the merchant's wares",
+      "done": "The merchant has gone through their pack for you.",
+      "trade": true,
+      "layout": [["merchant", "crate"]],
+      "center": [0, 0],
+      "stock": {
+        "default": ["willowbark_tonic", "lucky_charm", "scout_leathers", "longbow", "ring_of_vigor", "steel_sword"],
+        "elderglade": ["amulet_of_focus", "runed_staff", "mage_robes", "physicians_draught", "scholars_pendant"],
+        "greenvale": ["willowbark_tonic", "chainmail", "warhammer", "silver_tongue_brooch", "longbow"]
+      },
+      "outcomes": []
+    },
+    "shrine": {
+      "name": "Shrine",
+      "verb": "pray at the shrine",
+      "done": "The shrine is quiet.",
+      "layout": [["flowers_yellow", "shrine", "flowers_red"]],
+      "center": [1, 0],
+      "outcomes": [
+        {
+          "w": 4,
+          "text": "{heir} kneels at the shrine. Warmth runs through them and the road's aches are gone.",
+          "heal": true,
+          "xp": 0.6
+        },
+        {
+          "w": 2,
+          "text": "{heir} leaves a coin at the shrine and finds {gold} gold in the offering bowl, as if returned.",
+          "gold": [10, 40]
+        },
+        {"w": 2, "text": "{heir} prays, and the god is somewhere else. Nothing answers."},
+        {"w": 1, "text": "{heir} makes a vow at the shrine and rises sure of it.", "xp": 1.5}
+      ]
+    },
+    "well": {
+      "name": "Well",
+      "verb": "drink from the well",
+      "done": "The well has been drawn from.",
+      "layout": [["well"]],
+      "center": [0, 0],
+      "outcomes": [
+        {"w": 6, "text": "{heir} drinks cold, clean water and feels restored.", "heal": true},
+        {"w": 1.5, "text": "The water is foul. {heir} spits and is sick for an hour.", "hurt": 0.08},
+        {"w": 1, "text": "{heir} hauls up the bucket with {gold} old coins in it.", "gold": [8, 30]}
+      ]
+    },
+    "farm": {
+      "name": "Abandoned farm",
+      "verb": "search the farm",
+      "done": "The farm has been gleaned.",
+      "layout": [["hut", "haystack", "hedge"], [".", "wheat", "wheat"]],
+      "center": [0, 0],
+      "outcomes": [
+        {"w": 4, "text": "{heir} finds {gold} gold in a jar under the hearthstone.", "gold": [8, 30]},
+        {"w": 3, "text": "{heir} finds a cellar of dried herbs and takes a draught for the road.", "potion": 1},
+        {"w": 2, "text": "{heir} finds something worth carrying in the barn: {item}.", "loot": 0.8},
+        {"w": 1, "text": "The farm has been emptied by someone before {heir}."}
+      ]
+    },
+    "cave": {
+      "name": "Cave mouth",
+      "verb": "explore the cave",
+      "done": "The cave has been explored.",
+      "layout": [["boulder", "cave", "boulder"]],
+      "center": [1, 0],
+      "outcomes": [
+        {"w": 4, "text": "{heir} edges into the dark and finds {item}. {dungeon_line}", "loot": 1.8},
+        {"w": 2, "text": "{heir} finds {gold} gold among old bones. {dungeon_line}", "gold": [25, 70]},
+        {
+          "w": 2,
+          "text": "Something in the dark takes a swipe at {heir} before it is gone, and {heir} finds {item}. {dungeon_line}",
+          "hurt": 0.25,
+          "loot": 1.2
+        },
+        {"w": 1, "text": "The cave is only a cave. {dungeon_line}"}
+      ]
+    },
+    "standing_stones": {
+      "name": "Standing stones",
+      "verb": "touch the stones",
+      "done": "The stones are silent.",
+      "layout": [["standing_stone", ".", "standing_stone"], [".", "cairn", "."], ["standing_stone", ".", "standing_stone"]],
+      "center": [1, 1],
+      "outcomes": [
+        {"w": 4, "text": "{heir} lays a hand on the stones and sees, for a moment, everyone who ever stood here.", "xp": 1.0},
+        {"w": 2, "text": "The stones hum under {heir}'s palm and the tiredness drains away.", "heal": true},
+        {"w": 2, "text": "The stones are only stones."},
+        {"w": 1, "text": "{heir} finds {gold} gold in the moss at the foot of the tallest stone.", "gold": [15, 50]}
+      ]
+    },
+    "battlefield": {
+      "name": "Old battlefield",
+      "verb": "search the field",
+      "done": "The field has been searched.",
+      "layout": [["old_bones", "banner", "old_bones"], ["rubble", "old_bones", "."]],
+      "center": [1, 0],
+      "outcomes": [
+        {
+          "w": 5,
+          "text": "{heir} finds a weapon the grass had half swallowed: {item}.",
+          "loot": 1.5,
+          "slots": {"weapon": 80, "armor": 15, "trinket": 5}
+        },
+        {"w": 2, "text": "{heir} finds {gold} gold in a dead captain's belt.", "gold": [25, 80]},
+        {"w": 2, "text": "Bones and rust, and nothing {heir} can use."},
+        {
+          "w": 1,
+          "text": "The field is not quiet. A cold hand closes on {heir}'s ankle before letting go.",
+          "hurt": 0.12,
+          "loot": 1.0
+        }
+      ]
+    },
+    "lair": {
+      "name": "Lair of {legend}",
+      "verb": "search the den",
+      "done": "The den has been searched.",
+      "layout": [["boulder", "lair", "boulder"], ["old_bones", ".", "old_bones"]],
+      "center": [1, 0],
+      "outcomes": [
+        {
+          "w": 4,
+          "text": "The den is empty of its owner, and {heir} finds {item} among the bones.",
+          "loot": 3.0,
+          "if": "legend_slain"
+        },
+        {"w": 3, "text": "The den is cold. {heir} finds {gold} gold in the bones.", "gold": [60, 160], "if": "legend_slain"},
+        {
+          "w": 3,
+          "text": "{legend} is near. {heir} snatches {item} from the bones and runs, not unhurt.",
+          "hurt": 0.3,
+          "loot": 3.0,
+          "if": "legend_stirring"
+        },
+        {
+          "w": 2,
+          "text": "The air is thick with the smell of {legend}. {heir} takes {gold} gold and goes quickly.",
+          "hurt": 0.1,
+          "gold": [60, 160],
+          "if": "legend_stirring"
+        }
+      ]
+    },
+    "ore": {
+      "name": "Ore outcrop",
+      "verb": "mine the outcrop",
+      "done": "The outcrop has been worked.",
+      "layout": [["boulder", "ore_spot"]],
+      "center": [1, 0],
+      "outcomes": [
+        {"w": 5, "text": "{heir} chips out {n} lumps of {material}.", "ore": [2, 5]},
+        {"w": 2, "text": "{heir} strikes a rich seam: {n} lumps of {material}.", "ore": [5, 9]},
+        {
+          "w": 1,
+          "text": "A slab comes away and clips {heir}, who takes {n} lumps of {material} anyway.",
+          "ore": [2, 4],
+          "hurt": 0.1
+        }
+      ]
+    },
+    "herb_grove": {
+      "name": "Herb grove",
+      "verb": "gather herbs",
+      "done": "The grove has been cut back.",
+      "layout": [["herb_grove", "herb_grove"], ["fern", "herb_grove"]],
+      "center": [0, 0],
+      "outcomes": [
+        {"w": 5, "text": "{heir} gathers {n} bundles of good herbs.", "material": {"id": "herb", "n": [3, 6]}},
+        {
+          "w": 2,
+          "text": "{heir} gathers {n} bundles and brews a draught from the freshest.",
+          "material": {"id": "herb", "n": [2, 4]},
+          "potion": 1
+        },
+        {
+          "w": 1,
+          "text": "A thorn catches {heir}'s hand, but the grove gives {n} bundles.",
+          "material": {"id": "herb", "n": [2, 4]},
+          "hurt": 0.05
+        }
+      ]
+    },
+    "fishing": {
+      "name": "Fishing spot",
+      "verb": "fish here",
+      "done": "The water here has been fished out for now.",
+      "need": "water",
+      "layout": [["fishing_post"]],
+      "center": [0, 0],
+      "outcomes": [
+        {"w": 5, "text": "{heir} lands a good catch and sells it on for {gold} gold.", "gold": [8, 28]},
+        {"w": 2, "text": "{heir} lands nothing but weed and patience."},
+        {"w": 1, "text": "The line snags something heavy: {item}.", "loot": 0.8}
+      ]
+    },
+    "hermit": {
+      "name": "Hermit",
+      "verb": "talk to the hermit",
+      "done": "The hermit has said all there is to say.",
+      "layout": [["hut", "hermit"]],
+      "center": [1, 0],
+      "outcomes": [
+        {
+          "w": 3,
+          "text": "\"Mind the road,\" says the hermit, \"and mind what you step in.\" They press a warm herbal draught into {heir}'s hand.",
+          "potion": 1
+        },
+        {
+          "w": 3,
+          "text": "The hermit talks of {dungeon}, and the things that come out of it. {heir} listens, and learns something.",
+          "xp": 0.8
+        },
+        {"w": 2, "text": "\"Come in, sit,\" says the hermit. {heir} sits, and gets up rested.", "heal": true},
+        {
+          "w": 2,
+          "text": "The hermit says nothing for an hour, then gives {heir} {gold} gold for the company.",
+          "gold": [10, 35]
+        },
+        {
+          "w": 2,
+          "text": "The hermit's door is shut, and a fine mist hangs round their hut; but a gift has been left on the step: {item}.",
+          "loot": 1.0,
+          "areas": ["whisperwood", "elderglade"]
+        },
+        {
+          "w": 2,
+          "text": "\"The fen gives and the fen takes,\" says the hermit, and hands over a pouch of swamp-lights in a jar.",
+          "potion": 1,
+          "xp": 0.5,
+          "areas": ["mirefen"]
+        },
+        {
+          "w": 2,
+          "text": "The keeper of the lantern points out to the grey water: \"Wrecks, all along there. Take care what you take.\"",
+          "xp": 0.8,
+          "areas": ["stormcoast"]
+        }
+      ]
+    },
+    "wreck": {
+      "name": "Shipwreck",
+      "verb": "search the wreck",
+      "done": "The wreck has been stripped.",
+      "layout": [["wreck", "driftwood"]],
+      "center": [0, 0],
+      "outcomes": [
+        {"w": 4, "text": "{heir} wades the timbers and finds {item} in a sea-chest.", "loot": 1.8},
+        {"w": 3, "text": "{heir} finds {gold} gold in a drowned purse.", "gold": [25, 80]},
+        {"w": 1, "text": "A rotten deck gives way under {heir}.", "hurt": 0.12, "loot": 0.8}
+      ]
+    },
+    "fae_ring": {
+      "name": "Fae ring",
+      "verb": "step into the ring",
+      "done": "The ring is still, and the fae are elsewhere.",
+      "layout": [["fae_stone"]],
+      "center": [0, 0],
+      "outcomes": [
+        {
+          "w": 3,
+          "text": "{heir} steps into the ring. The stones sing, and when it stops {heir} knows a little more than before.",
+          "xp": 2.0
+        },
+        {"w": 3, "text": "{heir} dances three turns with no one, and comes out restored.", "heal": true},
+        {"w": 2, "text": "The fae take a tithe from {heir}'s purse, and laugh, and are gone.", "gold": [-40, -10]},
+        {"w": 1, "text": "A fae gift is left in the ring's heart: {item}.", "loot": 4.0}
+      ]
+    }
+  },
+  "text": {
+    "found": "{heir} comes upon {name}.",
+    "hint": "{name} here: Use to {verb}.",
+    "hint_done": "{name} here: {done}",
+    "nothing": "There is nothing to use here.",
+    "dungeon_line": "The tunnels run on toward {dungeon}.",
+    "dungeon_none": "the old roads",
+    "legend_unknown": "something old",
+    "offer": "{name}: {item} for {price} gold. Use again to buy it.",
+    "bought": "{heir} buys {item} for {price} gold.",
+    "poor": "{heir} cannot pay {price} gold for {item}.",
+    "full": "{heir} cannot carry {item}.",
+    "sold_out": "There is nothing more to sell {heir}.",
+    "tithe": "The fae took {gold} gold.",
+    "map_title": "Places found",
+    "map_line": "{name}, {area}",
+    "map_more": "and {n} more",
+    "map_none": "None found yet.",
+    "in_wilds": "the wilds"
+  },
+  "glyphs": {
+    "grass_patch": {
+      "rows": ["..a.....", ".aab..a.", "...b.aab", "a..a....", ".bb..a.a", "..a.bb..", "a...a..b", ".ab..a.."],
+      "palette": {"a": [0.36, 0.62, 0.26, 0.45], "b": [0.2, 0.42, 0.16, 0.45]}
+    },
+    "moss": {
+      "rows": ["m...m.n.", ".nm....m", "...mn...", "m.n...mm", ".m...n..", "..mm.m.n", "n...m...", ".m.n..m."],
+      "palette": {"m": [0.2, 0.44, 0.2, 0.5], "n": [0.3, 0.55, 0.28, 0.45]}
+    },
+    "dry_patch": {
+      "rows": ["d..e.d..", ".d...d.e", "..e.d...", "d...e.d.", ".e.d...e", "...e.d..", "e.d...d.", ".d..e..d"],
+      "palette": {"d": [0.56, 0.52, 0.3, 0.5], "e": [0.34, 0.4, 0.2, 0.45]}
+    },
+    "rock_tone": {
+      "rows": ["r..s..r.", "..r...s.", "s...r...", ".r..s..r", "...r..s.", "r.s...r.", "..r.s...", ".s...r.s"],
+      "palette": {"r": [0.3, 0.3, 0.33, 0.5], "s": [0.62, 0.61, 0.6, 0.4]}
+    },
+    "mud": {
+      "rows": ["mmm..mm.", "mmmm.mmm", ".mm..mmm", "..mm..m.", "mm..mmm.", "mmm.mmmm", ".mm..mm.", "..m..m.."],
+      "palette": {"m": [0.26, 0.19, 0.11, 0.45]}
+    },
+    "snow_patch": {
+      "rows": ["ww.www.w", "wwwwwwww", ".wwwwww.", "wwwwwwww", "ww.wwww.", "wwwwwwww", ".www.www", "wwwwwwww"],
+      "palette": {"w": [0.96, 0.98, 1.0, 0.6]}
+    },
+    "sand_ripple": {
+      "rows": [".s..s...", "..ss..s.", "........", "s...s.ss", ".ss.....", "...s..s.", "s......s", "..ss.s.."],
+      "palette": {"s": [0.62, 0.52, 0.3, 0.4]}
+    },
+    "scorch": {
+      "rows": ["kk..kkk.", ".kkk..kk", "k..kkk..", "kkk..kkk", "..kk.kk.", "kk..kkk.", ".kkk..kk", "k..kk..."],
+      "palette": {"k": [0.08, 0.04, 0.04, 0.5]}
+    },
+    "ash": {
+      "rows": ["a...a..a", "..a...a.", ".a..a...", "a...a..a", "..a..a..", ".a...a.a", "a..a....", "...a.a.."],
+      "palette": {"a": [0.5, 0.48, 0.48, 0.45]}
+    },
+    "fog": {
+      "rows": [".ff..fff", "ffff.fff", ".fff..f.", "..f..ff.", "fff.ffff", ".ff..ff.", "f..f.f..", ".ff..ff."],
+      "palette": {"f": [0.86, 0.89, 0.92, 0.3]}
+    },
+    "fae_glow": {
+      "rows": ["..g..g..", ".gGg.gg.", "..g.g...", "g..gG.g.", ".gg..g..", "..g.gGg.", "g..g..g.", ".g....g."],
+      "palette": {"g": [0.5, 0.95, 0.85, 0.3], "G": [0.9, 1.0, 1.0, 0.55]}
+    },
+    "furrow": {
+      "rows": ["........", "bBbBbBbB", "........", "........", "bBbBbBbB", "........", "........", "bBbBbBbB"],
+      "palette": {"b": [0.28, 0.18, 0.09, 0.45], "B": [0.4, 0.28, 0.14, 0.4]}
+    },
+    "grass_tuft": {
+      "rows": ["........", "........", "..g..g..", ".g.g.g..", ".gGgGg.g", ".gGgGgGg", "........", "........"],
+      "palette": {"g": [0.2, 0.46, 0.16], "G": [0.36, 0.66, 0.26]}
+    },
+    "flowers_yellow": {
+      "rows": ["........", "..y.....", ".ygy..w.", "..g..wgw", ".g....g.", "g..g..g.", ".g.g.g..", "........"],
+      "palette": {"y": [0.98, 0.86, 0.2], "w": [0.97, 0.97, 0.9], "g": [0.24, 0.52, 0.2]}
+    },
+    "flowers_red": {
+      "rows": ["........", ".....r..", "..r.rgr.", ".rgr.g..", "..g..g..", ".g..g...", "..g.g...", "........"],
+      "palette": {"r": [0.85, 0.22, 0.4], "g": [0.24, 0.52, 0.2]}
+    },
+    "fern": {
+      "rows": ["........", "..f..f..", ".ff.ff..", "..fffF..", ".fffFff.", "..fF.f..", "...f....", "...s...."],
+      "palette": {"f": [0.14, 0.44, 0.2], "F": [0.26, 0.62, 0.3], "s": [0.3, 0.24, 0.12]}
+    },
+    "mushrooms": {
+      "rows": ["........", "........", "..rr....", ".rwrr.rr", "..s..rwr", "..s...s.", ".sss.ss.", "........"],
+      "palette": {"r": [0.76, 0.2, 0.18], "w": [0.97, 0.95, 0.9], "s": [0.88, 0.84, 0.7]}
+    },
+    "reeds": {
+      "rows": ["..h..h..", "..b.hb..", ".bb.b.b.", ".b..b.b.", ".b.bb.b.", ".b.b..bb", "bb.b..b.", ".b.b..b."],
+      "palette": {"b": [0.42, 0.52, 0.2], "h": [0.52, 0.34, 0.16]}
+    },
+    "boulder": {
+      "rows": ["........", "........", "...rrr..", "..rRRRr.", ".rRRRRRr", ".rRRrRRr", "..rrrrr.", "........"],
+      "palette": {"r": [0.34, 0.34, 0.36], "R": [0.6, 0.6, 0.62]}
+    },
+    "fallen_log": {
+      "rows": ["........", "........", "........", ".bBBBBb.", "eEbbbBbB", ".bBBBBb.", "..b..b..", "........"],
+      "palette": {"b": [0.3, 0.19, 0.1], "B": [0.5, 0.34, 0.18], "e": [0.74, 0.6, 0.4], "E": [0.55, 0.4, 0.22]}
+    },
+    "snowdrift": {
+      "rows": ["........", "........", "..ww....", ".wWWw.w.", "wWWWWwWw", "WWWWWWWW", ".wwwwwww", "........"],
+      "palette": {"w": [0.78, 0.85, 0.93], "W": [0.97, 0.98, 1.0]}
+    },
+    "ice": {
+      "rows": [".iiiiii.", "iIIIIIIi", "iIcIIIIi", "iIIIcIIi", "iIIIIIIi", "iIIcIIIi", "iIIIIIIi", ".iiiiii."],
+      "palette": {"i": [0.55, 0.78, 0.9, 0.75], "I": [0.78, 0.92, 0.98, 0.7], "c": [1.0, 1.0, 1.0, 0.85]}
+    },
+    "lava_crack": {
+      "rows": ["........", "..L.....", "..LL....", "...LyL..", "....LL.L", ".....LLL", "......L.", "........"],
+      "palette": {"L": [0.95, 0.35, 0.08], "y": [1.0, 0.82, 0.2]}
+    },
+    "old_bones": {
+      "rows": ["........", "........", ".w...w..", "wWw.wWw.", ".w..wW.w", "..wwW.wW", "........", "........"],
+      "palette": {"w": [0.68, 0.66, 0.58], "W": [0.92, 0.9, 0.84]}
+    },
+    "crystal": {
+      "rows": ["........", "...c....", "..cCc...", "..cCc.c.", ".cCCcCc.", ".cCCcCc.", "..cc.cc.", "........"],
+      "palette": {"c": [0.5, 0.6, 0.95], "C": [0.82, 0.92, 1.0]}
+    },
+    "standing_stone": {
+      "rows": ["..ss....", ".sSSs...", ".sSSs...", ".sSSs...", ".sSmSs..", ".sSSSs..", "sSSSSSs.", ".mmmmm.."],
+      "palette": {"s": [0.4, 0.4, 0.44], "S": [0.62, 0.62, 0.67], "m": [0.25, 0.46, 0.22]}
+    },
+    "wisp": {
+      "rows": ["........", "...gg...", "..gWWg..", "..gWWg..", "...gg...", "........", ".g....g.", "........"],
+      "palette": {"g": [0.5, 1.0, 0.7, 0.55], "W": [0.92, 1.0, 0.96, 0.95]}
+    },
+    "pool": {
+      "rows": ["........", "..pppp..", ".pPPPPp.", "pPPPPPPp", "pPPoPPPp", ".pPPPPp.", "..pppp..", "........"],
+      "palette": {"p": [0.04, 0.06, 0.07, 0.92], "P": [0.07, 0.11, 0.13, 0.96], "o": [0.25, 0.36, 0.36]}
+    },
+    "scree": {
+      "rows": ["........", ".s..s...", "...d..s.", "s...s...", "..d...d.", ".s..s...", "...s..s.", "s...d..."],
+      "palette": {"s": [0.56, 0.55, 0.54], "d": [0.3, 0.3, 0.32]}
+    },
+    "cairn": {
+      "rows": ["........", "...rr...", "..rRRr..", "..rRr...", ".rRRRRr.", ".rRrRRr.", "rRRRRRRr", "........"],
+      "palette": {"r": [0.36, 0.36, 0.38], "R": [0.64, 0.63, 0.6]}
+    },
+    "shell": {
+      "rows": ["........", "........", "........", "..s...p.", ".sSs.pPp", "..s...p.", "........", "........"],
+      "palette": {"s": [0.8, 0.6, 0.55], "S": [0.97, 0.88, 0.82], "p": [0.9, 0.72, 0.8], "P": [0.99, 0.94, 0.94]}
+    },
+    "driftwood": {
+      "rows": ["........", "........", "........", ".d.dDd..", "dDdDddDd", ".d..d.d.", "........", "........"],
+      "palette": {"d": [0.52, 0.44, 0.32], "D": [0.74, 0.66, 0.52]}
+    },
+    "hedge": {
+      "rows": [".gGgGgg.", "gGGgGGGg", "GgGGgGgG", "gGGGGgGg", "gGgGGGGg", ".gGGgGg.", "..tt.tt.", "........"],
+      "palette": {"g": [0.1, 0.32, 0.1], "G": [0.2, 0.5, 0.18], "t": [0.3, 0.2, 0.1]}
+    },
+    "haystack": {
+      "rows": ["........", "...yy...", "..yYYy..", ".yYYYYy.", ".yYyYYy.", "yYYYYYYy", ".yyyyyy.", "........"],
+      "palette": {"y": [0.74, 0.58, 0.24], "Y": [0.92, 0.8, 0.4]}
+    },
+    "wheat": {
+      "rows": [".y.y.y.y", "yYyYyYyY", ".y.y.y.y", ".g.g.g.g", ".g.g.g.g", ".g.g.g.g", "........", "........"],
+      "palette": {"y": [0.82, 0.68, 0.24], "Y": [0.95, 0.84, 0.4], "g": [0.5, 0.56, 0.2]}
+    },
+    "scarecrow": {
+      "rows": ["..hh....", "..hh....", ".tttt...", "..t.t...", "..tt....", "..t.....", "..t.....", ".sss...."],
+      "palette": {"h": [0.85, 0.72, 0.4], "t": [0.46, 0.3, 0.16], "s": [0.3, 0.22, 0.12]}
+    },
+    "ripple": {
+      "rows": ["........", ".rr.....", "r..r..rr", "........", "...rr...", "..r..r..", "........", ".rr..rr."],
+      "palette": {"r": [0.72, 0.88, 0.98, 0.38]}
+    },
+    "foam": {
+      "rows": ["........", "........", ".ww..ww.", "w..ww..w", "........", "..ww....", ".w..ww..", "........"],
+      "palette": {"w": [1.0, 1.0, 1.0, 0.55]}
+    },
+    "lily": {
+      "rows": ["........", "........", ".gggg...", "gGGGGg..", "gGGpGg..", ".gggg...", "........", "........"],
+      "palette": {"g": [0.14, 0.4, 0.18], "G": [0.26, 0.58, 0.28], "p": [0.96, 0.7, 0.8]}
+    },
+    "birch_tree": {
+      "rows": ["...gg...", "..gGGg..", ".gGGGGg.", "..gGGg..", "...wW...", "...wk...", "...wW...", "...ww..."],
+      "palette": {"g": [0.4, 0.66, 0.2], "G": [0.58, 0.8, 0.3], "w": [0.9, 0.9, 0.84], "W": [0.8, 0.8, 0.74], "k": [0.2, 0.2, 0.2]}
+    },
+    "pine_tree": {
+      "rows": ["....g...", "...gGg..", "..gGGGg.", "...gGg..", "..gGGGg.", ".gGGGGGg", "....t...", "....t..."],
+      "palette": {"g": [0.05, 0.22, 0.14], "G": [0.12, 0.38, 0.24], "t": [0.34, 0.22, 0.12]}
+    },
+    "snow_pine": {
+      "rows": ["....w...", "...gWg..", "..gGGGg.", "...gWg..", "..gGWGg.", ".gGWGGGg", "....t...", "....t..."],
+      "palette": {
+        "g": [0.06, 0.24, 0.18],
+        "G": [0.14, 0.4, 0.28],
+        "W": [0.94, 0.97, 1.0],
+        "w": [0.96, 0.98, 1.0],
+        "t": [0.34, 0.22, 0.12]
+      }
+    },
+    "willow_tree": {
+      "rows": ["..gggg..", ".gGGGGg.", "gGGGGGGg", "gGgGGgGg", "g.gGGg.g", "g..tt..g", "...tt...", "...tt..."],
+      "palette": {"g": [0.16, 0.36, 0.2], "G": [0.3, 0.56, 0.3], "t": [0.3, 0.22, 0.14]}
+    },
+    "dead_tree": {
+      "rows": [".b....b.", ".bb..b..", "..bbb...", "...bb.b.", ".b.bb.b.", "..bbbb..", "...bb...", "...bb..."],
+      "palette": {"b": [0.3, 0.22, 0.15]}
+    },
+    "giant_fungus": {
+      "rows": ["..rrrr..", ".rRwRRr.", "rRRRwRRr", "rRwRRRRr", ".rrrrrr.", "...ss...", "...ss...", "...ss..."],
+      "palette": {"r": [0.42, 0.18, 0.52], "R": [0.68, 0.32, 0.78], "w": [0.92, 0.82, 0.97], "s": [0.88, 0.84, 0.74]}
+    },
+    "ancient_tree": {
+      "rows": [".gGGGGg.", "gGGgGGGg", "GGGGgGGG", "gGGGGGGg", ".gtGGtg.", "..tttt..", ".tt.tt..", "tt....tt"],
+      "palette": {"g": [0.05, 0.18, 0.13], "G": [0.12, 0.32, 0.22], "t": [0.26, 0.2, 0.16]}
+    },
+    "fae_tree": {
+      "rows": ["..gGGg..", ".gGwGGg.", "gGGGGwGg", "gGwGGGGg", ".gGGGGg.", "...tt...", "...tt...", "..tttt.."],
+      "palette": {"g": [0.1, 0.34, 0.36], "G": [0.2, 0.6, 0.55], "w": [0.8, 1.0, 0.95], "t": [0.36, 0.26, 0.2]}
+    },
+    "ruin_wall": {
+      "rows": ["........", ".ss.ss..", ".sSssS..", ".sSSSs..", "sSSsSSs.", "sSSSSSss", "sSmSSSSs", "ssssssss"],
+      "palette": {"s": [0.38, 0.37, 0.4], "S": [0.6, 0.58, 0.58], "m": [0.24, 0.44, 0.22]}
+    },
+    "rubble": {
+      "rows": ["........", "........", "..r...r.", ".rRr.rR.", "..r..r..", "r...rRr.", ".rr..r..", "........"],
+      "palette": {"r": [0.4, 0.38, 0.38], "R": [0.62, 0.6, 0.58]}
+    },
+    "tent_red": {
+      "rows": ["...rr...", "..rRRr..", ".rRRwRr.", "rRRRwRRr", "rRRwwwRr", "rRRRRRRr", "rrrddrrr", "....dd.."],
+      "palette": {"r": [0.6, 0.18, 0.14], "R": [0.8, 0.3, 0.22], "w": [0.95, 0.88, 0.7], "d": [0.15, 0.1, 0.08]}
+    },
+    "tent_green": {
+      "rows": ["...gg...", "..gGGg..", ".gGGwGg.", "gGGGwGGg", "gGGwwwGg", "gGGGGGGg", "ggggddgg", "....dd.."],
+      "palette": {"g": [0.14, 0.34, 0.16], "G": [0.28, 0.5, 0.26], "w": [0.9, 0.85, 0.65], "d": [0.12, 0.1, 0.06]}
+    },
+    "tent_blue": {
+      "rows": ["...bb...", "..bBBb..", ".bBBwBb.", "bBBBwBBb", "bBBwwwBb", "bBBBBBBb", "bbbbddbb", "....dd.."],
+      "palette": {"b": [0.14, 0.24, 0.5], "B": [0.28, 0.44, 0.76], "w": [0.95, 0.9, 0.7], "d": [0.1, 0.08, 0.1]}
+    },
+    "campfire": {
+      "rows": ["........", "...f....", "..fyf...", "..fYyf..", ".lfyfl..", ".llllll.", "..L..L..", "........"],
+      "palette": {"f": [0.95, 0.45, 0.1], "y": [1.0, 0.78, 0.2], "Y": [1.0, 0.95, 0.6], "l": [0.36, 0.22, 0.1], "L": [0.2, 0.14, 0.08]}
+    },
+    "crate": {
+      "rows": ["........", "........", ".tttttt.", ".tTttTt.", ".tttttt.", ".tTttTt.", ".tttttt.", "........"],
+      "palette": {"t": [0.52, 0.36, 0.18], "T": [0.7, 0.52, 0.28]}
+    },
+    "wagon": {
+      "rows": ["..wwww..", ".wWWWWw.", ".tbbbbt.", ".tbbbbt.", ".tttttt.", "kk....kk", "kKk..kKk", ".kk..kk."],
+      "palette": {
+        "w": [0.88, 0.84, 0.7],
+        "W": [0.97, 0.94, 0.84],
+        "t": [0.46, 0.3, 0.16],
+        "b": [0.34, 0.22, 0.12],
+        "k": [0.2, 0.15, 0.1],
+        "K": [0.5, 0.4, 0.3]
+      }
+    },
+    "shrine": {
+      "rows": ["...y....", "..yYy...", "..sSs...", "..sSs...", ".ssSSss.", ".sSSSSs.", ".ssssss.", "ssssssss"],
+      "palette": {"y": [1.0, 0.8, 0.3], "Y": [1.0, 0.95, 0.65], "s": [0.5, 0.5, 0.54], "S": [0.78, 0.78, 0.82]}
+    },
+    "well": {
+      "rows": ["..tttt..", ".t....t.", ".t....t.", "..bbbb..", ".bBBBBb.", "bBwwwwBb", "bBwWWwBb", ".bbbbbb."],
+      "palette": {"t": [0.4, 0.26, 0.12], "b": [0.4, 0.4, 0.44], "B": [0.62, 0.6, 0.6], "w": [0.14, 0.3, 0.5], "W": [0.4, 0.62, 0.84]}
+    },
+    "hut": {
+      "rows": ["...rr...", "..rRRr..", ".rRRRRr.", "rRRRRRRr", ".wwdwww.", ".wWdwWw.", ".wwdwww.", ".wwwwww."],
+      "palette": {
+        "r": [0.46, 0.3, 0.14],
+        "R": [0.66, 0.5, 0.26],
+        "w": [0.62, 0.5, 0.34],
+        "W": [0.86, 0.8, 0.5],
+        "d": [0.2, 0.12, 0.07]
+      }
+    },
+    "cave": {
+      "rows": [".rrrrrr.", "rRRRRRRr", "RRddddRR", "RdDDDDdR", "RdDDDDdR", "RdDDDDdR", "RRDDDDRR", ".rrrrrr."],
+      "palette": {"r": [0.32, 0.31, 0.34], "R": [0.52, 0.5, 0.52], "d": [0.12, 0.1, 0.12], "D": [0.04, 0.03, 0.05]}
+    },
+    "banner": {
+      "rows": ["..f.....", "..ff....", "..f.f...", "..f..r..", "..p..r..", "..p..r..", "..p.....", ".ppp...."],
+      "palette": {"f": [0.7, 0.14, 0.14], "r": [0.5, 0.1, 0.1], "p": [0.4, 0.28, 0.16]}
+    },
+    "lair": {
+      "rows": ["..rrrr..", ".rRRRRr.", "rRddddRr", "rRdDDdRr", "wRdDDdRw", ".wRddRw.", "..wWWw..", "........"],
+      "palette": {
+        "r": [0.3, 0.26, 0.2],
+        "R": [0.5, 0.44, 0.34],
+        "d": [0.1, 0.07, 0.06],
+        "D": [0.03, 0.02, 0.03],
+        "w": [0.72, 0.7, 0.62],
+        "W": [0.93, 0.92, 0.86]
+      }
+    },
+    "ore_spot": {
+      "rows": ["........", "...rr.y.", "..rRRr..", ".rRyRRr.", "rRRRRyRr", "rRyRRRRr", ".rrrrrr.", "........"],
+      "palette": {"r": [0.36, 0.36, 0.38], "R": [0.6, 0.6, 0.62], "y": [1.0, 0.85, 0.3]}
+    },
+    "herb_grove": {
+      "rows": ["..p...p.", ".pgp.pgp", ".ggggggg", "gGggGggG", ".gGggGg.", ".gggggg.", "..g..g..", "........"],
+      "palette": {"p": [0.9, 0.5, 0.74], "g": [0.2, 0.52, 0.2], "G": [0.34, 0.7, 0.3]}
+    },
+    "fishing_post": {
+      "rows": ["........", ".....r..", "....r.s.", "...r..s.", "..r...s.", "wwwwwwww", "w.w..w.w", "w.w..w.w"],
+      "palette": {"r": [0.4, 0.3, 0.16], "s": [0.9, 0.9, 0.85], "w": [0.5, 0.36, 0.2]}
+    },
+    "hermit": {
+      "rows": ["..hh....", ".hhhh...", "..cc.s..", ".cccc.s.", "cc..cc.s", ".cccc...", ".c..c...", ".k..k..."],
+      "palette": {"h": [0.9, 0.78, 0.65], "c": [0.4, 0.38, 0.3], "s": [0.5, 0.34, 0.18], "k": [0.2, 0.15, 0.1]}
+    },
+    "merchant": {
+      "rows": ["..hh....", ".hhhh...", "..cc.bb.", ".ccccBB.", "cc..ccb.", ".cccc.b.", ".c..c...", ".k..k..."],
+      "palette": {"h": [0.92, 0.76, 0.6], "c": [0.5, 0.18, 0.4], "b": [0.62, 0.45, 0.2], "B": [0.82, 0.64, 0.3], "k": [0.2, 0.14, 0.1]}
+    },
+    "wreck": {
+      "rows": ["........", "..t...t.", ".tt..tt.", "tTt.tTt.", "tTtttTtt", "tTTTTTTt", ".tttttt.", "........"],
+      "palette": {"t": [0.34, 0.24, 0.14], "T": [0.5, 0.38, 0.22]}
+    },
+    "fae_stone": {
+      "rows": ["........", "..g..g..", ".gWgWg..", "..gWg...", ".gWgWg..", "..g..g..", "........", "........"],
+      "palette": {"g": [0.5, 1.0, 0.85, 0.6], "W": [0.95, 1.0, 1.0, 0.95]}
+    }
+  }
+}

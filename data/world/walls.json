@@ -1,0 +1,22 @@
+{
+  "note": "The walls round the four towns of the open world (core/game/game_walls.gd, drawn by ui/play/wall_art.gd from data/art/walls.json, checked by tools/check_data.gd). A town's wall is a ring of tiles round its anchor: every tile whose distance from the anchor is over `radius` minus `thickness` and at most `radius` (a tile is about a metre, so the wall is a metre or two thick and drawn `wall_tiles` tall, three times a person's height less a bit). The ring blocks a walker like a tree or a building does, except at the gates. A gate is `side` (n, e, s or w) and `shift` (tiles along the wall from the anchor's line): an opening `gate_width` tiles wide (a cart passes) cut through the ring, with a tower of `tower_len` tiles either side of it and a lintel (an arch on a north or south gate) over the passage that a walker passes under. The radius is 34 tiles, just past the town's own ground (anchor_radius.town, 32, which the shops fill: their bodies stay within 30 of the anchor) and where the ground is still flat and dry (the water keeps `clear_inner` further off); the checker holds each wall tile to dry ground within `max_step` of the anchor's height for several seeds. Each road of the text game that leaves a town has a gate on the side it leaves by (within `road_angle` degrees of it), and the homestead plot beside Hearthmere is reached by its east gate. Every gate has guards (data/world/villagers.json, `guards`): GameVillagers puts two on duty at each post, by day and by night. No tree stands on the wall or in the way of a gate (`approach` tiles in front of it and `inside` tiles behind). Nothing here is random or saved.",
+  "settings": {
+    "radius": 34,
+    "thickness": 1.45,
+    "gate_width": 3,
+    "tower_len": 2,
+    "approach": 6,
+    "inside": 3,
+    "max_shift": 8,
+    "max_step": 2,
+    "road_angle": 50,
+    "min_gates": 2,
+    "check_seeds": [1, 7, 14, 24, 77, 123, 2024]
+  },
+  "towns": {
+    "hearthmere": {"gates": [{"side": "n", "shift": 0}, {"side": "e", "shift": 0}, {"side": "s", "shift": -5}, {"side": "w", "shift": 2}]},
+    "kingshold": {"gates": [{"side": "w", "shift": 0}, {"side": "s", "shift": 0}, {"side": "e", "shift": 0}]},
+    "ironford": {"gates": [{"side": "n", "shift": 0}, {"side": "e", "shift": 0}, {"side": "s", "shift": 3}, {"side": "w", "shift": -2}]},
+    "brinehaven": {"gates": [{"side": "w", "shift": 0}, {"side": "n", "shift": 0}, {"side": "s", "shift": 4}]}
+  }
+}

@@ -270,6 +270,19 @@ static func roll_item(r: RandomNumberGenerator, gen: int, boost: float = 1.0) ->
 	return make_id(rarity_id, slot, str(form["id"]), material, affixes, mythic, grade_of(gen), q)
 
 
+## The weighted pick and the affix pick, for the dungeon loot generator (GameDungeonLoot) to build items from the same parts.
+static func pick_weighted(r: RandomNumberGenerator, rows: Array) -> Dictionary:
+	return _pick_weighted(r, rows)
+
+
+static func pick_affixes(r: RandomNumberGenerator, slot: String, tier: int, n: int) -> Array:
+	return _pick_affixes(r, slot, tier, n)
+
+
+static func materials_at(form: Dictionary, tier: int) -> Array:
+	return _materials_at(form, tier)
+
+
 static func _materials_at(form: Dictionary, tier: int) -> Array:
 	var out: Array = []
 	for m in GameMaterials.of_tier(tier):

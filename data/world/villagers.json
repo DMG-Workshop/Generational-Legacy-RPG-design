@@ -1,5 +1,5 @@
 {
- "note": "The people who live in the open world's town buildings (core/game/game_villagers.gd, drawn by the sandbox screen when a house has its roof off; checked by tools/check_data.gd). A plain house holds as many residents as its floor has room for: each needs `area_per_person` tiles times their size squared (`sizes`: a halfling is 0.75 of a human, an orc 1.2; `monsters` are creatures that live beside the people of a town, `monster_percent` of the places, and only in a house with the room for them: an ogre wants 26 tiles), at most `max_residents`; a service building has its one person (`service`, the one GamePeople names for it). Who they are (race from the town's `races`, a calling from `classes`, a shirt from `colors`) and where they stand come from the building's id, never from dice, so the same village always has the same people. By day a resident is in one of the body's cells (not the top row, where the furniture stands) and moves on every `slot_hours` hours; by night they are at their beds. Every house resident has a job (`jobs`, picked by weight from the ones the town has the place for): a farmer walks out to a field at the edge of the town and works there (`field_from`, `field_span` tiles from the anchor), a guard walks the streets to and fro, and the rest go to the service they work for and spend their shift (`hours`) inside it; they leave between `depart_from` and `depart_from` + `depart_span` hours at `tiles_per_hour`, by the way GamePath finds, and come back. Out of doors they are walkers (`walkers_near`) and not in their house; a service person has the service's own job (`service_jobs`). A shop of data/shops/shops.json has its keeper (`service`), who stands inside by day and is gone at night (`GameShops.open_at`), and a house resident of the same town may have the shop's job (`jobs`: the keeper's name, e.g. Baker): they walk to the shop in the morning and spend the shift inside.",
+ "note": "The people who live in the open world's town buildings (core/game/game_villagers.gd, drawn by the sandbox screen when a house has its roof off; checked by tools/check_data.gd). A plain house holds as many residents as its floor has room for: each needs `area_per_person` tiles times their size squared (`sizes`: a halfling is 0.75 of a human, an orc 1.2; `monsters` are creatures that live beside the people of a town, `monster_percent` of the places, and only in a house with the room for them: an ogre wants 26 tiles), at most `max_residents`; a service building has its one person (`service`, the one GamePeople names for it). Who they are (race from the town's `races`, a calling from `classes`, a shirt from `colors`) and where they stand come from the building's id, never from dice, so the same village always has the same people. By day a resident is in one of the body's cells (not the top row, where the furniture stands) and moves on every `slot_hours` hours; by night they are at their beds. Every house resident has a job (`jobs`, picked by weight from the ones the town has the place for): a farmer walks out to a field at the edge of the town and works there (`field_from`, `field_span` tiles from the anchor), a guard walks the streets to and fro, and the rest go to the service they work for and spend their shift (`hours`) inside it; they leave between `depart_from` and `depart_from` + `depart_span` hours at `tiles_per_hour`, by the way GamePath finds, and come back. Out of doors they are walkers (`walkers_near`) and not in their house; a service person has the service's own job (`service_jobs`). A shop of data/shops/shops.json has its keeper (`service`), who stands inside by day and is gone at night (`GameShops.open_at`), and a house resident of the same town may have the shop's job (`jobs`: the keeper's name, e.g. Baker): they walk to the shop in the morning and spend the shift inside. The `post` job (gate guard, weight 0) is nobody's house job: every gate of every town (data/world/walls.json) has `guards`: `per_shift` of them on each of the `shifts` (hours; the night one runs past midnight), a warrior of the town's races in the town's colour, standing at the gate's two guard posts (one each side inside the passage), so at every hour at least `per_shift` stand at every gate.",
  "settings": {
   "slot_hours": 2,
   "area_per_person": 8,
@@ -7,12 +7,12 @@
   "monster_percent": 12
  },
  "walk": {
-  "tiles_per_hour": 16,
+  "tiles_per_hour": 20,
   "shift_hours": 6.0,
   "depart_from": 6.0,
-  "depart_span": 4.0,
+  "depart_span": 3.0,
   "max_nodes": 3000,
-  "field_from": 36,
+  "field_from": 40,
   "field_span": 8
  },
  "jobs": [
@@ -351,6 +351,14 @@
    "work": "",
    "weight": 1,
    "hours": 1.0
+  },
+  {
+   "id": "gate_guard",
+   "name": "Gate guard",
+   "work": "gate",
+   "weight": 0,
+   "hours": 12.0,
+   "post": true
   }
  ],
  "service_jobs": {
@@ -703,6 +711,29 @@
    "class": "cleric",
    "race": "dwarf",
    "color": "#d8d0c0"
+  }
+ },
+ "guards": {
+  "job": "gate_guard",
+  "per_shift": 2,
+  "class": "warrior",
+  "shifts": [
+   {
+    "id": "day",
+    "from": 6.0,
+    "to": 18.0
+   },
+   {
+    "id": "night",
+    "from": 18.0,
+    "to": 6.0
+   }
+  ],
+  "colors": {
+   "hearthmere": "#3f7a4a",
+   "kingshold": "#3a4f8a",
+   "brinehaven": "#2f8a84",
+   "ironford": "#b8403a"
   }
  }
 }

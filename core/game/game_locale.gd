@@ -66,6 +66,8 @@ static func source_lines(catalog: String) -> Dictionary:
 			return GameData.messages.get("lines", {})
 		"life":
 			return GameData.life.get("lines", {})
+		"talk":
+			return GameTalk.lines()
 		"tutorial":
 			var out := {}
 			for step in GameData.tutorial.get("steps", []):

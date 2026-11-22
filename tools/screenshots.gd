@@ -47,8 +47,17 @@ const SHOTS := [
 	["battle_swamp", DESKTOP, false, "battle:mirefen"],
 	["town", DESKTOP, false, "town"],
 	["river", DESKTOP, false, "river"],
+	["gate", DESKTOP, false, "gate"],
 	["homestead", DESKTOP, false, "homestead"],
 	["dollhouse", DESKTOP, false, "dollhouse"],
+	["wilds_forest", DESKTOP, false, "wilds_forest"],
+	["wilds_swamp", DESKTOP, false, "wilds_swamp"],
+	["wilds_fae", DESKTOP, false, "wilds_fae"],
+	["wilds_tundra", DESKTOP, false, "wilds_tundra"],
+	["dungeon_barrow", DESKTOP, false, "dungeon:hollow_barrow:0,3"],
+	["dungeon_ember", DESKTOP, false, "dungeon:emberpeak:4,0"],
+	["dungeon_warren", DESKTOP, false, "dungeon:goblin_warrens:5,-1"],
+	["dungeon_entrance", DESKTOP, false, "entrance:the_rift"],
 	["phone_life", PHONE, true, "life"],
 	["phone_battle", PHONE, true, "battle:kingshold"],
 ]
@@ -66,6 +75,14 @@ const STORE_SHOTS := [
 	["store_phone_life", STORE_PHONE, true, "life"],
 	["store_phone_battle", STORE_PHONE, true, "battle:kingshold"],
 ]
+
+## The wilds shots: the place whose anchor they are taken from, and the offset in tiles (the same seed always: 77).
+const WILDS_SPOTS := {
+	"wilds_forest": ["whisperwood", 14, -8],
+	"wilds_swamp": ["mirefen", 6, 4],
+	"wilds_fae": ["elderglade", 0, 3],
+	"wilds_tundra": ["frostreach", 12, 8],
+}
 
 var app: Node
 var d: GameDynasty
@@ -210,8 +227,11 @@ func _game() -> void:
 func _screen(what: String) -> void:
 	app.show_state()
 	await _frames(3)
+	if what.begins_with("dungeon:") or what.begins_with("entrance:"):
+		await _dungeon(what)
+		return
 	match what:
-		"town", "river", "homestead", "dollhouse":
+		"town", "river", "homestead", "dollhouse", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra":
 			await _open_world(what)
 		"life":
 			pass
@@ -313,7 +333,13 @@ func _select_tab(n: Node, name: String) -> void:
 ## The open world with the party in it: the home town with its buildings and two creatures near, or a river with its fords.
 func _open_world(what: String) -> void:
 	var town := what == "town"
-	var spot := Vector2i(160, 296) if town else Vector2i(143, 206)   # the town: the street between the store and the tavern
+	var spot := Vector2i(160, 296) if town else Vector2i(143, 206)
+	if WILDS_SPOTS.has(what):
+		var wa := GameWorldGen.anchor(str(WILDS_SPOTS[what][0]))
+		spot = Vector2i(int(wa["x"]) + int(WILDS_SPOTS[what][1]), int(wa["z"]) + int(WILDS_SPOTS[what][2]))   # the town: the street between the store and the tavern
+	if what == "gate":
+		var gate: Dictionary = GameWalls.gates("hearthmere")[0]   # the north gate, seen from inside the wall, its two guards at their posts
+		spot = (gate["inner"] as Vector2i) + Vector2i(0, 5)
 	if what == "homestead" or what == "dollhouse":
 		var plot := GameBuild.base()
 		spot = Vector2i(int(plot["x"]), int(plot["z"])) + (Vector2i.ZERO if what == "homestead" else Vector2i(0, 4))   # inside the house, or at its door with the roof half lifted
@@ -332,11 +358,48 @@ func _open_world(what: String) -> void:
 	if town:
 		scr.sb.creatures.append(GameBehaviour.new_agent(900, "wolf", float(spot.x) - 5.5, float(spot.y) + 2.5))
 		scr.sb.creatures.append(GameBehaviour.new_agent(901, "slime", float(spot.x) + 7.5, float(spot.y) - 3.5))
-	scr.zoom = 1.8 if what == "homestead" or what == "dollhouse" else (1.0 if town else 0.75)
+	if WILDS_SPOTS.has(what):
+		scr.sb.refresh()
+		scr.sb.creatures.clear()
+	scr.zoom = 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" else (1.0 if town else (1.5 if what == "gate" else 0.75))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
 	await _frames(2)   # (the world is held still, so the map is drawn again by hand once everything is made: a figure made while drawing blanks those drawn before it in that frame)
+	scr.overlay.queue_redraw()
+	await _frames(2)
+
+
+## A dungeon seen from inside (`dungeon:<place>:<x>,<z>`: the heir at that cell of its floor, in the dark of its theme, creatures
+## standing still) or its entrance seen from the open world (`entrance:<place>`).
+func _dungeon(what: String) -> void:
+	var parts := what.split(":")
+	var place := parts[1]
+	d.gen = 60
+	d.world.visit("hearthmere")
+	app.show_sandbox()
+	await _frames(3)
+	var scr: Control = app.current
+	scr.set_process(false)
+	d.world_seconds = 0.0
+	d.clock_carry = 0.0
+	var door: Dictionary = GameSpaces.space("world/" + place)["door"]
+	scr.sb.creatures.clear()
+	scr.sb.companions = []
+	if what.begins_with("entrance:"):
+		scr.sb.heir = Vector2i(int(door["x"]), int(door["z"]) + 3)
+		scr.zoom = 1.6
+	else:
+		scr.sb.heir = Vector2i(int(door["x"]), int(door["z"]))
+		scr.sb.use()
+		var xz := parts[2].split(",")
+		scr.sb.heir = Vector2i(int(xz[0]), int(xz[1]))
+		scr.zoom = 1.8
+	scr._warm_figures()
+	scr.cam = Vector2.ZERO
+	scr._process(0.0)
+	scr.queue_redraw()
+	await _frames(2)
 	scr.overlay.queue_redraw()
 	await _frames(2)
 

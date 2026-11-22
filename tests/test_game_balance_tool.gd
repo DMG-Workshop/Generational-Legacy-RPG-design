@@ -23,6 +23,7 @@ func _init() -> void:
 	test_range_and_verdict()
 	test_counting()
 	test_batch()
+	test_subclass()
 	print("balance tool tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -103,3 +104,25 @@ func test_batch() -> void:
 	# A different founding seed starts a different dynasty: not the same ages, in practice.
 	var d := Balance.play_batch(3, ["human", "elf"], 1)
 	ok(d != a, "another seed tells another story")
+
+
+## The subclass argument: ids parse, a founding with one plays a life, "keep" puts it on every heir, and
+## no subclass is the plain house (the harness's old figures).
+func test_subclass() -> void:
+	ok(Balance.valid_subclass("") and Balance.valid_subclass("all") and Balance.valid_subclass("breeder") and Balance.valid_subclass("venomwright"), "none, all and the ids are accepted")
+	ok(not Balance.valid_subclass("blacksmith") and not Balance.valid_subclass("Breeder"), "a name that is no calling is refused")
+	var ids: Array = GameSubclass.defs().map(func(s): return str(s["id"]))
+	ok(ids.size() == 20, "twenty callings to sweep: %d" % ids.size())
+	var plain := Balance.play_batch(1, ["human"], 1)
+	ok(Balance.play_batch(1, ["human"], 1, "") == plain, "an empty subclass is the plain house")
+	ok(int(plain["total"]["carried"]) == 0, "the plain house carries none")
+	var armorer := Balance.play_batch(1, ["human"], 2, "armorer")
+	ok(int(armorer["total"]["lives"]) >= 1, "a founding with a subclass plays a life")
+	ok(int(armorer["total"]["carried"]) >= 1, "the founder carries it")
+	var kept := Balance.play_batch(1, ["human"], 3, "armorer", true)
+	ok(int(kept["total"]["carried"]) == int(kept["total"]["lives"]), "with keep, every life carries it (%d of %d)" % [int(kept["total"]["carried"]), int(kept["total"]["lives"])])
+	ok(float(kept["total"]["gold"]) >= 0.0 and float(kept["total"]["kills"]) > 0.0, "gold and kills are recorded")
+	ok("carried" in Balance.detail(kept["total"]) and "gens/dynasty" in Balance.detail(kept["total"]), "the detail line reads: %s" % Balance.detail(kept["total"]))
+	var long_run := load("res://tools/long_run.gd")
+	var m: Dictionary = long_run.run_one(1, "human", 1, "bladewright")
+	ok(int(m["lives"]) == 1 and bool(m["loaded"]), "the long run founds a dynasty in a calling and its save loads back")
