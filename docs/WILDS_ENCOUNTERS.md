@@ -4,7 +4,20 @@ Design for two missing pieces of the open world's wilds (see `CLAUDE.md` "The wi
 `GameWildsSites` (landmarks, `use`, `used`), `GameSandbox.use()` and `offer()`, `GameSandbox._contact()` and `GameDynasty.start_encounter(ids, place)`, the
 area spawn tables (`data/creatures/spawn.json` `areas`), `GameWildsLoot`, the shop panel (`ui/play/shop_panel.gd`), and the map-fight stand-in (`ui/play/map_fight.gd`).
 
-## 1. Landmarks that start fights
+## 1. Landmarks that start fights (built)
+
+**As built** (`core/game/game_wilds_fights.gd`, an `encounter` block on four landmark kinds in `data/world/wilds.json`, `GameSandbox._landmark_approach` / `begin_landmark_fight` / `_after_landmark_fight`, `GameWildsSites.use`, `tests/test_game_wilds_fights.gd`). It follows the specification below, with these particulars:
+
+- **Which landmarks:** the bandit camp (approach, and a 60% chance that searching springs its guards), the old battlefield (approach, an ambush by the dead and scavengers), the ruin (use only, 35%, an ambush) and the cave (approach, its lodgers come out). Every other kind has no block and is as before. A block holds `triggers`, `range`, `use_chance`, a weighted `pool`, `count`, `level_mult`, `ambush` (`none` or `hidden`, per trigger), `renew_years`, `repeatable`, `loot` and its lines.
+- **Foes:** from the weighted `pool`, only creatures of the dynasty's era (the validator wants at least one first-era creature in every pool, so a new house always meets someone), a `count` of them, on dice keyed on the seed, the landmark and how often it has been fought (never the dynasty's). The fight is `GameDynasty.start_encounter(ids, area, level_mult)` (the new optional third argument multiplies the foes' levels; 1 is exactly the old call), with the hunt's own rewards and the dynasty's dice as any sandbox fight, and the heir's way clear behind them (`sandbox_escape`).
+- **Triggers:** approach fires when the heir comes within `range` of a landmark that has it, once per visit (`GameSandbox.armed`, let go at `leave_mult` times the range); use fires when searching rolls under `use_chance` (the guards come first, the search waits for the win).
+- **Ambush:** a `hidden` ambush sets `GameBattle.heir_skip` (the heir's first turn is lost, the foes strike first) unless the heir is already below `surprise_min_hp` (50%) of their health, so a hurt heir is never caught off guard on top of it. It never kills by rule of the data, but a first round is a first round: this is a bound, not a guarantee.
+- **Cooldown and clearing:** `GameDynasty.wilds.fought[id] = {year, gen, n}` starts on any fight (win, flight or defeat): no new fight for `renew_years` of the world calendar, and not twice in a generation unless `repeatable`. A win sets `wilds.cleared[id] = gen`: nothing more to fight there for `renew_gens` generations, the landmark's own search is free, and a bonus find (`GameWildsLoot`, boosted by `loot`) is paid. Both are saved with the rest of `wilds` only when set and loaded clean (`GameWildsFights.load_marks`).
+- **Not built:** the merchant "wary" tie to an uncleared landmark (needs both PRs), creatures that live at landmarks and walk (the guards are only met in the fight), and a landmark opening a dungeon's door.
+
+The original specification follows (the parts above override it where they differ).
+
+### Specification
 
 A landmark kind in `data/world/wilds.json` `landmarks` (the kinds with `outcomes`, a `trade` flag, `renew_gens`) gains an optional **`encounter`** block.
 
