@@ -117,7 +117,8 @@ func test_listing() -> void:
 
 
 func test_preview_and_wait() -> void:
-	ok(GameTrials.gain_preview("stone_lift") == "max hp +4%", "a stat gain reads as words: %s" % GameTrials.gain_preview("stone_lift"))
+	ok(GameTrials.gain_preview("embers_vigil") == "resist +4.5%", "a half-percent gain keeps its half: %s" % GameTrials.gain_preview("embers_vigil"))
+	ok(GameTrials.gain_preview("stone_lift") == "max hp +6%", "a stat gain reads as words: %s" % GameTrials.gain_preview("stone_lift"))
 	ok(GameTrials.gain_preview("archive_of_dust").contains("spell or feat"), "a Lore gain is a spell or feat")
 	ok(GameTrials.gain_preview("ancestors_hearth").contains("heirs"), "a Spirit gain says it passes to heirs: %s" % GameTrials.gain_preview("ancestors_hearth"))
 	ok(GameTrials.gain_preview("imps_bargain").contains("price"), "a Pact says its price: %s" % GameTrials.gain_preview("imps_bargain"))
