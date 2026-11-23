@@ -511,7 +511,7 @@
       ]
     },
     "cave": {
-      "name": "Cave mouth",
+      "name": "Cave mouth", "opens": true,
       "verb": "explore the cave",
       "done": "The cave has been explored.",
       "layout": [["boulder", "cave", "boulder"]],
@@ -732,7 +732,7 @@
     "bought": "{heir} buys {item} for {price} gold.",
     "poor": "{heir} cannot pay {price} gold for {item}.",
     "full": "{heir} cannot carry {item}.",
-    "sold_out": "There is nothing more to sell {heir}.", "merchant_open": "{name}: {heir} looks over what is for sale.", "wary": "{name} is shuttered and watchful: {guard} lies close by, and nobody here will deal while it does.", "sold": "{heir} sells {item} to {name} for {price} gold.", "sold_mats": "{heir} sells {n} {material} to {name} for {price} gold.", "bartered": "{heir} trades {give} to {name} for {get}.", "not_wanted": "{name} has no use for {item}.", "no_materials": "{heir} does not have {give}.", "not_for_sale": "{name} no longer has that.", "no_trader": "There is no trader here.", "found_item": "{heir} finds {item} among what was left.", "surprised": "{heir} is caught off guard!",
+    "sold_out": "There is nothing more to sell {heir}.", "door_open": "{name} runs deep. {heir} follows its old passage and comes out at the way into {dungeon}.", "merchant_open": "{name}: {heir} looks over what is for sale.", "wary": "{name} is shuttered and watchful: {guard} lies close by, and nobody here will deal while it does.", "sold": "{heir} sells {item} to {name} for {price} gold.", "sold_mats": "{heir} sells {n} {material} to {name} for {price} gold.", "bartered": "{heir} trades {give} to {name} for {get}.", "not_wanted": "{name} has no use for {item}.", "no_materials": "{heir} does not have {give}.", "not_for_sale": "{name} no longer has that.", "no_trader": "There is no trader here.", "found_item": "{heir} finds {item} among what was left.", "surprised": "{heir} is caught off guard!",
     "tithe": "The fae took {gold} gold.",
     "map_title": "Places found",
     "map_line": "{name}, {area}",

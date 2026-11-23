@@ -246,7 +246,7 @@ static func validate() -> Array:
 			bad.append("wilds.json: '%s' pool has no creature of the first era, so a new house could meet nothing" % kind)
 	if not found:
 		bad.append("wilds.json: no landmark has an encounter")
-	for k in ["found_item", "surprised"]:
+	for k in ["found_item", "surprised", "door_open"]:
 		if not GameWilds.data()["text"].has(k):
 			bad.append("wilds.json: text.%s is missing" % k)
 	if float(GameWilds.setting("leave_mult")) < 1.0 or float(GameWilds.setting("surprise_min_hp")) < 0.0 or float(GameWilds.setting("surprise_min_hp")) > 1.0:

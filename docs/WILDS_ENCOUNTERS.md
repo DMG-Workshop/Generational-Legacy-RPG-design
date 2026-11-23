@@ -15,7 +15,8 @@ area spawn tables (`data/creatures/spawn.json` `areas`), `GameWildsLoot`, the sh
 - **Cooldown and clearing:** `GameDynasty.wilds.fought[id] = {year, gen, n}` starts on any fight (win, flight or defeat): no new fight for `renew_years` of the world calendar, and not twice in a generation unless `repeatable`. A win sets `wilds.cleared[id] = gen`: nothing more to fight there for `renew_gens` generations, the landmark's own search is free, and a bonus find (`GameWildsLoot`, boosted by `loot`) is paid. Both are saved with the rest of `wilds` only when set and loaded clean (`GameWildsFights.load_marks`).
 - **Wary traders (built):** a trader whose `merchant.wary` range holds an uncleared fight-sending landmark will not deal (`GameWildsTrade.wary_of`, `tests/test_game_wilds_wary.gd`).
 - **Dwellers (built):** a block's `dwell` (`radius`, `hours`) puts the foes the landmark would send in sight, idling about it (`GameWildsFights.dwellers`, `GameSandbox.landmark_dwellers`, drawn by the sandbox screen), a pure function of seed, landmark, fights so far and the hour; none once cleared or on cooldown. They do not chase (the landmark's trigger starts the fight). `tests/test_game_wilds_dwellers.gd`.
-- **Not built:** dwellers that walk about, and a landmark opening a dungeon's door.
+- **Doors (built):** a kind with `opens` (the cave) whose guards are gone and which has been explored leads on when used (`GameWildsSites.door_of`, `GameSandbox.use`): the heir comes out on the door tile of the nearest dungeon whose entrance `GameDungeonArt` draws, and Use again goes in. `tests/test_game_wilds_portal.gd`.
+- **Not built:** dwellers that walk about.
 
 The original specification follows (the parts above override it where they differ).
 

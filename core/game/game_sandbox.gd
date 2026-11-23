@@ -321,6 +321,10 @@ func use() -> Dictionary:
 			log.append({"kind": "site", "text": str(r["text"])})
 			if r.has("fight"):   # searching sprang the guards
 				begin_landmark_fight(site, r["fight"])
+			elif r.has("door"):   # an explored cave leads on: the heir comes out on the dungeon's door tile
+				heir = Vector2i(int(r["door"]["x"]), int(r["door"]["z"]))
+				route = []
+				refresh()
 			return r
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):

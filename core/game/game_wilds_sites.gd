@@ -258,6 +258,23 @@ static func dungeon_near(lm: Dictionary) -> Dictionary:
 	return best
 
 
+## The way a landmark that `opens` leads by, once its guards are gone (it has no fight, or the fight is cleared): the nearest dungeon (`dungeon_near`) whose entrance
+## the open world draws (GameDungeonArt), as {place, x, z} with the tile of its door on the open world; {} when the kind does not open, a fight is uncleared or no
+## dungeon is near. A pure function of the world, nothing saved.
+static func door_of(d: GameDynasty, lm: Dictionary) -> Dictionary:
+	if lm.is_empty() or not bool(_def(str(lm["kind"])).get("opens", false)):
+		return {}
+	if not GameWildsFights.block(lm).is_empty() and not GameWildsFights.cleared(d, str(lm["id"])):
+		return {}
+	var a := dungeon_near(lm)
+	if a.is_empty() or GameDungeonArt.entrance_rect(str(a["id"])).size == Vector2i.ZERO:
+		return {}
+	var door: Dictionary = GameSpaces.space("world/" + str(a["id"])).get("door", {})
+	if door.is_empty():
+		return {}
+	return {"place": str(a["id"]), "x": int(door["x"]), "z": int(door["z"])}
+
+
 # ---------------------------------------------------------------- what the family has found and used
 
 static func state(d: GameDynasty) -> Dictionary:
@@ -381,6 +398,10 @@ static func use(d: GameDynasty, lm: Dictionary) -> Dictionary:
 	var def := _def(str(lm["kind"]))
 	var vals := {"heir": d.heir.name, "name": name_of(lm), "legend": legend_name(lm)}
 	if not available(d, id):
+		var door := door_of(d, lm)   # an explored cave that opens a way leads on to the dungeon's door
+		if not door.is_empty():
+			vals["dungeon"] = str(GameWorld.place(str(door["place"])).get("name", ""))
+			return {"ok": true, "text": GameWilds.text("door_open", vals), "door": door, "landmark": lm}
 		return {"ok": false, "text": str(def["done"])}
 	var n := int(used_info(d, id).get("n", 0))
 	var r := _rng(d, lm, n)
