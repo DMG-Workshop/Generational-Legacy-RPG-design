@@ -26,7 +26,6 @@ var fight_foes: Array = []         # the dungeon creatures in the fight now on, 
 var fight_site: Dictionary = {}    # the landmark of the wilds whose guards are the fight now on ({} for none), for after_fight (GameWildsFights)
 var armed: Dictionary = {}         # landmarks whose approach has already set their guards on the heir this visit (id -> their range); runtime only
 var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
-var offer := {}                    # a trader's pending offer at a landmark of the wilds (GameWildsSites), never saved
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
 
 
@@ -318,8 +317,7 @@ func use() -> Dictionary:
 	if u.is_empty():
 		var site := GameWildsSites.near(d, heir.x, heir.y) if storey() == 0 else {}
 		if not site.is_empty():
-			var r := GameWildsSites.use(d, site, offer)
-			offer = r.get("offer", {})
+			var r := GameWildsSites.use(d, site)
 			log.append({"kind": "site", "text": str(r["text"])})
 			if r.has("fight"):   # searching sprang the guards
 				begin_landmark_fight(site, r["fight"])

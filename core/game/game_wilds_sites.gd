@@ -375,9 +375,8 @@ static func _stock(def: Dictionary, area: String) -> Array:
 	return stock[area] if stock.has(area) else stock["default"]
 
 
-## Uses a landmark: {ok, text, offer?}. A trader first offers a thing (the result carries `offer`; pass it back to buy); anything
-## else plays out an outcome once. `offer` is the pending offer from the last call ({} for none).
-static func use(d: GameDynasty, lm: Dictionary, offer: Dictionary = {}) -> Dictionary:
+## Uses a landmark: {ok, text, open?}. A trader opens its merchant panel (`open` "merchant"); anything else plays out an outcome once.
+static func use(d: GameDynasty, lm: Dictionary) -> Dictionary:
 	var id := str(lm["id"])
 	var def := _def(str(lm["kind"]))
 	var vals := {"heir": d.heir.name, "name": name_of(lm), "legend": legend_name(lm)}
@@ -390,7 +389,7 @@ static func use(d: GameDynasty, lm: Dictionary, offer: Dictionary = {}) -> Dicti
 		if not plan.is_empty():
 			return {"ok": true, "text": str(plan["text"]), "fight": plan, "landmark": lm}
 	if bool(def.get("trade", false)):
-		return _trade(d, lm, def, offer, r, vals)
+		return _trade(d, lm, def, vals)
 	var rows: Array = def["outcomes"].filter(func(o): return _fits(d, lm, o))
 	if rows.is_empty():
 		return {"ok": false, "text": GameWilds.text("nothing")}
@@ -451,28 +450,7 @@ static func _fits(d: GameDynasty, lm: Dictionary, o: Dictionary) -> bool:
 	return true
 
 
-static func _trade(d: GameDynasty, lm: Dictionary, def: Dictionary, offer: Dictionary, r: RandomNumberGenerator, vals: Dictionary) -> Dictionary:
-	var id := str(lm["id"])
-	if not offer.is_empty() and str(offer.get("site", "")) == id:
-		var item := str(offer["item"])
-		var price := int(offer["price"])
-		vals["item"] = GameItems.item_name(item)
-		vals["price"] = price
-		if d.heir.gold < price:
-			return {"ok": false, "text": GameWilds.text("poor", vals), "offer": offer}
-		if not GameCarry.can_carry(d.heir, item):
-			return {"ok": false, "text": GameWilds.text("full", vals), "offer": offer}
-		d.heir.gold -= price
-		d.heir.inventory.append(item)
-		_mark_used(d, id)
-		var line := GameWilds.text("bought", vals)
-		d._say(line)
-		return {"ok": true, "text": line}
-	var wares: Array = _stock(def, str(lm["area"])).filter(func(i): return GameItems.stack_max(str(i)) > 0 or not GameItems.owns(d.heir, str(i)))
-	if wares.is_empty():
-		return {"ok": false, "text": GameWilds.text("sold_out", vals)}
-	var pick := str(wares[r.randi() % wares.size()])
-	var cost := int(round(float(GameItems.price(d, pick)) * float(GameWilds.setting("markup"))))
-	vals["item"] = GameItems.item_name(pick)
-	vals["price"] = cost
-	return {"ok": true, "text": GameWilds.text("offer", vals), "offer": {"site": id, "item": pick, "price": cost}}
+## A trader opens its panel (GameWildsTrade: wares, selling and barter, none of which uses the landmark up): {ok, text, open: "merchant", site}.
+static func _trade(d: GameDynasty, lm: Dictionary, def: Dictionary, vals: Dictionary) -> Dictionary:
+	var line := GameWilds.text("merchant_open", vals)
+	return {"ok": true, "text": line, "open": "merchant", "site": str(lm["id"]), "landmark": lm}

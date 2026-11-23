@@ -1,6 +1,6 @@
 # Wilds: landmarks that start fights, and the merchant panel
 
-Design for two missing pieces of the open world's wilds (see `CLAUDE.md` "The wilds"). Status: **landmark fights (section 1) are built and tested**; the merchant panel (section 2) is specified (it is built in its own PR). It reuses what exists:
+Design for two missing pieces of the open world's wilds (see `CLAUDE.md` "The wilds"). Status: **the merchant panel (section 2) is built and tested**; landmark fights (section 1) are specified, not built. It reuses what exists:
 `GameWildsSites` (landmarks, `use`, `used`), `GameSandbox.use()` and `offer()`, `GameSandbox._contact()` and `GameDynasty.start_encounter(ids, place)`, the
 area spawn tables (`data/creatures/spawn.json` `areas`), `GameWildsLoot`, the shop panel (`ui/play/shop_panel.gd`), and the map-fight stand-in (`ui/play/map_fight.gd`).
 
@@ -65,7 +65,22 @@ A surprise never kills: the same rule as traps (`GameDungeons`: costs a share of
 `GameSandbox.use()` (an `ambush` outcome), `GameSandbox._contact()` (placed foes), `GameDynasty.start_encounter`. The map fight screen needs nothing new. `tests/test_game_wilds_encounters.gd` would
 cover: a trigger, the foes' levels and count by generation, surprise once, the cooldown and `cleared`, save/load of `fought`, and that the autopilot (which never walks the wilds) is untouched.
 
-## 2. The merchant panel
+## 2. The merchant panel (built)
+
+**As built** (`core/game/game_wilds_trade.gd`, `ui/play/merchant_panel.gd`, a `merchant` block on each trading landmark in `data/world/wilds.json`, `GameWildsSites.use` returning `open: "merchant"`, `GameSandbox`/`sandbox_screen` opening the panel as a modal, `tests/test_game_wilds_trade.gd`). It follows the specification below, with these particulars:
+
+- **Use opens the panel** (the old one-offer-then-buy-on-the-second-Use is gone); a trader is **never used up** by a purchase, so the heir can buy several things and come back.
+- **Wares** are generated, a pure function of the seed, the landmark id and the renewal period (`renew_gens` generations, `GameWildsTrade.period`): `stock_count` entries from the landmark's existing `stock` pool for its area, shuffled on the trader's own dice, plus (if the block says `find`) one made piece from `GameWildsLoot` at 1.1 times its price (never a unique). The same wares show for every generation of a period and change at renewal.
+- **Prices**: the item's price times the trade's `markup` (wilds.json settings, 1.15) times `GameItems.price_mult` (so a world event and the Caravaneer count; the town's faction does not apply out here).
+- **Sold out**: a purchase is recorded in `GameDynasty.shop_sold` under `site:<landmark id>` with the period (saved with the rest of that record, loaded clean by `GameShops.load_sold`; `GameShops._mark_sold` leaves `site:` records alone). Gone until the period turns.
+- **Sell**: items in the pack of a slot the trader `wants_slots` (never a unique item), at `GameItems.sell_price` times the trader's `buy_share`; materials from the stores with one of its `wants_tags`, at the shop's material unit price times `material_share`.
+- **Barter**: the block's `barter` rows, materials from the stores for an item or for gold (gold scaled by the generation as other gold is).
+- **Layout**: gold and pack weight on top, the last line told, then For sale, Sell and Barter sections in a scroll; Buy, Sell and Trade buttons are disabled with the reason as text when they cannot work (no gold, too heavy, already owned, materials short).
+- **Not built**: a trader that wanders off or has hours (landmarks are fixed), a trader that is `wary` while an encounter at its landmark is uncleared (needs section 1), selling animals.
+
+The original specification follows (the parts above override it where they differ).
+
+### Specification
 
 Today a wilds `trade` landmark offers **one** item at `markup` (`GameSandbox.offer`, never saved) and sells it on the second Use. The panel replaces the two-step Use with a small
 shop that opens as a modal over the map (the world waits while a `modal` panel is open, like the sandbox's service panels).
