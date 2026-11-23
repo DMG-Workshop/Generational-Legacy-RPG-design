@@ -39,6 +39,10 @@ static func play_batch(base: int, races: Array, gens: int, subclass: String = ""
 				rec["profile_actions"] = int(fin["actions"])
 				rec["profile_trials"] = int(fin["trials"])
 				rec["profile_tried"] = int(fin["tried"])
+				rec["profile_paid"] = int(fin["paid"])
+				rec["profile_hours"] = float(fin["hours"])
+				rec["profile_hops"] = int(fin["hops"])
+				rec["profile_clock"] = int(fin["clock"])
 			var race := str(rec.get("race_id", races[ri]))
 			if not by_race.has(race):
 				by_race[race] = blank()
@@ -69,6 +73,10 @@ static func record(totals: Dictionary, rec: Dictionary, carried: int = 0) -> voi
 	totals["actions"] += float(rec.get("profile_actions", 0))
 	totals["trials"] += float(rec.get("profile_trials", 0))
 	totals["tried"] += float(rec.get("profile_tried", 0))
+	totals["paid"] += float(rec.get("profile_paid", 0))
+	totals["hours"] += float(rec.get("profile_hours", 0.0))
+	totals["hops"] += float(rec.get("profile_hops", 0))
+	totals["clock"] += float(rec.get("profile_clock", 0))
 	if str(rec.get("cause", "")) == SLAIN:
 		totals["slain"] += 1
 
@@ -99,7 +107,7 @@ static func seed_range(first: int, last: int) -> Array:
 
 
 static func blank() -> Dictionary:
-	return {"lives": 0, "slain": 0, "level": 0.0, "age": 0.0, "gold": 0.0, "kills": 0.0, "wins": 0.0, "carried": 0, "dynasties": 0, "ended": 0, "ge": 0.0, "actions": 0.0, "trials": 0.0, "tried": 0.0}
+	return {"lives": 0, "slain": 0, "level": 0.0, "age": 0.0, "gold": 0.0, "kills": 0.0, "wins": 0.0, "carried": 0, "dynasties": 0, "ended": 0, "ge": 0.0, "actions": 0.0, "trials": 0.0, "tried": 0.0, "paid": 0.0, "hours": 0.0, "hops": 0.0, "clock": 0.0}
 
 
 static func add(into: Dictionary, from: Dictionary) -> void:
@@ -120,7 +128,7 @@ static func profile_detail(t: Dictionary) -> String:
 	var a := float(t["actions"]) / n
 	var out := "gain %6.0f GE, effort %5.1f actions, %5.1f GE per action" % [float(t["ge"]) / n, a, (float(t["ge"]) / n) / maxf(1.0, a)]
 	if float(t["tried"]) > 0.0:   # the trialist: its power is in the stats, not the purse, so say what it passed
-		out += ", trials %4.2f passed of %4.2f tried per life" % [float(t["trials"]) / n, float(t["tried"]) / n]
+		out += ", trials %4.2f passed of %4.2f tried per life (%.0f gold paid, %.0f gold the clock took, %.1f hours, %.1f road hops)" % [float(t["trials"]) / n, float(t["tried"]) / n, float(t["paid"]) / n, float(t["clock"]) / n, float(t["hours"]) / n, float(t["hops"]) / n]
 	return out
 
 

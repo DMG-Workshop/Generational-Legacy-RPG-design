@@ -23,7 +23,7 @@ static func has(id: String) -> bool:
 
 ## The state of one life's profile: {id, steps, actions, worth0, shaft, forage_i, house_i}.
 static func start(d: GameDynasty, id: String) -> Dictionary:
-	return {"id": id, "steps": 0, "actions": 0, "worth0": net_worth(d), "shaft": 0, "forage_i": 0, "house_i": 0, "fled": 0, "trials": 0, "tried": 0, "passed": []}
+	return {"id": id, "steps": 0, "actions": 0, "worth0": net_worth(d), "shaft": 0, "forage_i": 0, "house_i": 0, "fled": 0, "trials": 0, "tried": 0, "passed": [], "paid": 0, "hours": 0.0, "hops": 0, "clock": 0, "age0": float(d.heir.age)}
 
 
 ## Sets the hooks for a life of this profile and returns the Callable to give `GameBot.live_life`. `detach` puts everything back.
@@ -40,7 +40,7 @@ static func detach() -> void:
 
 ## What the life gained and what it cost in actions: {gain (gold-equivalent), actions}.
 static func finish(d: GameDynasty, ctx: Dictionary) -> Dictionary:
-	return {"gain": net_worth(d) - float(ctx["worth0"]), "actions": int(ctx["actions"]), "trials": int(ctx["trials"]), "tried": int(ctx["tried"])}
+	return {"gain": net_worth(d) - float(ctx["worth0"]), "actions": int(ctx["actions"]), "trials": int(ctx["trials"]), "tried": int(ctx["tried"]), "paid": int(ctx["paid"]), "hours": float(ctx["hours"]), "hops": int(ctx["hops"]), "clock": int(ctx["clock"])}
 
 
 # ---------------------------------------------------------------- net worth
@@ -264,11 +264,16 @@ static func _trial(d: GameDynasty, ctx: Dictionary) -> void:
 			GameTrials.leave(d)   # never one the bot cannot fight; (begin is never offered for them below)
 			return
 		if GameTrials.remaining(d) > 0.0:
+			ctx["hours"] = float(ctx["hours"]) + GameTrials.remaining(d)
+			var g0 := d.heir.gold
 			GameTrials.wait_out(d)
+			ctx["clock"] = int(ctx["clock"]) + (g0 - d.heir.gold)   # what the world's clock took (or gave) while the hours went
 			_act(ctx)
 			if d.state != "life" or not GameTrials.active(d).has("id"):
 				return
+		var gold_before := d.heir.gold
 		GameTrials.finish(d)
+		ctx["paid"] = int(ctx["paid"]) + maxi(0, gold_before - d.heir.gold)   # a failed try's cost
 		_act(ctx)
 		ctx["tried"] = int(ctx["tried"]) + 1
 		if GameTrials.done(d.heir, id):
@@ -289,13 +294,18 @@ static func _trial(d: GameDynasty, ctx: Dictionary) -> void:
 				return
 			"way":
 				if GameTrials.step_block(d, id) == "":
+					var before := d.heir.gold
 					GameTrials.do_step(d, id)
+					ctx["paid"] = int(ctx["paid"]) + maxi(0, before - d.heir.gold)   # an offering
 					_act(ctx)
 					return
 				var s := GameTrials.next_step(d, id)
 				if str(s.get("kind", "")) == "visit" and d.world.location != str(s["place"]):
 					var route := d.world.route_to(str(s["place"]), d.flags)
 					if not route.is_empty():
+						var g1 := d.heir.gold
 						d.travel(str(route[0]))
+						ctx["clock"] = int(ctx["clock"]) + (g1 - d.heir.gold)
+						ctx["hops"] = int(ctx["hops"]) + 1
 						_act(ctx)
 						return

@@ -180,6 +180,9 @@ func test_trialist() -> void:
 	ok(float(b["total"]["tried"]) >= float(b["total"]["trials"]), "a batch counts trials tried and passed")
 	ok(Balance.profile_detail(b["total"]).contains("trials") or float(b["total"]["tried"]) == 0.0, "the detail line says what the trialist passed")
 	ok(not Balance.profile_detail(Balance.play_batch(2, ["human"], 2, "", false, "forager")["total"]).contains("trials"), "and the other profiles' lines are as before")
+	# what the trials cost is counted: gold paid (offerings and failed tries), hours waited, road hops
+	ok(int(ctx["paid"]) >= 0 and float(ctx["hours"]) > 0.0 and int(ctx["hops"]) >= 0, "the trialist counts what it paid (%d gold), waited (%.0f hours) and travelled (%d hops)" % [int(ctx["paid"]), float(ctx["hours"]), int(ctx["hops"])])
+	ok(float(b["total"]["hours"]) >= 0.0 and Balance.profile_detail(b["total"]).contains("gold paid") == (float(b["total"]["tried"]) > 0.0), "and the line shows it once there are tries")
 
 
 func test_batch() -> void:
