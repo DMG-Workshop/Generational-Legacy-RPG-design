@@ -260,7 +260,10 @@ static func step_all(d: GameDynasty, agents: Array, view: Dictionary, tick: int)
 				else:
 					_stay(a, view)   # by day the watch rests at its post
 			"gather":
-				_gather(d, a, view, tick, claimed, events)
+				if bool(view.get("indoors", false)):
+					_follow(a, view, i, events)   # a dungeon has no nodes to work: they keep close
+				else:
+					_gather(d, a, view, tick, claimed, events)
 			_:
 				_follow(a, view, i, events)
 		for j in range(before, events.size()):
