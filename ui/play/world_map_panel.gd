@@ -49,6 +49,13 @@ class MapCanvas extends Control:
 			var lp: Vector2 = (Vector2(m["cell"]) + Vector2(0.5, 0.5)) * cell
 			var q := maxf(2.0, mpx * 0.4)
 			draw_colored_polygon(PackedVector2Array([lp + Vector2(0, -q), lp + Vector2(q, 0), lp + Vector2(0, q), lp + Vector2(-q, 0)]), Color(0.95, 0.8, 0.4))
+		for m in GameWorldMap.trial_markers(d):
+			var tp: Vector2 = (Vector2(m["cell"]) + Vector2(0.5, 0.5)) * cell
+			var tq := maxf(3.0, mpx * 0.55)
+			var tcol: Color = Kit.good() if bool(m["passed"]) else Color(0.8, 0.55, 0.95)
+			var tri := PackedVector2Array([tp + Vector2(0, -tq), tp + Vector2(tq, tq * 0.8), tp + Vector2(-tq, tq * 0.8)])
+			draw_colored_polygon(PackedVector2Array([tri[0] + Vector2(0, -1), tri[1] + Vector2(1.5, 1), tri[2] + Vector2(-1.5, 1)]), Color(0.1, 0.08, 0.14))
+			draw_colored_polygon(tri, tcol)
 		if panel.heir_tile.x >= 0:
 			var c := GameWorldMap.cell_of(panel.heir_tile.x, panel.heir_tile.y)
 			var hp := (Vector2(c) + Vector2(0.5, 0.5)) * cell
@@ -105,6 +112,11 @@ func _ready() -> void:
 	places.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	places.custom_minimum_size = Vector2(maxf(160.0, minf(room.x - 60.0, room.y - 190.0)), 0)
 	v.add_child(places)
+	var trials := Kit.label(GameWorldMap.text("trial_title") + ": " + ", ".join(GameWorldMap.trial_lines(dynasty, 4)), 13, Kit.TEXT)
+	trials.name = "Trials"
+	trials.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	trials.custom_minimum_size = Vector2(side, 0)
+	v.add_child(trials)
 	var legend := Kit.label(GameWorldMap.text("legend"), 13, Kit.dim())
 	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	legend.custom_minimum_size = Vector2(side, 0)

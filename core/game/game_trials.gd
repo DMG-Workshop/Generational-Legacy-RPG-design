@@ -186,7 +186,7 @@ static func describe(d: GameDynasty, id: String) -> Dictionary:
 		return {}
 	var steps: Array = t["quest"]["steps"]
 	var out := {"id": id, "name": str(t["name"]), "focus": str(t["focus"]), "focus_name": focus_name(str(t["focus"])), "realm": str(t["realm"]),
-		"level": int(t["gate"].get("level", 1)), "length": int(t["length"]), "master": str(t["master"]["name"]), "fight": bool(t.get("fight", false)),
+		"level": int(t["gate"].get("level", 1)), "length": int(t["length"]), "master": str(t["master"]["name"]), "master_id": str(t["master"]["id"]), "fight": bool(t.get("fight", false)),
 		"gain": gain_preview(id), "chance": -1, "steps_done": quest_steps_done(d, id), "steps_total": steps.size(), "step_text": "", "step_why": "", "why": "", "status": ""}
 	if not out["fight"]:
 		out["chance"] = int(round(chance(d.heir, id) * 100.0))
