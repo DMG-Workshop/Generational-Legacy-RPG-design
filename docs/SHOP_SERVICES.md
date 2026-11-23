@@ -1,7 +1,7 @@
 # Shop services: enchanting, spellcasting, and opening hours
 
 Design for two paid **services** a shop does *for* the heir (as opposed to selling a thing off a shelf), and for the life screen's **Shops** button keeping
-shop hours. Status: **opening hours are built and tested** (below); enchanting and spellcasting are **specified**, with the data shape and the places they plug in.
+shop hours. Status: **opening hours and enchanting are built and tested** (below); spellcasting is **specified**, with the data shape and the places it plugs in.
 
 A service is already a concept: a shop's `services` list in `data/shops/shops.json` (the bathhouse's hot bath) is run by `GameShops.serve(d, shop, service_id)`:
 a price (`GameShops.service_price`: the town's prices and the heir's haggling count), an effect (`heal`, `mp` shares), a line of text, no dice, no time.
@@ -42,7 +42,20 @@ the life screen's actions nudge the clock; neither is built.
 `tests/test_game_shops.gd` `test_hours_gate` checks open, warning, shut, no grace, refusals of buy, sell and sell_material, `open_here`, and that the
 six old services have no hours.
 
-## 1. Enchanting as a shop service (specified)
+## 1. Enchanting as a shop service (built)
+
+**As built** (`core/game/game_enchant.gd`, `data/shops/enchant.json`, the Kingshold enchanter's `services` row, `ui/play/shop_panel.gd` `_build_enchant`, `tests/test_game_enchant.gd`). It follows the specification below, with these differences, all forced by how made gear is stored:
+
+- **One more affix is the next rarity up.** A made piece's id carries exactly as many affixes as its rarity says (`GameLoot.parse` refuses any other), so adding an affix moves the piece one step up craft.json's `rarity_by_essences` ladder: no affix to fine, fine to rare, rare *or epic* to legendary. A piece with three affixes (legendary) is full; a mythic is refused. The old `max_enchants` counter is dropped: the three-affix cap bounds it, and the piece's id cannot record which of its affixes came from a shop.
+- **No level rule.** The spec's "heir's level at least the affix's tier" is always true (tiers open with the generation), so it is not checked; the shop's tier is (`tier_limit`: the town's `shop_tier` plus the shop's `tier_bonus`, held to the row's `tier_cap`; Kingshold's enchanter works to tier 4).
+- **Fee** is `base_fee` (120) times the square of the piece's *material tier* times (1 + 0.5 for each affix already held), then `GameItems.price_mult` and the Enchanter's `forge_fee_mult`. The affix is chosen by the heir from those its slot and tier allow; the essence of it must be in the family's stores or bought outright (`essence_fee` 40 gold times the affix's tier).
+- **Risk**: the Kingshold row is `safe`. A `risky` row fails `fail_per_tier` (10%) for each tier above 1 on dice keyed on the seed, the piece, the affix and the family's count (`stores.enchanted`); a failure loses the essence and keeps the fee, and never harms the piece.
+- **State**: nothing new is saved but the stores' `enchanted` count (loaded clean with `crafted` and `brewed`) and the new id where the old one was (worn slot or pack). No `GameReplay` op: crafting and salvaging are not ops either (the screens do not record).
+- **UI**: the enchanter's tab has an Enchanting section: the made pieces the heir carries or wears (Choose, with the reason in the tooltip when a piece cannot be worked), then for the chosen piece each affix that fits (essences held, the fee, the failure chance, what it becomes, Enchant, and Buy essence when none is held). Every refusal is text.
+
+The original specification follows (the parts above override it where they differ).
+
+### Specification
 
 **Where.** The `enchanter` shop (Kingshold, 10:00-20:00, `tier_bonus` 1) is the first; the `scroll_shop` and the `guild_hall` are candidates. A shop offers it by
 having a `services` row of kind `enchant` (the row shape below). The shelf and the service are separate tabs of the same panel.
