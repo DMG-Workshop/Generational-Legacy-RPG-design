@@ -6,6 +6,12 @@
     "here": "The family is at {place}.",
     "heir": "{heir} stands at {x}, {z}.",
     "title": "The world",
-    "legend": "Towns and places the family has been to are named; the rest are marked but not known."
+    "legend": "Towns and places the family has been to are named; the rest are marked but not known. A triangle is the site of a trial the family has found (green once passed).",
+    "trial_title": "Trials found",
+    "trial_none": "none yet; a trial's site is found by the first step of its way in",
+    "trial_line": "{name} ({focus}, {state}) near {x}, {z}",
+    "trial_more": "and {n} more",
+    "trial_passed": "passed",
+    "trial_open": "not yet passed"
   }
 }

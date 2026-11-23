@@ -5,6 +5,7 @@
 ## Run: godot --headless --path . -s res://tests/test_game_trials_screen.gd
 extends SceneTree
 
+const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const HousePanel := preload("res://ui/play/house_panel.gd")
 
@@ -172,6 +173,10 @@ func test_panel() -> void:
 	await process_frame
 	ok(_button(panel, "TrialStep") != null, "a trial with a way in to do has its step button")
 	ok(panel.find_children("*", "Button", true, false).all(func(b): return (b as Button).tooltip_text == ""), "no button hides its reason in a tooltip")
+	var frames := panel.find_children("Master", "PanelContainer", true, false)
+	ok(frames.size() == GameTrials.listing(d).size() and frames.size() > 0, "every trial shows its master (%d portraits)" % frames.size())
+	ok(frames.all(func(f): return f.find_children("*", "TextureRect", true, false).size() == 1), "each as the creature's own art")
+	ok(GameTrials.listing(d).all(func(t): return SpriteArt.has_creature(str(t["master_id"]))), "and every master has art to draw")
 	var first: Dictionary = GameTrials.listing(d).filter(func(t): return str(t["id"]) == "stone_lift")[0]
 	d.world.location = "hearthmere"
 	panel._build()

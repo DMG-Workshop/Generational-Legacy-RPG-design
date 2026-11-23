@@ -83,6 +83,58 @@ static func landmark_markers(d: GameDynasty) -> Array:
 	return out
 
 
+## Where a trial of the open world stands as a tile: its place in the trials' square, stretched over the world, and moved to the nearest cell
+## that is not water (a site is never under the sea). A pure function of the seed.
+static func trial_tile(d: GameDynasty, p: Dictionary) -> Vector2i:
+	var area := maxi(1, int(GameTrials.setting("area")))
+	var size := GameWorldGen.size()
+	var x := clampi(int(p["x"]) * size / area, 0, size - 1)
+	var z := clampi(int(p["z"]) * size / area, 0, size - 1)
+	var c := cell_of(x, z)
+	for r in cells():
+		for dz in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if maxi(absi(dx), absi(dz)) != r:
+					continue
+				var cx := c.x + dx
+				var cz := c.y + dz
+				if cx < 0 or cz < 0 or cx >= cells() or cz >= cells():
+					continue
+				if kind_at(d, cx, cz) != "water":
+					return Vector2i(x, z) if r == 0 else tile_of(cx, cz)
+	return Vector2i(x, z)
+
+
+## A marker for every trial of the open world whose site the family has found (the first step of its way in done) or has passed, and none it has not:
+## {id, name, focus_name, master, x, z, cell, passed}. The other realms are spaces of their own and are not on this map.
+static func trial_markers(d: GameDynasty) -> Array:
+	var out: Array = []
+	for p in GameTrials.placed(d.seed_value, "material"):
+		var id := str(p["id"])
+		var passed := GameTrials.done(d.heir, id)
+		if GameTrials.quest_steps_done(d, id) < 1 and not passed:
+			continue
+		var t := GameTrials.trial(id)
+		var tile := trial_tile(d, p)
+		out.append({"id": id, "name": str(t["name"]), "focus_name": GameTrials.focus_name(str(t["focus"])), "master": str(t["master"]["name"]),
+			"x": tile.x, "z": tile.y, "cell": cell_of(tile.x, tile.y), "passed": passed})
+	return out
+
+
+## The lines that list the trials found, `max_lines` at most, then how many more.
+static func trial_lines(d: GameDynasty, max_lines: int) -> Array:
+	var marks := trial_markers(d)
+	if marks.is_empty():
+		return [text("trial_none")]
+	var out: Array = []
+	for i in mini(max_lines, marks.size()):
+		var m: Dictionary = marks[i]
+		out.append(text("trial_line", {"name": m["name"], "focus": m["focus_name"], "state": text("trial_passed") if bool(m["passed"]) else text("trial_open"), "x": m["x"], "z": m["z"]}))
+	if marks.size() > max_lines:
+		out.append(text("trial_more", {"n": marks.size() - max_lines}))
+	return out
+
+
 ## The lines that list them, `max_lines` at most, then how many more.
 static func landmark_lines(d: GameDynasty, max_lines: int) -> Array:
 	var marks := landmark_markers(d)
@@ -116,7 +168,7 @@ static func validate() -> Array:
 		return bad
 	if int(dat["settings"]["step"]) > GameWorldGen.size() / 4:
 		bad.append("worldmap.json: a step of %d leaves too few cells to be a map" % int(dat["settings"]["step"]))
-	for k in ["unknown", "here", "heir", "title", "legend"]:
+	for k in ["unknown", "here", "heir", "title", "legend", "trial_title", "trial_none", "trial_line", "trial_more", "trial_passed", "trial_open"]:
 		if str(dat["text"].get(k, "")) == "":
 			bad.append("worldmap.json: text.%s is missing" % k)
 	return bad

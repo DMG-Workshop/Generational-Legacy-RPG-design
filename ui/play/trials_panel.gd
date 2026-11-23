@@ -4,6 +4,8 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const SpriteArt := preload("res://ui/play/sprite_art.gd")
+const PORTRAIT := 56.0
 const WIDE := 760.0
 
 var dynasty: GameDynasty
@@ -73,9 +75,34 @@ func _row(t: Dictionary) -> Control:
 			box.add_child(b2)
 			if str(t["why"]) != "":
 				box.add_child(_wrapped(str(t["why"]), 14, Kit.dim()))
-	var rule := HSeparator.new()
-	box.add_child(rule)
-	return box
+	box.add_child(HSeparator.new())
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 10)
+	row.add_child(_portrait(str(t["master_id"]), str(t["master"])))
+	row.add_child(box)
+	return row
+
+
+## The master drawn as the creature that runs the trial (the same pixel art the fight shows), in a framed square; the name stands in when there is none.
+func _portrait(creature_id: String, master: String) -> Control:
+	var frame := PanelContainer.new()
+	frame.name = "Master"
+	frame.custom_minimum_size = Vector2(PORTRAIT + 8.0, PORTRAIT + 8.0)
+	frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	frame.add_theme_stylebox_override("panel", Kit.style(Color("#14121f"), 6, Kit.dim()))
+	var tex := SpriteArt.creature(creature_id)
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(PORTRAIT, PORTRAIT)
+	frame.add_child(holder)
+	if tex != null:
+		holder.add_child(SpriteArt.sprite_node(tex, Vector2(PORTRAIT, PORTRAIT)))
+	else:
+		var l := Kit.label(master.substr(0, 1), 24, Kit.dim())
+		l.size = Vector2(PORTRAIT, PORTRAIT)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		holder.add_child(l)
+	return frame
 
 
 ## The trial under way: its stage, the hours, and what can be done now.

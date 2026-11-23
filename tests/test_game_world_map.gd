@@ -33,6 +33,7 @@ func _run() -> void:
 	test_data()
 	test_grid()
 	test_markers()
+	test_trials()
 	test_image()
 	await test_panel()
 	await test_screen()
@@ -118,6 +119,39 @@ func test_markers() -> void:
 	ok(GameWorldMap.here_line(d).contains(str(d.world.here()["name"])), "the line says where the family is: %s" % GameWorldMap.here_line(d))
 
 
+func test_trials() -> void:
+	var d := _fresh()
+	ok(GameWorldMap.trial_markers(d).is_empty(), "no trial is on the map before the family has found one")
+	ok(GameWorldMap.trial_lines(d, 4).size() == 1 and GameWorldMap.trial_lines(d, 4)[0] == GameWorldMap.text("trial_none"), "and the list says so")
+	var placed := GameTrials.placed(d.seed_value, "material")
+	ok(not placed.is_empty(), "the world has trials in the open realm")
+	var id := str(placed[0]["id"])
+	d.trials["steps"] = {id: 1}
+	var ms := GameWorldMap.trial_markers(d)
+	ok(ms.size() == 1 and str(ms[0]["id"]) == id and not bool(ms[0]["passed"]), "the first step of the way in puts the trial's site on the map")
+	var m: Dictionary = ms[0]
+	var n := GameWorldGen.size()
+	ok(int(m["x"]) >= 0 and int(m["z"]) >= 0 and int(m["x"]) < n and int(m["z"]) < n, "the site is inside the world (%d, %d)" % [int(m["x"]), int(m["z"])])
+	ok(GameWorldMap.kind_at(d, m["cell"].x, m["cell"].y) != "water", "and never under water")
+	ok(JSON.stringify(GameWorldMap.trial_markers(d)) == JSON.stringify(ms), "the same seed gives the same site")
+	for other in GameTrials.placed_all(d.seed_value):
+		if str(other["realm"]) != "material":
+			ok(GameWorldMap.trial_markers(d).all(func(x): return str(x["id"]) != str(other["id"])), "a trial of another realm is not on this map")
+			break
+	d.heir.trials_done.append(id)
+	ok(bool(GameWorldMap.trial_markers(d)[0]["passed"]), "a passed trial is marked passed")
+	ok(GameWorldMap.trial_lines(d, 4)[0].contains(str(GameTrials.trial(id)["name"])) and GameWorldMap.trial_lines(d, 4)[0].contains(GameWorldMap.text("trial_passed")), "and listed by name: %s" % GameWorldMap.trial_lines(d, 4)[0])
+	var all_found := _fresh()
+	all_found.trials["steps"] = {}
+	for p in placed:
+		all_found.trials["steps"][str(p["id"])] = 1
+	ok(GameWorldMap.trial_markers(all_found).size() == placed.size(), "every found trial has a marker")
+	ok(GameWorldMap.trial_lines(all_found, 1).size() == (2 if placed.size() > 1 else 1), "a long list is cut with a count of the rest")
+	var old := _fresh()
+	old.trials = {}
+	ok(GameWorldMap.trial_markers(old).is_empty(), "a save with no trial state shows none")
+
+
 func test_image() -> void:
 	var d := _fresh()
 	var img := WorldMapPanel.make_image(d)
@@ -147,6 +181,7 @@ func test_panel() -> void:
 	ok(panel.find_child("Canvas", true, false) != null and panel.find_child("Close", true, false) != null, "it has the picture and a Close button")
 	ok((panel.find_child("HereLine", true, false) as Label).text.contains("Hearthmere"), "it says where the family is")
 	ok(panel.find_child("HeirLine", true, false) != null and (panel.find_child("HeirLine", true, false) as Label).text.contains("160"), "and where the heir stands")
+	ok(panel.find_child("Trials", true, false) != null and (panel.find_child("Trials", true, false) as Label).text.contains(GameWorldMap.text("trial_none")), "it lists the trials found, none at first")
 	panel.canvas.queue_redraw()
 	await process_frame
 	(panel.find_child("Close", true, false) as Button).pressed.emit()
