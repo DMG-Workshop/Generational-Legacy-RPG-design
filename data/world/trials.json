@@ -13,28 +13,28 @@
   "body": {
    "name": "Body",
    "cap": {
-    "max_hp": 0.1,
-    "carry_weight": 0.12
+    "max_hp": 0.15,
+    "carry_weight": 0.18
    }
   },
   "will": {
    "name": "Will",
    "cap": {
-    "resist": 0.08
+    "resist": 0.12
    }
   },
   "lore": {
    "name": "Lore",
    "cap": {
     "unlocks": 3,
-    "max_mp": 0.06
+    "max_mp": 0.09
    }
   },
   "mastery": {
    "name": "Mastery",
    "cap": {
-    "crit_damage": 0.12,
-    "reflexes": 0.05
+    "crit_damage": 0.18,
+    "reflexes": 0.075
    }
   },
   "spirit": {
@@ -46,15 +46,15 @@
   "wild": {
    "name": "Wild",
    "cap": {
-    "stealth": 0.08,
-    "fire_resistance": 0.1
+    "stealth": 0.12,
+    "fire_resistance": 0.15
    }
   },
   "pact": {
    "name": "Pact",
    "cap": {
-    "melee_damage": 0.15,
-    "max_mp": 0.2
+    "melee_damage": 0.19,
+    "max_mp": 0.25
    }
   }
  },
@@ -93,8 +93,8 @@
   "fight_not_run": "This trial is not won by a fight.",
   "no_fight": "No fight is waiting.",
   "stage": "Stage {n} of {total}: {line}",
-    "preview_stat": "{stat} {value}",
-    "preview_lore": "a spell or feat your calling can use"
+  "preview_stat": "{stat} {value}",
+  "preview_lore": "a spell or feat your calling can use"
  },
  "realms": {
   "material": {
@@ -118,7 +118,7 @@
      },
      "gain": {
       "stat": "max_hp",
-      "value": 0.04
+      "value": 0.06
      },
      "master": {
       "id": "stone_golem",
@@ -181,7 +181,7 @@
      },
      "gain": {
       "stat": "resist",
-      "value": 0.03
+      "value": 0.045
      },
      "master": {
       "id": "wraith",
@@ -315,7 +315,7 @@
       ],
       "fallback": {
        "stat": "max_mp",
-       "value": 0.03
+       "value": 0.045
       }
      },
      "master": {
@@ -379,7 +379,7 @@
      },
      "gain": {
       "stat": "crit_damage",
-      "value": 0.05
+      "value": 0.075
      },
      "master": {
       "id": "ogre",
@@ -506,7 +506,7 @@
      },
      "gain": {
       "stat": "stealth",
-      "value": 0.04
+      "value": 0.06
      },
      "master": {
       "id": "wolf",
@@ -569,7 +569,7 @@
      },
      "gain": {
       "stat": "melee_damage",
-      "value": 0.08
+      "value": 0.1
      },
      "master": {
       "id": "fire_imp",
@@ -640,7 +640,7 @@
      },
      "gain": {
       "stat": "resist",
-      "value": 0.03
+      "value": 0.045
      },
      "master": {
       "id": "thornhound",
@@ -703,7 +703,7 @@
      },
      "gain": {
       "stat": "fire_resistance",
-      "value": 0.05
+      "value": 0.075
      },
      "master": {
       "id": "moss_stag",
@@ -789,7 +789,7 @@
       ],
       "fallback": {
        "stat": "max_mp",
-       "value": 0.03
+       "value": 0.045
       }
      },
      "master": {
@@ -917,7 +917,7 @@
      },
      "gain": {
       "stat": "max_mp",
-      "value": 0.1
+      "value": 0.125
      },
      "master": {
       "id": "glimmer_moth",
@@ -988,7 +988,7 @@
      },
      "gain": {
       "stat": "resist",
-      "value": 0.03
+      "value": 0.045
      },
      "master": {
       "id": "wraith",
@@ -1051,7 +1051,7 @@
      },
      "gain": {
       "stat": "carry_weight",
-      "value": 0.05
+      "value": 0.075
      },
      "master": {
       "id": "ghoul",
@@ -1141,7 +1141,7 @@
       ],
       "fallback": {
        "stat": "max_mp",
-       "value": 0.03
+       "value": 0.045
       }
      },
      "master": {
@@ -1205,7 +1205,7 @@
      },
      "gain": {
       "stat": "reflexes",
-      "value": 0.02
+      "value": 0.03
      },
      "master": {
       "id": "skeleton",
@@ -1268,7 +1268,7 @@
      },
      "gain": {
       "stat": "melee_damage",
-      "value": 0.08
+      "value": 0.1
      },
      "master": {
       "id": "rift_shade",
