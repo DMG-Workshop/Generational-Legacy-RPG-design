@@ -170,6 +170,23 @@ Built: `core/game/game_shops.gd`, `data/shops/shops.json` (`text`, `last_call_ho
 To build: `core/game/game_enchant.gd`, `core/game/game_casting.gd` (new, with `.uid` files), `data/shops/shops.json` rows, `GameShops.validate`, `ui/play/shop_panel.gd` tabs,
 `core/game/game_replay.gd` ops, `core/game/game_dynasty.gd` (`blessing`, `services_used`, saved only when set), `data/text` lines, tests (`test_game_enchant.gd`, `test_game_casting.gd`).
 
+## 2b. The heir's own spells: the same system, paid in MP (built)
+
+Spellcasting used to exist twice: the shops' (`GameCasting`) and a dungeon-only table for the heir's own spells (`GameDungeonSpells`, `spells` in `dungeons.json`), which applied the same spells by different rules (Cleanse only healed, Rejuvenation healed at once, Ward was a flag of the visit). They are now **one system with two payers**:
+
+| | Shop | The heir's own |
+|---|---|---|
+| Pays | gold (`price`), a daily cooldown per shop and spell | MP (the spell's own cost, as `GameSkillTree` shapes it) |
+| Needs | the shop open and in town; the spell need not be known | the spell known; outside a fight (`GameSandbox.cast` keeps its screen button to dungeons) |
+| Strength | `caster_level` of the row | the heir's own healing power (`GameBattle.heal_amount`); blessings at level 1 |
+| Kinds | one table, `casting.json` `settings.kinds`: **healing** (mass_heal), **cleansing** (cleanse), **blessing** (ward, haste, rejuvenation) | the same |
+
+- **Healing** mends the heir and every companion; refused, and free, when everyone is whole. **Cleansing** cures every sickness (refused and free with none). **Blessing** is laid on the party for the next fight (`self_fights` fights, `self_years` years) and replaces another; the same one is not laid twice.
+- **The ward** is a blessing like any other, and `settings.trap_wards` lists the ones that also turn the **next hidden trap** of a dungeon (`GameCasting.ward_up`, asked as the heir steps; `spend_ward` records it as `trap_spent` in the saved blessing, and it still blesses the next fight). It makes no difference who laid it: a ward from the spell shop turns a trap just as the heir's own does. It no longer drops when the heir leaves the dungeon (it was a flag of the visit); it waits like any blessing.
+- **Saved:** nothing new except the optional `trap_spent` mark in the blessing, written only once a ward has been used on a trap and loaded clean (a damaged mark is dropped; old saves load as they were). No dice. The autopilot never casts.
+- **Changed from the old dungeon spells (said plainly):** Cleanse now cures sickness; Rejuvenation is a blessing for the next fight, not an instant heal; Haste can be cast; a ward persists to the next fight. `tests/test_game_self_cast.gd` checks all of it.
+- Not built: casting damage or control spells outside a fight, a Cast button outside dungeons (the sandbox's bar would change its stored screenshots), caster level for the heir's own blessings.
+
 ## Open numbers needed for a full pass
 
 `base_fee`, `fail_chance` per tier, `max_enchants`, `mp_gold`, `caster_level` per shop tier, `cooldown_days`, blessing `fights`/`years`; whether the Enchanter calling's

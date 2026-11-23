@@ -4,6 +4,8 @@
 ## party for the NEXT fight and applied when it begins, one at a time, for a fight or a year and until the heir dies. A cast has a cooldown
 ## of a day of the world clock per shop and spell. No dice are drawn. `GameDynasty.blessing` and `casts_used` are saved only when set and
 ## loaded clean here; `GameDynasty._begin_battle` asks `on_battle`. The autopilot never casts, so no seeded life or golden digest moves.
+## The heir's OWN spells (`self_castable`, `self_cast`) are the same system paid in MP: the same kinds, the same effects, the same blessing; a ward
+## blessing (`trap_wards`) also turns the next hidden trap of a dungeon (`ward_up`, `spend_ward`).
 class_name GameCasting
 extends RefCounted
 
@@ -167,6 +169,100 @@ static func cast(d: GameDynasty, shop_id: String, service_id: String) -> String:
 	return line
 
 
+## ---- the heir's own spells, paid in MP ----------------------------------------------------------------------------------------------
+
+## The spells the heir knows that this system has a kind for: [{id, name, cost, kind, can, why}] in their spell-list order. `can` is whether
+## they have the MP; `why` says what is lacking when they do not.
+static func self_castable(d: GameDynasty) -> Array:
+	var out: Array = []
+	if d.heir == null:
+		return out
+	for id in d.heir.spells:
+		if kind_of(str(id)) == "":
+			continue
+		var sp := GameSkillTree.spell(d.heir, str(id))
+		if sp.is_empty():
+			continue
+		var cost := GameCombat.ability_cost(sp, d.heir.level)
+		var enough := d.heir.mp >= cost
+		out.append({"id": str(id), "name": str(sp.get("name", id)), "cost": cost, "kind": kind_of(str(id)), "can": enough,
+			"why": "" if enough else text("self_no_mp", {"name": str(sp.get("name", id)), "cost": cost})})
+	return out
+
+
+## The heir casts one of their own spells, outside a fight, for MP: {ok, text, kind}. Refused (nothing paid) for a spell not known or
+## not of a kind here, without the MP, a healing spell when everyone is whole, a cleansing one with no sickness, or a blessing already
+## laid. The effects are the shop's own: healing mends the heir and the party, cleansing cures every sickness, a blessing is laid for
+## the next fight. No dice are drawn.
+static func self_cast(d: GameDynasty, id: String) -> Dictionary:
+	var kind := kind_of(id)
+	if d.heir == null or d.battle != null or id not in d.heir.spells or kind == "":
+		return {"ok": false, "text": text("self_unknown"), "kind": ""}
+	var sp := GameSkillTree.spell(d.heir, id)
+	if sp.is_empty():
+		return {"ok": false, "text": text("self_unknown"), "kind": ""}
+	var h := d.heir
+	var name := str(sp.get("name", id))
+	var cost := GameCombat.ability_cost(sp, h.level)
+	if h.mp < cost:
+		return {"ok": false, "text": text("self_no_mp", {"name": name, "cost": cost}), "kind": kind}
+	var line := ""
+	match kind:
+		"healing":
+			if not _needs_mending(d):
+				return {"ok": false, "text": text("no_need", {"name": h.name}), "kind": kind}
+			h.mp -= cost
+			var pct := float(sp.get("pct_max_hp", 0.1))
+			var n := _mend_heir(h, pct)
+			var mended: Array = [h.name]
+			for m in d.party.members:
+				var body = d.party._body(d, m)
+				var room: int = body.max_hp() - int(m["hp"])
+				if room <= 0:
+					continue
+				m["hp"] = int(m["hp"]) + mini(room, GameBattle.heal_amount(h, body, {"pct_max_hp": pct}))
+				mended.append(str(m["name"]))
+			line = text("self_healed", {"h": h.name, "spell": name, "who": GameMessages.text("life", "list_and").join(mended), "n": n})
+		"cleansing":
+			if h.diseases.is_empty():
+				return {"ok": false, "text": text("cleansed_none", {"name": h.name}), "kind": kind}
+			h.mp -= cost
+			var cured := 0
+			for e in h.diseases.duplicate():
+				if GameDisease.cure(h, str(e["id"])):
+					cured += 1
+			_mend_heir(h, float(sp.get("pct_max_hp", 0.0)))
+			line = text("self_cleansed", {"h": h.name, "spell": name, "what": "%d sickness%s washed away" % [cured, "" if cured == 1 else "es"]})
+		"blessing":
+			if str(blessing(d).get("spell", "")) == id:
+				return {"ok": false, "text": text("same", {"spell": name}), "kind": kind}
+			h.mp -= cost
+			d.blessing = {"spell": id, "fights": int(setting("self_fights")), "years": float(setting("self_years")), "year": d.world.year, "gen": d.gen, "level": 1}
+			line = text("self_blessed", {"h": h.name, "spell": name})
+			if id in setting("trap_wards"):
+				line += text("self_ward")
+	d._say(line)
+	return {"ok": true, "text": line, "kind": kind}
+
+
+static func _mend_heir(h: GameHeir, pct: float) -> int:
+	var n := maxi(0, mini(GameBattle.heal_amount(h, h, {"pct_max_hp": pct}), h.max_hp() - h.hp))
+	h.hp += n
+	return n
+
+
+## Whether a ward of the kind that turns traps is up and not yet used on one (a dungeon asks this before a hidden trap goes off).
+static func ward_up(d: GameDynasty) -> bool:
+	var b := blessing(d)
+	return not b.is_empty() and str(b["spell"]) in setting("trap_wards") and not bool(b.get("trap_spent", false))
+
+
+## The ward has turned a trap aside: it will not turn another, though it still blesses the next fight.
+static func spend_ward(d: GameDynasty) -> void:
+	if ward_up(d):
+		d.blessing["trap_spent"] = true
+
+
 ## Called as a fight begins: lays the blessing's statuses on the heir and every companion, then spends one of its fights.
 static func on_battle(d: GameDynasty, b: GameBattle) -> void:
 	var bl := blessing(d)
@@ -203,6 +299,8 @@ static func load_blessing(v: Variant) -> Dictionary:
 		if typeof(f) not in [TYPE_INT, TYPE_FLOAT] or is_nan(float(f)) or is_inf(float(f)):
 			return {}
 		out[k] = float(f)
+	if typeof((v as Dictionary).get("trap_spent")) == TYPE_BOOL and bool((v as Dictionary)["trap_spent"]):
+		out["trap_spent"] = true
 	return out if int(out["fights"]) > 0 else {}
 
 
@@ -224,7 +322,7 @@ static func validate() -> Array:
 			return ["casting.json: %s is missing" % k]
 	GameData.load_all()
 	var s: Dictionary = dat["settings"]
-	for k in ["mp_gold", "level_step", "price_step", "kinds"]:
+	for k in ["mp_gold", "level_step", "price_step", "kinds", "self_fights", "self_years", "trap_wards"]:
 		if not s.has(k):
 			bad.append("casting.json: settings.%s is missing" % k)
 	if not bad.is_empty():
@@ -248,7 +346,13 @@ static func validate() -> Array:
 			for st in sp.get("statuses", []):
 				if GameCombat.status_def(str(st["id"])).is_empty():
 					bad.append("casting.json: the blessing '%s' lays the unknown status '%s'" % [sid, st["id"]])
-	for k in ["healed", "cleansed", "cleansed_none", "blessed", "replaced", "blessing_on", "no_service", "not_for_sale", "no_gold", "no_need", "cooldown", "in_fight", "same"]:
+	if int(s["self_fights"]) < 1 or float(s["self_years"]) <= 0.0:
+		bad.append("casting.json: self_fights is at least 1 and self_years above 0")
+	for w in s["trap_wards"]:
+		if kind_of(str(w)) != "blessing":
+			bad.append("casting.json: trap_wards names '%s', which is not a blessing" % w)
+	for k in ["healed", "cleansed", "cleansed_none", "blessed", "replaced", "blessing_on", "no_service", "not_for_sale", "no_gold", "no_need", "cooldown", "in_fight", "same",
+			"self_unknown", "self_no_mp", "self_healed", "self_cleansed", "self_blessed", "self_ward"]:
 		if not dat["text"].has(k):
 			bad.append("casting.json: text.%s is missing" % k)
 	var found := false

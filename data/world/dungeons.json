@@ -83,12 +83,6 @@
    "text": "The air tears and something cold goes through {h}: {n} damage."
   }
  },
- "spells": {
-  "mass_heal": {"effect": "heal", "party": true},
-  "cleanse": {"effect": "heal", "party": true},
-  "rejuvenation": {"effect": "heal", "party": true, "pct": 0.2},
-  "ward": {"effect": "ward"}
- },
  "dungeons": {
   "goblin_warrens": {
    "locks": [
@@ -2527,12 +2521,6 @@
   "found_key": "{h} finds the {key}.",
   "locked": "The {door} is locked. It wants the {key}.",
   "unlocked": "{h} turns the {key} in the {door}, and it swings open.",
-  "spell_unknown": "That spell cannot be cast here.",
-  "spell_no_mp": "{name} costs {cost} MP, and there is not enough.",
-  "spell_whole": "{h} is whole already; the spell would be wasted.",
-  "spell_healed": "{h} casts {spell}: {who} mended, {n} health for {h}.",
-  "spell_warded": "A ward already shields the next step.",
-  "spell_ward": "{h} casts {spell}: the next hidden trap will be turned aside.",
   "spell_turned": "The ward flares and turns the {trap} aside.",
   "freed": "{h} frees {who}, who presses what the captors left into their hands."
  }

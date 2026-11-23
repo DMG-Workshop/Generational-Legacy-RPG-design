@@ -32,7 +32,7 @@ var _scales := {}           # companions: "id:level" -> their size against a hum
 var house_size := 3         # the index of the size of house the Raise house button builds (GameSandbox.house_sizes)
 var house_preview := false  # whether the house's footprint is drawn (after the size button was pressed)
 var house_button: Button
-var cast_button: Button     # Cast, shown only in a dungeon: the heir's spells that work outside a fight (GameDungeonSpells)
+var cast_button: Button     # Cast, shown only in a dungeon: the heir's spells that work outside a fight (GameCasting.self_castable)
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
 var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
@@ -376,7 +376,7 @@ func _open_cast() -> void:
 	var menu := PopupMenu.new()
 	menu.add_theme_font_size_override("font_size", 20)
 	menu.add_theme_constant_override("v_separation", 16)
-	var list: Array = GameDungeonSpells.castable(app.dynasty)
+	var list: Array = GameCasting.self_castable(app.dynasty)
 	for i in list.size():
 		menu.add_item("%s  (%d MP)" % [list[i]["name"], int(list[i]["cost"])], i)
 		menu.set_item_disabled(i, not bool(list[i]["can"]))
@@ -616,7 +616,7 @@ func _refresh_status() -> void:
 	if level_button != null:
 		level_button.text = "Level: %s" % sb.level_name()
 	if cast_button != null:
-		cast_button.visible = GameDungeons.is_dungeon(sb.space) and not GameDungeonSpells.castable(d).is_empty()
+		cast_button.visible = GameDungeons.is_dungeon(sb.space) and not GameCasting.self_castable(d).is_empty()
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 
