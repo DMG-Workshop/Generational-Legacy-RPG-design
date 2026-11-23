@@ -18,7 +18,7 @@
     "dungeon_near": 56,
     "found_cap": 4000,
     "markup": 1.15,
-    "offer_reach": 4.0
+    "offer_reach": 4.0, "leave_mult": 3.0, "surprise_min_hp": 0.5
   },
   "ground": {
     "plains": {
@@ -398,7 +398,7 @@
       "done": "The ruin has been picked over.",
       "layout": [["ruin_wall", ".", "ruin_wall"], ["ruin_wall", "rubble", "."], ["rubble", "ruin_wall", "rubble"]],
       "center": [1, 1],
-      "outcomes": [
+      "encounter": {"triggers": ["use"], "range": 0.0, "use_chance": 35, "pool": [{"id": "skeleton", "w": 3}, {"id": "goblin", "w": 3}], "count": [1, 2], "level_mult": 1.0, "ambush": {"use": "hidden"}, "renew_years": 1.0, "repeatable": false, "loot": 1.0, "text": {"use": "A stone shifts at {name}: {foes} were waiting for {heir}.", "won": "Nothing else stirs in {name}.", "fled": "{heir} scrambles out of {name}."}}, "outcomes": [
         {"w": 5, "text": "{heir} turns over the rubble and finds {item}.", "loot": 1.5},
         {"w": 3, "text": "{heir} pries a purse of {gold} gold from behind a loose stone.", "gold": [20, 60]},
         {"w": 2, "text": "{heir} finds nothing but rubble and old nests."},
@@ -411,7 +411,7 @@
       "done": "The camp has been stripped.",
       "layout": [["tent_red", "campfire", "tent_red"], [".", "crate", "."]],
       "center": [1, 0],
-      "outcomes": [
+      "encounter": {"triggers": ["approach", "use"], "range": 4.0, "use_chance": 60, "pool": [{"id": "bandit", "w": 5}, {"id": "goblin", "w": 2}], "count": [2, 3], "level_mult": 1.0, "ambush": {"approach": "none", "use": "hidden"}, "renew_years": 1.0, "repeatable": false, "loot": 1.5, "text": {"approach": "{name}: {foes} step out to bar {heir}'s way.", "use": "{heir} has barely begun to search {name} when {foes} spring from cover.", "won": "{name} is silent. {heir} stands over what is left of its guards.", "fled": "{heir} breaks away from {name}."}}, "outcomes": [
         {"w": 3, "text": "{heir} finds the bandits' stash: {item}.", "loot": 1.3},
         {"w": 4, "text": "{heir} takes {gold} gold from the camp chest.", "gold": [30, 90]},
         {
@@ -439,7 +439,7 @@
       "name": "Traders' camp",
       "verb": "see what the traders sell",
       "done": "The traders have nothing more for you.",
-      "trade": true,
+      "trade": true, "merchant": {"stock_count": [3, 4], "find": true, "buy_share": 0.6, "material_share": 0.6, "wants_slots": ["weapon", "armor", "trinket", "remedy"], "wants_tags": ["metal", "leather", "herb", "food"], "barter": [{"give": {"iron": 6}, "get": {"item": "willowbark_tonic"}}, {"give": {"leather": 5}, "get": {"gold": 60}}, {"give": {"herb": 8}, "get": {"item": "physicians_draught"}}]},
       "layout": [["wagon", "tent_blue", "campfire"]],
       "center": [0, 0],
       "stock": {
@@ -453,7 +453,7 @@
       "name": "Wandering merchant",
       "verb": "see the merchant's wares",
       "done": "The merchant has gone through their pack for you.",
-      "trade": true,
+      "trade": true, "merchant": {"stock_count": [4, 6], "find": true, "buy_share": 0.7, "material_share": 0.7, "wants_slots": ["weapon", "armor", "trinket", "remedy"], "wants_tags": ["precious", "magic", "gem", "metal"], "barter": [{"give": {"silver": 3}, "get": {"gold": 90}}, {"give": {"crystal": 2}, "get": {"item": "lucky_charm"}}]},
       "layout": [["merchant", "crate"]],
       "center": [0, 0],
       "stock": {
@@ -516,7 +516,7 @@
       "done": "The cave has been explored.",
       "layout": [["boulder", "cave", "boulder"]],
       "center": [1, 0],
-      "outcomes": [
+      "encounter": {"triggers": ["approach"], "range": 3.0, "use_chance": 0, "pool": [{"id": "wolf", "w": 3}, {"id": "goblin", "w": 2}, {"id": "slime", "w": 2}], "count": [1, 3], "level_mult": 1.0, "ambush": {"approach": "none"}, "renew_years": 1.0, "repeatable": false, "loot": 0.8, "text": {"approach": "Something stirs in {name}: {foes} come out to meet {heir}.", "won": "{name} is quiet. Whatever lodged there is gone.", "fled": "{heir} backs away from {name}."}}, "outcomes": [
         {"w": 4, "text": "{heir} edges into the dark and finds {item}. {dungeon_line}", "loot": 1.8},
         {"w": 2, "text": "{heir} finds {gold} gold among old bones. {dungeon_line}", "gold": [25, 70]},
         {
@@ -547,7 +547,7 @@
       "done": "The field has been searched.",
       "layout": [["old_bones", "banner", "old_bones"], ["rubble", "old_bones", "."]],
       "center": [1, 0],
-      "outcomes": [
+      "encounter": {"triggers": ["approach"], "range": 3.0, "use_chance": 0, "pool": [{"id": "skeleton", "w": 4}, {"id": "ghoul", "w": 1}, {"id": "bandit", "w": 2}], "count": [2, 3], "level_mult": 1.0, "ambush": {"approach": "hidden"}, "renew_years": 2.0, "repeatable": false, "loot": 1.0, "text": {"approach": "{foes} close in on {heir} across {name}.", "won": "{name} lies still again.", "fled": "{heir} leaves {name} to its dead."}}, "outcomes": [
         {
           "w": 5,
           "text": "{heir} finds a weapon the grass had half swallowed: {item}.",
@@ -732,7 +732,7 @@
     "bought": "{heir} buys {item} for {price} gold.",
     "poor": "{heir} cannot pay {price} gold for {item}.",
     "full": "{heir} cannot carry {item}.",
-    "sold_out": "There is nothing more to sell {heir}.",
+    "sold_out": "There is nothing more to sell {heir}.", "found_item": "{heir} finds {item} among what was left.", "surprised": "{heir} is caught off guard!", "merchant_open": "{name}: {heir} looks over what is for sale.", "sold": "{heir} sells {item} to {name} for {price} gold.", "sold_mats": "{heir} sells {n} {material} to {name} for {price} gold.", "bartered": "{heir} trades {give} to {name} for {get}.", "not_wanted": "{name} has no use for {item}.", "no_materials": "{heir} does not have {give}.", "not_for_sale": "{name} no longer has that.", "no_trader": "There is no trader here.",
     "tithe": "The fae took {gold} gold.",
     "map_title": "Places found",
     "map_line": "{name}, {area}",
