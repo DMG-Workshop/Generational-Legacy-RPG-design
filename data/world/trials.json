@@ -7,6 +7,7 @@
   "check_min": 0.15,
   "check_max": 0.9,
   "retry_hours": 12,
+  "site_reach": 3,
   "master_level_mult": 1.0
  },
  "focuses": {
@@ -93,6 +94,9 @@
   "fight_not_run": "This trial is not won by a fight.",
   "no_fight": "No fight is waiting.",
   "stage": "Stage {n} of {total}: {line}",
+  "site_hint": "A trial stands here: {trial}, run by {master}. Use to speak with them.",
+  "site_speak": "{master} stands by the site of {trial}. {line}",
+  "site_speak_passed": "{master} nods to {name}: {trial} is passed. {line}",
   "preview_stat": "{stat} {value}",
   "preview_lore": "a spell or feat your calling can use"
  },

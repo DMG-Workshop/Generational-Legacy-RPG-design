@@ -20,7 +20,7 @@ const STEP_KINDS := ["visit", "offering", "level"]
 const RISK_KINDS := ["hurt", "cost"]
 const TEXT_KEYS := ["no_trial", "not_placed", "realm_closed", "done_already", "one_at_a_time", "low_level", "wrong_class", "needs_trial", "quest_open",
 	"retry_wait", "started", "left", "not_ready", "no_active", "step_blocked", "need_place", "need_gold", "need_level", "no_step", "quest_done", "passed", "failed",
-	"hurt", "cost", "gain_stat", "gain_capped", "gain_unlock", "gain_legacy", "drawback", "fight_first", "fight_begins", "fight_not_run", "no_fight", "stage", "preview_stat", "preview_lore"]
+	"hurt", "cost", "gain_stat", "gain_capped", "gain_unlock", "gain_legacy", "drawback", "fight_first", "fight_begins", "fight_not_run", "no_fight", "stage", "preview_stat", "preview_lore", "site_hint", "site_speak", "site_speak_passed"]
 
 static var _cache: Dictionary = {}
 static var _index: Dictionary = {}
@@ -229,6 +229,49 @@ static func wait_out(d: GameDynasty) -> Array:
 	if active(d).is_empty():
 		return []
 	return wait(d, remaining(d) + 0.01)
+
+
+# ---------------------------------------------------------------- sites in the open world
+
+## The sites of the open world's trials the family has found (as the world map marks them), each with the creature that runs it:
+## {id, name, focus_name, master, master_id, x, z, passed}. A pure function of the seed and what the family has done.
+static func sites(d: GameDynasty) -> Array:
+	var out: Array = []
+	for m in GameWorldMap.trial_markers(d):
+		var s: Dictionary = (m as Dictionary).duplicate()
+		s["master_id"] = str(trial(str(m["id"]))["master"]["id"])
+		out.append(s)
+	return out
+
+
+## The found site within `site_reach` tiles of a tile (the nearest), or {}.
+static func site_near(d: GameDynasty, x: int, z: int) -> Dictionary:
+	var reach := float(setting("site_reach"))
+	var best := {}
+	var best_dist := reach + 0.001
+	for s in sites(d):
+		var dist := Vector2(float(int(s["x"]) - x), float(int(s["z"]) - z)).length()
+		if dist <= reach and dist < best_dist:
+			best = s
+			best_dist = dist
+	return best
+
+
+## The line the place line adds beside a site.
+static func site_hint(d: GameDynasty, x: int, z: int) -> String:
+	var s := site_near(d, x, z)
+	return "" if s.is_empty() else text("site_hint", {"trial": str(s["name"]), "master": str(s["master"])})
+
+
+## What Use does at a site: the master speaks (the trial's opening line, or its success line once passed) and the Trials panel opens, where the way in,
+## the hours and the trial itself are done. Changes nothing itself: {ok, text, open: "trials", trial}.
+static func site_use(d: GameDynasty, id: String) -> Dictionary:
+	var t := trial(id)
+	if t.is_empty():
+		return {"ok": false, "text": text("no_trial")}
+	var passed := done(d.heir, id)
+	var vals := {"master": str(t["master"]["name"]), "trial": str(t["name"]), "name": d.heir.name, "line": str(t["lines"]["success" if passed else "opening"])}
+	return {"ok": true, "text": text("site_speak_passed" if passed else "site_speak", vals), "open": "trials", "trial": id}
 
 
 # ---------------------------------------------------------------- the quest
@@ -658,6 +701,8 @@ static func validate() -> Array:
 		bad.append("trials: area and the check limits are not sound")
 	if float(setting("retry_hours")) < 0.0:
 		bad.append("trials: retry_hours is negative")
+	if float(setting("site_reach")) < 1.0:
+		bad.append("trials: site_reach must be at least 1 tile")
 	var seen := {}
 	var base_focuses := {}
 	if dat["realms"].size() < 3:

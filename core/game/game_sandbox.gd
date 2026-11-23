@@ -131,6 +131,9 @@ func place_line() -> String:
 		line = _text("upstairs_at", {"n": storey()}) if line == "" else "%s %s" % [_text("upstairs_at", {"n": storey()}), line]
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty() and storey() == 0:
+		var trial_site := GameTrials.site_hint(d, heir.x, heir.y)
+		if trial_site != "":
+			return trial_site if line == "" else "%s %s" % [line, trial_site]
 		var site := GameWildsSites.hint(d, heir.x, heir.y)
 		if site != "":
 			return site if line == "" else "%s %s" % [line, site]
@@ -332,6 +335,11 @@ func use() -> Dictionary:
 			return t
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty():
+		var trial_site := GameTrials.site_near(d, heir.x, heir.y) if storey() == 0 else {}
+		if not trial_site.is_empty():   # a trial's master, at its site: the screen opens the Trials panel
+			var spoke := GameTrials.site_use(d, str(trial_site["id"]))
+			log.append({"kind": "site", "text": str(spoke["text"])})
+			return spoke
 		var site := GameWildsSites.near(d, heir.x, heir.y) if storey() == 0 else {}
 		if not site.is_empty():
 			var r := GameWildsSites.use(d, site)

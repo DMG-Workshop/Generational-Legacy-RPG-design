@@ -52,6 +52,7 @@ const SHOTS := [
 	["gate", DESKTOP, false, "gate"],
 	["homestead", DESKTOP, false, "homestead"],
 	["dollhouse", DESKTOP, false, "dollhouse"],
+	["trial_site", DESKTOP, false, "trial_site"],
 	["wilds_forest", DESKTOP, false, "wilds_forest"],
 	["wilds_swamp", DESKTOP, false, "wilds_swamp"],
 	["wilds_fae", DESKTOP, false, "wilds_fae"],
@@ -233,7 +234,7 @@ func _screen(what: String) -> void:
 		await _dungeon(what)
 		return
 	match what:
-		"town", "river", "homestead", "dollhouse", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra":
+		"town", "river", "homestead", "dollhouse", "trial_site", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra":
 			await _open_world(what)
 		"life":
 			pass
@@ -346,6 +347,10 @@ func _open_world(what: String) -> void:
 		var plot := GameBuild.base()
 		spot = Vector2i(int(plot["x"]), int(plot["z"])) + (Vector2i.ZERO if what == "homestead" else Vector2i(0, 4))   # inside the house, or at its door with the roof half lifted
 		_build_house()
+	if what == "trial_site":   # a trial the family has found: its master stands at its ring of stones
+		d.trials["steps"] = {str(GameTrials.placed(d.seed_value, "material")[0]["id"]): 1}
+		var site: Dictionary = GameTrials.sites(d)[0]
+		spot = Vector2i(int(site["x"]) + 2, int(site["z"]) + 2)
 	d.world.visit("hearthmere")
 	app.show_sandbox()
 	await _frames(3)
@@ -363,7 +368,7 @@ func _open_world(what: String) -> void:
 	if WILDS_SPOTS.has(what):
 		scr.sb.refresh()
 		scr.sb.creatures.clear()
-	scr.zoom = 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" else (1.0 if town else (1.5 if what == "gate" else 0.75))
+	scr.zoom = 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" else (1.0 if town else (1.5 if what == "gate" else 0.75))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
