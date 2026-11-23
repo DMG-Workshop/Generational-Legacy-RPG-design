@@ -732,7 +732,7 @@
     "bought": "{heir} buys {item} for {price} gold.",
     "poor": "{heir} cannot pay {price} gold for {item}.",
     "full": "{heir} cannot carry {item}.",
-    "sold_out": "There is nothing more to sell {heir}.", "merchant_open": "{name}: {heir} looks over what is for sale.", "sold": "{heir} sells {item} to {name} for {price} gold.", "sold_mats": "{heir} sells {n} {material} to {name} for {price} gold.", "bartered": "{heir} trades {give} to {name} for {get}.", "not_wanted": "{name} has no use for {item}.", "no_materials": "{heir} does not have {give}.", "not_for_sale": "{name} no longer has that.", "no_trader": "There is no trader here.",
+    "sold_out": "There is nothing more to sell {heir}.", "found_item": "{heir} finds {item} among what was left.", "surprised": "{heir} is caught off guard!", "merchant_open": "{name}: {heir} looks over what is for sale.", "sold": "{heir} sells {item} to {name} for {price} gold.", "sold_mats": "{heir} sells {n} {material} to {name} for {price} gold.", "bartered": "{heir} trades {give} to {name} for {get}.", "not_wanted": "{name} has no use for {item}.", "no_materials": "{heir} does not have {give}.", "not_for_sale": "{name} no longer has that.", "no_trader": "There is no trader here.",
     "tithe": "The fae took {gold} gold.",
     "map_title": "Places found",
     "map_line": "{name}, {area}",
