@@ -53,6 +53,7 @@ const SHOTS := [
 	["homestead", DESKTOP, false, "homestead"],
 	["dollhouse", DESKTOP, false, "dollhouse"],
 	["trial_site", DESKTOP, false, "trial_site"],
+	["turned", DESKTOP, false, "turned"],
 	["wilds_forest", DESKTOP, false, "wilds_forest"],
 	["wilds_swamp", DESKTOP, false, "wilds_swamp"],
 	["wilds_fae", DESKTOP, false, "wilds_fae"],
@@ -234,7 +235,7 @@ func _screen(what: String) -> void:
 		await _dungeon(what)
 		return
 	match what:
-		"town", "river", "homestead", "dollhouse", "trial_site", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra":
+		"town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra":
 			await _open_world(what)
 		"life":
 			pass
@@ -368,7 +369,9 @@ func _open_world(what: String) -> void:
 	if WILDS_SPOTS.has(what):
 		scr.sb.refresh()
 		scr.sb.creatures.clear()
-	scr.zoom = 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" else (1.0 if town else (1.5 if what == "gate" else 0.75))
+	if what == "turned":   # the heir faces left (the art faces right): a turned figure must stand on its shadow, as an unturned one does
+		scr.facing_dir = Vector2i(-1, 0)
+	scr.zoom = 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town else (1.5 if what == "gate" else 0.75))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()

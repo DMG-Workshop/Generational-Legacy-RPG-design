@@ -989,14 +989,17 @@ func _figure_size(tex: Texture2D, cell: float) -> Vector2:
 	return Vector2(h * float(tex.get_width()) / float(tex.get_height()), h)
 
 
-## Draws a sprite standing with its feet at `feet`, on a shadow, turned the other way when `flip`.
+## Draws a sprite standing with its feet at `feet`, on a shadow, turned the other way when `flip`. A turned figure is drawn through a transform that mirrors
+## it about the middle of its box, so it stands on the same ground as the unturned one (a rect with a negative width does not: it is drawn a box to the right).
 func _stand(c: Control, tex: Texture2D, feet: Vector2, box: Vector2, flip: bool, tint: Color, cell: float) -> void:
 	c.draw_set_transform(feet, 0.0, Vector2(1.0, 0.4))
 	c.draw_circle(Vector2.ZERO, box.x * 0.4, Color(0, 0, 0, float(setting("shadow_alpha"))))
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var at := feet - Vector2(box.x * 0.5, box.y - cell * 0.1)
 	if flip:
-		c.draw_texture_rect(tex, Rect2(at + Vector2(box.x, 0.0), Vector2(-box.x, box.y)), false, tint)
+		c.draw_set_transform(at + Vector2(box.x, 0.0), 0.0, Vector2(-1.0, 1.0))
+		c.draw_texture_rect(tex, Rect2(Vector2.ZERO, box), false, tint)
+		c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	else:
 		c.draw_texture_rect(tex, Rect2(at, box), false, tint)
 
