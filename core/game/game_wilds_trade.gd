@@ -25,6 +25,18 @@ static func period(d: GameDynasty) -> int:
 	return int(floor(float(d.gen - 1) / float(GameWilds.setting("renew_gens"))))
 
 
+## The landmark that makes this trader wary: the nearest one within the trader's `wary` range that sends a fight (an `encounter` block) and is not cleared, or {}.
+## A trader with no `wary` is never wary. The wagon opens again once the heir has won there (GameWildsFights.won) or the clearing runs out and is fought again.
+static func wary_of(d: GameDynasty, lm: Dictionary) -> Dictionary:
+	var r := 0.0 if lm.is_empty() else float(def_of(lm).get("wary", 0.0))
+	if r <= 0.0:
+		return {}
+	for o in GameWildsSites.within(d, float(lm["x"]) + 0.5, float(lm["z"]) + 0.5, r):
+		if str(o["id"]) != str(lm["id"]) and not GameWildsFights.block(o).is_empty() and not GameWildsFights.cleared(d, str(o["id"])):
+			return o
+	return {}
+
+
 static func _mark_key(lm: Dictionary) -> String:
 	return PREFIX + str(lm["id"])
 
@@ -247,6 +259,8 @@ static func validate() -> Array:
 			bad.append("wilds.json: '%s' stock_count is [min, max] of 1 to 8" % kind)
 		if float(md["buy_share"]) <= 0.0 or float(md["buy_share"]) > 1.0 or float(md["material_share"]) <= 0.0 or float(md["material_share"]) > 1.0:
 			bad.append("wilds.json: '%s' buy_share and material_share are above 0 and at most 1" % kind)
+		if float(md.get("wary", 0.0)) < 0.0 or float(md.get("wary", 0.0)) > 40.0:
+			bad.append("wilds.json: '%s' wary is a range of 0 to 40 tiles" % kind)
 		for t in md["wants_tags"]:
 			var used := false
 			for m in GameMaterials.ids():
@@ -268,7 +282,7 @@ static func validate() -> Array:
 				bad.append("wilds.json: a barter row of '%s' gets nothing real" % kind)
 	if not found:
 		bad.append("wilds.json: no landmark trades")
-	for k in ["merchant_open", "sold", "sold_mats", "bartered", "not_wanted", "no_materials", "not_for_sale", "no_trader"]:
+	for k in ["merchant_open", "sold", "sold_mats", "bartered", "not_wanted", "no_materials", "not_for_sale", "no_trader", "wary"]:
 		if not GameWilds.data()["text"].has(k):
 			bad.append("wilds.json: text.%s is missing" % k)
 	return bad
