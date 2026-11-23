@@ -15,6 +15,7 @@ const ShopPanel := preload("res://ui/play/shop_panel.gd")
 const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
+const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const TalkPanel := preload("res://ui/play/talk_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
@@ -308,6 +309,16 @@ func _open_service(kind: String, tab: String) -> void:
 	add_child(panel)
 
 
+## A wilds trader's panel over the map (GameWildsTrade): the world waits while it is open.
+func _open_merchant(lm: Dictionary) -> void:
+	var panel: Control = MerchantPanel.new()
+	panel.dynasty = app.dynasty
+	panel.landmark = lm
+	panel.on_change = func(): _refresh_status()
+	panel.set_meta("modal", true)
+	add_child(panel)
+
+
 ## The world map over the open world (GameWorldMap): the world waits while it is open.
 func _open_world_map() -> void:
 	var panel: Control = WorldMapPanel.new()
@@ -365,6 +376,8 @@ func _use() -> void:
 		_open_workshop(str(r.get("forge", "")))
 	elif str(r.get("open", "")) in ["shop", "tavern", "board"]:
 		_open_service(str(r["open"]), str(r.get("tab", "")))
+	elif str(r.get("open", "")) == "merchant":
+		_open_merchant(r["landmark"])
 	elif r.has("who") and not (r["who"] as Dictionary).is_empty():
 		_say(str(r["who"]["id"]), str(r.get("bare", "")))   # a villager answered: their words show over their head
 		if not (r["choices"] as Array).is_empty():

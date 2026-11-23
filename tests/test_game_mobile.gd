@@ -13,6 +13,7 @@ const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const Kit := preload("res://ui/play/ui_kit.gd")
 const ShopPanel := preload("res://ui/play/shop_panel.gd")
+const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const MapPanel := preload("res://ui/play/map_panel.gd")
@@ -730,6 +731,28 @@ func test_every_tooltip_reachable() -> void:
 				await _probe(p.get_children().back(), "skill_tree_panel.gd")
 		p.queue_free()
 		await _frames(2)
+	# a wilds trader's panel: its disabled buttons carry their reasons as tooltips
+	var trader := {}
+	for area in ["elderglade", "greenvale", "whisperwood", "mirefen"]:
+		var a := GameWorldGen.anchor(area)
+		for r in range(0, 90, 6):
+			for ang in 16:
+				for lm in GameWildsSites.within(d, int(a["x"]) + int(round(cos(float(ang) / 16.0 * TAU) * r)), int(a["z"]) + int(round(sin(float(ang) / 16.0 * TAU) * r)), 14.0):
+					if trader.is_empty() and GameWildsTrade.is_trader(lm):
+						trader = lm
+	if not trader.is_empty():
+		var was_gold := d.heir.gold
+		d.heir.gold = 0
+		var mp: Control = MerchantPanel.new()
+		mp.dynasty = d
+		mp.landmark = trader
+		mp.on_change = func(): pass
+		app.current.add_child(mp)
+		await _frames(3)
+		await _probe(mp, "merchant_panel.gd")
+		mp.queue_free()
+		await _frames(2)
+		d.heir.gold = was_gold
 	var m: Control = MapPanel.new()
 	m.dynasty = d
 	m.on_travel = func(_to): pass

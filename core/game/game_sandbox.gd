@@ -24,7 +24,6 @@ var interior: Dictionary = {}      # the cells of the interior the heir is in (G
 var denizens: Array = []           # the creatures of the dungeon the heir is in (GameBehaviour agents with a key, room and boss flag), never saved
 var fight_foes: Array = []         # the dungeon creatures in the fight now on, for after_fight
 var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
-var offer := {}                    # a trader's pending offer at a landmark of the wilds (GameWildsSites), never saved
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
 
 
@@ -316,8 +315,7 @@ func use() -> Dictionary:
 	if u.is_empty():
 		var site := GameWildsSites.near(d, heir.x, heir.y) if storey() == 0 else {}
 		if not site.is_empty():
-			var r := GameWildsSites.use(d, site, offer)
-			offer = r.get("offer", {})
+			var r := GameWildsSites.use(d, site)
 			log.append({"kind": "site", "text": str(r["text"])})
 			return r
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
