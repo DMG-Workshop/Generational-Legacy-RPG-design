@@ -1,0 +1,1320 @@
+{
+ "note": "Trials (roadmap item 67; core/game/game_trials.gd, checked by tools/check_data.gd; see docs/TRIALS.md). Every number is a guess until measured. A realm lists its pool of trials; `placed` picks `place_min` to `place_max` of them for a world seed. Each trial: focus, length in world hours, gate (level, classes, an earlier trial), check (stat and difficulty: chance = score / (score + difficulty), kept within check_min..check_max), risk (hurt takes hp_pct of max HP but never kills; cost takes gold), gain (a stat bonus in trait terms, `legacy` passes to heirs) or Lore (a list of spells and feats, the first that suits the heir's class, else the fallback), a drawback for Pact, a master (a creature of data/creatures that runs the trial, with its lines), `fight` (the trial is won by beating the master), and a quest of steps the heir must finish before it can start (visit a place, offer gold, reach a level).",
+ "settings": {
+  "place_min": 3,
+  "place_max": 6,
+  "area": 256,
+  "check_min": 0.15,
+  "check_max": 0.9,
+  "retry_hours": 12,
+  "master_level_mult": 1.0
+ },
+ "focuses": {
+  "body": {
+   "name": "Body",
+   "cap": {
+    "max_hp": 0.1,
+    "carry_weight": 0.12
+   }
+  },
+  "will": {
+   "name": "Will",
+   "cap": {
+    "resist": 0.08
+   }
+  },
+  "lore": {
+   "name": "Lore",
+   "cap": {
+    "unlocks": 3,
+    "max_mp": 0.06
+   }
+  },
+  "mastery": {
+   "name": "Mastery",
+   "cap": {
+    "crit_damage": 0.12,
+    "reflexes": 0.05
+   }
+  },
+  "spirit": {
+   "name": "Spirit",
+   "cap": {
+    "luck": 0.05
+   }
+  },
+  "wild": {
+   "name": "Wild",
+   "cap": {
+    "stealth": 0.08,
+    "fire_resistance": 0.1
+   }
+  },
+  "pact": {
+   "name": "Pact",
+   "cap": {
+    "melee_damage": 0.15,
+    "max_mp": 0.2
+   }
+  }
+ },
+ "text": {
+  "no_trial": "There is no such trial.",
+  "not_placed": "That trial does not stand in this world.",
+  "realm_closed": "The way to that realm is shut.",
+  "done_already": "{name} has passed this trial already.",
+  "one_at_a_time": "{name} is already in a trial.",
+  "low_level": "The trial wants level {level}.",
+  "wrong_class": "The trial is not for your calling.",
+  "needs_trial": "First pass {trial}.",
+  "quest_open": "{master} will not begin until the way in is done: {step}",
+  "retry_wait": "Wait {hours} more hours before trying again.",
+  "started": "{name} begins {trial}.",
+  "left": "{name} leaves {trial}; the progress is lost.",
+  "not_ready": "{trial} is not over yet: {hours} hours to go.",
+  "no_active": "No trial is under way.",
+  "step_blocked": "Not yet: {why}",
+  "need_place": "Go to {place} first.",
+  "need_gold": "Bring {gold} gold.",
+  "need_level": "Reach level {level}.",
+  "no_step": "The way in is done already.",
+  "quest_done": "The way in to {trial} is done.",
+  "passed": "{name} passes {trial}. {gain}",
+  "failed": "{name} fails {trial}. {setback}",
+  "hurt": "Hurt, down {hp} health.",
+  "cost": "It costs {gold} gold.",
+  "gain_stat": "Lasting gain: {stat} {value}.",
+  "gain_capped": "The gain is already at its limit.",
+  "gain_unlock": "Learned {what}.",
+  "gain_legacy": " It will pass to heirs.",
+  "drawback": " The price: {stat} {value}.",
+  "fight_first": "{master} must be beaten in a fight.",
+  "fight_begins": "{master} steps up to fight.",
+  "fight_not_run": "This trial is not won by a fight.",
+  "no_fight": "No fight is waiting.",
+  "stage": "Stage {n} of {total}: {line}"
+ },
+ "realms": {
+  "material": {
+   "trials": [
+    {
+     "id": "stone_lift",
+     "name": "The Stone Lift",
+     "focus": "body",
+     "length": 6,
+     "gate": {
+      "level": 3
+     },
+     "check": {
+      "stat": "vit",
+      "difficulty": 18
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.3,
+      "gold": 0
+     },
+     "gain": {
+      "stat": "max_hp",
+      "value": 0.04
+     },
+     "master": {
+      "id": "stone_golem",
+      "name": "the Stone Warden"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Stone Lift: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "hearthmere",
+        "text": "Word of The Stone Lift is heard at Hearthmere; go and find the site.",
+        "done": "You find the way to The Stone Lift."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 30,
+        "text": "the Stone Warden asks an offering of 30 gold before it will test you.",
+        "done": "the Stone Warden takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "ironford",
+        "text": "A last errand: be seen at Ironford so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Stone Warden grinds upright. 'Lift what I lift, and carry it as long as I do.'",
+      "stages": [
+       "Lift the first slab.",
+       "Walk with it. Do not let it down.",
+       "Hold. The stone does not tire; you must not."
+      ],
+      "success": "The Stone Warden sets down its slab. 'Your back will remember this.'",
+      "failure": "The slab slips. The Stone Warden says only: 'Again, when you are stronger.'"
+     }
+    },
+    {
+     "id": "embers_vigil",
+     "name": "The Vigil of Embers",
+     "focus": "will",
+     "length": 8,
+     "gate": {
+      "level": 4
+     },
+     "check": {
+      "stat": "vit",
+      "difficulty": 22
+     },
+     "risk": {
+      "kind": "cost",
+      "hp_pct": 0.0,
+      "gold": 25
+     },
+     "gain": {
+      "stat": "resist",
+      "value": 0.03
+     },
+     "master": {
+      "id": "wraith",
+      "name": "the Pale Keeper"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Vigil of Embers: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "greenvale",
+        "text": "Word of The Vigil of Embers is heard at Greenvale; go and find the site.",
+        "done": "You find the way to The Vigil of Embers."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 35,
+        "text": "the Pale Keeper asks an offering of 35 gold before it will test you.",
+        "done": "the Pale Keeper takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "whisperwood",
+        "text": "A last errand: be seen at Whisperwood so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Pale Keeper floats beside a low fire. 'Watch until the last ember. Do not look away.'",
+      "stages": [
+       "Watch the fire. Voices begin to whisper.",
+       "The whispers name your fears. Do not answer.",
+       "Only embers remain, and something stands behind you."
+      ],
+      "success": "The last ember dies. 'You were afraid, and you stayed,' says the Pale Keeper.",
+      "failure": "You look away. The fire goes out and the Keeper fades."
+     }
+    },
+    {
+     "id": "archive_of_dust",
+     "name": "The Archive of Dust",
+     "focus": "lore",
+     "length": 5,
+     "gate": {
+      "level": 5
+     },
+     "check": {
+      "stat": "mag",
+      "difficulty": 24
+     },
+     "risk": {
+      "kind": "cost",
+      "hp_pct": 0.0,
+      "gold": 40
+     },
+     "gain": {
+      "lore": [
+       {
+        "kind": "spell",
+        "id": "chain_lightning"
+       },
+       {
+        "kind": "spell",
+        "id": "radiant_burst"
+       },
+       {
+        "kind": "spell",
+        "id": "haste"
+       },
+       {
+        "kind": "spell",
+        "id": "mana_tap"
+       },
+       {
+        "kind": "spell",
+        "id": "rejuvenation"
+       },
+       {
+        "kind": "spell",
+        "id": "fear"
+       },
+       {
+        "kind": "spell",
+        "id": "ward"
+       },
+       {
+        "kind": "spell",
+        "id": "entangle"
+       },
+       {
+        "kind": "spell",
+        "id": "earthshatter"
+       },
+       {
+        "kind": "feat",
+        "id": "whirlwind"
+       },
+       {
+        "kind": "feat",
+        "id": "flurry"
+       },
+       {
+        "kind": "feat",
+        "id": "called_shot"
+       },
+       {
+        "kind": "feat",
+        "id": "sunder"
+       },
+       {
+        "kind": "feat",
+        "id": "rend"
+       },
+       {
+        "kind": "feat",
+        "id": "rain_of_arrows"
+       },
+       {
+        "kind": "feat",
+        "id": "dragon_kick"
+       },
+       {
+        "kind": "feat",
+        "id": "ambush"
+       }
+      ],
+      "fallback": {
+       "stat": "max_mp",
+       "value": 0.03
+      }
+     },
+     "master": {
+      "id": "lich_acolyte",
+      "name": "the Archivist"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Archive of Dust: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "kingshold",
+        "text": "Word of The Archive of Dust is heard at Kingshold; go and find the site.",
+        "done": "You find the way to The Archive of Dust."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 45,
+        "text": "the Archivist asks an offering of 45 gold before it will test you.",
+        "done": "the Archivist takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "hearthmere",
+        "text": "A last errand: be seen at Hearthmere so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Archivist turns a page with a dry finger. 'Read what suits your hand.'",
+      "stages": [
+       "Find the shelf that is yours.",
+       "The text is in no language you know. Read it anyway.",
+       "The last page asks you to say it aloud."
+      ],
+      "success": "The Archivist closes the book. 'It is yours now. Use it well.'",
+      "failure": "The page crumbles. 'You were not ready,' says the Archivist."
+     }
+    },
+    {
+     "id": "ring_of_champions",
+     "name": "The Ring of Champions",
+     "focus": "mastery",
+     "length": 4,
+     "gate": {
+      "level": 6
+     },
+     "check": {
+      "stat": "agi",
+      "difficulty": 26
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.35,
+      "gold": 0
+     },
+     "gain": {
+      "stat": "crit_damage",
+      "value": 0.05
+     },
+     "master": {
+      "id": "ogre",
+      "name": "the Ring Champion"
+     },
+     "fight": true,
+     "quest": {
+      "name": "The Ring of Champions: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "ironford",
+        "text": "Word of The Ring of Champions is heard at Ironford; go and find the site.",
+        "done": "You find the way to The Ring of Champions."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 50,
+        "text": "the Ring Champion asks an offering of 50 gold before it will test you.",
+        "done": "the Ring Champion takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "brinehaven",
+        "text": "A last errand: be seen at Brinehaven so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Ring Champion cracks its knuckles. 'Beat me, or at least stay on your feet.'",
+      "stages": [
+       "Circle. Learn its rhythm.",
+       "Take a blow, return one.",
+       "The last round: no holding back."
+      ],
+      "success": "The Ring Champion grins through the blood. 'You fight like you mean it.'",
+      "failure": "You are put on the sand. The Ring Champion says: 'Come back sharper.'"
+     }
+    },
+    {
+     "id": "ancestors_hearth",
+     "name": "The Ancestors' Hearth",
+     "focus": "spirit",
+     "length": 6,
+     "gate": {
+      "level": 5
+     },
+     "check": {
+      "stat": "vit",
+      "difficulty": 20
+     },
+     "risk": {
+      "kind": "cost",
+      "hp_pct": 0.0,
+      "gold": 40
+     },
+     "gain": {
+      "stat": "luck",
+      "value": 0.02,
+      "legacy": true
+     },
+     "master": {
+      "id": "skeleton",
+      "name": "the Ancestor's Shade"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Ancestors' Hearth: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "hearthmere",
+        "text": "Word of The Ancestors' Hearth is heard at Hearthmere; go and find the site.",
+        "done": "You find the way to The Ancestors' Hearth."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 40,
+        "text": "the Ancestor's Shade asks an offering of 40 gold before it will test you.",
+        "done": "the Ancestor's Shade takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "kingshold",
+        "text": "A last errand: be seen at Kingshold so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Ancestor's Shade sits by a cold hearth. 'Name those who came before you.'",
+      "stages": [
+       "Name your parents.",
+       "Name theirs, and what each gave up.",
+       "Light the hearth with their names."
+      ],
+      "success": "The hearth catches. The Shade says: 'They go with your children now.'",
+      "failure": "You forget a name. The hearth stays cold."
+     }
+    },
+    {
+     "id": "packs_road",
+     "name": "The Pack's Road",
+     "focus": "wild",
+     "length": 6,
+     "gate": {
+      "level": 4
+     },
+     "check": {
+      "stat": "agi",
+      "difficulty": 20
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.2,
+      "gold": 0
+     },
+     "gain": {
+      "stat": "stealth",
+      "value": 0.04
+     },
+     "master": {
+      "id": "wolf",
+      "name": "the Pack-Mother"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Pack's Road: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "greenvale",
+        "text": "Word of The Pack's Road is heard at Greenvale; go and find the site.",
+        "done": "You find the way to The Pack's Road."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 30,
+        "text": "the Pack-Mother asks an offering of 30 gold before it will test you.",
+        "done": "the Pack-Mother takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "mirefen",
+        "text": "A last errand: be seen at Mirefen so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Pack-Mother circles you. 'Cross the wild without being seen, and without a road.'",
+      "stages": [
+       "Slip through the bracken.",
+       "Cross the marsh by moonlight.",
+       "The last mile is open ground."
+      ],
+      "success": "The Pack-Mother falls in beside you. 'You moved like one of us.'",
+      "failure": "You are heard. The Pack-Mother turns away."
+     }
+    },
+    {
+     "id": "imps_bargain",
+     "name": "The Imp's Bargain",
+     "focus": "pact",
+     "length": 3,
+     "gate": {
+      "level": 8
+     },
+     "check": {
+      "stat": "mag",
+      "difficulty": 28
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.4,
+      "gold": 20
+     },
+     "gain": {
+      "stat": "melee_damage",
+      "value": 0.08
+     },
+     "master": {
+      "id": "fire_imp",
+      "name": "the Bargain Imp"
+     },
+     "fight": true,
+     "quest": {
+      "name": "The Imp's Bargain: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "emberpeak",
+        "text": "Word of The Imp's Bargain is heard at Emberpeak; go and find the site.",
+        "done": "You find the way to The Imp's Bargain."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 60,
+        "text": "the Bargain Imp asks an offering of 60 gold before it will test you.",
+        "done": "the Bargain Imp takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "highcrag",
+        "text": "A last errand: be seen at Highcrag so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Bargain Imp spreads its hands. 'Power, for a little of what you are. Win my game and it is yours.'",
+      "stages": [
+       "Name your price.",
+       "Match my wit.",
+       "Strike the bargain, or me."
+      ],
+      "success": "The Imp laughs. 'Done. Do not forget what you gave.'",
+      "failure": "The Imp pockets your coin. 'Another time, when you are less greedy.'"
+     },
+     "drawback": {
+      "stat": "max_hp",
+      "value": -0.05
+     }
+    }
+   ]
+  },
+  "verdant": {
+   "trials": [
+    {
+     "id": "thorn_vigil",
+     "name": "The Thorn Vigil",
+     "focus": "will",
+     "length": 6,
+     "gate": {
+      "level": 6
+     },
+     "check": {
+      "stat": "vit",
+      "difficulty": 26
+     },
+     "risk": {
+      "kind": "cost",
+      "hp_pct": 0.0,
+      "gold": 30
+     },
+     "gain": {
+      "stat": "resist",
+      "value": 0.03
+     },
+     "master": {
+      "id": "thornhound",
+      "name": "the Thorn Warden"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Thorn Vigil: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "elderglade",
+        "text": "Word of The Thorn Vigil is heard at Elderglade; go and find the site.",
+        "done": "You find the way to The Thorn Vigil."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 40,
+        "text": "the Thorn Warden asks an offering of 40 gold before it will test you.",
+        "done": "the Thorn Warden takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "whisperwood",
+        "text": "A last errand: be seen at Whisperwood so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Thorn Warden bars the way. 'Bear the briars without a sound.'",
+      "stages": [
+       "The thorns close in.",
+       "Do not cry out.",
+       "Wait for the briars to let go."
+      ],
+      "success": "The briars part. 'Silent and unbroken,' says the Thorn Warden.",
+      "failure": "You cry out. The thorns tighten and cast you out."
+     }
+    },
+    {
+     "id": "court_of_seasons",
+     "name": "The Court of Seasons",
+     "focus": "wild",
+     "length": 8,
+     "gate": {
+      "level": 6
+     },
+     "check": {
+      "stat": "agi",
+      "difficulty": 24
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.2,
+      "gold": 0
+     },
+     "gain": {
+      "stat": "fire_resistance",
+      "value": 0.05
+     },
+     "master": {
+      "id": "moss_stag",
+      "name": "the Moss Stag"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Court of Seasons: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "elderglade",
+        "text": "Word of The Court of Seasons is heard at Elderglade; go and find the site.",
+        "done": "You find the way to The Court of Seasons."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 40,
+        "text": "the Moss Stag asks an offering of 40 gold before it will test you.",
+        "done": "the Moss Stag takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "greenvale",
+        "text": "A last errand: be seen at Greenvale so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Moss Stag lowers its antlers. 'Walk all four seasons in a day.'",
+      "stages": [
+       "Spring: wade the thaw.",
+       "Summer: cross the glare.",
+       "Autumn and winter: finish before the snow."
+      ],
+      "success": "The Moss Stag bows. 'The seasons know you now.'",
+      "failure": "Winter takes you. The Moss Stag leaves you at the glade's edge."
+     }
+    },
+    {
+     "id": "moth_archive",
+     "name": "The Moth Archive",
+     "focus": "lore",
+     "length": 5,
+     "gate": {
+      "level": 7
+     },
+     "check": {
+      "stat": "mag",
+      "difficulty": 28
+     },
+     "risk": {
+      "kind": "cost",
+      "hp_pct": 0.0,
+      "gold": 45
+     },
+     "gain": {
+      "lore": [
+       {
+        "kind": "spell",
+        "id": "entangle"
+       },
+       {
+        "kind": "spell",
+        "id": "rejuvenation"
+       },
+       {
+        "kind": "spell",
+        "id": "acid_rain"
+       },
+       {
+        "kind": "spell",
+        "id": "cleanse"
+       },
+       {
+        "kind": "feat",
+        "id": "mire_trap"
+       }
+      ],
+      "fallback": {
+       "stat": "max_mp",
+       "value": 0.03
+      }
+     },
+     "master": {
+      "id": "glimmer_moth",
+      "name": "the Glimmer Elder"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Moth Archive: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "elderglade",
+        "text": "Word of The Moth Archive is heard at Elderglade; go and find the site.",
+        "done": "You find the way to The Moth Archive."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 50,
+        "text": "the Glimmer Elder asks an offering of 50 gold before it will test you.",
+        "done": "the Glimmer Elder takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "whisperwood",
+        "text": "A last errand: be seen at Whisperwood so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Glimmer Elder shimmers. 'Follow the light and read what it shows.'",
+      "stages": [
+       "Follow the first glimmer.",
+       "The pattern is a word. Read it.",
+       "Say it back in the Court's tongue."
+      ],
+      "success": "The Glimmer Elder dims with pleasure. 'Keep it. The Court remembers.'",
+      "failure": "The light scatters. 'Not yet,' says the Glimmer Elder."
+     }
+    },
+    {
+     "id": "antler_dance",
+     "name": "The Antler Dance",
+     "focus": "spirit",
+     "length": 6,
+     "gate": {
+      "level": 7
+     },
+     "check": {
+      "stat": "agi",
+      "difficulty": 24
+     },
+     "risk": {
+      "kind": "cost",
+      "hp_pct": 0.0,
+      "gold": 45
+     },
+     "gain": {
+      "stat": "luck",
+      "value": 0.02,
+      "legacy": true
+     },
+     "master": {
+      "id": "moss_stag",
+      "name": "the Court's Elder"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Antler Dance: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "elderglade",
+        "text": "Word of The Antler Dance is heard at Elderglade; go and find the site.",
+        "done": "You find the way to The Antler Dance."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 45,
+        "text": "the Court's Elder asks an offering of 45 gold before it will test you.",
+        "done": "the Court's Elder takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "greenvale",
+        "text": "A last errand: be seen at Greenvale so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Court's Elder stamps once. 'Dance as your line has danced.'",
+      "stages": [
+       "Find the old step.",
+       "Dance it faster.",
+       "Dance it for those who come after."
+      ],
+      "success": "The Elder nods. 'It is in your blood now, and theirs.'",
+      "failure": "You stumble. The Elder turns away without a word."
+     }
+    },
+    {
+     "id": "gloam_bargain",
+     "name": "The Gloam Bargain",
+     "focus": "pact",
+     "length": 3,
+     "gate": {
+      "level": 10
+     },
+     "check": {
+      "stat": "mag",
+      "difficulty": 32
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.4,
+      "gold": 25
+     },
+     "gain": {
+      "stat": "max_mp",
+      "value": 0.1
+     },
+     "master": {
+      "id": "glimmer_moth",
+      "name": "the Gloam Moth"
+     },
+     "fight": true,
+     "quest": {
+      "name": "The Gloam Bargain: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "elderglade",
+        "text": "Word of The Gloam Bargain is heard at Elderglade; go and find the site.",
+        "done": "You find the way to The Gloam Bargain."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 70,
+        "text": "the Gloam Moth asks an offering of 70 gold before it will test you.",
+        "done": "the Gloam Moth takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "whisperwood",
+        "text": "A last errand: be seen at Whisperwood so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Gloam Moth sheds dark dust. 'Mana for a little of your will. Win my game.'",
+      "stages": [
+       "Name your price.",
+       "Match my wit.",
+       "Strike the bargain, or me."
+      ],
+      "success": "The Gloam Moth settles. 'It is done. You will feel the cost.'",
+      "failure": "The dust blinds you. 'Not today,' whispers the Moth."
+     },
+     "drawback": {
+      "stat": "resist",
+      "value": -0.03
+     }
+    }
+   ]
+  },
+  "hollow": {
+   "trials": [
+    {
+     "id": "dark_descent",
+     "name": "The Dark Descent",
+     "focus": "will",
+     "length": 8,
+     "gate": {
+      "level": 8
+     },
+     "check": {
+      "stat": "vit",
+      "difficulty": 30
+     },
+     "risk": {
+      "kind": "cost",
+      "hp_pct": 0.0,
+      "gold": 40
+     },
+     "gain": {
+      "stat": "resist",
+      "value": 0.03
+     },
+     "master": {
+      "id": "wraith",
+      "name": "the Barrow Warden"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Dark Descent: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "hollow_barrow",
+        "text": "Word of The Dark Descent is heard at Hollow Barrow; go and find the site.",
+        "done": "You find the way to The Dark Descent."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 60,
+        "text": "the Barrow Warden asks an offering of 60 gold before it will test you.",
+        "done": "the Barrow Warden takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "deepstone_halls",
+        "text": "A last errand: be seen at Deepstone Halls so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Barrow Warden holds out no light. 'Go down without a lamp.'",
+      "stages": [
+       "The stairs end. The dark does not.",
+       "Something breathes beside you.",
+       "Climb back without a lamp."
+      ],
+      "success": "You climb into the light. 'The dark has no hold on you,' says the Warden.",
+      "failure": "You light a lamp. The Warden snuffs it and sends you up."
+     }
+    },
+    {
+     "id": "weight_of_stone",
+     "name": "The Weight of Stone",
+     "focus": "body",
+     "length": 6,
+     "gate": {
+      "level": 8
+     },
+     "check": {
+      "stat": "vit",
+      "difficulty": 30
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.3,
+      "gold": 0
+     },
+     "gain": {
+      "stat": "carry_weight",
+      "value": 0.05
+     },
+     "master": {
+      "id": "ghoul",
+      "name": "the Deep Porter"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Weight of Stone: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "deepstone_halls",
+        "text": "Word of The Weight of Stone is heard at Deepstone Halls; go and find the site.",
+        "done": "You find the way to The Weight of Stone."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 60,
+        "text": "the Deep Porter asks an offering of 60 gold before it will test you.",
+        "done": "the Deep Porter takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "hollow_barrow",
+        "text": "A last errand: be seen at Hollow Barrow so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Deep Porter points at a heap. 'Carry it up. All of it.'",
+      "stages": [
+       "The first load.",
+       "The second, heavier.",
+       "The last, which is the heaviest."
+      ],
+      "success": "The Deep Porter grunts. 'You can carry more than you thought.'",
+      "failure": "You drop the last load. The Deep Porter shrugs."
+     }
+    },
+    {
+     "id": "shadow_ledger",
+     "name": "The Shadow Ledger",
+     "focus": "lore",
+     "length": 5,
+     "gate": {
+      "level": 9
+     },
+     "check": {
+      "stat": "mag",
+      "difficulty": 32
+     },
+     "risk": {
+      "kind": "cost",
+      "hp_pct": 0.0,
+      "gold": 50
+     },
+     "gain": {
+      "lore": [
+       {
+        "kind": "spell",
+        "id": "fear"
+       },
+       {
+        "kind": "spell",
+        "id": "curse_of_weakness"
+       },
+       {
+        "kind": "spell",
+        "id": "grave_tide"
+       },
+       {
+        "kind": "spell",
+        "id": "expose_weakness"
+       },
+       {
+        "kind": "feat",
+        "id": "garrote"
+       },
+       {
+        "kind": "feat",
+        "id": "smoke_bomb"
+       }
+      ],
+      "fallback": {
+       "stat": "max_mp",
+       "value": 0.03
+      }
+     },
+     "master": {
+      "id": "lich_acolyte",
+      "name": "the Ledger Keeper"
+     },
+     "fight": false,
+     "quest": {
+      "name": "The Shadow Ledger: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "hollow_barrow",
+        "text": "Word of The Shadow Ledger is heard at Hollow Barrow; go and find the site.",
+        "done": "You find the way to The Shadow Ledger."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 70,
+        "text": "the Ledger Keeper asks an offering of 70 gold before it will test you.",
+        "done": "the Ledger Keeper takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "deepstone_halls",
+        "text": "A last errand: be seen at Deepstone Halls so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Ledger Keeper opens a book of names. 'Every power has a price written here.'",
+      "stages": [
+       "Find your line in the ledger.",
+       "Read what is owed.",
+       "Sign."
+      ],
+      "success": "The Ledger Keeper blots the page. 'Paid in full.'",
+      "failure": "The ink runs. The Ledger Keeper closes the book."
+     }
+    },
+    {
+     "id": "bone_duel",
+     "name": "The Bone Duel",
+     "focus": "mastery",
+     "length": 4,
+     "gate": {
+      "level": 9
+     },
+     "check": {
+      "stat": "agi",
+      "difficulty": 32
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.35,
+      "gold": 0
+     },
+     "gain": {
+      "stat": "reflexes",
+      "value": 0.02
+     },
+     "master": {
+      "id": "skeleton",
+      "name": "the Bone Duellist"
+     },
+     "fight": true,
+     "quest": {
+      "name": "The Bone Duel: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "hollow_barrow",
+        "text": "Word of The Bone Duel is heard at Hollow Barrow; go and find the site.",
+        "done": "You find the way to The Bone Duel."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 70,
+        "text": "the Bone Duellist asks an offering of 70 gold before it will test you.",
+        "done": "the Bone Duellist takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "deepstone_halls",
+        "text": "A last errand: be seen at Deepstone Halls so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Bone Duellist salutes with an empty hand. 'Three touches.'",
+      "stages": [
+       "First touch.",
+       "Second touch.",
+       "Third touch."
+      ],
+      "success": "The Duellist clatters in respect. 'You were quick.'",
+      "failure": "The Duellist's blade finds you first. 'Again.'"
+     }
+    },
+    {
+     "id": "wraiths_price",
+     "name": "The Wraith's Price",
+     "focus": "pact",
+     "length": 3,
+     "gate": {
+      "level": 11
+     },
+     "check": {
+      "stat": "mag",
+      "difficulty": 36
+     },
+     "risk": {
+      "kind": "hurt",
+      "hp_pct": 0.4,
+      "gold": 30
+     },
+     "gain": {
+      "stat": "melee_damage",
+      "value": 0.08
+     },
+     "master": {
+      "id": "rift_shade",
+      "name": "the Rift Shade"
+     },
+     "fight": true,
+     "quest": {
+      "name": "The Wraith's Price: the way in",
+      "steps": [
+       {
+        "id": "find",
+        "kind": "visit",
+        "place": "deepstone_halls",
+        "text": "Word of The Wraith's Price is heard at Deepstone Halls; go and find the site.",
+        "done": "You find the way to The Wraith's Price."
+       },
+       {
+        "id": "right",
+        "kind": "offering",
+        "gold": 80,
+        "text": "the Rift Shade asks an offering of 80 gold before it will test you.",
+        "done": "the Rift Shade takes the offering and nods."
+       },
+       {
+        "id": "errand",
+        "kind": "visit",
+        "place": "the_rift",
+        "text": "A last errand: be seen at The Rift so the warden knows you.",
+        "done": "The warden has heard of you."
+       }
+      ]
+     },
+     "lines": {
+      "opening": "The Rift Shade speaks from everywhere. 'Strength, if you pay in vigour. Win.'",
+      "stages": [
+       "Name your price.",
+       "Match my wit.",
+       "Strike the bargain, or me."
+      ],
+      "success": "The Shade fades. 'Taken. Spend it well.'",
+      "failure": "The Shade laughs without sound."
+     },
+     "drawback": {
+      "stat": "max_hp",
+      "value": -0.05
+     }
+    }
+   ]
+  }
+ }
+}

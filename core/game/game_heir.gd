@@ -39,6 +39,7 @@ var subclass: String = ""          # the id of this heir's subclass (see GameSub
 var subclass_founded: bool = false  # chosen at the founding or born to it: its perks are stronger
 var titles: Array = []          # ids of the personal titles this heir has earned (see GameTitles); saved only once there is one
 var boons: Array = []           # ids of the factions that have honoured this heir with their gift (see GameFactions); saved only once there is one
+var trials_done: Array = []      # ids of the trials this heir has passed (see GameTrials); saved only once there is one
 var title_worn: String = ""     # the title worn after the name, from these or the house's; "" for none
 var children: Array = []     # Array[GameHeir], born to this heir
 var spouse: GameHeir = null
@@ -115,7 +116,10 @@ func trait_total(stat: String) -> float:
 					total += float(e["value"])
 	if not diseases.is_empty():
 		total += GameDisease.effect_total(self, stat)
-	return total + GameSkillTree.bonus(self, stat)
+	total += GameSkillTree.bonus(self, stat)
+	if not trials_done.is_empty():   # a heir who has passed no trial adds nothing, so every seeded life is what it was
+		total += GameTrials.bonus(self, stat)
+	return total
 
 
 func fate_modifier_total() -> float:
@@ -286,6 +290,8 @@ func to_dict() -> Dictionary:
 	}
 	if shirt != "":   # only once chosen, so a save (and its golden digest) is unchanged until then
 		out["shirt"] = shirt
+	if not trials_done.is_empty():   # only once a trial is passed
+		out["trials_done"] = trials_done
 	if subclass != "":   # likewise only once there is one
 		out["subclass"] = subclass
 		out["subclass_founded"] = subclass_founded
@@ -320,6 +326,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.shirt = str(d.get("shirt", "")) if typeof(d.get("shirt", "")) == TYPE_STRING else ""
 	h.titles = GameTitles.clean_ids(d.get("titles", []))
 	h.boons = GameFactions.load_boons(d.get("boons", []))
+	h.trials_done = GameTrials.clean_done(d.get("trials_done", []))
 	if typeof(d.get("subclass")) == TYPE_STRING and GameSubclass.has(str(d["subclass"])):   # an id this game does not know is no subclass
 		h.subclass = str(d["subclass"])
 		h.subclass_founded = typeof(d.get("subclass_founded")) == TYPE_BOOL and d["subclass_founded"]

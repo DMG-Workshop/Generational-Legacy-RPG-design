@@ -21,6 +21,7 @@ var house_titles: Array = []    # ids of the house titles the dynasty has earned
 var achievements: Dictionary = {}   # milestones the house has reached, id -> {gen, year, heir} (see GameAchievements); saved only once there is one
 var hard: Dictionary = {}       # hard-mode options chosen at the founding (see GameHardMode); saved only when one is on
 var world_event: Dictionary = {}    # the war, famine or golden age running now, or the rest after one (see GameWorldEvents); saved only when not empty
+var trials: Dictionary = {}     # the family's trial state: quest steps done, legacy gains, the trial under way, tries and waits (see GameTrials); saved only when not empty
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
@@ -1022,6 +1023,7 @@ func choose_heir(index: int) -> Array:
 	c.refresh_derived()
 	c.full_heal()
 	heir = c
+	GameTrials.on_succession(self, c)   # legacy gains pass down; a trial under way is lost
 	party.on_succession(self, msgs)
 	quests.on_succession(self, msgs)
 	candidates = []
@@ -1072,6 +1074,8 @@ func to_dict() -> Dictionary:
 		out["dungeon_marks"] = dungeon_marks
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
 		out["house"] = house
+	if not trials.is_empty():   # only once a trial step is done
+		out["trials"] = trials
 	if world_seconds > 0.0:   # likewise: only once the clock has run
 		out["world_seconds"] = world_seconds
 	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
@@ -1123,6 +1127,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.quests = GameQuests.from_dict(d.get("quests", {}))
 	g.party = GameParty.from_dict(d.get("party", {}), g)
 	g.house = GameHouse.from_dict(d.get("house", {}))
+	g.trials = GameTrials.load_state(d.get("trials", {}))
 	g.roster = GameRoster.load_list(d.get("roster", []))
 	g.stores = GameCraft.load_stores(d.get("stores", {}))
 	g.mine = GameMine.load_state(d.get("mine", {}))
