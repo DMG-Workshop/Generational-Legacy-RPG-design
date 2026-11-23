@@ -386,8 +386,8 @@ static func serve(d: GameDynasty, shop_id: String, service_id: String) -> String
 	if not is_open(d, shop_id):
 		return shut_line(d, shop_id)
 	for s in def(shop_id).get("services", []):
-		if str(s["id"]) != service_id:
-			continue
+		if str(s["id"]) != service_id or str(s.get("kind", "")) != "":
+			continue   # a row with a kind (casting) is run by its own system, not by a bath's rules
 		var cost := service_price(d, s)
 		if h.gold < cost:
 			return text("no_gold", {"name": h.name, "item": str(s["name"]).to_lower(), "price": GameText.num(cost)})
