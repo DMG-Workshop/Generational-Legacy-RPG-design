@@ -10,7 +10,7 @@
 ##   subclass  found each dynasty in a calling: one of the twenty ids, "none", or "all" for a sweep (the baseline and
 ##          each calling in turn, one line each); the calling passes down at the game's own 50% chance
 ##   keep   with subclass: every heir carries the calling, not only the ones it is passed down to
-##   profile  play the lives as a profile bot (forge, miner, builder, farmer, breeder, forager, fleer: GameProfile), and report the gold-equivalent gain and the
+##   profile  play the lives as a profile bot (forge, miner, builder, farmer, breeder, forager, fleer, trialist: GameProfile), and report the gold-equivalent gain and the
 ##          effort per life beside the usual figures; "none" is the plain autopilot
 ##   check  exit 1 when the overall share is outside the band (default: only print)
 ##

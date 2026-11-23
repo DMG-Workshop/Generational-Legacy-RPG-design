@@ -178,6 +178,7 @@ what a player gets). Each is run once for the plain house and once for each call
 | `breeder` | pairs creatures, keeps the young, sells the surplus | `find_mult`, `fertility_mult`, `mutation_mult`, `value_mult`, `keep_mult` | breeder, wildcaller |
 | `forager` | forages the nearest node each generation and hauls with companions | `forage_mult`, `haul_mult`, `carry_mult` | feastwright, greenwarden, wayfinder, caravaneer, delver |
 | `fleer` | flees any fight under a hp share (it never does today) | `flee_mult` | trapsmith, wayfinder |
+| `trialist` | every fourth step works toward the trials of the open realms: waits out and finishes the one under way, begins one that is ready, does the next step of a way in when it stands there, else takes one road toward the place the step asks for (`GameProfile._trial`, through `GameTrials`); never a trial won by a fight, and never pays for a way in whose gate level, class or earlier trial it lacks | the trial gains (`GameTrials.bonus`, a spell or feat) | all (the trials are the house's, not a calling's) |
 
 A profile never changes the **fights** (`GameBattle` still plays by `GameTactics`), so the existing 3-7% battle-death band still applies to the plain house with the profile on.
 
@@ -204,6 +205,7 @@ Callings on their profile (same seeds, `keep`):
 | feastwright on forager | 1,618 (+20%) | 27.2 | 59.4 | 3.2% |
 
 How to read it:
+- **The trialist** (same seeds, commit of the profile): gold at death 3,829 against 4,775 (-20%), mean level 58 against 59, mean age 186 against 190, battle deaths 2.5% against 2.7%, 1.63 trials passed of 2.71 tried per life, 10.3 actions, gain 840 GE (the autopilot's own is about 850: the offerings and the years on the road cost about what the trials' stats are worth in the purse). Its power is in the stats, not the purse, so net worth undercounts it; the level, age and death rows show it neither makes a life clearly stronger nor weaker. The line to read is passes per try (60%) and the gold: a way in plus the road costs about a fifth of a life's gold for a few percent of one stat. That is a first guess of the bot's policy and of the data; if trials are meant to pay for themselves, the lever is the gains in `data/world/trials.json` (`focus_cap`), not the bot.
 - **An autopilot life already gains about 850 GE** (gear and gold it holds at death), so a profile's own gain is its figure minus about 850: forge +410, miner +110, forager +500, builder +1,050. The farmer, breeder and fleer sit on the baseline.
 - **Farmer and breeder are identical to the digit (854 GE, 8.2 actions): the breeder never reaches breeding in these runs**, so its numbers are the farmer's. Buying young animals at market price and valuing them at sell price gains nothing until they grow, and the policy rarely holds a pair of adults. This is a gap in the policy, not a result about the Breeder calling.
 - **The fleer's 5.3% battle deaths** (against 2.7%) is the cost of fleeing under 35% health: the heir leaves a fight it was winning, and the effort is the 0.9 flights per life. `flee_mult` perks (Trapsmith, Wayfinder) are not yet run on it.

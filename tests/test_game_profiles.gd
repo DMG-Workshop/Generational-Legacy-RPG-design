@@ -23,6 +23,7 @@ func _init() -> void:
 	test_hooks_off()
 	test_net_worth()
 	test_profiles()
+	test_trialist()
 	test_batch()
 	test_perks()
 	test_args()
@@ -138,6 +139,49 @@ func test_profiles() -> void:
 	ok(GameBot.flee_below == 0.0 and not GameBot.on_fight_end.is_valid(), "and detach puts it all back")
 
 
+func test_trialist() -> void:
+	var d := _dyn(3)
+	d.heir.level = 12
+	d.heir.gold = 100000
+	var ctx := GameProfile.start(d, "trialist")
+	var seen_active := false
+	var seen_fight := false
+	for i in 400:
+		GameProfile.hook(d, ctx)
+		if d.state != "life":
+			break
+		var a := GameTrials.active(d)
+		if not a.is_empty():
+			seen_active = true
+			if bool(GameTrials.trial(str(a["id"])).get("fight", false)):
+				seen_fight = true
+	ok(int(ctx["actions"]) > 0, "the trialist acts (%d actions)" % int(ctx["actions"]))
+	ok(seen_active and int(ctx["tried"]) > 0, "it begins and finishes a trial (%d tried, %d passed)" % [int(ctx["tried"]), int(ctx["trials"])])
+	ok(not seen_fight, "and never a trial won by a fight")
+	ok(int(ctx["trials"]) == (ctx["passed"] as Array).size() and int(ctx["trials"]) <= int(ctx["tried"]), "its count of passes is the list's")
+	for id in ctx["passed"]:
+		ok(GameTrials.done(d.heir, str(id)), "%s is on the heir's record" % id)
+	ok(d.trials.get("steps", {}).size() > 0, "the family learned a way in")
+	# nothing placed stands in reach: it does nothing and spends nothing
+	var q := _dyn(3)
+	q.heir.level = 1
+	var qctx := GameProfile.start(q, "trialist")
+	var gold := q.heir.gold
+	for i in 20:
+		GameProfile.hook(q, qctx)
+	ok(q.trials.is_empty() and q.heir.gold == gold, "a heir with no realm open and no trial in reach does nothing")
+	# no other profile touches a trial
+	var f := _life("forge", 3)
+	ok((f["d"] as GameDynasty).trials.is_empty(), "the other profiles never start a trial")
+	# a whole life, and a batch: the counts add up and print
+	var life := _life("trialist", 3)
+	ok(int(life["actions"]) >= 0 and int(life["tried"]) >= int(life["trials"]), "a whole life as a trialist (%d tried)" % int(life["tried"]))
+	var b := Balance.play_batch(2, ["human"], 3, "", false, "trialist")
+	ok(float(b["total"]["tried"]) >= float(b["total"]["trials"]), "a batch counts trials tried and passed")
+	ok(Balance.profile_detail(b["total"]).contains("trials") or float(b["total"]["tried"]) == 0.0, "the detail line says what the trialist passed")
+	ok(not Balance.profile_detail(Balance.play_batch(2, ["human"], 2, "", false, "forager")["total"]).contains("trials"), "and the other profiles' lines are as before")
+
+
 func test_batch() -> void:
 	var a := Balance.play_batch(2, ["human", "elf"], 3, "", false, "forager")
 	var b := Balance.play_batch(2, ["human", "elf"], 3, "", false, "forager")
@@ -179,4 +223,4 @@ func test_perks() -> void:
 
 func test_args() -> void:
 	ok(GameProfile.has("forge") and GameProfile.has("fleer") and not GameProfile.has("nonsuch") and not GameProfile.has(""), "the profile ids")
-	ok(GameProfile.IDS.size() == 7, "seven profiles")
+	ok(GameProfile.IDS.size() == 8 and GameProfile.has("trialist"), "eight profiles, the trialist among them")
