@@ -809,6 +809,7 @@ func finish_battle() -> Array:
 			msgs.append_array(party_msgs)
 			for m in msgs:
 				_say(m)
+	msgs.append_array(GameTrials.settle_master(self))   # a win over the master of a trial under way wins the trial (nothing at all with none)
 	return msgs
 
 

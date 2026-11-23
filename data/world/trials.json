@@ -92,7 +92,9 @@
   "fight_begins": "{master} steps up to fight.",
   "fight_not_run": "This trial is not won by a fight.",
   "no_fight": "No fight is waiting.",
-  "stage": "Stage {n} of {total}: {line}"
+  "stage": "Stage {n} of {total}: {line}",
+    "preview_stat": "{stat} {value}",
+    "preview_lore": "a spell or feat your calling can use"
  },
  "realms": {
   "material": {
