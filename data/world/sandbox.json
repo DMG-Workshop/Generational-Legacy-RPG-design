@@ -5,6 +5,7 @@
     "keep": 4,
     "threat_near": 10.0,
     "contact_range": 1.5,
+    "reach_step": 0.25,
     "contact_join": 4.0,
     "contact_max": 3,
     "escape_tiles": 6,

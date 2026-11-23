@@ -662,6 +662,16 @@ func build_house(w: int, h: int, dx: int, dz: int) -> Dictionary:
 ## A creature that is hunting the heir and has reached them starts a fight (GameDynasty.start_encounter), with any others that
 ## are hunting them within `contact_join` tiles, up to `contact_max` in all. The creatures in the fight are taken out of the
 ## open world. Only while no fight is on and the heir is living; returns whether one began.
+## Whether a creature at (x, z) can strike the heir: within `rng` tiles and with nothing that stops a reach on the line between them
+## (a wall, a tower, a building, a shut gate: `GameWalls.line_clear`), so a creature pressed against the outside of a wall cannot
+## fight the heir on the other side of it. Ranged and area reach follow the same line (see docs/REACH.md).
+func reaches_heir(a: Dictionary, rng: float) -> bool:
+	var at := Vector2(float(a["x"]), float(a["z"]))
+	if at.distance_to(heir_point()) > rng:
+		return false
+	return GameWalls.line_clear(at, heir_point(), GameWalls.shut_now(d), float(setting("reach_step")))
+
+
 func _contact() -> bool:
 	if d.battle != null or d.state != "life" or storey() > 0 or space != "world":
 		return false   # nothing reaches the heir upstairs or indoors
@@ -669,7 +679,7 @@ func _contact() -> bool:
 	var first := -1
 	for i in creatures.size():
 		var a: Dictionary = creatures[i]
-		if str(a["mode"]) == "chase" and Vector2(float(a["x"]), float(a["z"])).distance_to(me) <= float(setting("contact_range")):
+		if str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_range"))):
 			first = i
 			break
 	if first < 0:
@@ -680,7 +690,7 @@ func _contact() -> bool:
 		var a: Dictionary = creatures[i]
 		if ids.size() >= int(setting("contact_max")):
 			break
-		if i == first or (str(a["mode"]) == "chase" and Vector2(float(a["x"]), float(a["z"])).distance_to(me) <= float(setting("contact_join"))):
+		if i == first or (str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_join")))):
 			ids.append(str(a["id"]))
 			gone.append(a)
 	var fight := d.start_encounter(ids)

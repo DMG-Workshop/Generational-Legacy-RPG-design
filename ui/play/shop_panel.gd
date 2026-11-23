@@ -263,6 +263,12 @@ func _build_shop(shop: String) -> void:
 	var h := dynasty.heir
 	var sdef := GameShops.def(shop)
 	rows.add_child(_section("%s - %s" % [GameShops.name_of(shop), "open until %02d:00" % int(sdef["hours"][1])]))
+	if not GameShops.is_open(dynasty, shop):   # the shop keeps its hours (GameShops.shut_line): nothing to buy or sell until it opens
+		rows.add_child(Kit.label(GameShops.text("shut_tab", {"opens": GameShops.opens_text(shop), "closes": GameShops.closes_text(shop)}), 15, Kit.dim()))
+		return
+	var soon := GameShops.closing_soon(dynasty, shop)
+	if soon != "":
+		rows.add_child(Kit.label(soon, 14, Kit.dim()))
 	var shelf := GameShops.stock(dynasty, shop)
 	if shelf.is_empty():
 		rows.add_child(Kit.label(GameShops.text("no_stock", {"shop": GameShops.name_of(shop)}), 15, Kit.dim()))

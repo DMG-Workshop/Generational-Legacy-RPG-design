@@ -5,7 +5,7 @@
   "bundle_markup": 1.15,
   "animal_markup": 1.0,
   "max_loot_tries": 12,
-  "quality_floor": 0
+  "quality_floor": 0, "last_call_hours": 1.0
  },
  "text": {
   "bought": "{name} buys {item} for {price} gold.",
@@ -13,7 +13,10 @@
   "sold": "{name} sells {item} to {shop} for {price} gold.",
   "bought_material": "{name} buys {n} {material} for {price} gold.",
   "sold_material": "{name} sells {n} {material} for {price} gold.",
-  "not_open": "{shop} is shut.",
+  "not_open": "{shop} is shut. It opens at {opens} and closes at {closes}.",
+    "closing_soon": "{shop} closes at {closes}.",
+    "all_shut": "Every shop here is shut for now.",
+    "shut_tab": "Shut until {opens} (open {opens} to {closes}).",
   "not_here": "There is no {shop} here.",
   "not_on_shelf": "{shop} does not have that.",
   "no_gold": "{name} cannot afford {item}: it costs {price} gold.",
