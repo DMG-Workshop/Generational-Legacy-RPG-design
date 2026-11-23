@@ -79,19 +79,22 @@ func _row(t: Dictionary) -> Control:
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", 10)
-	row.add_child(_portrait(str(t["master_id"]), str(t["master"])))
+	row.add_child(_portrait(str(t["id"]), str(t["master_id"]), str(t["master"])))
 	row.add_child(box)
 	return row
 
 
-## The master drawn as the creature that runs the trial (the same pixel art the fight shows), in a framed square; the name stands in when there is none.
-func _portrait(creature_id: String, master: String) -> Control:
+## The master drawn as its own look (the creature that runs the trial, repainted: data/art/masters.json; the plain creature when there is none), in
+## a framed square; the name stands in when there is no art at all.
+func _portrait(trial_id: String, creature_id: String, master: String) -> Control:
 	var frame := PanelContainer.new()
 	frame.name = "Master"
 	frame.custom_minimum_size = Vector2(PORTRAIT + 8.0, PORTRAIT + 8.0)
 	frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	frame.add_theme_stylebox_override("panel", Kit.style(Color("#14121f"), 6, Kit.dim()))
-	var tex := SpriteArt.creature(creature_id)
+	var tex := SpriteArt.master(trial_id)
+	if tex == null:
+		tex = SpriteArt.creature(creature_id)
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(PORTRAIT, PORTRAIT)
 	frame.add_child(holder)

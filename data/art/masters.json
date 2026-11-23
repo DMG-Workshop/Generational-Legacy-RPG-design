@@ -1,0 +1,385 @@
+{
+ "note": "A look of its own for each trial's master (docs/TRIALS.md, *Masters' art*; ui/play/sprite_art.gd `master`, checked by `SpriteArt.validate`). A master is a creature of data/creatures that runs a trial, so its look is that creature's sprite in data/art/creatures.json repainted: `palette` replaces the colours of keys the base sprite already has (so the colour count does not grow past the style's cap) and `marks` is a few pixels, inside the silhouette, in colours of their own (war paint, a gold rune, a scar). Every trial in data/world/trials.json needs one, and none is the plain creature, so a master is never mistaken for the wild creature of its kind.",
+ "masters": {
+  "stone_lift": {
+   "base": "stone_golem",
+   "palette": {
+    "L": "#9bb08a",
+    "M": "#6f8a62",
+    "D": "#4d6446",
+    "X": "#33442f",
+    "y": "#bfe8ff",
+    "o": "#7fd0ff"
+   }
+  },
+  "embers_vigil": {
+   "base": "wraith",
+   "palette": {
+    "L": "#f3c9a0",
+    "M": "#d98a5a",
+    "D": "#a8553a",
+    "X": "#6e3524",
+    "E": "#ffb04a",
+    "e": "#fff0c0",
+    "w": "#f6d9a8",
+    "W": "#c9955a"
+   }
+  },
+  "archive_of_dust": {
+   "base": "lich_acolyte",
+   "palette": {
+    "L": "#4f9aa8",
+    "M": "#33707f",
+    "D": "#204a58",
+    "X": "#12303a",
+    "G": "#ffe28a",
+    "g": "#d9a52a"
+   },
+   "marks": {
+    "palette": {
+     "a": "#ffe28a"
+    },
+    "pixels": [
+     [
+      17,
+      26,
+      "a"
+     ],
+     [
+      16,
+      27,
+      "a"
+     ],
+     [
+      17,
+      27,
+      "a"
+     ],
+     [
+      18,
+      27,
+      "a"
+     ],
+     [
+      17,
+      28,
+      "a"
+     ]
+    ]
+   }
+  },
+  "ring_of_champions": {
+   "base": "ogre",
+   "palette": {
+    "O": "#b4624a",
+    "l": "#d48a6a",
+    "d": "#8a4636",
+    "D": "#5e2e26"
+   },
+   "marks": {
+    "palette": {
+     "R": "#f4efe0"
+    },
+    "pixels": [
+     [
+      14,
+      20,
+      "R"
+     ],
+     [
+      14,
+      21,
+      "R"
+     ],
+     [
+      14,
+      22,
+      "R"
+     ],
+     [
+      17,
+      20,
+      "R"
+     ],
+     [
+      17,
+      21,
+      "R"
+     ],
+     [
+      17,
+      22,
+      "R"
+     ],
+     [
+      20,
+      20,
+      "R"
+     ],
+     [
+      20,
+      21,
+      "R"
+     ],
+     [
+      20,
+      22,
+      "R"
+     ]
+    ]
+   }
+  },
+  "ancestors_hearth": {
+   "base": "skeleton",
+   "palette": {
+    "W": "#d6f0f4",
+    "B": "#b4d4dc",
+    "b": "#8ab0bc",
+    "e": "#ffd25a",
+    "o": "#2c3a5c",
+    "m": "#ffe8a0",
+    "n": "#c9a24a"
+   }
+  },
+  "packs_road": {
+   "base": "wolf",
+   "palette": {
+    "W": "#5e4a3e",
+    "l": "#8a7060",
+    "L": "#b49880",
+    "w": "#463630",
+    "d": "#2e2420",
+    "y": "#bfe8ff",
+    "t": "#f4efe0"
+   },
+   "marks": {
+    "palette": {
+     "s": "#f4efe0"
+    },
+    "pixels": [
+     [
+      10,
+      10,
+      "s"
+     ],
+     [
+      10,
+      11,
+      "s"
+     ],
+     [
+      11,
+      12,
+      "s"
+     ]
+    ]
+   }
+  },
+  "imps_bargain": {
+   "base": "fire_imp",
+   "palette": {
+    "R": "#8a3ab8",
+    "r": "#5e2688",
+    "D": "#3a1658",
+    "l": "#b878e0",
+    "y": "#ffe14a"
+   }
+  },
+  "thorn_vigil": {
+   "base": "thornhound",
+   "palette": {
+    "B": "#4a3a6b",
+    "b": "#6f5a94",
+    "n": "#2a1f4a",
+    "T": "#e87a8a",
+    "e": "#ffd25a"
+   }
+  },
+  "court_of_seasons": {
+   "base": "moss_stag",
+   "palette": {
+    "M": "#8ad25a",
+    "m": "#4e9a38",
+    "A": "#ffe28a",
+    "F": "#9a7048",
+    "f": "#c49a68"
+   }
+  },
+  "moth_archive": {
+   "base": "glimmer_moth",
+   "palette": {
+    "g": "#ffe8a0",
+    "G": "#fff8dc",
+    "d": "#8a6a3a",
+    "y": "#ffffff",
+    "e": "#ff9a6a"
+   }
+  },
+  "antler_dance": {
+   "base": "moss_stag",
+   "palette": {
+    "M": "#e0904a",
+    "m": "#a85a2a",
+    "A": "#f0f0ea",
+    "F": "#8a8478",
+    "f": "#b8b2a4",
+    "e": "#ffd25a"
+   }
+  },
+  "gloam_bargain": {
+   "base": "glimmer_moth",
+   "palette": {
+    "g": "#b878e0",
+    "G": "#e8c8ff",
+    "d": "#4a2a6a",
+    "y": "#ff8ac8",
+    "e": "#ff5aa8"
+   }
+  },
+  "dark_descent": {
+   "base": "wraith",
+   "palette": {
+    "L": "#8aa88a",
+    "M": "#587a62",
+    "D": "#385040",
+    "X": "#22342c",
+    "E": "#ff5040",
+    "e": "#ffd0c0",
+    "w": "#b4b49a",
+    "W": "#807f6e"
+   }
+  },
+  "weight_of_stone": {
+   "base": "ghoul",
+   "palette": {
+    "a": "#b4a890",
+    "m": "#8c8068",
+    "d": "#66604e",
+    "x": "#46402f",
+    "e": "#ffb04a",
+    "P": "#8a6a3a",
+    "p": "#64482a",
+    "q": "#44301e"
+   }
+  },
+  "shadow_ledger": {
+   "base": "lich_acolyte",
+   "palette": {
+    "L": "#b8505a",
+    "M": "#8a2e3e",
+    "D": "#5e1a2a",
+    "X": "#380f1a",
+    "G": "#ffe28a",
+    "g": "#d9a52a"
+   },
+   "marks": {
+    "palette": {
+     "a": "#ffe28a"
+    },
+    "pixels": [
+     [
+      14,
+      27,
+      "a"
+     ],
+     [
+      15,
+      27,
+      "a"
+     ],
+     [
+      16,
+      27,
+      "a"
+     ],
+     [
+      18,
+      27,
+      "a"
+     ],
+     [
+      19,
+      27,
+      "a"
+     ],
+     [
+      14,
+      30,
+      "a"
+     ],
+     [
+      15,
+      30,
+      "a"
+     ],
+     [
+      16,
+      30,
+      "a"
+     ],
+     [
+      18,
+      30,
+      "a"
+     ],
+     [
+      19,
+      30,
+      "a"
+     ],
+     [
+      14,
+      33,
+      "a"
+     ],
+     [
+      15,
+      33,
+      "a"
+     ],
+     [
+      16,
+      33,
+      "a"
+     ],
+     [
+      18,
+      33,
+      "a"
+     ],
+     [
+      19,
+      33,
+      "a"
+     ]
+    ]
+   }
+  },
+  "bone_duel": {
+   "base": "skeleton",
+   "palette": {
+    "W": "#e8dcc0",
+    "B": "#cdbf9c",
+    "b": "#a09274",
+    "e": "#ff5040",
+    "o": "#3a1a1a",
+    "m": "#e8e8f0",
+    "n": "#7a8098",
+    "t": "#6e1e26",
+    "q": "#a8322a",
+    "Q": "#6e1e26"
+   }
+  },
+  "wraiths_price": {
+   "base": "rift_shade",
+   "palette": {
+    "L": "#c0505a",
+    "M": "#7a2e3e",
+    "D": "#481a28",
+    "e": "#ffffff",
+    "E": "#ffd25a",
+    "r": "#ff8a4a"
+   }
+  }
+ }
+}
