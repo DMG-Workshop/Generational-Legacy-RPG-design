@@ -330,6 +330,7 @@ static func load_state(v: Variant) -> Dictionary:
 				used[id] = {"gen": int(u["gen"]), "n": maxi(1, int(u["n"]))}
 		if not used.is_empty():
 			out["used"] = used
+	out.merge(GameWildsFights.load_marks(v))   # fought and cleared (GameWildsFights)
 	return out
 
 
@@ -384,6 +385,10 @@ static func use(d: GameDynasty, lm: Dictionary, offer: Dictionary = {}) -> Dicti
 		return {"ok": false, "text": str(def["done"])}
 	var n := int(used_info(d, id).get("n", 0))
 	var r := _rng(d, lm, n)
+	if GameWildsFights.use_springs(d, lm):   # searching a guarded place may spring its guards (GameWildsFights); the search waits for the win
+		var plan := GameWildsFights.plan(d, lm, "use")
+		if not plan.is_empty():
+			return {"ok": true, "text": str(plan["text"]), "fight": plan, "landmark": lm}
 	if bool(def.get("trade", false)):
 		return _trade(d, lm, def, offer, r, vals)
 	var rows: Array = def["outcomes"].filter(func(o): return _fits(d, lm, o))

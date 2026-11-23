@@ -23,6 +23,8 @@ var outside := Vector2i.ZERO       # the open-world tile to come back to when th
 var interior: Dictionary = {}      # the cells of the interior the heir is in (GameInterior.cells), {} on the open world
 var denizens: Array = []           # the creatures of the dungeon the heir is in (GameBehaviour agents with a key, room and boss flag), never saved
 var fight_foes: Array = []         # the dungeon creatures in the fight now on, for after_fight
+var fight_site: Dictionary = {}    # the landmark of the wilds whose guards are the fight now on ({} for none), for after_fight (GameWildsFights)
+var armed: Dictionary = {}         # landmarks whose approach has already set their guards on the heir this visit (id -> their range); runtime only
 var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
 var offer := {}                    # a trader's pending offer at a landmark of the wilds (GameWildsSites), never saved
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
@@ -319,6 +321,8 @@ func use() -> Dictionary:
 			var r := GameWildsSites.use(d, site, offer)
 			offer = r.get("offer", {})
 			log.append({"kind": "site", "text": str(r["text"])})
+			if r.has("fight"):   # searching sprang the guards
+				begin_landmark_fight(site, r["fight"])
 			return r
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
@@ -421,6 +425,8 @@ func step(ticks: int = 1) -> void:
 		var cview := GameBehaviour.world_view(d, [{"x": heir_point().x, "z": heir_point().y}], night)
 		creatures = GameBehaviour.step_all(creatures, cview, d.seed_value, tick)
 		if _contact():
+			return
+		if _landmark_approach():
 			return
 		companions = GameCompanions.reconcile(d, companions, heir_point().x, heir_point().y)
 		GamePath.sync(path_cache, d)
@@ -729,6 +735,8 @@ func after_fight() -> void:
 	if not fight_foes.is_empty():
 		_after_dungeon_fight()
 		return
+	if not fight_site.is_empty():
+		_after_landmark_fight()
 	if d.sandbox_escape.is_empty():
 		return
 	heir = Vector2i(int(d.sandbox_escape["x"]), int(d.sandbox_escape["z"]))
@@ -757,6 +765,63 @@ func _key(x: int, z: int) -> String:
 
 func _text(key: String, vals: Dictionary = {}) -> String:
 	return str(data()["text"][key]).format(vals)
+
+
+# ---------------------------------------------------------------- landmark fights
+
+## Each tick: the landmarks the heir has come within `range` of whose guards have not yet been set on them this visit (GameWildsFights.can_trigger), the
+## first of which starts its fight. A landmark is let off `armed` once the heir is `leave_mult` times its range away, so leaving and coming back is a new
+## visit (still held by the landmark's own cooldown). Nothing happens upstairs, indoors, in a fight or with the heir fallen.
+func _landmark_approach() -> bool:
+	if d.battle != null or d.state != "life" or storey() > 0 or space != "world":
+		return false
+	var me := heir_point()
+	for id in armed.keys():
+		var p := GameWildsSites.parse_id(str(id))
+		if Vector2(float(p.x) + 0.5, float(p.y) + 0.5).distance_to(me) > float(GameWilds.setting("leave_mult")) * float(armed[id]):
+			armed.erase(id)
+	for lm in GameWildsSites.within(d, me.x, me.y, 8.0):
+		var b := GameWildsFights.block(lm)
+		if b.is_empty() or armed.has(str(lm["id"])) or not "approach" in b["triggers"]:
+			continue
+		if Vector2(float(lm["x"]) + 0.5, float(lm["z"]) + 0.5).distance_to(me) > float(b["range"]):
+			continue
+		var plan := GameWildsFights.plan(d, lm, "approach")
+		if plan.is_empty():
+			continue
+		armed[str(lm["id"])] = float(b["range"])
+		log.append({"kind": "site", "text": str(plan["text"])})
+		return begin_landmark_fight(lm, plan)
+	return false
+
+
+## Starts the fight a landmark sends (`plan` is GameWildsFights.plan): its foes by the hunt's own rules, the heir's way clear behind them, the first blow
+## theirs on an ambush unless the heir is already hurt below `surprise_min_hp`. Marks the landmark fought (its cooldown starts). Returns whether a fight began.
+func begin_landmark_fight(lm: Dictionary, plan: Dictionary) -> bool:
+	var fight := d.start_encounter(plan["foes"], str(lm["area"]), float(plan["level_mult"]))
+	if fight == null:
+		return false
+	GameWildsFights.mark_fought(d, lm)
+	fight_site = {"id": str(lm["id"]), "lm": lm, "foes": plan["foes"]}
+	var away := _escape_tile(Vector2(float(lm["x"]) + 0.5, float(lm["z"]) + 0.5))
+	d.sandbox_escape = {"x": away.x, "z": away.y}
+	if bool(plan["ambush"]) and float(d.heir.hp) >= float(GameWilds.setting("surprise_min_hp")) * float(d.heir.max_hp()):
+		fight.heir_skip = true
+		log.append({"kind": "fight", "text": GameWilds.text("surprised", {"heir": d.heir.name})})
+	return true
+
+
+## After a landmark's fight: a win clears it and pays its bonus find; a flight or defeat leaves it as it was (its cooldown running).
+func _after_landmark_fight() -> void:
+	var site := fight_site
+	fight_site = {}
+	route = []
+	var lm: Dictionary = site["lm"]
+	if d.last_result == "victory":
+		for line in GameWildsFights.won(d, lm):
+			log.append({"kind": "site", "text": str(line)})
+	else:
+		log.append({"kind": "site", "text": GameWildsFights.fled(d, lm)})
 
 
 # ---------------------------------------------------------------- dungeons

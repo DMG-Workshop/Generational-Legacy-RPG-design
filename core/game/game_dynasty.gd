@@ -623,7 +623,7 @@ func start_hunt(kind: String) -> GameBattle:
 ## Starts a fight with particular wild creatures that have caught the heir in the open world (GameSandbox): the hunt's
 ## rules (levels round the heir's, the hunt's scale and reward) for exactly these creatures, by id. Returns null when
 ## nothing known was given. Draws from the dynasty's dice like any hunt; the autopilot never calls it.
-func start_encounter(ids: Array, place_id: String = "") -> GameBattle:
+func start_encounter(ids: Array, place_id: String = "", level_mult: float = 1.0) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")["hunt"]
 	var danger := float((GameWorld.place(place_id) if place_id != "" else world.here()).get("danger", 1.0))
 	var foes: Array = []
@@ -634,7 +634,7 @@ func start_encounter(ids: Array, place_id: String = "") -> GameBattle:
 				kin = c
 		if kin.is_empty():
 			continue
-		var lv_mult := rng.randf_range(float(cfg["level_min"]), float(cfg["level_max"])) * danger
+		var lv_mult := rng.randf_range(float(cfg["level_min"]), float(cfg["level_max"])) * danger * level_mult
 		foes.append(_make_enemy(kin, float(cfg["scale"]), float(cfg["reward"]), maxi(1, int(round(float(heir.level) * lv_mult)))))
 	if foes.is_empty():
 		return null

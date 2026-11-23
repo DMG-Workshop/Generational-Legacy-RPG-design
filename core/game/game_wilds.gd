@@ -324,7 +324,7 @@ static func validate() -> Array:
 	var surface: Array = GameWorldGen.data()["biomes"].keys()
 	var known := func(g: String) -> bool: return dat["glyphs"].has(g) or GameWorldGen.data()["nodes"].has(g)
 	var s: Dictionary = dat["settings"]
-	for k in ["town_clear", "town_fade", "road_clear", "road_fade", "road_floor", "dungeon_clear", "area_fade", "cell", "margin", "min_gap", "tries", "see_range", "use_reach", "renew_gens", "dungeon_near", "found_cap", "markup", "offer_reach"]:
+	for k in ["town_clear", "town_fade", "road_clear", "road_fade", "road_floor", "dungeon_clear", "area_fade", "cell", "margin", "min_gap", "tries", "see_range", "use_reach", "renew_gens", "dungeon_near", "found_cap", "markup", "offer_reach", "leave_mult", "surprise_min_hp"]:
 		if not s.has(k):
 			bad.append("wilds.json: settings.%s is missing" % k)
 	if not bad.is_empty():
