@@ -1,6 +1,6 @@
 # Trials
 
-Status: **design, not built.** Queued as ROADMAP item 67. Idea from the user: each world holds trials that take time and permanently improve the heir in one way each (body, mind, knowledge and so on), and each world can have its own.
+Status: **first slice built** (core, data, tests; no screen yet). ROADMAP item 67. Idea from the user: each world holds trials that take time and permanently improve the heir in one way each (body, mind, knowledge and so on), and each world can have its own.
 
 ## What a trial is
 
@@ -40,3 +40,17 @@ Measure each focus as gold-equivalent or risk saved per world hour, with `docs/B
 - Whether failure can kill (proposed: no, only scars and costs).
 - Whether companions can enter a trial with the heir.
 - Interaction with titles (a title for finishing all of a realm's trials).
+
+## Trial quest and trial-master
+
+Every trial is reached through a **quest** and run by a **trial-master**, both in `data/world/trials.json` (text out of code).
+
+**The quest.** A trial has `quest.steps`, done in order with `GameTrials.do_step`: `visit` (the heir stands at a place: the site is found), `offering` (pay gold, scaled by the generation like other prices: the right to enter) and `level`. A trial refuses to start (`start_block`) until every step is done, and the refusal is the master's own line naming the step still open. The way in is learned once by the family (`GameDynasty.trials.steps`) and sets the story flag `trial_<id>_way`, so `GameQuests` flag objectives can build on it. The trial itself is the quest's last step: its gain is given only when it is passed, and passing sets `trial_<id>`. Trial quests are not on any town board and are not in `data/quests`, so `GameQuests.bot_tick` and `GameBot` cannot offer or take them (the test checks it).
+
+**The master.** Each trial names a creature of `data/creatures` (`master.id`) and a name. It speaks, from data: an `opening` line when the trial starts, one line per stage (`stage_line`, the stage follows the hours spent), then `success` or `failure`. A Mastery or Pact trial may set `fight: true`: after its hours it is won only by beating the master. `begin_master` builds the master as a foe of the heir's level (`master_level_mult`) with its trial name and starts it as a legend-style fight (so no sickness is rolled on the dynasty's dice); after `finish_battle` the caller runs `settle_master`, where a victory passes the trial and anything else leaves it to be fought again. The fight uses the battle's dice like any fight, and only a player ever starts one.
+
+**Built.** Placement (`placed`, 3 to 6 per realm, a function of seed and realm only), quest, start, world-hour progress (`wait` feeds `GameClock`; a day is 24 hours of `GameDay`), the check on its own dice (`hash(seed, trial, heir, try)`), setbacks that never kill (`hurt` takes a share of max HP down to 1, `cost` takes gold) and a retry wait, capped gains read through `GameTrials.bonus` (hooked into `GameHeir.trait_total` and `GameCarry.capacity`, only for a heir with a trial passed), Lore picking a spell or feat the class suits (else a small fallback gain; at most `unlocks` per heir), Pact drawbacks, Spirit `legacy` gains passed to heirs, saves (`GameHeir.trials_done`, `GameDynasty.trials`, each written only once set, damaged ids dropped) and `tools/check_data.gd` validation. Data: 7 trials in the base world (`material`, one per focus), 5 in the Verdant Court, 5 in the Hollow Below.
+
+**Not built.** A screen (no list, no map marker, no sandbox place yet), a profile bot, a title for finishing a realm, companions in a trial, a scar as a setback (a Pact's flaw is a stat drawback for now).
+
+**Guessed numbers (all in data, none measured).** Gains: Body +4% max HP or +5% carry, Will +3% resist, Mastery +5% crit damage or +2% reflexes, Spirit +2% luck (legacy), Wild +4% stealth or +5% fire resistance, Pact +8% melee damage (or +10% max MP) against -5% max HP (or -3% resist). Caps per focus and stat are in `focuses.*.cap` (for example Body max HP 10%, Will resist 8%, Lore 3 unlocks). Lengths 3 to 8 hours, gate levels 3 to 11, offerings 30 to 80 gold, check difficulties 18 to 36 on a stat (chance is score over score plus difficulty, 15% to 90%), retry wait 12 hours. Wild gains use stats the game already reads (stealth, fire resistance) rather than a new terrain rule.

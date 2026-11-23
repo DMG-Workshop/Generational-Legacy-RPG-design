@@ -28,7 +28,10 @@ static func text(key: String, vals: Dictionary = {}) -> String:
 
 ## How much the heir can carry.
 static func capacity(h: GameHeir) -> float:
-	return (float(setting("base_capacity")) + float(setting("per_strength")) * h.stat("str")) * GameSubclass.perk(h, "carry_mult")
+	var cap := (float(setting("base_capacity")) + float(setting("per_strength")) * h.stat("str")) * GameSubclass.perk(h, "carry_mult")
+	if not h.trials_done.is_empty():   # a Body trial's gain
+		cap *= 1.0 + GameTrials.bonus(h, "carry_weight")
+	return cap
 
 
 ## What the heir carries now: the pack, what is worn, and the healing potions.
