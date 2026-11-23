@@ -801,6 +801,8 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 		items.append([float(a["z"]) + 0.5, "foe", a])
 	for pr in GameDungeons.layout(sb.space).get("people", []):
 		items.append([float(pr["z"]) + 0.5, "person", pr])
+	for a in sb.companions:
+		items.append([float(a["z"]) + 0.5, "companion", a])
 	items.append([float(sb.heir.y) + 1.0, "heir", null])
 	items.sort_custom(func(p, q): return p[0] < q[0])
 	for it in items:
@@ -812,6 +814,14 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 				c.draw_circle(p, maxf(3.0, cell * 0.35), Color.html(str(pr["color"])))
 			else:
 				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(pr["race"])), false, Color.WHITE, cell)
+		elif str(it[1]) == "companion":
+			var a: Dictionary = it[2]
+			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
+			var tex: Texture2D = _party_figure(str(a["id"]))
+			if tex == null:
+				c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
+			else:
+				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), Color.WHITE, cell)
 		elif str(it[1]) == "foe":
 			var a: Dictionary = it[2]
 			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
