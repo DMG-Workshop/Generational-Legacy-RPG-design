@@ -619,7 +619,7 @@ static func step_on(d: GameDynasty, space_id: String, x: int, z: int, warded: bo
 			continue
 		mark(d, "t", place, str(t["id"]))
 		var def: Dictionary = data()["traps"][str(t["kind"])]
-		if warded:   # a ward (GameDungeonSpells) turns it aside, whatever the heir's eye
+		if warded:   # a ward (GameCasting.ward_up) turns it aside, whatever the heir's eye
 			return {"hit": false, "text": text("spell_turned", {"trap": str(def["name"])}), "damage": 0, "cell": Vector2i(x, z), "warded": true}
 		var r := RandomNumberGenerator.new()
 		r.seed = _hash([d.seed_value, "dungeon_trap", place, str(t["id"])])
@@ -646,7 +646,7 @@ static func validate() -> Array:
 	for k in ["refill_years", "foe_years", "min_foe_distance", "reach", "people_years"]:
 		if float(dat["settings"].get(k, 0)) <= 0.0:
 			bad.append("dungeons.json: settings.%s must be above 0" % k)
-	for k in ["opened", "empty", "found_gold", "found_materials", "found_nothing", "found_unique", "spotted", "spent", "boss_gone", "boss_stirs", "nothing_to_use", "healed", "found_key", "locked", "unlocked", "freed", "spell_unknown", "spell_no_mp", "spell_whole", "spell_healed", "spell_warded", "spell_ward", "spell_turned"]:
+	for k in ["opened", "empty", "found_gold", "found_materials", "found_nothing", "found_unique", "spotted", "spent", "boss_gone", "boss_stirs", "nothing_to_use", "healed", "found_key", "locked", "unlocked", "freed", "spell_turned"]:
 		if str(dat["text"].get(k, "")) == "":
 			bad.append("dungeons.json: the text '%s' is missing" % k)
 	for t in dat["traps"]:
@@ -733,5 +733,4 @@ static func validate() -> Array:
 					bad.append("dungeons.json: %s %s has a shrine that does not heal by a share up to 1" % [place, role])
 				if not GameDungeonArt.has_glyph(place, str(f["prop"])):
 					bad.append("dungeons.json: %s %s has a feature on the prop '%s', which its theme has no glyph for" % [place, role, f["prop"]])
-	bad.append_array(GameDungeonSpells.validate())
 	return bad

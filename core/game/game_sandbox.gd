@@ -22,7 +22,6 @@ var space := "world"               # where the heir is: the open world, or the i
 var outside := Vector2i.ZERO       # the open-world tile to come back to when the heir goes out of an interior
 var interior: Dictionary = {}      # the cells of the interior the heir is in (GameInterior.cells), {} on the open world
 var denizens: Array = []           # the creatures of the dungeon the heir is in (GameBehaviour agents with a key, room and boss flag), never saved
-var warded := false                # a ward cast in a dungeon is up: the next hidden trap is turned aside (never saved)
 var fight_foes: Array = []         # the dungeon creatures in the fight now on, for after_fight
 var fight_site: Dictionary = {}    # the landmark of the wilds whose guards are the fight now on ({} for none), for after_fight (GameWildsFights)
 var armed: Dictionary = {}         # landmarks whose approach has already set their guards on the heir this visit (id -> their range); runtime only
@@ -279,7 +278,6 @@ func leave() -> Dictionary:
 	if heir != GameInterior.entry():
 		return {"ok": false, "text": _text("no_exit")}
 	var from_dungeon := GameDungeons.is_dungeon(space)
-	warded = false
 	space = "world"
 	interior = {}
 	denizens = []
@@ -294,13 +292,11 @@ func leave() -> Dictionary:
 	return {"ok": true, "text": line}
 
 
-## Casts one of the heir's spells on a dungeon's floor (GameDungeonSpells): {ok, text}. Only in a dungeon and out of a fight.
+## Casts one of the heir's spells on a dungeon's floor (GameCasting.self_cast): {ok, text, kind}. Only in a dungeon and out of a fight.
 func cast(id: String) -> Dictionary:
 	if space == "world" or not GameDungeons.is_dungeon(space) or d.battle != null:
-		return {"ok": false, "text": GameDungeons.text("spell_unknown")}
-	var r := GameDungeonSpells.cast(d, id, warded)
-	if bool(r["ok"]) and str(r["effect"]) == "ward":
-		warded = true
+		return {"ok": false, "text": GameCasting.text("self_unknown"), "kind": ""}
+	var r := GameCasting.self_cast(d, id)
 	log.append({"kind": "dungeon", "text": str(r["text"])})
 	return r
 
@@ -1084,9 +1080,9 @@ func _dungeon_guard_fights(e: Dictionary) -> void:
 
 ## The heir has stepped on a cell of a dungeon: a hidden trap goes off, and the cell is redrawn (it shows once sprung).
 func _dungeon_arrive() -> void:
-	var t := GameDungeons.step_on(d, space, heir.x, heir.y, warded)
+	var t := GameDungeons.step_on(d, space, heir.x, heir.y, GameCasting.ward_up(d))
 	if bool(t.get("warded", false)):
-		warded = false
+		GameCasting.spend_ward(d)
 	var text := str(t.get("text", ""))
 	if text != "":
 		log.append({"kind": "dungeon", "text": text})
