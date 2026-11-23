@@ -32,6 +32,7 @@ var _scales := {}           # companions: "id:level" -> their size against a hum
 var house_size := 3         # the index of the size of house the Raise house button builds (GameSandbox.house_sizes)
 var house_preview := false  # whether the house's footprint is drawn (after the size button was pressed)
 var house_button: Button
+var cast_button: Button     # Cast, shown only in a dungeon: the heir's spells that work outside a fight (GameDungeonSpells)
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
 var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
@@ -107,6 +108,9 @@ func _ready() -> void:
 	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
 	bar.add_child(Kit.button("Map", func(): _open_world_map(), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Use", func(): _use(), Vector2(64, BAR - 12)))
+	cast_button = Kit.button("Cast", func(): _open_cast(), Vector2(64, BAR - 12))
+	cast_button.visible = false
+	bar.add_child(cast_button)
 	bar.add_child(Kit.button("Up", func(): _climb(-1), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Down", func(): _climb(1), Vector2(72, BAR - 12)))
 	status = Kit.label("", 14, Kit.dim())
@@ -367,6 +371,25 @@ func _fight_over() -> void:
 	queue_redraw()   # (a heir who fell or a line that ended is handed on by the next _process)
 
 
+## The spells the heir can cast on a dungeon's floor, as a menu; one picked is cast (GameSandbox.cast).
+func _open_cast() -> void:
+	var menu := PopupMenu.new()
+	menu.add_theme_font_size_override("font_size", 20)
+	menu.add_theme_constant_override("v_separation", 16)
+	var list: Array = GameDungeonSpells.castable(app.dynasty)
+	for i in list.size():
+		menu.add_item("%s  (%d MP)" % [list[i]["name"], int(list[i]["cost"])], i)
+		menu.set_item_disabled(i, not bool(list[i]["can"]))
+	menu.id_pressed.connect(func(i: int):
+		var r := sb.cast(str(list[i]["id"]))
+		last_line = str(r["text"])
+		_refresh_status()
+		queue_redraw())
+	menu.popup_hide.connect(func(): menu.queue_free.call_deferred())
+	add_child(menu)
+	menu.popup_centered()
+
+
 ## The Use action: in by the door the heir stands at, or out by the entrance of the interior they are in.
 func _use() -> void:
 	var r := sb.use()
@@ -592,6 +615,8 @@ func _refresh_status() -> void:
 		line = room if line == "" else line
 	if level_button != null:
 		level_button.text = "Level: %s" % sb.level_name()
+	if cast_button != null:
+		cast_button.visible = GameDungeons.is_dungeon(sb.space) and not GameDungeonSpells.castable(d).is_empty()
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
 
 
