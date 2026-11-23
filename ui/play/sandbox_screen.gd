@@ -679,6 +679,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 		items.append([float(e["rect"].end.y) - 0.1, "entrance", e])
 	for a in sb.creatures:
 		items.append([float(a["z"]) + 0.5, "creature", a])
+	for a in sb.landmark_dwellers():
+		items.append([float(a["z"]) + 0.5, "creature", a])
 	for a in sb.companions:
 		items.append([float(a["z"]) + 0.5, "companion", a])
 	items.append([float(sb.heir.y) + 1.0, "heir", null])

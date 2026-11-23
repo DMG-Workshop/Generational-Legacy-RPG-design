@@ -767,6 +767,18 @@ func _text(key: String, vals: Dictionary = {}) -> String:
 
 # ---------------------------------------------------------------- landmark fights
 
+## The creatures that live at the landmarks round the heir, idling there now (GameWildsFights.dwellers), as agent-like dictionaries the screen draws: not in
+## `creatures`, so they never chase or start a fight (the landmark's own trigger does). Only on the open world's ground, in sight (`see_range`).
+func landmark_dwellers() -> Array:
+	var out: Array = []
+	if space != "world" or storey() > 0:
+		return out
+	var me := heir_point()
+	for lm in GameWildsSites.within(d, me.x, me.y, float(GameWilds.setting("see_range"))):
+		out.append_array(GameWildsFights.dwellers(d, lm, GameDay.hour(d)))
+	return out
+
+
 ## Each tick: the landmarks the heir has come within `range` of whose guards have not yet been set on them this visit (GameWildsFights.can_trigger), the
 ## first of which starts its fight. A landmark is let off `armed` once the heir is `leave_mult` times its range away, so leaving and coming back is a new
 ## visit (still held by the landmark's own cooldown). Nothing happens upstairs, indoors, in a fight or with the heir fallen.
