@@ -214,3 +214,27 @@ Order: profile on the plain house first (that is the baseline for the profile); 
 - **Effort counting**: `E` needs a counter on every player action the profiles use; the sandbox's `log` is not a count.
 - **Target band** for `dGE` (above) is a guess pending the first measurement; the existing docs give a band for *battle deaths* only (3-7%), not for gold.
 - The older table's claim that the autopilot "searches the dead (`gather_mult`, `essence_mult`, `drop_mult`, `rarity_mult`)" disagrees with `CLAUDE.md`, which says `GameBot` never calls `GameLoot.search_dead`/`GameCraft.after_search` (they are asked for by the screens). Resolve by reading `GameBot.step` before using those four keys as "autopilot-measured".
+
+## Gold gaps: Hidewright and Trapsmith (re-run)
+
+The first sweep (seeds 1-12) read the Hidewright's gold at death at -11% and the Trapsmith's at +12% of the plain house and marked both "unconfirmed". They were re-run on **24 new seeds (13-36), 8 races, 10 generations, `keep`, 1,920 lives each**, same arguments for every row:
+
+```bash
+godot --headless --path . -s res://tools/balance_harness.gd -- seeds=13-36 subclass=<none|hidewright|trapsmith> keep
+```
+
+| Row | Slain (of 1,920) | Mean level | Kills | Gold at death | vs plain house |
+|---|---|---|---|---|---|
+| none | 63 (3.3%) | 57 | 117.2 | 4,428 | +0.0% |
+| hidewright | 68 (3.5%) | 56 | 114.7 | 4,391 | **-0.8%** |
+| trapsmith (`hunt_gold_mult` 1.08) | 74 (3.9%) | 56 | 115.8 | 4,954 | **+11.9%** |
+| trapsmith (`hunt_gold_mult` 1.05, after the change) | 71 (3.7%) | 57 | 117.5 | 4,732 | **+6.9%** |
+
+**Where income and sinks diverge.** The autopilot's gold is almost all *hunt gold* (the fights' rewards, scaled by `hunt_gold_mult`) less what it spends on gear, potions and the temple; it digs, crafts and builds nothing. So a perk on a number in that path moves gold at death one for one, and a perk off the path does not move it at all.
+
+- **Hidewright**: no perk on the gold path (`gather_mult`, `salvage_mult`, `defense_mult` 1.05, `carry_mult`). The -11% was noise (-0.8% on 1,920 new lives; the first run's own baseline moves about 12% between seed sets, see *Method and noise*). **Resolved: no change; not a gap.** (A thicker coat slightly lowers deaths, not gold.)
+- **Trapsmith**: `hunt_gold_mult` 1.08 at founded strength (1.5x on the distance from 1) is **x1.12**, and +11.9% is that, to within noise. **A real gap, by design of the number.** The target margin for a perk that is *not* the calling's centrepiece is **under about +8% of the plain house's gold at death** (the same width the Wayfinder's `hunt_gold_mult` 1.05 gives, +7.5% founded, and the Caravaneer's buy/sell perks give). **Change: `hunt_gold_mult` 1.08 -> 1.05**, which is +6.9% measured (founded x1.075), with deaths unchanged (3.7%, in band) and the Trapsmith's real centrepieces (`raid_mult` 0.7, `flee_mult` 1.3) untouched.
+
+**Target gold curve** (for a full pass; nothing beyond the margin above is decided): the plain house's mean gold at death is 4,428-4,775 depending on the seed set; a calling should sit within **+-8%** of it unless gold is its stated job (the Caravaneer, Steadholder, odd jobs), and the *shape over generations* should match the plain house's (no calling pulls ahead early and falls behind, or the reverse). The per-generation gold curve is **not printed by the harness** (it prints the mean at death only), so the shape check needs `Balance.detail` to also keep gold by generation; that is the missing number for a complete pass.
+
+**Expected output of a re-run.** After the change the same command on seeds 13-36 should print the Trapsmith's gold within 4,430 +- 8% (4,070-4,780): measured 4,732. The Wayfinder, which shares the 1.05, should read near +7.5% against the same baseline (not re-run here). Any re-tune of a gold perk is re-run on the same seeds against the plain house **in the same session** (the baseline moves with the seed set, so only a same-seed pair is a measurement).
