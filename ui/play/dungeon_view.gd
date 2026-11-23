@@ -45,6 +45,7 @@ static func atlas_names(place: String) -> Array:
 	for g in GameDungeonArt.data()["shared"]["containers"]:
 		out.append(g)
 	out.append("trap_sprung")
+	out.append("lock")
 	return out
 
 
@@ -52,7 +53,7 @@ func _make_tileset() -> void:
 	names = atlas_names(space_id)
 	var img := Image.create(PX * names.size(), PX, false, Image.FORMAT_RGBA8)
 	for i in names.size():
-		var g := GameDungeonArt.glyph(space_id, str(names[i])) if str(names[i]) != "trap_sprung" else _trap_glyph()
+		var g := GameDungeonArt.glyph(space_id, str(names[i])) if str(names[i]) not in ["trap_sprung", "lock"] else (_trap_glyph() if str(names[i]) == "trap_sprung" else _lock_glyph())
 		var block := PX / 8
 		var rows: Array = g["rows"]
 		for y in rows.size():
@@ -75,6 +76,10 @@ static func _trap_glyph() -> Dictionary:
 	return {"rows": ["........", "........", ".k.k.k..", ".kkkkkk.", "k.k.k.k.", ".kkkkkk.", "........", "........"], "palette": {"k": Color("#c8c4b0")}}
 
 
+static func _lock_glyph() -> Dictionary:
+	return {"rows": ["..kkkk..", ".k....k.", ".k....k.", "yyyyyyyy", "yyyddyyy", "yyyddyyy", "yyyyyyyy", "........"], "palette": {"k": Color("#c8c4b0"), "y": Color("#c8a040"), "d": Color("#3a2a10")}}
+
+
 func _atlas(name: String) -> Vector2i:
 	return Vector2i(names.find(name), 0)
 
@@ -87,7 +92,7 @@ func ground_name(x: int, z: int) -> String:
 			return GameDungeonArt.floor_kind(space_id, x, z)
 		"wall":
 			return GameDungeonArt.wall_kind(cells, x, z)
-		"door":
+		"door", "locked":
 			return "door"
 		"exit":
 			return "exit"
@@ -97,6 +102,8 @@ func ground_name(x: int, z: int) -> String:
 ## The thing drawn over a cell: a container (closed or open), a sprung trap, or an ambient prop; "" for nothing.
 func thing_name(x: int, z: int) -> String:
 	var lay := GameDungeons.layout(space_id)
+	if GameDungeons.lock_closed(d, space_id, x, z):
+		return "lock"
 	for c in lay["containers"]:
 		if int(c["x"]) == x and int(c["z"]) == z:
 			return str(c["kind"]) + ("_open" if GameDungeons.container_open(d, space_id, str(c["id"])) else "")

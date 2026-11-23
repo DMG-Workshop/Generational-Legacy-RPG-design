@@ -259,7 +259,7 @@ func enter() -> Dictionary:
 		return {"ok": false, "text": _text("no_door")}
 	outside = heir
 	space = id
-	interior = GameDungeons.walk_cells(id) if GameDungeons.is_dungeon(id) else cells
+	interior = GameDungeons.walk_cells(id, d) if GameDungeons.is_dungeon(id) else cells
 	heir = GameInterior.entry()
 	route = []
 	denizens = _spawn_denizens(id) if GameDungeons.is_dungeon(id) else []
@@ -297,10 +297,13 @@ func use() -> Dictionary:
 				var t := GamePeople.talk(d, space, p)
 				log.append({"kind": "talk", "text": str(t["text"])})
 				return t
-			var thing := GameDungeons.thing_near(space, heir.x, heir.y)
+			var thing := GameDungeons.thing_near(space, heir.x, heir.y, d)
 			if not thing.is_empty():
 				var u := GameDungeons.use_thing(d, space, thing)
 				log.append({"kind": "dungeon", "text": str(u["text"])})
+				if u.has("opened"):   # a door unlocked: it can be walked through now
+					var oc: Vector2i = u["opened"]
+					interior[GameInterior.key(oc.x, oc.y)] = "door"
 				for c in u["dirty"]:
 					dirty.append(c)
 				return u

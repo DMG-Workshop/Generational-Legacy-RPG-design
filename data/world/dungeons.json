@@ -84,6 +84,26 @@
  },
  "dungeons": {
   "goblin_warrens": {
+   "locks": [
+    {
+     "id": "hoard_door",
+     "door": [
+      "guard_den",
+      "hoard"
+     ],
+     "key": "warchief_key",
+     "name": "iron-bound hoard door"
+    }
+   ],
+   "keys": [
+    {
+     "id": "warchief_key",
+     "name": "Warchief's key",
+     "room": "prison",
+     "kind": "chest",
+     "tier": "plain"
+    }
+   ],
    "fallback": [
     {
      "id": "goblin",
@@ -390,6 +410,42 @@
    }
   },
   "hollow_barrow": {
+   "locks": [
+    {
+     "id": "vault_door",
+     "door": [
+      "antechamber",
+      "bone_vault"
+     ],
+     "key": "bone_key",
+     "name": "sealed vault door"
+    },
+    {
+     "id": "tomb_door",
+     "door": [
+      "burial_hall",
+      "tomb"
+     ],
+     "key": "king_seal",
+     "name": "seal of the king's tomb"
+    }
+   ],
+   "keys": [
+    {
+     "id": "bone_key",
+     "name": "Bone key",
+     "room": "ossuary",
+     "kind": "urn",
+     "tier": "plain"
+    },
+    {
+     "id": "king_seal",
+     "name": "King's seal",
+     "room": "bone_vault",
+     "kind": "chest",
+     "tier": "rich"
+    }
+   ],
    "fallback": [
     {
      "id": "plague_rat",
@@ -741,6 +797,26 @@
    }
   },
   "emberpeak": {
+   "locks": [
+    {
+     "id": "magma_door",
+     "door": [
+      "forge_hall",
+      "magma_vault"
+     ],
+     "key": "slag_key",
+     "name": "heat-warped vault door"
+    }
+   ],
+   "keys": [
+    {
+     "id": "slag_key",
+     "name": "Slag key",
+     "room": "ember_shrine",
+     "kind": "chest",
+     "tier": "plain"
+    }
+   ],
    "fallback": [
     {
      "id": "goblin",
@@ -1104,6 +1180,26 @@
    }
   },
   "sunken_temple": {
+   "locks": [
+    {
+     "id": "reliquary_door",
+     "door": [
+      "shrine",
+      "reliquary"
+     ],
+     "key": "tide_key",
+     "name": "coral-crusted reliquary door"
+    }
+   ],
+   "keys": [
+    {
+     "id": "tide_key",
+     "name": "Tide key",
+     "room": "drowned_cells",
+     "kind": "chest",
+     "tier": "plain"
+    }
+   ],
    "fallback": [
     {
      "id": "slime",
@@ -1452,6 +1548,26 @@
    }
   },
   "deepstone_halls": {
+   "locks": [
+    {
+     "id": "throne_door",
+     "door": [
+      "stone_court",
+      "throne"
+     ],
+     "key": "runed_key",
+     "name": "runed stone door"
+    }
+   ],
+   "keys": [
+    {
+     "id": "runed_key",
+     "name": "Runed key",
+     "room": "great_forge",
+     "kind": "chest",
+     "tier": "plain"
+    }
+   ],
    "fallback": [
     {
      "id": "goblin",
@@ -1870,6 +1986,26 @@
    }
   },
   "the_rift": {
+   "locks": [
+    {
+     "id": "void_door",
+     "door": [
+      "beyond",
+      "void_vault"
+     ],
+     "key": "shard_key",
+     "name": "door of black glass"
+    }
+   ],
+   "keys": [
+    {
+     "id": "shard_key",
+     "name": "Shard key",
+     "room": "shard_field",
+     "kind": "chest",
+     "tier": "plain"
+    }
+   ],
    "fallback": [],
    "roles": {
     "entrance_hall": {
@@ -2219,6 +2355,9 @@
   "boss_gone": "{boss} is not here now. The lair is empty.",
   "boss_stirs": "{boss} rises in the {room}!",
   "nothing_to_use": "There is nothing here to use.",
-  "healed": "{h} is eased: {n} health."
+  "healed": "{h} is eased: {n} health.",
+  "found_key": "{h} finds the {key}.",
+  "locked": "The {door} is locked. It wants the {key}.",
+  "unlocked": "{h} turns the {key} in the {door}, and it swings open."
  }
 }
