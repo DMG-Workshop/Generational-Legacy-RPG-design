@@ -508,6 +508,7 @@ static func begin_master(d: GameDynasty) -> GameBattle:
 	if foe.is_empty():
 		return null
 	foe["name"] = str(t["master"]["name"])
+	foe["master_of"] = str(a["id"])   # the battle screen draws this trial's master look, not the plain creature
 	a["fight"] = true
 	d._say(text("fight_begins", {"master": str(t["master"]["name"])}))
 	return d._begin_battle([foe], "legend")   # no sickness is rolled on the dynasty's dice, as for a legend

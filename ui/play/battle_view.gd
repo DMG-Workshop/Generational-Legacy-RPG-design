@@ -330,7 +330,9 @@ func _build_actors() -> void:
 		sel.visible = false
 		sel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		root.add_child(sel)
-		var tex := SpriteArt.creature(str(e.get("id", "")))
+		var tex: Texture2D = SpriteArt.master(str(e.get("master_of", ""))) if e.has("master_of") else null   # a trial's master has a look of its own
+		if tex == null:
+			tex = SpriteArt.creature(str(e.get("id", "")))
 		var body := ColorRect.new()
 		body.color = Color(e["color"]) if tex == null else Color(0, 0, 0, 0)
 		body.size = Vector2(w, h)

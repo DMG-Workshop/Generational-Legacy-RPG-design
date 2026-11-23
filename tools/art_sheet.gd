@@ -5,7 +5,8 @@
 ## It first prints any problems SpriteArt.validate() and SceneryArt.validate() find. Runs headless: images
 ## only, no screen.
 ## what=gear draws every class (as race=<id>, human by default) in a row of gear sets, the first with none.
-## godot --headless --path . -s res://tools/art_sheet.gd -- out=/abs/path/sheet.png [what=creatures|heroes|scenery|gear]
+## what=masters draws every trial's master (data/art/masters.json) in the order of the trials, each: one tile each, in the order of the trials.
+## godot --headless --path . -s res://tools/art_sheet.gd -- out=/abs/path/sheet.png [what=creatures|heroes|scenery|gear|masters]
 extends SceneTree
 
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
@@ -51,6 +52,10 @@ func _init() -> void:
 			for c in classes:
 				tiles.append(SpriteArt.hero(_arg("race", "human"), str(c), Color(GameData.classes[c]["color"]), g))
 		print("rows: no gear, %s\ncolumns: %s" % [", ".join(sets.slice(1).map(func(g): return "%s + %s" % [g["armor"], g["weapon"]])), ", ".join(classes)])
+	elif what == "masters":
+		for id in GameTrials.ids():
+			tiles.append(SpriteArt.master(str(id)))
+		print("in order: %s" % ", ".join(GameTrials.ids().map(func(i): return str(i))))
 	elif what == "heroes":
 		var classes: Array = GameData.classes.keys()
 		cols = classes.size()

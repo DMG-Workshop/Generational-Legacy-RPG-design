@@ -14,6 +14,7 @@ The same sprites are meant for the later isometric pixel-art version of the game
 | `data/art/classes.json` | One figure per class: `{"sprites": {class_id: SPRITE}}` |
 | `data/art/races.json` | Each race's colours and layers: `{"races": {race_id: RACE}}` |
 | `data/art/creatures.json` | One sprite per creature id in `data/creatures/creatures.json`, bosses included |
+| `data/art/masters.json` | One look per trial's master: its creature's sprite repainted (palette and a few marks), see `docs/TRIALS.md` |
 | `data/art/shirts.json` | The shirt colours a hero or companion can wear: `{"shirts": [{"id", "name", "color"}]}` |
 | `data/art/gear.json` | How gear shows on figures: a note per class, the finishes, a look per weapon and armour, and the cape |
 | `data/art/scenery.json` | The battle scenery: a scene per kind of land, what some places add, the weather, the seasons and props |

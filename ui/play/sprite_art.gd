@@ -9,6 +9,7 @@ extends RefCounted
 const CLASSES := "res://data/art/classes.json"
 const RACES := "res://data/art/races.json"
 const CREATURES := "res://data/art/creatures.json"
+const MASTERS := "res://data/art/masters.json"
 const SHIRTS := "res://data/art/shirts.json"
 const GEAR := "res://data/art/gear.json"
 const STYLE := "res://data/art/style.json"
@@ -19,6 +20,7 @@ const RESERVED := "SsHhCc"
 static var _classes: Dictionary = {}
 static var _races: Dictionary = {}
 static var _creatures: Dictionary = {}
+static var _masters: Dictionary = {}
 static var _shirts: Array = []
 static var _gear: Dictionary = {}
 static var _style: Dictionary = {}
@@ -34,6 +36,7 @@ static func _load() -> void:
 	_classes = _read(CLASSES).get("sprites", {})
 	_races = _read(RACES).get("races", {})
 	_creatures = _read(CREATURES).get("sprites", {})
+	_masters = _read(MASTERS).get("masters", {})
 	_gear = _read(GEAR)
 	_style = _read(STYLE)
 	_shirts = []
@@ -55,6 +58,7 @@ static func reset() -> void:
 	_classes = {}
 	_races = {}
 	_creatures = {}
+	_masters = {}
 	_shirts = []
 	_gear = {}
 	_style = {}
@@ -75,6 +79,51 @@ static func has_class(id: String) -> bool:
 static func has_race(id: String) -> bool:
 	_load()
 	return _races.has(id)
+
+
+static func has_master(trial_id: String) -> bool:
+	_load()
+	return _masters.has(trial_id) and _creatures.has(str(_masters[trial_id].get("base", "")))
+
+
+## The image of a trial's master: its creature's sprite with the master's palette and marks (see data/art/masters.json), or an empty
+## image when the trial has no look. Not cached here; `master` caches the texture.
+static func master_image(trial_id: String) -> Image:
+	_load()
+	if not has_master(trial_id):
+		return Image.create_empty(1, 1, false, Image.FORMAT_RGBA8)
+	var m: Dictionary = _masters[trial_id]
+	var s: Dictionary = (_creatures[str(m["base"])] as Dictionary).duplicate()
+	var pal: Dictionary = (s.get("palette", {}) as Dictionary).duplicate()
+	var over: Variant = m.get("palette", {})
+	if typeof(over) == TYPE_DICTIONARY:
+		for k in over:
+			if pal.has(k) and Color.html_is_valid(str(over[k])):
+				pal[k] = over[k]
+	s["palette"] = pal
+	var img := _paint(s, {})
+	var marks: Variant = m.get("marks", {})
+	if typeof(marks) == TYPE_DICTIONARY and typeof(marks.get("pixels")) == TYPE_ARRAY and typeof(marks.get("palette")) == TYPE_DICTIONARY:
+		for px in marks["pixels"]:
+			if typeof(px) != TYPE_ARRAY or px.size() != 3:
+				continue
+			var x := int(px[0])
+			var y := int(px[1])
+			var key := str(px[2])
+			if _opaque(img, x, y) and marks["palette"].has(key) and Color.html_is_valid(str(marks["palette"][key])):
+				img.set_pixel(x, y, Color.html(str(marks["palette"][key])))
+	return img
+
+
+## A trial's master as the creature repainted for it (facing left), or null when the trial has no look: the caller draws the plain creature.
+static func master(trial_id: String) -> Texture2D:
+	_load()
+	if not has_master(trial_id):
+		return null
+	var key := "master:" + trial_id
+	if not _cache.has(key):
+		_cache[key] = _texture(master_image(trial_id))
+	return _cache[key]
 
 
 ## A creature's sprite (facing left), or null when it has none and the screen keeps the old block.
@@ -332,6 +381,7 @@ static func validate() -> Array:
 		if size.size() != 2 or int(size[0]) < 1 or int(size[1]) < 1 or int(size[0]) > 64 or int(size[1]) > 64:
 			out.append("creature %s: size must be 1 to 64 a side" % id)
 		out.append_array(_grid_problems("creature " + id, s.get("rows", []), size, s.get("palette", {}), false))
+	out.append_array(_master_problems())
 	var raw_shirts: Array = _read(SHIRTS).get("shirts", [])
 	var seen := {}
 	if raw_shirts.size() < 2:
@@ -353,6 +403,55 @@ static func validate() -> Array:
 		for layer in ["under", "over"]:
 			if r.has(layer):
 				out.append_array(_grid_problems("race %s %s" % [id, layer], r[layer], [FIGURE.x, FIGURE.y], r.get("palette", {}), true))
+	return out
+
+
+## Problems with masters.json: every master repaints a creature that has art, only recolours keys that creature has, keeps its marks inside the
+## silhouette in colours it names, and belongs to a trial that exists; every trial has one; and none is the plain creature.
+static func _master_problems() -> Array:
+	var out: Array = []
+	for id in _masters:
+		var m: Dictionary = _masters[id]
+		var w := "master %s" % id
+		if not GameTrials.has(str(id)):
+			out.append("%s: there is no such trial" % w)
+		var base := str(m.get("base", ""))
+		if not _creatures.has(base):
+			out.append("%s: base '%s' has no creature art" % [w, base])
+			continue
+		var bp: Dictionary = (_creatures[base] as Dictionary).get("palette", {})
+		var over: Variant = m.get("palette", {})
+		if typeof(over) != TYPE_DICTIONARY or (over as Dictionary).is_empty():
+			out.append("%s: it needs a palette that repaints its creature" % w)
+		else:
+			for k in over:
+				if not bp.has(k):
+					out.append("%s: palette key '%s' is not one of %s's colours" % [w, k, base])
+				if not Color.html_is_valid(str(over[k])):
+					out.append("%s: palette '%s' is not a colour" % [w, k])
+		var marks: Variant = m.get("marks", {})
+		if typeof(marks) == TYPE_DICTIONARY and not (marks as Dictionary).is_empty():
+			var mp: Variant = marks.get("palette", {})
+			if typeof(mp) != TYPE_DICTIONARY or typeof(marks.get("pixels")) != TYPE_ARRAY:
+				out.append("%s: marks need a palette and a list of pixels" % w)
+			else:
+				var plain := _paint(_creatures[base], {})
+				for px in marks["pixels"]:
+					if typeof(px) != TYPE_ARRAY or px.size() != 3 or not (mp as Dictionary).has(str(px[2])) or not Color.html_is_valid(str((mp as Dictionary).get(str(px[2]), ""))):
+						out.append("%s: a mark %s is not [x, y, key] with a key of the marks' palette" % [w, str(px)])
+					elif not _opaque(plain, int(px[0]), int(px[1])):
+						out.append("%s: the mark at %d,%d is outside the silhouette" % [w, int(px[0]), int(px[1])])
+		elif typeof(marks) != TYPE_DICTIONARY:
+			out.append("%s: marks must be a table" % w)
+		if has_master(str(id)):
+			var a := master_image(str(id))
+			var b := _paint(_creatures[base], {})
+			var same := a.get_width() == b.get_width() and a.get_height() == b.get_height() and a.get_data() == b.get_data()
+			if same:
+				out.append("%s: it looks exactly like the plain %s" % [w, base])
+	for tid in GameTrials.ids():
+		if not _masters.has(str(tid)):
+			out.append("trial %s has no master look in masters.json" % tid)
 	return out
 
 
@@ -458,6 +557,10 @@ static func style_problems() -> Array:
 		bosses[str(c["id"])] = bool(c.get("boss", false))
 	for id in _creatures:
 		out.append_array(check_sprite("creature " + id, _paint(_creatures[id], {}), "boss" if bosses.get(id, false) else "creature"))
+	for id in _masters:
+		if has_master(str(id)):
+			var base_boss: bool = bosses.get(str(_masters[id].get("base", "")), false)
+			out.append_array(check_sprite("master " + id, master_image(str(id)), "boss" if base_boss else "creature"))
 	return out
 
 
