@@ -799,10 +799,20 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 	var items: Array = []
 	for a in sb.denizens:
 		items.append([float(a["z"]) + 0.5, "foe", a])
+	for pr in GameDungeons.layout(sb.space).get("people", []):
+		items.append([float(pr["z"]) + 0.5, "person", pr])
 	items.append([float(sb.heir.y) + 1.0, "heir", null])
 	items.sort_custom(func(p, q): return p[0] < q[0])
 	for it in items:
-		if str(it[1]) == "foe":
+		if str(it[1]) == "person":
+			var pr: Dictionary = it[2]
+			var p := origin + (Vector2(float(pr["x"]) + 0.5, float(pr["z"]) + 0.5) - centre) * cell + area * 0.5
+			var tex: Texture2D = SpriteArt.hero(str(pr["race"]), str(pr["class"]), Color.html(str(pr["color"])))
+			if tex == null:
+				c.draw_circle(p, maxf(3.0, cell * 0.35), Color.html(str(pr["color"])))
+			else:
+				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(pr["race"])), false, Color.WHITE, cell)
+		elif str(it[1]) == "foe":
 			var a: Dictionary = it[2]
 			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 			var tex: Texture2D = SpriteArt.creature(str(a["id"]))
@@ -841,6 +851,8 @@ func _warm_figures() -> void:
 	SpriteArt.begin_batch()
 	var d: GameDynasty = app.dynasty
 	SpriteArt.figure(d.heir)
+	for pr in GameDungeons.layout(sb.space).get("people", []):
+		SpriteArt.hero(str(pr["race"]), str(pr["class"]), Color.html(str(pr["color"])))
 	for m in d.party.members:
 		_party_figure(str(m["id"]))
 	for b in GameTown.all():

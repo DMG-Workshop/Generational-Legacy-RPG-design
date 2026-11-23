@@ -59,7 +59,8 @@ static func _hash(tags: Array) -> int:
 
 ## The layout of a dungeon, built once: {containers: [{id, room, role, x, z, kind, tier}], traps: [{id, room, x, z, kind}],
 ## foes: [{key, room, role, x, z}], boss: {key, room, x, z} or {}, locks: [{id, x, z, key, name, rooms: [from, to]}] (a door that
-## stays shut until its key is used; a container that holds a key has `key` set), features: [{id, room, x, z, prop, kind, name, ...}],
+## stays shut until its key is used; a container that holds a key has `key` set), people: [{id, room, x, z, ...the data row}]
+## (a prisoner, a hint-giver or a healer standing on a floor cell), features: [{id, room, x, z, prop, kind, name, ...}],
 ## solid: {"x,z": true} (cells the heir cannot stand on) and reserved: {"x,z": true}}.
 static func layout(space_id: String) -> Dictionary:
 	var place := place_of(space_id)
@@ -68,7 +69,7 @@ static func layout(space_id: String) -> Dictionary:
 	if _layouts.has(place):
 		return _layouts[place]
 	var cells := GameInterior.cells(space_id)
-	var out := {"containers": [], "traps": [], "foes": [], "boss": {}, "features": [], "locks": [], "solid": {}, "reserved": {}}
+	var out := {"containers": [], "traps": [], "foes": [], "boss": {}, "features": [], "locks": [], "people": [], "solid": {}, "reserved": {}}
 	var near_door := {}
 	for k in cells:
 		if str(cells[k]) in ["door", "exit"]:
@@ -100,6 +101,20 @@ static func layout(space_id: String) -> Dictionary:
 		# containers: against a wall, away from doors, never blocking the way
 		var edge: Array = floor_cells.filter(func(c): return _against_wall(cells, c) and not near_door.has(_key(c.x, c.y)) and not out["reserved"].has(_key(c.x, c.y)))
 		edge.sort_custom(func(a, b): return _hash([place, rid, "box", a.x, a.y]) < _hash([place, rid, "box", b.x, b.y]))
+		# the people of the room stand on a floor cell away from the doors
+		for pspec in data()["dungeons"][place].get("people", []):
+			if str(pspec["room"]) != rid:
+				continue
+			var spots_p: Array = floor_cells.filter(func(c): return not near_door.has(_key(c.x, c.y)) and not out["reserved"].has(_key(c.x, c.y)))
+			spots_p.sort_custom(func(a, b): return _hash([place, rid, "person", a.x, a.y]) < _hash([place, rid, "person", b.x, b.y]))
+			for c in spots_p:
+				if _try_solid(cells, out, c):
+					var row: Dictionary = pspec.duplicate(true)
+					row["room"] = rid
+					row["x"] = c.x
+					row["z"] = c.y
+					out["people"].append(row)
+					break
 		# a key lies in a container of its room (placed first, so no other container takes its spot)
 		for kspec in data()["dungeons"][place].get("keys", []):
 			if str(kspec["room"]) != rid:
@@ -243,6 +258,8 @@ static func walk_cells(space_id: String, d: GameDynasty = null) -> Dictionary:
 				cells[_key(int(lk["x"]), int(lk["z"]))] = "locked"
 	for k in layout(space_id)["solid"]:
 		cells[k] = "prop"
+	for p in layout(space_id)["people"]:
+		cells[_key(int(p["x"]), int(p["z"]))] = "person"
 	for k in GameDungeonArt.solid_props(space_id):
 		cells[k] = "prop"
 	return cells
@@ -311,6 +328,8 @@ static func mark_key(kind: String, place: String, key: String) -> String:
 static func _span(kind: String) -> float:
 	if kind in ["y", "d"]:   # a key held and a door opened do not come back
 		return INF
+	if kind == "p":   # a captive freed or a blessing given: another comes in time
+		return float(setting("people_years"))
 	return float(setting("foe_years")) if kind == "k" else float(setting("refill_years"))
 
 
@@ -341,7 +360,7 @@ static func load_marks(v: Variant) -> Dictionary:
 		if typeof(k) != TYPE_STRING or typeof(v[k]) not in [TYPE_INT, TYPE_FLOAT] or is_nan(float(v[k])) or is_inf(float(v[k])):
 			continue
 		var parts := str(k).split(":")
-		if (parts[0] == "u" and parts.size() == 2) or (parts[0] in ["o", "t", "f", "k", "y", "d"] and parts.size() == 3):
+		if (parts[0] == "u" and parts.size() == 2) or (parts[0] in ["o", "t", "f", "k", "y", "d", "p"] and parts.size() == 3):
 			out[str(k)] = float(v[k])
 	return out
 
@@ -367,6 +386,11 @@ static func thing_near(space_id: String, x: int, z: int, d: GameDynasty = null) 
 		if maxi(absi(int(f["x"]) - x), absi(int(f["z"]) - z)) <= reach and dist < best_d:
 			best_d = dist
 			best = {"type": "feature", "thing": f}
+	for p in lay["people"]:
+		var dist := Vector2(float(int(p["x"]) - x), float(int(p["z"]) - z)).length()
+		if maxi(absi(int(p["x"]) - x), absi(int(p["z"]) - z)) <= reach and dist < best_d:
+			best_d = dist
+			best = {"type": "person", "thing": p}
 	if d != null:
 		for lk in lay["locks"]:
 			var dist := Vector2(float(int(lk["x"]) - x), float(int(lk["z"]) - z)).length()
@@ -374,6 +398,62 @@ static func thing_near(space_id: String, x: int, z: int, d: GameDynasty = null) 
 				best_d = dist
 				best = {"type": "lock", "thing": lk}
 	return best
+
+
+# ---------------------------------------------------------------- people
+
+## Talking to a person of a dungeon (Use beside them): {ok, text, dirty, lines}. A `prisoner` is freed (once, until `people_years`
+## pass) and rewards the heir with a loot roll of their tier (GameDungeonLoot, keyed on the seed); a `healer` eases the heir by a
+## share of their health once in the same span; a `hint` names the room of the next key the heir has not found, or what to do with
+## the key held, or says its piece when every door is open. Draws no die of the dynasty's.
+static func talk(d: GameDynasty, space_id: String, p: Dictionary) -> Dictionary:
+	var place := place_of(space_id)
+	var vals := {"h": d.heir.name, "who": str(p["name"])}
+	var lines: Array = [str(p["greet"]).format(vals)]
+	var cell := Vector2i(int(p["x"]), int(p["z"]))
+	var did := false
+	match str(p["kind"]):
+		"prisoner":
+			if is_marked(d, "p", place, str(p["id"])):
+				lines.append(str(p["thanks"]).format(vals))
+			else:
+				mark(d, "p", place, str(p["id"]))
+				lines.append(text("freed", vals))
+				var got := GameDungeonLoot.roll(d, place, "p:" + str(p["id"]), str(p["tier"]), "chest")
+				lines.append_array(GameDungeonLoot.give(d, got))
+				did = true
+		"healer":
+			if is_marked(d, "p", place, str(p["id"])) or d.heir.hp >= d.heir.max_hp():
+				lines.append(str(p["thanks"]).format(vals))
+			else:
+				var amount := mini(maxi(1, int(round(float(d.heir.max_hp()) * float(p["pct"])))), d.heir.max_hp() - d.heir.hp)
+				d.heir.hp += amount
+				mark(d, "p", place, str(p["id"]))
+				lines.append(text("healed", {"h": d.heir.name, "n": amount}))
+				did = true
+		"hint":
+			lines.append(_hint(d, space_id, p, vals))
+	return {"ok": true, "text": "  ".join(lines), "dirty": [], "lines": lines, "person": str(p["id"]), "did": did, "cell": cell}
+
+
+static func _hint(d: GameDynasty, space_id: String, p: Dictionary, vals: Dictionary) -> String:
+	var lay := layout(space_id)
+	for lk in lay["locks"]:
+		if lock_open(d, space_id, str(lk["id"])):
+			continue
+		if has_key(d, space_id, str(lk["key"])):
+			return str(p["with_key"]).format({"door": str(lk["name"]), "key": key_name(space_id, str(lk["key"])).to_lower()})
+		for c in lay["containers"]:
+			if str(c.get("key", "")) == str(lk["key"]):
+				return str(p["hint"]).format({"door": str(lk["name"]), "key": key_name(space_id, str(lk["key"])).to_lower(), "room": _room_name(space_id, str(c["room"])).to_lower()})
+	return str(p["done"]).format(vals)
+
+
+static func _room_name(space_id: String, room: String) -> String:
+	for r in GameSpaces.rooms(space_id):
+		if str(r["id"]) == room:
+			return str(r["name"])
+	return room
 
 
 # ---------------------------------------------------------------- locked doors and keys
@@ -497,6 +577,8 @@ static func use_thing(d: GameDynasty, space_id: String, found: Dictionary) -> Di
 	var cell := Vector2i(int(t["x"]), int(t["z"]))
 	if str(found["type"]) == "lock":
 		return use_lock(d, space_id, t)
+	if str(found["type"]) == "person":
+		return talk(d, space_id, t)
 	if str(found["type"]) == "container":
 		var kname := str(data()["kinds"][str(t["kind"])]["name"])
 		if is_marked(d, "o", place, str(t["id"])):
@@ -559,10 +641,10 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	GameData.load_all()
-	for k in ["refill_years", "foe_years", "min_foe_distance", "reach"]:
+	for k in ["refill_years", "foe_years", "min_foe_distance", "reach", "people_years"]:
 		if float(dat["settings"].get(k, 0)) <= 0.0:
 			bad.append("dungeons.json: settings.%s must be above 0" % k)
-	for k in ["opened", "empty", "found_gold", "found_materials", "found_nothing", "found_unique", "spotted", "spent", "boss_gone", "boss_stirs", "nothing_to_use", "healed", "found_key", "locked", "unlocked"]:
+	for k in ["opened", "empty", "found_gold", "found_materials", "found_nothing", "found_unique", "spotted", "spent", "boss_gone", "boss_stirs", "nothing_to_use", "healed", "found_key", "locked", "unlocked", "freed"]:
 		if str(dat["text"].get(k, "")) == "":
 			bad.append("dungeons.json: the text '%s' is missing" % k)
 	for t in dat["traps"]:
@@ -589,6 +671,20 @@ static func validate() -> Array:
 			bad.append("dungeons.json: %s has a lair (%s) but no boss_lair room" % [place, lair])
 		if lair == "" and roles.has("boss_lair"):
 			bad.append("dungeons.json: %s has a boss_lair room but world.json gives it no lair" % place)
+		var person_ids := {}
+		for pp in dg.get("people", []):
+			var kind := str(pp.get("kind", ""))
+			var good := str(pp.get("id", "")) != "" and not person_ids.has(str(pp["id"])) and str(pp.get("name", "")) != "" and str(pp.get("greet", "")) != "" and room_ids(space).has(str(pp.get("room", ""))) and GameData.classes.has(str(pp.get("class", ""))) and GameData.races.has(str(pp.get("race", ""))) and str(pp.get("color", "")).is_valid_html_color()
+			good = good and kind in ["prisoner", "healer", "hint"]
+			if kind == "prisoner":
+				good = good and str(pp.get("thanks", "")) != "" and GameDungeonLoot.data()["tiers"].has(str(pp.get("tier", "")))
+			if kind == "healer":
+				good = good and str(pp.get("thanks", "")) != "" and float(pp.get("pct", 0)) > 0.0 and float(pp["pct"]) <= 1.0
+			if kind == "hint":
+				good = good and str(pp.get("hint", "")).contains("{room}") and str(pp.get("with_key", "")) != "" and str(pp.get("done", "")) != ""
+			if not good:
+				bad.append("dungeons.json: %s has a bad person '%s' (id, name, greet, a room of the dungeon, a race and class, a colour, and what their kind needs)" % [place, pp.get("id", "")])
+			person_ids[str(pp.get("id", ""))] = true
 		var key_ids := {}
 		for k in dg.get("keys", []):
 			if str(k.get("id", "")) == "" or str(k.get("name", "")) == "" or not room_ids(space).has(str(k.get("room", ""))) or not dat["kinds"].has(str(k.get("kind", ""))) or key_ids.has(str(k["id"])):

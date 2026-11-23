@@ -4,7 +4,8 @@
   "refill_years": 30.0,
   "foe_years": 12.0,
   "min_foe_distance": 3.0,
-  "reach": 1
+  "reach": 1,
+  "people_years": 40.0
  },
  "roles": {
   "entrance_hall": "entrance hall",
@@ -93,6 +94,33 @@
      ],
      "key": "warchief_key",
      "name": "iron-bound hoard door"
+    }
+   ],
+   "people": [
+    {
+     "id": "captive_trader",
+     "name": "Marta the trader",
+     "room": "prison",
+     "kind": "prisoner",
+     "race": "human",
+     "class": "rogue",
+     "color": "#a05a3a",
+     "tier": "fine",
+     "greet": "A woman in rags rattles her chains. \"Goblins took my cart. Get me out of here!\"",
+     "thanks": "Marta waves from the road. \"Hearthmere will hear of you.\""
+    },
+    {
+     "id": "old_scout",
+     "name": "an old scout",
+     "room": "totem_cave",
+     "kind": "hint",
+     "race": "human",
+     "class": "ranger",
+     "color": "#5a7a3a",
+     "greet": "A grey scout crouches by the totem. \"Quiet now.\"",
+     "hint": "\"The warchief's hoard is behind the {door}. The {key} is in the {room}.\"",
+     "with_key": "\"You hold the key. The {door} is for it.\"",
+     "done": "\"The hoard is open. Take what you came for, and go.\""
     }
    ],
    "keys": [
@@ -428,6 +456,33 @@
      ],
      "key": "king_seal",
      "name": "seal of the king's tomb"
+    }
+   ],
+   "people": [
+    {
+     "id": "gravekeeper",
+     "name": "the gravekeeper",
+     "room": "shrine",
+     "kind": "hint",
+     "race": "human",
+     "class": "cleric",
+     "color": "#d8d4c0",
+     "greet": "A hooded keeper tends the altar candles. \"The dead sleep light here.\"",
+     "hint": "\"The {door} is shut. The {key} lies in the {room}.\"",
+     "with_key": "\"Good. The {door} knows that key.\"",
+     "done": "\"Every door of the barrow stands open. May the king forgive us.\""
+    },
+    {
+     "id": "lost_pilgrim",
+     "name": "a lost pilgrim",
+     "room": "antechamber",
+     "kind": "healer",
+     "race": "halfling",
+     "class": "cleric",
+     "color": "#8a7a5a",
+     "pct": 0.3,
+     "greet": "A pilgrim sits against the wall, a lantern in her lap. \"Let me bind that.\"",
+     "thanks": "\"I have no more to give. Go carefully.\""
     }
    ],
    "keys": [
@@ -806,6 +861,33 @@
      ],
      "key": "slag_key",
      "name": "heat-warped vault door"
+    }
+   ],
+   "people": [
+    {
+     "id": "smith_apprentice",
+     "name": "an apprentice smith",
+     "room": "slag_armoury",
+     "kind": "prisoner",
+     "race": "dwarf",
+     "class": "warrior",
+     "color": "#8a4a2a",
+     "tier": "fine",
+     "greet": "A soot-black youth is chained to a rack. \"The drake's kin took me. Please.\"",
+     "thanks": "\"I will make you something fine, one day.\""
+    },
+    {
+     "id": "ash_hermit",
+     "name": "the ash hermit",
+     "room": "ember_shrine",
+     "kind": "hint",
+     "race": "human",
+     "class": "mage",
+     "color": "#6a4a3a",
+     "greet": "A hermit warms her hands at the shrine. \"The mountain is not angry. It is hungry.\"",
+     "hint": "\"The {door} will not yield without the {key}. Look in the {room}.\"",
+     "with_key": "\"The {key} fits the {door}. Mind the heat.\"",
+     "done": "\"All the doors are open now. The fire will come for you next.\""
     }
    ],
    "keys": [
@@ -1191,6 +1273,32 @@
      "name": "coral-crusted reliquary door"
     }
    ],
+   "people": [
+    {
+     "id": "drowned_acolyte",
+     "name": "a drowned acolyte",
+     "room": "drowned_cells",
+     "kind": "prisoner",
+     "race": "human",
+     "class": "cleric",
+     "color": "#4a7a8a",
+     "tier": "fine",
+     "greet": "An acolyte clings to the bars, water at her knees. \"The tide keeps us. Free me.\"",
+     "thanks": "\"The tide let me go. Bless you.\""
+    },
+    {
+     "id": "tide_priest",
+     "name": "the tide priest",
+     "room": "shrine",
+     "kind": "healer",
+     "race": "elf",
+     "class": "cleric",
+     "color": "#6ab0c0",
+     "pct": 0.4,
+     "greet": "A priest kneels in the shallows. \"The water remembers you. Be still.\"",
+     "thanks": "\"The water has given what it will.\""
+    }
+   ],
    "keys": [
     {
      "id": "tide_key",
@@ -1557,6 +1665,33 @@
      ],
      "key": "runed_key",
      "name": "runed stone door"
+    }
+   ],
+   "people": [
+    {
+     "id": "lost_delver",
+     "name": "a lost delver",
+     "room": "collapsed_mine",
+     "kind": "hint",
+     "race": "dwarf",
+     "class": "warrior",
+     "color": "#8a8a9a",
+     "greet": "A dwarf sits among fallen stones, one boot torn. \"The deep is not what it was.\"",
+     "hint": "\"The {door} wants the {key}. We left it in the {room}.\"",
+     "with_key": "\"That key is for the {door}. The old kings are behind it.\"",
+     "done": "\"The throne stands open to you. We never dared.\""
+    },
+    {
+     "id": "rune_keeper",
+     "name": "a rune keeper",
+     "room": "stone_court",
+     "kind": "healer",
+     "race": "dwarf",
+     "class": "cleric",
+     "color": "#a0a0c0",
+     "pct": 0.4,
+     "greet": "A keeper traces a rune in the air. \"Stand still, stone-walker.\"",
+     "thanks": "\"The rune is spent. Wait.\""
     }
    ],
    "keys": [
@@ -1997,6 +2132,33 @@
      "name": "door of black glass"
     }
    ],
+   "people": [
+    {
+     "id": "expeditioner",
+     "name": "a lost expeditioner",
+     "room": "expedition_cache",
+     "kind": "prisoner",
+     "race": "human",
+     "class": "ranger",
+     "color": "#c0b080",
+     "tier": "rich",
+     "greet": "A thin figure is wedged in a crack of the cache. \"Pull me out. I have lost the count of days.\"",
+     "thanks": "\"I see the sky again. Thank you.\""
+    },
+    {
+     "id": "rift_watcher",
+     "name": "the watcher at the edge",
+     "room": "beyond",
+     "kind": "hint",
+     "race": "elf",
+     "class": "mage",
+     "color": "#9a6ac0",
+     "greet": "A watcher stands where the floor ends. \"It looks back, you know.\"",
+     "hint": "\"The {door} is glass and shut. The {key} is in the {room}.\"",
+     "with_key": "\"You carry the {key}. The {door} will open for it.\"",
+     "done": "\"Everything is open. That is the trouble with it.\""
+    }
+   ],
    "keys": [
     {
      "id": "shard_key",
@@ -2358,6 +2520,7 @@
   "healed": "{h} is eased: {n} health.",
   "found_key": "{h} finds the {key}.",
   "locked": "The {door} is locked. It wants the {key}.",
-  "unlocked": "{h} turns the {key} in the {door}, and it swings open."
+  "unlocked": "{h} turns the {key} in the {door}, and it swings open.",
+  "freed": "{h} frees {who}, who presses what the captors left into their hands."
  }
 }
