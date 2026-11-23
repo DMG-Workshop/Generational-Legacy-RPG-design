@@ -5,6 +5,7 @@
     "speed": 1.0,
     "hostile": false,
     "lose_sight_mult": 1.5,
+    "chase_detour_mult": 4.0,
     "leash": 0.0,
     "wander_radius": 8.0,
     "idle_chance": 0.35,

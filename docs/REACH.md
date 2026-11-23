@@ -1,7 +1,15 @@
 # Reach across walls
 
 Design for what a blow, a shot, a spell or a creature's attention may cross, and what stops it. Status: the **melee contact rule is built and tested**
-(`GameWalls.line_clear`, `GameSandbox.reaches_heir`, `tests/test_game_reach.gd`); the rest is specified here with the places it would be read.
+(`GameWalls.line_clear`, `GameSandbox.reaches_heir`, `tests/test_game_reach.gd`). The **rest of the rules are built as pure functions** in `GameReach`
+(`core/game/game_reach.gd`, tunables in `data/world/walls.json` `reach`, `tests/test_game_reach_rules.gd`): ranged lines and arcs, area shadows, sight, the
+detour test, flank points, shove, pull and blink, and the `bars` and `slit` stoppers. **Not yet wired** into the creature step, the companions' guard or the
+battle: nothing calls them in play, so the autopilot, golden fixture and every seeded fight are unchanged. The map has no `bars` or `slit` tile yet either
+(a shut gate counts as a grille for a shot or a look); the tests supply them through a probe.
+
+## GameReach at a glance
+
+Each stopper kind in `reach.stoppers` lists the channels it stops (`walk`, `melee`, `ranged`, `area`, `sight`) and a `height`. `GameReach.line_clear(a, b, channel, shut, probe, arc)` is the one line test (the melee channel equals `GameWalls.line_clear`). `shot_ok` (range, line, `arc` lob over stoppers no taller than `reach.arc.height` from `reach.arc.min_range`), `can_end_on` (a flier), `area_hits` / `aimable` (burst, cone, line clipped by shadow; all and party unclipped), `sees` / `keeps` (sight needs a line, an existing chase only distance), `loses_interest` (needs `chase_detour_mult`, a new `behaviour.json` default, 4), `flank_point`, `knock`, `pull` (ends `pull_gap` short of the caster) and `blink_ok`. The edge-case table below says which rows `GameReach` now covers: bars, slit, knockback, pull and blink, and flying are rules in code; doors and the dungeon and companion wiring are still open.
 
 ## Why
 
