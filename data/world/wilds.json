@@ -439,7 +439,7 @@
       "name": "Traders' camp",
       "verb": "see what the traders sell",
       "done": "The traders have nothing more for you.",
-      "trade": true, "merchant": {"stock_count": [3, 4], "find": true, "buy_share": 0.6, "material_share": 0.6, "wants_slots": ["weapon", "armor", "trinket", "remedy"], "wants_tags": ["metal", "leather", "herb", "food"], "barter": [{"give": {"iron": 6}, "get": {"item": "willowbark_tonic"}}, {"give": {"leather": 5}, "get": {"gold": 60}}, {"give": {"herb": 8}, "get": {"item": "physicians_draught"}}]},
+      "trade": true, "merchant": {"wary": 14.0, "stock_count": [3, 4], "find": true, "buy_share": 0.6, "material_share": 0.6, "wants_slots": ["weapon", "armor", "trinket", "remedy"], "wants_tags": ["metal", "leather", "herb", "food"], "barter": [{"give": {"iron": 6}, "get": {"item": "willowbark_tonic"}}, {"give": {"leather": 5}, "get": {"gold": 60}}, {"give": {"herb": 8}, "get": {"item": "physicians_draught"}}]},
       "layout": [["wagon", "tent_blue", "campfire"]],
       "center": [0, 0],
       "stock": {
@@ -453,7 +453,7 @@
       "name": "Wandering merchant",
       "verb": "see the merchant's wares",
       "done": "The merchant has gone through their pack for you.",
-      "trade": true, "merchant": {"stock_count": [4, 6], "find": true, "buy_share": 0.7, "material_share": 0.7, "wants_slots": ["weapon", "armor", "trinket", "remedy"], "wants_tags": ["precious", "magic", "gem", "metal"], "barter": [{"give": {"silver": 3}, "get": {"gold": 90}}, {"give": {"crystal": 2}, "get": {"item": "lucky_charm"}}]},
+      "trade": true, "merchant": {"wary": 14.0, "stock_count": [4, 6], "find": true, "buy_share": 0.7, "material_share": 0.7, "wants_slots": ["weapon", "armor", "trinket", "remedy"], "wants_tags": ["precious", "magic", "gem", "metal"], "barter": [{"give": {"silver": 3}, "get": {"gold": 90}}, {"give": {"crystal": 2}, "get": {"item": "lucky_charm"}}]},
       "layout": [["merchant", "crate"]],
       "center": [0, 0],
       "stock": {
@@ -732,7 +732,7 @@
     "bought": "{heir} buys {item} for {price} gold.",
     "poor": "{heir} cannot pay {price} gold for {item}.",
     "full": "{heir} cannot carry {item}.",
-    "sold_out": "There is nothing more to sell {heir}.", "merchant_open": "{name}: {heir} looks over what is for sale.", "sold": "{heir} sells {item} to {name} for {price} gold.", "sold_mats": "{heir} sells {n} {material} to {name} for {price} gold.", "bartered": "{heir} trades {give} to {name} for {get}.", "not_wanted": "{name} has no use for {item}.", "no_materials": "{heir} does not have {give}.", "not_for_sale": "{name} no longer has that.", "no_trader": "There is no trader here.",
+    "sold_out": "There is nothing more to sell {heir}.", "merchant_open": "{name}: {heir} looks over what is for sale.", "wary": "{name} is shuttered and watchful: {guard} lies close by, and nobody here will deal while it does.", "sold": "{heir} sells {item} to {name} for {price} gold.", "sold_mats": "{heir} sells {n} {material} to {name} for {price} gold.", "bartered": "{heir} trades {give} to {name} for {get}.", "not_wanted": "{name} has no use for {item}.", "no_materials": "{heir} does not have {give}.", "not_for_sale": "{name} no longer has that.", "no_trader": "There is no trader here.", "found_item": "{heir} finds {item} among what was left.", "surprised": "{heir} is caught off guard!",
     "tithe": "The fae took {gold} gold.",
     "map_title": "Places found",
     "map_line": "{name}, {area}",

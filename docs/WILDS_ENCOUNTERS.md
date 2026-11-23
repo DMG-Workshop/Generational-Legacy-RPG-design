@@ -13,7 +13,8 @@ area spawn tables (`data/creatures/spawn.json` `areas`), `GameWildsLoot`, the sh
 - **Triggers:** approach fires when the heir comes within `range` of a landmark that has it, once per visit (`GameSandbox.armed`, let go at `leave_mult` times the range); use fires when searching rolls under `use_chance` (the guards come first, the search waits for the win).
 - **Ambush:** a `hidden` ambush sets `GameBattle.heir_skip` (the heir's first turn is lost, the foes strike first) unless the heir is already below `surprise_min_hp` (50%) of their health, so a hurt heir is never caught off guard on top of it. It never kills by rule of the data, but a first round is a first round: this is a bound, not a guarantee.
 - **Cooldown and clearing:** `GameDynasty.wilds.fought[id] = {year, gen, n}` starts on any fight (win, flight or defeat): no new fight for `renew_years` of the world calendar, and not twice in a generation unless `repeatable`. A win sets `wilds.cleared[id] = gen`: nothing more to fight there for `renew_gens` generations, the landmark's own search is free, and a bonus find (`GameWildsLoot`, boosted by `loot`) is paid. Both are saved with the rest of `wilds` only when set and loaded clean (`GameWildsFights.load_marks`).
-- **Not built:** the merchant "wary" tie to an uncleared landmark (needs both PRs), creatures that live at landmarks and walk (the guards are only met in the fight), and a landmark opening a dungeon's door.
+- **Wary traders (built):** a trader whose `merchant.wary` range holds an uncleared fight-sending landmark will not deal (`GameWildsTrade.wary_of`, `tests/test_game_wilds_wary.gd`).
+- **Not built:** creatures that live at landmarks and walk (the guards are only met in the fight), and a landmark opening a dungeon's door.
 
 The original specification follows (the parts above override it where they differ).
 
@@ -76,7 +77,7 @@ cover: a trigger, the foes' levels and count by generation, surprise once, the c
 - **Sell**: items in the pack of a slot the trader `wants_slots` (never a unique item), at `GameItems.sell_price` times the trader's `buy_share`; materials from the stores with one of its `wants_tags`, at the shop's material unit price times `material_share`.
 - **Barter**: the block's `barter` rows, materials from the stores for an item or for gold (gold scaled by the generation as other gold is).
 - **Layout**: gold and pack weight on top, the last line told, then For sale, Sell and Barter sections in a scroll; Buy, Sell and Trade buttons are disabled with the reason as text when they cannot work (no gold, too heavy, already owned, materials short).
-- **Not built**: a trader that wanders off or has hours (landmarks are fixed), a trader that is `wary` while an encounter at its landmark is uncleared (needs section 1), selling animals.
+- **Not built**: a trader that wanders off or has hours (landmarks are fixed), selling animals.
 
 The original specification follows (the parts above override it where they differ).
 

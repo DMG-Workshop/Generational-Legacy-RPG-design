@@ -389,6 +389,10 @@ static func use(d: GameDynasty, lm: Dictionary) -> Dictionary:
 		if not plan.is_empty():
 			return {"ok": true, "text": str(plan["text"]), "fight": plan, "landmark": lm}
 	if bool(def.get("trade", false)):
+		var guard := GameWildsTrade.wary_of(d, lm)   # a trader will not deal while a fight near its wagon is uncleared
+		if not guard.is_empty():
+			vals["guard"] = name_of(guard).to_lower()
+			return {"ok": false, "text": GameWilds.text("wary", vals), "wary": str(guard["id"])}
 		return _trade(d, lm, def, vals)
 	var rows: Array = def["outcomes"].filter(func(o): return _fits(d, lm, o))
 	if rows.is_empty():
