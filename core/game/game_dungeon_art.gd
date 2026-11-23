@@ -231,6 +231,36 @@ static func entrance_rect(place: String) -> Rect2i:
 	return Rect2i(int(door.get("x", 0)) - (w - 1) / 2, int(door.get("z", 0)) - (h - 1), w, h)
 
 
+## The entrance's solid tiles: every tile of every entrance (`entrance_rect`) but its door tile, so the hillside, the mound or the gate-house is a body
+## that stops walkers and blows like a tree or a building does, and the way in is the door tile alone, reached from the open ground below it.
+## {"x,z": true}, built once (tests that change the data call `reload`).
+static var _solid: Dictionary = {}
+
+
+static func solid() -> Dictionary:
+	if _solid.is_empty():
+		for place in data()["dungeons"]:
+			var r := entrance_rect(str(place))
+			if r.size == Vector2i.ZERO:
+				continue
+			var door: Dictionary = GameSpaces.space("world/" + str(place)).get("door", {})
+			for x in range(r.position.x, r.end.x):
+				for z in range(r.position.y, r.end.y):
+					if not (x == int(door.get("x", -1)) and z == int(door.get("z", -1))):
+						_solid["%d,%d" % [x, z]] = true
+	return _solid
+
+
+## Whether a tile is the body of a dungeon's entrance (not its door).
+static func blocks(x: int, z: int) -> bool:
+	return solid().has("%d,%d" % [x, z])
+
+
+static func reload() -> void:
+	_cache = {}
+	_solid = {}
+
+
 ## The dungeons whose entrance overlaps a rectangle of the open world's tiles: [{place, rect, entrance}].
 static func entrances_in(view: Rect2i) -> Array:
 	var out: Array = []
