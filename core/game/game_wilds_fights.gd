@@ -71,6 +71,37 @@ static func _in_era(d: GameDynasty, creature_id: String) -> bool:
 	return false
 
 
+## The creatures that live at a landmark and can be seen idling beside it at an hour of the day: [{id, creature, x, z, mode: "idle", uid, site}]. They are the foes the
+## landmark would send next (`foes_for`), standing about the landmark's centre within the block's `dwell.radius`, each moving to a new spot every `dwell.hours` hours:
+## a pure function of the seed, the landmark, how often it has been fought and the hour, never the dynasty's dice. Nobody lives at a landmark that has no `dwell`, is
+## cleared (its guards are gone) or is on its cooldown (they are away or dead for now).
+static func dwellers(d: GameDynasty, lm: Dictionary, hour: float) -> Array:
+	var b := block(lm)
+	var dw: Dictionary = {} if b.is_empty() else b.get("dwell", {})
+	if dw.is_empty() or cleared(d, str(lm["id"])) or not _off_cooldown(d, lm):
+		return []
+	var out: Array = []
+	var slot := int(floor(hour / float(dw["hours"])))
+	var foes := foes_for(d, lm)
+	var n := int(fought_info(d, str(lm["id"])).get("n", 0))
+	for i in foes.size():
+		var r := RandomNumberGenerator.new()
+		r.seed = hash([d.seed_value, "wilds_dwell", str(lm["id"]), n, i, slot])
+		var ang := r.randf() * TAU
+		var dist := 1.0 + r.randf() * (float(dw["radius"]) - 1.0)
+		out.append({"id": str(foes[i]), "creature": str(foes[i]), "x": float(lm["x"]) + 0.5 + cos(ang) * dist, "z": float(lm["z"]) + 0.5 + sin(ang) * dist, "mode": "idle", "uid": "%s#%d" % [str(lm["id"]), i], "site": str(lm["id"])})
+	return out
+
+
+## Whether the landmark's cooldown has run out (the calendar and, unless `repeatable`, the generation) whatever its triggers.
+static func _off_cooldown(d: GameDynasty, lm: Dictionary) -> bool:
+	var b := block(lm)
+	var f := fought_info(d, str(lm["id"]))
+	if f.is_empty():
+		return true
+	return d.world.year - float(f["year"]) >= float(b["renew_years"]) and (bool(b.get("repeatable", false)) or int(f["gen"]) != d.gen)
+
+
 ## What a trigger would start: {foes, ambush (bool), level_mult, text, loot} or {} when it cannot.
 static func plan(d: GameDynasty, lm: Dictionary, trigger: String) -> Dictionary:
 	if not can_trigger(d, lm, trigger):
@@ -187,6 +218,9 @@ static func validate() -> Array:
 		for k in ["won", "fled"]:
 			if not b["text"].has(k):
 				bad.append("wilds.json: '%s' has no text.%s" % [kind, k])
+		var dw: Dictionary = b.get("dwell", {})
+		if not dw.is_empty() and (float(dw.get("radius", 0.0)) < 1.5 or float(dw["radius"]) > 12.0 or float(dw.get("hours", 0.0)) <= 0.0 or float(dw["hours"]) > 24.0):
+			bad.append("wilds.json: '%s' dwell needs a radius of 1.5 to 12 tiles and hours above 0 and at most 24" % kind)
 		if "approach" in b["triggers"] and float(b.get("range", 0.0)) <= 0.0:
 			bad.append("wilds.json: '%s' triggers by approach and needs a range above 0" % kind)
 		if "use" in b["triggers"] and (int(b.get("use_chance", 0)) < 1 or int(b.get("use_chance", 0)) > 100):
@@ -212,7 +246,7 @@ static func validate() -> Array:
 			bad.append("wilds.json: '%s' pool has no creature of the first era, so a new house could meet nothing" % kind)
 	if not found:
 		bad.append("wilds.json: no landmark has an encounter")
-	for k in ["found_item", "surprised"]:
+	for k in ["found_item", "surprised", "door_open"]:
 		if not GameWilds.data()["text"].has(k):
 			bad.append("wilds.json: text.%s is missing" % k)
 	if float(GameWilds.setting("leave_mult")) < 1.0 or float(GameWilds.setting("surprise_min_hp")) < 0.0 or float(GameWilds.setting("surprise_min_hp")) > 1.0:
