@@ -494,7 +494,9 @@
      "bundle": 4
     }
    ],
-   "services": []
+   "services": [
+    {"id": "cast_rejuvenation", "kind": "cast", "name": "Rejuvenation", "desc": "Slow green healing on the party in the next fight.", "price": 0, "spell": "rejuvenation", "caster_level": 3, "fights": 1, "years": 1.0, "daily": true}
+   ]
   },
   {
    "id": "apothecary",
@@ -579,7 +581,9 @@
      "tier_max": 2
     }
    ],
-   "services": []
+   "services": [
+    {"id": "cast_cleanse", "kind": "cast", "name": "Cleanse", "desc": "Washes every sickness from the heir.", "price": 0, "spell": "cleanse", "caster_level": 4, "fights": 1, "years": 1.0, "daily": true}
+   ]
   },
   {
    "id": "alchemist",
@@ -1708,7 +1712,13 @@
      "tier_max": 9
     }
    ],
-   "services": []
+   "services": [
+    {"id": "cast_ward", "kind": "cast", "name": "A ward", "desc": "A shimmering ward on the party for the next fight.", "price": 0, "spell": "ward", "caster_level": 8, "fights": 1, "years": 1.0, "daily": true},
+    {"id": "cast_haste", "kind": "cast", "name": "Haste", "desc": "Quickens the party for the next fight.", "price": 0, "spell": "haste", "caster_level": 8, "fights": 1, "years": 1.0, "daily": true},
+    {"id": "cast_rejuvenation", "kind": "cast", "name": "Rejuvenation", "desc": "Slow green healing on the party in the next fight.", "price": 0, "spell": "rejuvenation", "caster_level": 8, "fights": 1, "years": 1.0, "daily": true},
+    {"id": "cast_mass_heal", "kind": "cast", "name": "Mass heal", "desc": "Mends the heir and the party at once.", "price": 0, "spell": "mass_heal", "caster_level": 8, "fights": 1, "years": 1.0, "daily": true},
+    {"id": "cast_cleanse", "kind": "cast", "name": "Cleanse", "desc": "Washes every sickness from the heir.", "price": 0, "spell": "cleanse", "caster_level": 8, "fights": 1, "years": 1.0, "daily": true}
+   ]
   },
   {
    "id": "enchanter",
@@ -3160,7 +3170,10 @@
      "tier_max": 9
     }
    ],
-   "services": []
+   "services": [
+    {"id": "cast_mass_heal", "kind": "cast", "name": "Mass heal", "desc": "Mends the heir and the party at once.", "price": 0, "spell": "mass_heal", "caster_level": 6, "fights": 1, "years": 1.0, "daily": true},
+    {"id": "cast_ward", "kind": "cast", "name": "A ward", "desc": "A shimmering ward on the party for the next fight.", "price": 0, "spell": "ward", "caster_level": 5, "fights": 1, "years": 1.0, "daily": true}
+   ]
   }
  ]
 }

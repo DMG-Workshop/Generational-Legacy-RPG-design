@@ -14,7 +14,7 @@ const SLAIN := "slain in battle"   # the cause GameDynasty._die is given when a 
 ## kills and battles won at death (sums), the lives that `carried` a subclass, and the dynasties played and ended.
 ## `subclass` founds each dynasty in that calling ("" for none, which plays exactly as before); it passes down at
 ## the game's own inheritance chance. With `keep` every new heir is also founded in it, so every life carries it.
-static func play_batch(base: int, races: Array, gens: int, subclass: String = "", keep: bool = false) -> Dictionary:
+static func play_batch(base: int, races: Array, gens: int, subclass: String = "", keep: bool = false, profile: String = "") -> Dictionary:
 	GameData.load_all()
 	var total := blank()
 	var by_race := {}
@@ -24,8 +24,19 @@ static func play_batch(base: int, races: Array, gens: int, subclass: String = ""
 		total["dynasties"] += 1
 		for g in gens:
 			var carried := 1 if d.heir != null and d.heir.subclass != "" else 0
-			GameBot.live_life(d)
+			var ctx := {}
+			if profile != "":   # a profile bot (GameProfile): its extra actions, and what the life gained and cost
+				ctx = GameProfile.start(d, profile)
+				GameBot.live_life(d, GameProfile.attach(ctx))
+				GameProfile.detach()
+			else:
+				GameBot.live_life(d)
 			var rec: Dictionary = d.last_death
+			if profile != "":
+				var fin := GameProfile.finish(d, ctx)
+				rec = rec.duplicate()
+				rec["profile_gain"] = float(fin["gain"])
+				rec["profile_actions"] = int(fin["actions"])
 			var race := str(rec.get("race_id", races[ri]))
 			if not by_race.has(race):
 				by_race[race] = blank()
@@ -52,6 +63,8 @@ static func record(totals: Dictionary, rec: Dictionary, carried: int = 0) -> voi
 		for k in kills:
 			totals["kills"] += float(kills[k])
 	totals["carried"] += carried
+	totals["ge"] += float(rec.get("profile_gain", 0.0))
+	totals["actions"] += float(rec.get("profile_actions", 0))
 	if str(rec.get("cause", "")) == SLAIN:
 		totals["slain"] += 1
 
@@ -82,7 +95,7 @@ static func seed_range(first: int, last: int) -> Array:
 
 
 static func blank() -> Dictionary:
-	return {"lives": 0, "slain": 0, "level": 0.0, "age": 0.0, "gold": 0.0, "kills": 0.0, "wins": 0.0, "carried": 0, "dynasties": 0, "ended": 0}
+	return {"lives": 0, "slain": 0, "level": 0.0, "age": 0.0, "gold": 0.0, "kills": 0.0, "wins": 0.0, "carried": 0, "dynasties": 0, "ended": 0, "ge": 0.0, "actions": 0.0}
 
 
 static func add(into: Dictionary, from: Dictionary) -> void:
@@ -95,6 +108,13 @@ static func add(into: Dictionary, from: Dictionary) -> void:
 static func detail(t: Dictionary) -> String:
 	var n := maxf(1.0, float(t["lives"]))
 	return "gold %6.0f, kills %5.1f, wins %5.1f, carried %3.0f%%, %4.1f gens/dynasty" % [float(t["gold"]) / n, float(t["kills"]) / n, float(t["wins"]) / n, 100.0 * float(t["carried"]) / n, float(t["lives"]) / maxf(1.0, float(t["dynasties"]))]
+
+
+## What a profile's lives gained and cost per life: gold-equivalent net-worth gain (GameProfile.net_worth), actions spent, and the return on effort (gain per action).
+static func profile_detail(t: Dictionary) -> String:
+	var n := maxf(1.0, float(t["lives"]))
+	var a := float(t["actions"]) / n
+	return "gain %6.0f GE, effort %5.1f actions, %5.1f GE per action" % [float(t["ge"]) / n, a, (float(t["ge"]) / n) / maxf(1.0, a)]
 
 
 ## Percent of lives that ended slain in battle.

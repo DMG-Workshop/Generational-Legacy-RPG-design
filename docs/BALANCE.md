@@ -150,8 +150,8 @@ Judge a calling by arithmetic first (the perks above the autopilot cannot reach 
 ## Perks the autopilot cannot use (measurement plan)
 
 Twelve of the twenty callings have most of their power in places `GameBot` never visits (list under *What the autopilot can use*, above). The sweep cannot see them, so
-"all twenty are within noise" says nothing about the Delver's ore, the Steadholder's flock or the Stonewright's walls. This section defines how to measure them. **Status: method
-and metrics specified; the profile bots are not built** (nothing below changes a seeded life, so no balance number moves until they are).
+"all twenty are within noise" says nothing about the Delver's ore, the Steadholder's flock or the Stonewright's walls. This section defines how to measure them. **Status: the profile bots are built (`GameProfile`, `profile=<id>` on the harness) and run once on the plain house, with first numbers below;
+the per-calling comparison is only partly run.** Nothing here changes a seeded life: with no profile the autopilot plays exactly as before (`tests/test_game_profiles.gd` checks that).
 
 ### Terms (the same as above)
 
@@ -164,10 +164,10 @@ and metrics specified; the profile bots are not built** (nothing below changes a
 - **Risk** (`R`): extra expected battle death share per life while pursuing the profile (a delver goes deeper, a forager walks further), measured in points of battle deaths against the plain house on the
   same profile.
 
-### Profile bots (to build)
+### Profile bots (built)
 
 A **profile** is a small policy layered on `GameBot.live_life` that adds the actions a perk needs, and **only those**, through the same core calls the screens use (no new rules, so what it measures is
-what a player gets). Each is run once for the plain house and once for each calling that has a perk it exercises. Suggested set (`tools/profiles.gd`, run through `balance_harness.gd -- profile=<id>`):
+what a player gets). Each is run once for the plain house and once for each calling that has a perk it exercises. The set is in `core/game/game_profile.gd` and runs through `godot --headless --path . -s res://tools/balance_harness.gd -- seeds=1-12 profile=<id> [subclass=<id> keep]`. The harness prints, besides the usual figures, `gain` (gold-equivalent net-worth gain per life, `GameProfile.net_worth`), `effort` (player actions per life) and `GE per action`. The policies are first guesses (how often it acts, what it buys); change them in `GameProfile.hook`.
 
 | Profile | The bot additionally... | Perks it exercises | Callings |
 |---|---|---|---|
@@ -180,6 +180,37 @@ what a player gets). Each is run once for the plain house and once for each call
 | `fleer` | flees any fight under a hp share (it never does today) | `flee_mult` | trapsmith, wayfinder |
 
 A profile never changes the **fights** (`GameBattle` still plays by `GameTactics`), so the existing 3-7% battle-death band still applies to the plain house with the profile on.
+
+#### First measurement: the plain house on every profile (seeds 1-12, 8 races, 10 generations, 960 lives, commit 5d3521b)
+
+| Profile | Gold at death | Gain (GE) | Actions | GE per action | Battle deaths |
+|---|---|---|---|---|---|
+| none (autopilot) | 4,775 | n/a | n/a | n/a | 2.7% |
+| forge | 645 | 1,263 | 34.3 | 36.8 | 2.7% |
+| miner | 4,808 | 963 | 28.6 | 33.7 | 2.3% |
+| builder | 6,092 | 1,902 | 50.2 | 37.9 | 4.4% |
+| farmer | 4,507 | 854 | 8.2 | 104.4 | 2.4% |
+| breeder | 4,507 | 854 | 8.2 | 104.4 | 2.4% |
+| forager | 4,775 | 1,347 | 27.2 | 49.5 | 2.7% |
+| fleer | 4,293 | 876 | 0.9 | 876.2 | 5.3% |
+
+Callings on their profile (same seeds, `keep`):
+
+| Calling on profile | Gain (GE) | Actions | GE per action | Battle deaths |
+|---|---|---|---|---|
+| delver on miner | 1,062 (+10%) | 29.2 | 36.4 | 3.1% |
+| stonewright on miner | 874 (-9%) | 27.2 | 32.2 | 3.3% |
+| greenwarden on forager | 1,611 (+20%) | 26.7 | 60.4 | 4.4% |
+| feastwright on forager | 1,618 (+20%) | 27.2 | 59.4 | 3.2% |
+
+How to read it:
+- **An autopilot life already gains about 850 GE** (gear and gold it holds at death), so a profile's own gain is its figure minus about 850: forge +410, miner +110, forager +500, builder +1,050. The farmer, breeder and fleer sit on the baseline.
+- **Farmer and breeder are identical to the digit (854 GE, 8.2 actions): the breeder never reaches breeding in these runs**, so its numbers are the farmer's. Buying young animals at market price and valuing them at sell price gains nothing until they grow, and the policy rarely holds a pair of adults. This is a gap in the policy, not a result about the Breeder calling.
+- **The fleer's 5.3% battle deaths** (against 2.7%) is the cost of fleeing under 35% health: the heir leaves a fight it was winning, and the effort is the 0.9 flights per life. `flee_mult` perks (Trapsmith, Wayfinder) are not yet run on it.
+- **The builder moves the plain life itself**: gold at death 6,092 (+28% over 4,775), mean level 65 (against 59) and deaths 4.4%. A built house (bedroom rest, the forge it can hold) changes how the autopilot plays after it is built, so the builder's gain mixes the houses with a stronger life. Read it as an upper bound, and check what in the house does this before using it as a target.
+- **The Stonewright's miner result (-9%) is noise.** Its power is walls, so the builder profile is its test; it has not been run.
+- Delver and the two foragers read +10% to +20% on their profile, within the +-12% gold noise for Delver and above it for the foragers; they need the 24-seed re-run before any retune.
+- **Not yet run:** the other callings on their profiles (armorer and the forge set, steadholder and wildcaller on farmer, breeder on breeder, trapsmith and wayfinder on fleer), builder with callings, and the synergy pairs.
 
 ### Metrics, per profile and calling (36 seeds, `keep`, 10 generations)
 
@@ -209,10 +240,11 @@ Order: profile on the plain house first (that is the baseline for the profile); 
 
 ### Flagged: numbers missing for a full pass
 
-- `GameBot` has **no profile hooks**: the profiles above need `GameBot.live_life` to call a `profile` callable each generation (a small, optional parameter, off by default so seeded lives do not move). Its place in the dice order must be chosen so that profile `none` is bit-for-bit today's run (the determinism tests will catch a slip).
-- **Gold-equivalent prices** for creature work (wool, eggs, venom: `GameRanch.yearly_work`), made-piece quality and mined ore are listed above only as "use the shop's number"; there is no single `gold_value(item)` function. One is a prerequisite (`GameItems.sell_price` for items, `unit_price` for materials, `GameRanch.sell` for creatures) and should live in core, not in the tool.
-- **Effort counting**: `E` needs a counter on every player action the profiles use; the sandbox's `log` is not a count.
-- **Target band** for `dGE` (above) is a guess pending the first measurement; the existing docs give a band for *battle deaths* only (3-7%), not for gold.
+- **Hooks (built)**: `GameBot.live_life(d, hook)`, `GameBot.flee_below` and `GameBot.on_fight_end` are off by default, so seeded lives do not move (`tests/test_game_profiles.gd`).
+- **Gold-equivalent (built)**: `GameProfile.net_worth` prices the purse, materials (`GameShops.unit_price`), essences (40 per tier), pack and worn items (`GameItems.sell_price`), the roster (`GameRanch.sell_price`), built pieces (list cost) and potions (`potion_price`). Creature *work* (wool, eggs, venom per year) is not priced: a farm's yearly yield is invisible to it. That is the missing number for the farmer and breeder.
+- **Effort counting (built)**: one action per dig, forage, craft, salvage, build, purchase, breeding order or flight. The mix is the policy's, not a measurement of a human.
+- **Policies are first guesses**: the forge, builder, farmer and breeder rarely act (the bot is seldom in a town with a forge or market, and a 3x3 house costs 32 oak and 1 iron). Tune them before reading a calling's number against them.
+- **Target band** for `dGE` (above) is still a guess; the first table gives the spread to set it from.
 - The older table's claim that the autopilot "searches the dead (`gather_mult`, `essence_mult`, `drop_mult`, `rarity_mult`)" disagrees with `CLAUDE.md`, which says `GameBot` never calls `GameLoot.search_dead`/`GameCraft.after_search` (they are asked for by the screens). Resolve by reading `GameBot.step` before using those four keys as "autopilot-measured".
 
 ## Gold gaps: Hidewright and Trapsmith (re-run)
