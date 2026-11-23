@@ -295,11 +295,13 @@ func _build_shop(shop: String) -> void:
 					b2.tooltip_text = why
 				var what := "Raw material for crafting" if str(ent["kind"]) == "material" else "Kept at the family's ranch"
 				rows.add_child(_service_row(GameShops.entry_name(ent).capitalize() if str(ent["kind"]) == "material" else GameShops.entry_name(ent), what, "", "%sg" % GameText.num(cost), Kit.TEXT, "", b2, _afford(cost)))
+	if not GameCasting.rows(shop).is_empty():
+		_build_casting(shop)
 	if not GameEnchant.row(shop).is_empty():
 		_build_enchant(shop)
 	for sv in sdef.get("services", []):
 		if str(sv.get("kind", "")) != "":
-			continue   # enchanting has its own section above
+			continue   # casting and enchanting have their own sections above
 		var sid := str(sv["id"])
 		var sc := GameShops.service_price(dynasty, sv)
 		var sb := Kit.button("Pay", func(): _act(GameShops.serve(dynasty, shop, sid)), Vector2(96, 34))
@@ -319,6 +321,25 @@ func _build_shop(shop: String) -> void:
 		var mb := Kit.button("Sell all", func(): _act(GameShops.sell_material(dynasty, shop, mid, 9999)), Vector2(96, 34))
 		rows.add_child(_service_row("%s x%d" % [GameMaterials.name_of(mid), int(m["have"])], "From the family's stores.", "", "%sg each" % GameText.num(int(m["price"])), Kit.TEXT, "", mb))
 
+
+## A casting shop's section (GameCasting): the spells it will cast for the party, each with what it does, the price and a Cast button (disabled
+## with the reason as text: no gold, nothing to mend, no sickness, on cooldown until tomorrow); the blessing now laid on the party is named.
+func _build_casting(shop: String) -> void:
+	var h := dynasty.heir
+	rows.add_child(_section("Spells"))
+	var bl := GameCasting.blessing(dynasty)
+	if not bl.is_empty():
+		rows.add_child(Kit.label("Laid on the party for the next fight: %s." % str(GameCasting.spell(str(bl["spell"])).get("name", bl["spell"])), 14, Kit.dim()))
+	for sv in GameCasting.rows(shop):
+		var sid := str(sv["id"])
+		var plan := GameCasting.plan(dynasty, shop, sid)
+		var cb := Kit.button("Cast", func(): _act(GameCasting.cast(dynasty, shop, sid)), Vector2(96, 34))
+		cb.name = "CastSpell"
+		cb.disabled = not bool(plan["ok"])
+		if not bool(plan["ok"]):
+			cb.tooltip_text = str(plan["why"])
+		var sp := GameCasting.spell(str(sv["spell"]))
+		rows.add_child(_service_row(str(sv["name"]), str(sp.get("text", sv["desc"])), GameCasting.kind_of(str(sv["spell"])).capitalize(), "%sg" % GameText.num(int(plan["price"])), Kit.TEXT, "", cb, _afford(int(plan["price"]))))
 
 ## An enchanting shop's section (GameEnchant): the made pieces the heir has, and for the one chosen the affixes that could be bound into it,
 ## each with the essences held, the fee and a button; an affix with no essence held can be bought outright. Every refusal is shown as text.

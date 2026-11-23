@@ -48,6 +48,8 @@ var quests := GameQuests.new()
 var party := GameParty.new()
 var pending_event: Dictionary = {}   # an event waiting for the player's choice (see GameEvents)
 var shop_state: Dictionary = {}      # owned by GameItems: temple services used by the living heir
+var blessing: Dictionary = {}        # a spell a shop laid on the party for the next fight, {spell, fights, years, year, gen, level} (see GameCasting); saved only when set
+var casts_used: Dictionary = {}      # the days a shop has cast each spell, {"place|shop|service": "year|day"} (see GameCasting); saved only when set
 var ages := GameAges.new()           # per-Age summaries of older heirs, and the saga's greatest
 var auto_battle: bool = false        # the player's choice: hunts fight themselves (see GameTactics.auto_turn)
 var loot: Dictionary = {}            # the dead of the last victory, until searched or left (see GamePlague)
@@ -684,6 +686,7 @@ func _begin_battle(foes: Array, kind: String) -> GameBattle:
 	battle.biomes = world.here().get("biomes", [])
 	battle.add_allies(party.battle_allies(self))
 	battle.open_with_breath()
+	GameCasting.on_battle(self, battle)   # a blessing a shop laid on the party is applied (none: nothing happens)
 	battle_kind = kind
 	_say(GameMessages.text("life", "battle_begins", {"foes": GameMessages.text("life", "list_comma").join(foes.map(func(e): return e["name"]))}))
 	return battle
@@ -1066,6 +1069,10 @@ func to_dict() -> Dictionary:
 		out["sandbox_at"] = sandbox_at
 	if not shop_sold.is_empty():   # and only once something was bought off a shelf
 		out["shop_sold"] = shop_sold
+	if not blessing.is_empty():   # and only once a shop has blessed the party
+		out["blessing"] = blessing
+	if not casts_used.is_empty():   # and only once a shop has cast a spell
+		out["casts_used"] = casts_used
 	if not wilds.is_empty():   # and only once a landmark of the wilds is found
 		out["wilds"] = wilds
 	if not dungeon_marks.is_empty():   # and only once something is opened, sprung, used or killed in a dungeon
@@ -1131,6 +1138,8 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.sandbox_at = GameSandbox.load_at(d.get("sandbox_at", {}))
 	g.wilds = GameWildsSites.load_state(d.get("wilds", {}))
+	g.blessing = GameCasting.load_blessing(d.get("blessing", {}))
+	g.casts_used = GameCasting.load_used(d.get("casts_used", {}))
 	g.shop_sold = GameShops.load_sold(d.get("shop_sold", {}))
 	g.dungeon_marks = GameDungeons.load_marks(d.get("dungeon_marks", {}))
 	g.house_titles = GameTitles.clean_ids(d.get("house_titles", []))
