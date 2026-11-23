@@ -1790,7 +1790,9 @@
      "tier_max": 9
     }
    ],
-   "services": []
+   "services": [
+    {"id": "enchant", "kind": "enchant", "name": "Enchant a piece", "desc": "Binds one more affix into a made piece.", "price": 0, "base_fee": 120, "risk": "safe", "tier_cap": 4}
+   ]
   },
   {
    "id": "cartographer",
