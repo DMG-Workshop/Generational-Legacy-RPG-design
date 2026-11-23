@@ -317,7 +317,7 @@ static func validate() -> Array:
 		var v: Variant = defaults[k]
 		if typeof(v) in [TYPE_INT, TYPE_FLOAT] and float(v) < 0.0:
 			bad.append("behaviour.json: the default %s is negative" % k)
-	for k in ["sight", "speed", "wander_radius", "flee_dist", "lose_sight_mult", "alert_radius", "flank", "flank_spread", "flank_close"]:
+	for k in ["sight", "speed", "wander_radius", "flee_dist", "lose_sight_mult", "chase_detour_mult", "alert_radius", "flank", "flank_spread", "flank_close"]:
 		if float(defaults.get(k, 0.0)) <= 0.0:
 			bad.append("behaviour.json: the default %s must be above 0" % k)
 	if float(defaults.get("idle_chance", -1.0)) < 0.0 or float(defaults.get("idle_chance", 2.0)) > 1.0:

@@ -19,5 +19,22 @@
     "kingshold": {"gates": [{"side": "w", "shift": 0}, {"side": "s", "shift": 0}, {"side": "e", "shift": 0}]},
     "ironford": {"gates": [{"side": "n", "shift": 0}, {"side": "e", "shift": 0}, {"side": "s", "shift": 3}, {"side": "w", "shift": -2}]},
     "brinehaven": {"gates": [{"side": "w", "shift": 0}, {"side": "n", "shift": 0}, {"side": "s", "shift": 4}]}
+  },
+  "reach": {
+    "note": "What stops what (core/game/game_reach.gd, docs/REACH.md). Each kind of stopper lists the channels it stops: walk (a step), melee (a blow), ranged (a shot), area (a spell's spread) and sight (what a creature sees). `height` (tiles) is what a lobbed shot (an arc) must clear. A wall, tower, jamb and building stop everything. A shut gate is a grille: it stops steps and blows, not shots, spells or sight. `bars` is the same for a built grille, and a `slit` stops steps, blows and spreads but lets a shot and a look through. The world's own tiles are wall, tower, jamb, building and shut gate; bars and slits are for tiles the map gains later (they are read from a probe today).",
+    "step": 0.25,
+    "stoppers": {
+      "wall": {"stops": ["walk", "melee", "ranged", "area", "sight"], "height": 3.0},
+      "tower": {"stops": ["walk", "melee", "ranged", "area", "sight"], "height": 4.0},
+      "jamb": {"stops": ["walk", "melee", "ranged", "area", "sight"], "height": 4.0},
+      "building": {"stops": ["walk", "melee", "ranged", "area", "sight"], "height": 3.0},
+      "gate_shut": {"stops": ["walk", "melee"], "height": 2.5},
+      "bars": {"stops": ["walk", "melee"], "height": 2.0},
+      "slit": {"stops": ["walk", "melee", "area"], "height": 3.0}
+    },
+    "arc": {"height": 2.2, "min_range": 3.0},
+    "knock_step": 0.25,
+    "pull_gap": 1.0,
+    "line_width": 1.5
   }
 }
