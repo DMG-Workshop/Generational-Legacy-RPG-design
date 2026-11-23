@@ -194,14 +194,15 @@ func test_caps() -> void:
 	var d := _dyn()
 	d.heir.trials_done = ["stone_lift", "weight_of_stone"]
 	var hp := GameTrials.bonus(d.heir, "max_hp")
-	ok(is_equal_approx(hp, 0.04), "a Body trial adds its max HP gain (%f)" % hp)
-	ok(is_equal_approx(GameTrials.bonus(d.heir, "carry_weight"), 0.05), "and its carry gain")
+	ok(is_equal_approx(hp, 0.06), "a Body trial adds its max HP gain (%f)" % hp)
+	ok(is_equal_approx(GameTrials.bonus(d.heir, "carry_weight"), 0.075), "and its carry gain")
 	var carry := GameCarry.capacity(d.heir)
 	d.heir.trials_done = []
 	ok(carry > GameCarry.capacity(d.heir), "carry weight is raised by the Body trial")
-	# Two Will trials give 0.06 of a cap of 0.08; three more could not pass it.
+	# Three Will trials would give 0.135 of a cap of 0.12: the cap holds.
 	d.heir.trials_done = ["embers_vigil", "thorn_vigil", "dark_descent"]
 	ok(GameTrials.bonus(d.heir, "resist") <= float(GameTrials.focus_cap("will")["resist"]) + 0.000001, "a focus never passes its cap")
+	ok(is_equal_approx(GameTrials.bonus(d.heir, "resist"), 0.12), "and three Will trials reach it exactly (%f)" % GameTrials.bonus(d.heir, "resist"))
 	d.heir.trials_done = ["imps_bargain"]
 	ok(is_equal_approx(GameTrials.bonus(d.heir, "max_hp"), -0.05), "a Pact's drawback is applied")
 	ok(GameTrials.bonus(d.heir, "melee_damage") > 0.0, "and its strong perk")

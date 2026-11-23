@@ -53,7 +53,7 @@ Every trial is reached through a **quest** and run by a **trial-master**, both i
 
 **Not built.** A sandbox place for a trial, a title for finishing a realm, companions in a trial, a scar as a setback (a Pact's flaw is a stat drawback for now).
 
-**Guessed numbers (all in data, none measured).** Gains: Body +4% max HP or +5% carry, Will +3% resist, Mastery +5% crit damage or +2% reflexes, Spirit +2% luck (legacy), Wild +4% stealth or +5% fire resistance, Pact +8% melee damage (or +10% max MP) against -5% max HP (or -3% resist). Caps per focus and stat are in `focuses.*.cap` (for example Body max HP 10%, Will resist 8%, Lore 3 unlocks). Lengths 3 to 8 hours, gate levels 3 to 11, offerings 30 to 80 gold, check difficulties 18 to 36 on a stat (chance is score over score plus difficulty, 15% to 90%), retry wait 12 hours. Wild gains use stats the game already reads (stealth, fire resistance) rather than a new terrain rule.
+**Guessed numbers (all in data, none measured).** Gains: Body +6% max HP or +7.5% carry, Will +4.5% resist, Mastery +7.5% crit damage or +3% reflexes, Spirit +2% luck (legacy), Wild +6% stealth or +7.5% fire resistance, Lore's fallback +4.5% max MP, Pact +10% melee damage (or +12.5% max MP) against -5% max HP (or -3% resist). Caps per focus and stat are in `focuses.*.cap` (for example Body max HP 15%, Will resist 12%, Lore 3 unlocks). Lengths 3 to 8 hours, gate levels 3 to 11, offerings 30 to 80 gold, check difficulties 18 to 36 on a stat (chance is score over score plus difficulty, 15% to 90%), retry wait 12 hours. Wild gains use stats the game already reads (stealth, fire resistance) rather than a new terrain rule.
 
 
 ## The screen (built)
@@ -75,6 +75,10 @@ The panel computes nothing. A fight trial's battle is handed to the battle scree
 ## The payoff, measured
 
 Whether the trials pay for themselves was tried with the profile bot and the harness (`docs/BALANCE.md`, the trialist's variants). The answer is that the autopilot cannot tell: with the trials free, with their gains at nothing and with their gains tripled, the plain autopilot's numbers do not move apart from the gold the bot loses by leaving its home town. A trial's price is small (about 35 gold, 17 hours and a road hop a life) and its gain a few percent of one stat, capped by focus, which is well under a calling's worth as the design asks. **No gain, cost or cap was changed.** If the gains should be larger or the costs smaller, that is a design decision for the numbers on paper, and the place to make it is `data/world/trials.json` (`gain`, `risk`, the offerings in `quest.steps`, `focuses.*.cap`).
+
+## The retune
+
+The payoff measurement (above) could not say how much a trial should give, so the sizing is on paper. A calling costs 300 gold for 8% to 10% on one battle number, and a trial costs about 35 gold, 17 hours of the clock and a road hop for a few percent of one stat: cheap, and a first gain that is only 3% or 4% is not worth the errand. **Every gain went up by half** (rounded to half a percent) **and every focus cap with it**, except the Spirit's, which is unchanged because its gain passes to every heir afterwards and so is already worth more than it reads, and the Pact's, which went up by a quarter (its drawback is unchanged, so it costs the same for more). The caps rose so that the realms' trials still stack to a cap and not past it (three Will trials are 13.5% against a cap of 12%). Costs (offerings, setbacks, hours, the retry wait) are unchanged: they were never what made a trial dear. The autopilot never starts a trial, so no seeded fight or life moves; the trialist's gold, level, age and battle deaths are within noise of before (BALANCE.md). If it proves too much on a real run, the numbers to bring back are in `data/world/trials.json` (`gain.value`, `gain.fallback.value`, `focuses.*.cap`).
 
 ## Masters' art (built)
 

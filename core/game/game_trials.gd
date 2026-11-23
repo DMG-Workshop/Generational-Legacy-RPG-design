@@ -157,7 +157,7 @@ static func offering_cost(d: GameDynasty, step: Dictionary) -> int:
 
 # ---------------------------------------------------------------- what a screen shows
 
-## What passing a trial would give, as words (nothing is applied): "max hp +4%", "a spell or feat your calling can use", with the
+## What passing a trial would give, as words (nothing is applied): "max hp +6%", "a spell or feat your calling can use", with the
 ## Pact's price and a Spirit gain's passing to heirs.
 static func gain_preview(id: String) -> String:
 	var t := trial(id)
@@ -420,7 +420,10 @@ static func _setback(d: GameDynasty, id: String) -> String:
 
 
 static func _percent(v: float) -> String:
-	return "%+d%%" % int(round(v * 100.0))
+	var p := v * 100.0
+	if is_equal_approx(p, round(p)):
+		return "%+d%%" % int(round(p))
+	return "%+.1f%%" % p   # a half-percent gain (4.5) reads as it is
 
 
 static func _give(d: GameDynasty, id: String) -> String:
