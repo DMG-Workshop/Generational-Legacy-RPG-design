@@ -1,7 +1,7 @@
 ## The balance harness: the autopilot plays whole dynasties, and the share of heirs slain in battle is
 ## compared with the roadmap's 3-7% band. Run it after any change that could move a seeded fight.
 ##
-## Run: godot --headless --path . -s res://tools/balance_harness.gd -- [seeds=1-12] [gens=10] [races=human,elf] [jobs=4] [subclass=<id|all|none>] [keep] [check]
+## Run: godot --headless --path . -s res://tools/balance_harness.gd -- [seeds=1-12] [gens=10] [races=human,elf] [jobs=4] [subclass=<id|all|none>] [keep] [profile=<id|none>] [check]
 ##   seeds  base seeds, as a range (1-12) or a list (1,5,9). Each seed is a batch that plays one dynasty
 ##          per starting race, so a batch is 8 dynasties and, at 10 generations, about 80 lives (default 1-12)
 ##   gens   generations played per dynasty (default 10)
@@ -10,6 +10,8 @@
 ##   subclass  found each dynasty in a calling: one of the twenty ids, "none", or "all" for a sweep (the baseline and
 ##          each calling in turn, one line each); the calling passes down at the game's own 50% chance
 ##   keep   with subclass: every heir carries the calling, not only the ones it is passed down to
+##   profile  play the lives as a profile bot (forge, miner, builder, farmer, breeder, forager, fleer: GameProfile), and report the gold-equivalent gain and the
+##          effort per life beside the usual figures; "none" is the plain autopilot
 ##   check  exit 1 when the overall share is outside the band (default: only print)
 ##
 ## The numbers are this tool's own baseline: they follow from the seeds it plays, so compare before and
@@ -27,6 +29,7 @@ var _races: Array = []
 var _jobs := 0
 var _check := false
 var _subclass := ""   # "" none, a subclass id, or "all" for the sweep
+var _profile := ""    # a profile bot (GameProfile id), "" for the plain autopilot
 var _keep := false     # the calling on every heir, not only the ones it is passed down to
 var _out := ""   # worker mode: write this batch's totals here as JSON instead of printing a report
 
@@ -65,6 +68,8 @@ func _init() -> void:
 	print("")
 	print("Overall:   %s" % Balance.line(all))
 	print("           %s" % Balance.detail(all))
+	if _profile != "":
+		print("           profile %s: %s" % [_profile, Balance.profile_detail(all)])
 	print("")
 	print("By race of the heir (hybrids appear through marriages):")
 	var ids: Array = by_race.keys()
@@ -91,7 +96,7 @@ func _sweep(started: int) -> void:
 			base = all
 		var diff := Balance.share(all) - Balance.share(base)
 		var range_ := Balance.wilson(int(all["slain"]), int(all["lives"]))
-		print("%-12s %s (%.1f-%.1f%%, %+.1f pts) | level %5.1f | %s" % ["none" if id == "" else id, Balance.line(all).split(", mean level")[0], range_.x, range_.y, diff, float(all["level"]) / maxf(1.0, float(all["lives"])), Balance.detail(all)])
+		print("%-12s %s (%.1f-%.1f%%, %+.1f pts) | level %5.1f | %s" % ["none" if id == "" else id, Balance.line(all).split(", mean level")[0], range_.x, range_.y, diff, float(all["level"]) / maxf(1.0, float(all["lives"])), Balance.detail(all)] + ("" if _profile == "" else " | " + Balance.profile_detail(all)))
 	print("")
 	print("Sweep took %.0f s." % ((Time.get_ticks_msec() - started) / 1000.0))
 	quit(0)
@@ -121,6 +126,11 @@ func _read_args() -> bool:
 			_jobs = maxi(1, int(a.substr(5)))
 		elif a == "keep":
 			_keep = true
+		elif a.begins_with("profile="):
+			_profile = a.substr(8) if a.substr(8) != "none" else ""
+			if _profile != "" and not GameProfile.has(_profile):
+				printerr("Unknown profile '%s'. Use one of: %s or none" % [_profile, ", ".join(GameProfile.IDS)])
+				return false
 		elif a.begins_with("subclass="):
 			_subclass = a.substr(9) if a.substr(9) != "none" else ""
 			if not Balance.valid_subclass(_subclass):
@@ -136,7 +146,7 @@ func _read_args() -> bool:
 					return false
 			_races = want
 		else:
-			printerr("Unknown argument '%s'. Arguments: seeds=1-12 gens=10 races=human,elf jobs=4 subclass=<id|all|none> keep check" % a)
+			printerr("Unknown argument '%s'. Arguments: seeds=1-12 gens=10 races=human,elf jobs=4 subclass=<id|all|none> keep profile=<id|none> check" % a)
 			return false
 	if _seeds.is_empty() or _races.is_empty():
 		printerr("Nothing to play: seeds and races must not be empty.")
@@ -153,7 +163,7 @@ func _run_batches(sub: String) -> Array:
 	var jobs := _jobs if _jobs > 0 else OS.get_processor_count()
 	if jobs <= 1 or _seeds.size() == 1:
 		for i in _seeds.size():
-			results[i] = Balance.play_batch(int(_seeds[i]), _races, _gens, sub, _keep)
+			results[i] = Balance.play_batch(int(_seeds[i]), _races, _gens, sub, _keep, _profile)
 		return results
 	var dir := OS.get_temp_dir().path_join("balance_harness_%d" % OS.get_process_id())
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -169,6 +179,8 @@ func _run_batches(sub: String) -> Array:
 				args.append("subclass=%s" % sub)
 			if _keep:
 				args.append("keep")
+			if _profile != "":
+				args.append("profile=%s" % _profile)
 			running[next] = OS.create_process(OS.get_executable_path(), args)
 			next += 1
 		OS.delay_msec(300)
@@ -182,7 +194,7 @@ func _run_batches(sub: String) -> Array:
 
 ## Worker mode: play the one batch asked for and leave it as JSON for the parent.
 func _work() -> void:
-	var batch := Balance.play_batch(int(_seeds[0]), _races, _gens, _subclass, _keep)
+	var batch := Balance.play_batch(int(_seeds[0]), _races, _gens, _subclass, _keep, _profile)
 	var file := FileAccess.open(_out, FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(batch))
