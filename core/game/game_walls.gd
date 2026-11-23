@@ -156,7 +156,7 @@ static func _stop_at(t: Vector2i, gates_shut: bool, probe: Callable) -> bool:
 
 
 static func _stops(t: Vector2i, gates_shut: bool) -> bool:
-	return stops_reach(t.x, t.y, gates_shut) or GameTown.blocks(t.x, t.y)
+	return stops_reach(t.x, t.y, gates_shut) or GameTown.blocks(t.x, t.y) or GameDungeonArt.blocks(t.x, t.y)
 
 
 ## Whether the world leaves a tile free of trees and rocks: the wall itself and the way in and out of each gate.

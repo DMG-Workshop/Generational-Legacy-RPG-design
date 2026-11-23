@@ -129,6 +129,8 @@ static func _mark_sold(d: GameDynasty, shop_id: String, key: String) -> void:
 	var rk := "%s|%s" % [d.world.location, shop_id]
 	var period := _period(d)
 	for k in d.shop_sold.keys():   # a season on, the old record is forgotten (the shelf has filled again)
+		if str(k).begins_with(GameWildsTrade.PREFIX):
+			continue   # a wilds trader's record has its own period (GameWildsTrade)
 		if str((d.shop_sold[k] as Dictionary)["period"]) != period:
 			d.shop_sold.erase(k)
 	if not d.shop_sold.has(rk):

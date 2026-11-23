@@ -1,7 +1,7 @@
 ## The wilds' landmarks (GameWildsSites; data/world/wilds.json): placed by area as pure functions of the seed, never on water, a tree,
 ## a town's, plot's or dungeon's ground; found when the heir comes near (saved only when set, loaded clean from an old save or a
 ## damaged one), listed on the world map only once found, used once until they renew with outcomes keyed on the seed and the landmark,
-## a trader's offer and sale, and the Use action of the sandbox.
+## a trader opening its panel, and the Use action of the sandbox.
 ## Run: godot --headless --path . -s res://tests/test_game_wilds_sites.gd
 extends SceneTree
 
@@ -275,22 +275,11 @@ func test_trade() -> void:
 	var d := _fresh()
 	var lm := _find(d, "elderglade", "merchant")
 	ok(not lm.is_empty(), "Elderglade has a merchant")
-	d.heir.gold = 0
-	var offer := GameWildsSites.use(d, lm)
-	ok(bool(offer["ok"]) and offer.has("offer") and offer["offer"]["site"] == lm["id"], "the first use is an offer: %s" % offer["text"])
-	var item := str(offer["offer"]["item"])
-	ok(item in GameWilds.data()["landmarks"]["merchant"]["stock"]["elderglade"], "of something this merchant sells here")
-	var poor := GameWildsSites.use(d, lm, offer["offer"])
-	ok(not bool(poor["ok"]) and poor.has("offer") and GameWildsSites.available(d, str(lm["id"])), "with no gold the buy is refused and the offer stands: %s" % poor["text"])
-	d.heir.gold = 5000
-	var bought := GameWildsSites.use(d, lm, offer["offer"])
-	ok(bool(bought["ok"]) and not bought.has("offer") and item in d.heir.inventory, "with gold it is bought: %s" % bought["text"])
-	ok(d.heir.gold == 5000 - int(offer["offer"]["price"]), "and paid for")
-	ok(not GameWildsSites.available(d, str(lm["id"])), "and the merchant is spent for now")
-	var other := _find(d, "greenvale", "merchant")
-	if not other.is_empty():
-		var o2 := GameWildsSites.use(d, other, offer["offer"])
-		ok(str(o2["offer"]["site"]) == str(other["id"]), "an offer from another merchant is not taken here")
+	var first := GameWildsSites.use(d, lm)
+	ok(bool(first["ok"]) and str(first["open"]) == "merchant" and first["site"] == lm["id"] and first["landmark"] == lm, "Use opens the merchant panel: %s" % first["text"])
+	ok(GameWildsSites.available(d, str(lm["id"])), "and uses nothing up: a trader can be used again")
+	ok(GameWildsSites.use(d, lm)["open"] == "merchant", "so a second Use opens it again")
+	ok(not GameWildsTrade.wares(d, lm).is_empty(), "the merchant has wares (see test_game_wilds_trade.gd for the dealing)")
 
 
 func test_sandbox() -> void:
