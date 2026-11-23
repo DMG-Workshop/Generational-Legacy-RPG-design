@@ -1,0 +1,24 @@
+{
+  "note": "Spellcasting as a shop service (core/game/game_casting.gd, specified in docs/SHOP_SERVICES.md, checked by tools/check_data.gd). A shop with `services` rows of kind `cast` casts one of the spells of data/spells/spells.json FOR the heir, for gold: it is a purchase, so the heir's own mana is not spent and the spell never needs to be known. Only the party-shaped utility spells are for sale (`healing`: mass_heal; `cleansing`: cleanse; `blessing`: ward, haste, rejuvenation), because a shop acts on the heir and the party, not on foes. Outside a fight a healing spell mends the heir and the companions at once by the spell's own `pct_max_hp`, a cleansing spell cures every sickness the heir has (and mends its own small share), no time passes and no dice are drawn; a blessing is carried into the NEXT fight and applied to the heir and every companion when it begins (the spell's own statuses, at the spell's own turns), and then lapses: one at a time (a second replaces it), at most `fights` fights, at most `years` years, and it ends with the heir. A row's `caster_level` strengthens the spell by `level_step` for each level above 1 and raises the price by `price_step` for each; the price is the spell's own `mp` times `mp_gold` times that, then the shop's prices (GameItems.price_mult). A cast has a cooldown of a day by default (`daily`): the same spell at the same shop is not cast twice in one day of the world clock (the year and the GameDay day number), so a shop is not a free full heal every fight. Nothing is random; the blessing and the day marks are saved only when set.",
+  "settings": {
+    "mp_gold": 6,
+    "level_step": 0.03,
+    "price_step": 0.1,
+    "kinds": {"mass_heal": "healing", "cleanse": "cleansing", "ward": "blessing", "haste": "blessing", "rejuvenation": "blessing"}
+  },
+  "text": {
+    "healed": "{name} pays {price} gold at {shop}: the party is mended ({what}).",
+    "cleansed": "{name} pays {price} gold at {shop}: {what}.",
+    "cleansed_none": "No sickness lies on {name}.",
+    "blessed": "{name} pays {price} gold at {shop}: {spell} is laid on the party for the next fight.",
+    "replaced": "It replaces the {old} laid before.",
+    "blessing_on": "{spell} blesses the party.",
+    "no_service": "{shop} does not cast.",
+    "not_for_sale": "{spell} cannot be cast here.",
+    "no_gold": "{name} cannot afford it: {price} gold.",
+    "no_need": "{name} and the party need no mending.",
+    "cooldown": "{shop} has cast {spell} for you today; it will cast it again tomorrow.",
+    "in_fight": "Not in a fight.",
+    "same": "{spell} is already laid on the party."
+  }
+}

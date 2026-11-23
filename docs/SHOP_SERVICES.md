@@ -1,7 +1,7 @@
 # Shop services: enchanting, spellcasting, and opening hours
 
 Design for two paid **services** a shop does *for* the heir (as opposed to selling a thing off a shelf), and for the life screen's **Shops** button keeping
-shop hours. Status: **opening hours and enchanting are built and tested** (below); spellcasting is **specified**, with the data shape and the places it plugs in.
+shop hours. Status: **opening hours, enchanting and spellcasting are all built and tested** (below).
 
 A service is already a concept: a shop's `services` list in `data/shops/shops.json` (the bathhouse's hot bath) is run by `GameShops.serve(d, shop, service_id)`:
 a price (`GameShops.service_price`: the town's prices and the heir's haggling count), an effect (`heal`, `mp` shares), a line of text, no dice, no time.
@@ -106,7 +106,21 @@ No save change: the item id *is* the state. `GameReplay.OPS` needs an `enchant` 
 **Autopilot.** It never calls it (it uses only the six old services), so no seeded life or golden digest moves; the Enchanter calling's perks stay unmeasured
 by the autopilot (see BALANCE.md).
 
-## 2. Spellcasting as a shop service (specified)
+## 2. Spellcasting as a shop service (built)
+
+**As built** (`core/game/game_casting.gd`, `data/shops/casting.json`, `cast` rows in `data/shops/shops.json`, `GameDynasty.blessing` and `casts_used`, `ui/play/shop_panel.gd` `_build_casting`, `tests/test_game_casting.gd`). It follows the specification below, with these particulars:
+
+- **For sale:** only the party-shaped utility spells: `mass_heal` (healing), `cleanse` (cleansing) and `ward`, `haste`, `rejuvenation` (blessings). The validator refuses a spell with any other target shape, so nothing aimed at foes is ever sold. Rows: the Kingshold spell shop (all five, caster level 8), the apothecary (cleanse, level 4), the herbalist (rejuvenation, level 3) and the Ironford shrine (mass heal level 6, ward level 5). The temple's own services are the old ones and are untouched.
+- **Outside a fight** (the only time a shop casts): a healing spell mends the heir and every companion at once by the spell's own `pct_max_hp` times the caster's strength; a cleansing spell cures every sickness the heir has (and mends its small share); a blessing is laid on the party for the **next fight** and applied to the heir and every companion when it begins (`GameDynasty._begin_battle` asks `GameCasting.on_battle`), using the spell's own statuses and turns. No time passes and no dice are drawn.
+- **Strength and price:** `level_step` (3%) stronger and `price_step` (10%) dearer for each caster level above 1; the price is the spell's own `mp` times `mp_gold` (6) times that, then `GameItems.price_mult`. The heir's own mana is not spent.
+- **Blessing rules:** one at a time (a second replaces it, and says so); it lapses after its `fights` (1), after its `years` (1) of the world's calendar, and with its heir (it records the generation); buying the same blessing again at the same or lower strength while it is laid is refused.
+- **Cooldown:** the same spell at the same shop once a day of the world clock (`day_mark`: the world year and `GameDay`'s day number); a row may switch it off (`daily: false`). The life screen's clock stands still, so there the cooldown lasts until the open world's day has passed.
+- **State:** `blessing` and `casts_used` are saved only when set and loaded clean (`GameCasting.load_blessing`, `load_used`); the autopilot never casts, a fight with no blessing begins exactly as before (the test compares), so no seeded life, golden digest or balance number moves. No `GameReplay` op (nothing the shops do is an op yet).
+- **UI:** the shop's tab has a Spells section: a line naming the blessing now laid, then each spell with its effect text, kind, price and a Cast button (disabled with the reason as text: no gold, nothing to mend, no sickness, on cooldown, shop shut, in a fight).
+
+The original specification follows (the parts above override it where they differ).
+
+### Specification
 
 **Where.** The `temple`/`shrine` (healing and cleansing, always open: they are old services), the `apothecary`/`herbalist` (cleansing), the `scroll_shop`
 and `guild_hall` (utility and buffs for pay), and the `enchanter`. A service row of kind `cast` names a spell from `data/spells/spells.json` and who casts it.

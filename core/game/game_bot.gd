@@ -3,15 +3,29 @@ class_name GameBot
 extends RefCounted
 
 
+## Two hooks a profile (GameProfile, the balance tool's "profile bots") sets; both are off by default, so the autopilot plays exactly as it always has:
+## `flee_below` (a share of health under which the heir tries to flee, 0 for never) and `on_fight_end` (a Callable(d, foes, result) called when a fight is over,
+## before the dead are searched, with the foes as the fight began).
+static var flee_below := 0.0
+static var on_fight_end: Callable = Callable()
+
+
 ## Fights the battle in progress to the end with GameTactics (potions and heals when low, areas
 ## against packs, control on the worst foe), settles it and searches the dead or leaves them.
 static func fight(d: GameDynasty) -> void:
 	var b := d.battle
+	var foes: Array = b.enemies.duplicate(true) if on_fight_end.is_valid() else []
 	var guard := 0
 	while not b.is_over() and guard < 300:
 		guard += 1
+		if flee_below > 0.0 and float(d.heir.hp) < flee_below * float(d.heir.max_hp()):
+			b.flee()
+			if b.is_over():
+				break
 		GameTactics.auto_turn(b)
 	d.finish_battle()
+	if on_fight_end.is_valid():
+		on_fight_end.call(d, foes, d.last_result)
 	GamePlague.bot_loot(d)
 
 
@@ -90,13 +104,16 @@ static func _legend_to_hunt(d: GameDynasty) -> Dictionary:
 	return {}
 
 
-static func live_life(d: GameDynasty) -> void:
+## Lives the heir's life. `hook` (a Callable(d), off by default) is called before each decision: a profile's extra actions (GameProfile).
+static func live_life(d: GameDynasty, hook: Callable = Callable()) -> void:
 	var guard := 0
 	while d.state == "life" and guard < 1000 + int(d.heir.lifespan):
 		guard += 1
 		if d.heir.age >= minf(d.heir.lifespan, d.heir.compute_lifespan(false)) * 0.9 and d.can_retire():
 			d.retire()
 		else:
+			if hook.is_valid() and d.state == "life" and not d.has_pending_event():
+				hook.call(d)
 			step(d)
 
 
