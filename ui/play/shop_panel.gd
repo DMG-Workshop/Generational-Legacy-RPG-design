@@ -32,6 +32,7 @@ var tab_note: Label
 var scroll: ScrollContainer
 var rows: VBoxContainer
 var side: VBoxContainer
+var ench_pick: String = ""      # the made piece chosen on an enchanting shop's tab (GameEnchant)
 var confirm_sell: String = ""   # a unique item waiting for a second click before it is sold
 var confirm_drop: String = ""   # a piece of gear waiting for a second click before it is left behind
 var left_w := LEFT_W
@@ -296,9 +297,11 @@ func _build_shop(shop: String) -> void:
 				rows.add_child(_service_row(GameShops.entry_name(ent).capitalize() if str(ent["kind"]) == "material" else GameShops.entry_name(ent), what, "", "%sg" % GameText.num(cost), Kit.TEXT, "", b2, _afford(cost)))
 	if not GameCasting.rows(shop).is_empty():
 		_build_casting(shop)
+	if not GameEnchant.row(shop).is_empty():
+		_build_enchant(shop)
 	for sv in sdef.get("services", []):
 		if str(sv.get("kind", "")) != "":
-			continue   # casting has its own section above
+			continue   # casting and enchanting have their own sections above
 		var sid := str(sv["id"])
 		var sc := GameShops.service_price(dynasty, sv)
 		var sb := Kit.button("Pay", func(): _act(GameShops.serve(dynasty, shop, sid)), Vector2(96, 34))
@@ -337,6 +340,54 @@ func _build_casting(shop: String) -> void:
 			cb.tooltip_text = str(plan["why"])
 		var sp := GameCasting.spell(str(sv["spell"]))
 		rows.add_child(_service_row(str(sv["name"]), str(sp.get("text", sv["desc"])), GameCasting.kind_of(str(sv["spell"])).capitalize(), "%sg" % GameText.num(int(plan["price"])), Kit.TEXT, "", cb, _afford(int(plan["price"]))))
+
+## An enchanting shop's section (GameEnchant): the made pieces the heir has, and for the one chosen the affixes that could be bound into it,
+## each with the essences held, the fee and a button; an affix with no essence held can be bought outright. Every refusal is shown as text.
+func _build_enchant(shop: String) -> void:
+	var h := dynasty.heir
+	rows.add_child(_section("Enchanting"))
+	var pcs := GameEnchant.pieces(dynasty)
+	if pcs.is_empty():
+		rows.add_child(Kit.label("%s carries no made piece to enchant." % h.name, 15, Kit.dim()))
+		return
+	var known := false
+	for p in pcs:
+		if str(p["id"]) == ench_pick:
+			known = true
+	if not known:
+		ench_pick = ""
+	rows.add_child(Kit.label("Stores: %s." % GameCraft.describe(dynasty), 14, Kit.dim()))
+	for p in pcs:
+		var pid := str(p["id"])
+		var why := GameEnchant.why_not_piece(dynasty, shop, pid)
+		var fee := GameEnchant.price(dynasty, shop, pid)
+		var chosen := pid == ench_pick
+		var pb := Kit.button("Chosen" if chosen else "Choose", func(): ench_pick = pid; _rebuild(), Vector2(96, 34))
+		pb.name = "EnchantPick"
+		pb.disabled = why != "" or chosen
+		if why != "":
+			pb.tooltip_text = why
+		var sub := ("worn. " if str(p["worn"]) != "" else "") + (why if why != "" else "Binds one more affix.")
+		rows.add_child(_service_row(GameItems.item_name(pid), sub, GameLoot.rarity_name(pid), ("%sg" % GameText.num(fee)) if why == "" else "", Kit.TEXT, "", pb, _afford(fee)))
+	if ench_pick == "":
+		return
+	for o in GameEnchant.options(dynasty, ench_pick):
+		var aid := str(o["id"])
+		var plan := GameEnchant.plan(dynasty, shop, ench_pick, aid)
+		var eb := Kit.button("Enchant", func(): var pid2 := ench_pick; _act(GameEnchant.apply(dynasty, shop, pid2, aid)), Vector2(96, 34))
+		eb.name = "EnchantApply"
+		eb.disabled = not bool(plan["ok"])
+		if not bool(plan["ok"]):
+			eb.tooltip_text = str(plan["why"])
+		var chance := float(plan["fail"])
+		var effect := "%d essence%s held%s" % [int(o["have"]), "" if int(o["have"]) == 1 else "s", ("  -  %d%% to fail" % int(round(chance * 100.0))) if chance > 0.0 else ""]
+		rows.add_child(_service_row(str(o["name"]), "Becomes %s." % str(plan["new_name"]) if str(plan["new_name"]) != "" else "", effect, "%sg" % GameText.num(int(plan["fee"])), Kit.TEXT, "", eb, _afford(int(plan["fee"]))))
+		if int(o["have"]) < 1:
+			var ep := GameEnchant.essence_price(dynasty, shop, aid)
+			var bb := Kit.button("Buy essence", func(): _act(GameEnchant.buy_essence(dynasty, shop, aid)), Vector2(110, 34))
+			bb.name = "EnchantBuyEssence"
+			bb.disabled = h.gold < ep
+			rows.add_child(_service_row("Essence of %s" % str(o["name"]).to_lower(), "Bought outright.", "", "%sg" % GameText.num(ep), Kit.TEXT, "", bb, _afford(ep)))
 
 
 ## The store sells healing potions too (the same `GameDynasty.buy_potion` as the life screen's Potion button, at the same price).

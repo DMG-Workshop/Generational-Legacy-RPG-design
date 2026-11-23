@@ -84,7 +84,7 @@ static func load_stores(v: Variant) -> Dictionary:
 				clean[str(id)] = int(n)
 		if not clean.is_empty():
 			out[kind] = clean
-	for counter in ["crafted", "brewed"]:
+	for counter in ["crafted", "brewed", "enchanted"]:
 		var made: Variant = v.get(counter, 0)
 		if typeof(made) in [TYPE_INT, TYPE_FLOAT] and int(made) > 0:
 			out[counter] = int(made)

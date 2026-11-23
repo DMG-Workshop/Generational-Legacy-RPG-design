@@ -1,0 +1,26 @@
+{
+  "note": "Enchanting as a shop service (core/game/game_enchant.gd, specified in docs/SHOP_SERVICES.md, checked by tools/check_data.gd). A shop with a `services` row of kind `enchant` binds ONE more affix into a piece of made gear the heir carries or wears (an id GameLoot.build reads, so the result is the same kind of item as a drop or a crafted piece), spending an essence of that affix from the family's stores (GameCraft) and gold. A made piece has exactly as many affixes as its rarity says (loot.json), so one more affix is the next rarity up by `rarity_by_essences` in craft.json: none to fine, fine to rare, rare or epic to legendary. A piece with three affixes (legendary) or a mythic is full. The fee is `base_fee` (the row's) times the square of the piece's tier times (1 + `affix_step` for each affix it has already), then the shop's prices (GameItems.price_mult) and the Enchanter's forge_fee_mult. A `risky` row may lose the essence and the fee but never harms the piece: `fail_per_tier` for each tier above 1, on dice keyed on the seed, the piece, the affix and how many enchantings the family has made (never the dynasty's). The shop cannot bind into a piece of a tier above its own (the town's `shop_tier` plus the shop's `tier_bonus`) or the row's `tier_cap`. A shop may also sell an essence outright (`essence_fee` times the tier, for an affix the piece's slot can take) so a heir with no salvage can still enchant. Nothing here is random but the risky roll, nothing is saved but the stores (the count `enchanted`) and the item's own id, and the autopilot never calls it.",
+  "settings": {
+    "affix_step": 0.5,
+    "fail_per_tier": 0.1,
+    "essence_fee": 40,
+    "counter": "enchanted"
+  },
+  "text": {
+    "enchanted": "{name} has {item} bound with {affix}. It is now {new}. ({price} gold)",
+    "failed": "The binding fails: {essence} is lost and {price} gold is kept. {item} is as it was.",
+    "bought_essence": "{name} buys an essence of {affix} for {price} gold.",
+    "no_service": "{shop} does not enchant.",
+    "not_gear": "{item} is not a made piece: only made gear can be enchanted (a fixed piece must be remade at a forge).",
+    "mythic": "A mythic piece cannot be enchanted.",
+    "full": "{item} already holds all the affixes it can.",
+    "too_fine": "{shop} cannot work a piece of that grade (tier {tier}; it works up to tier {cap}).",
+    "bad_affix": "{affix} does not fit {item}.",
+    "has_affix": "{item} already holds {affix}.",
+    "no_essence": "{name} has no essence of {affix}.",
+    "no_gold": "{name} cannot afford it: {price} gold.",
+    "no_room": "{item} would be too heavy to carry as it is.",
+    "not_carried": "{name} does not carry {item}.",
+    "in_fight": "Not in a fight."
+  }
+}
