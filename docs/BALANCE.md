@@ -205,7 +205,22 @@ Callings on their profile (same seeds, `keep`):
 | feastwright on forager | 1,618 (+20%) | 27.2 | 59.4 | 3.2% |
 
 How to read it:
-- **The trialist** (same seeds, commit of the profile): gold at death 3,829 against 4,775 (-20%), mean level 58 against 59, mean age 186 against 190, battle deaths 2.5% against 2.7%, 1.63 trials passed of 2.71 tried per life, 10.3 actions, gain 840 GE (the autopilot's own is about 850: the offerings and the years on the road cost about what the trials' stats are worth in the purse). Its power is in the stats, not the purse, so net worth undercounts it; the level, age and death rows show it neither makes a life clearly stronger nor weaker. The line to read is passes per try (60%) and the gold: a way in plus the road costs about a fifth of a life's gold for a few percent of one stat. That is a first guess of the bot's policy and of the data; if trials are meant to pay for themselves, the lever is the gains in `data/world/trials.json` (`focus_cap`), not the bot.
+- **The trialist** (seeds 1-12, 960 lives; the plain autopilot is gold 4,775, level 59, age 190, 2.7% battle deaths): gold at death 3,829 (-20%), level 58, age 186, battle deaths 2.5%; per life 1.63 trials passed of 2.71 tried, 10.3 actions, 28 gold paid (offerings and failed tries), 7 gold taken by the clock while it waited or travelled, 17.3 hours waited, 1.1 road hops. On seeds 13-24 the plain autopilot is 4,494 and the trialist 3,440 (-23%), so the gap is not noise.
+  **The trials' cost is not what the gap is.** Each variant below is the trialist on seeds 1-12 with one thing changed in `data/world/trials.json` (a throwaway override, not committed):
+
+  | Variant | Gold at death | Level | Age | Battle deaths |
+  |---|---|---|---|---|
+  | as shipped | 3,829 | 58 | 186 | 2.5% |
+  | no setbacks (a failed try costs nothing) | 3,727 | 58 | 187 | 2.6% |
+  | free (no setbacks, no offerings: 0 gold paid) | 3,530 | 60 | 191 | 2.2% |
+  | every gain 0 | 3,647 | 58 | 191 | 2.0% |
+  | every gain and cap x3 | 3,438 | 57 | 179 | 2.1% |
+  | trials take no hours | 4,009 | 59 | 189 | 2.5% |
+  | the heir walks home after each action | 3,992 | 57 | 186 | 3.3% |
+  | the trialist never travels (so does almost nothing) | 4,887 | 59 | 190 | 3.3% |
+
+  Making the trials free, or giving them nothing, or giving three times as much, changes nothing the autopilot can see: the gold stays about 20% under the plain life and the level, age and battle deaths stay within noise. The gap comes from the trialist leaving the autopilot's ground, not from what a trial costs or gives: the autopilot hunts where it stands and takes quests only at a town's board (`GameQuests._bot_can_do`: "never walks back to claim a reward"), so a heir that a road hop leaves in another town keeps hunting there and loses the home board's quest gold; walking home after each action recovers only a little of it, and waiting out the hours is worth about 4%. Not fully explained, and this bot does not need to be.
+  **So the autopilot cannot value the trials.** A gain of 4% of one stat, even tripled, moves none of level, age or deaths, because the plain house is already below the 3-7% band and lives end of old age. The direct price of a trial is small (about 35 gold, 17 hours of the clock and one road hop a life) against a calling's 300 gold for 8% to 10% on one battle number, so on paper a trial is not dear; whether its gains are worth enough is a design judgment, not one this tool can measure. No number in `trials.json` was changed.
 - **An autopilot life already gains about 850 GE** (gear and gold it holds at death), so a profile's own gain is its figure minus about 850: forge +410, miner +110, forager +500, builder +1,050. The farmer, breeder and fleer sit on the baseline.
 - **Farmer and breeder are identical to the digit (854 GE, 8.2 actions): the breeder never reaches breeding in these runs**, so its numbers are the farmer's. Buying young animals at market price and valuing them at sell price gains nothing until they grow, and the policy rarely holds a pair of adults. This is a gap in the policy, not a result about the Breeder calling.
 - **The fleer's 5.3% battle deaths** (against 2.7%) is the cost of fleeing under 35% health: the heir leaves a fight it was winning, and the effort is the 0.9 flights per life. `flee_mult` perks (Trapsmith, Wayfinder) are not yet run on it.
