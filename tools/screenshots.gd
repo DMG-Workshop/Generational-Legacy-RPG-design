@@ -20,6 +20,7 @@ const Diff := preload("res://tools/screenshot_diff.gd")
 const ShopPanel := preload("res://ui/play/shop_panel.gd")
 const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
 const HousePanel := preload("res://ui/play/house_panel.gd")
+const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const LooksPanel := preload("res://ui/play/looks_panel.gd")
 const MapPanel := preload("res://ui/play/map_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
@@ -34,6 +35,7 @@ const SHOTS := [
 	["shop", DESKTOP, false, "shop"],
 	["map", DESKTOP, false, "map"],
 	["house", DESKTOP, false, "house"],
+	["trials", DESKTOP, false, "trials"],
 	["looks", DESKTOP, false, "looks"],
 	["skill_tree", DESKTOP, false, "skills"],
 	["chronicle", DESKTOP, false, "chronicle"],
@@ -300,8 +302,8 @@ func _screen(what: String) -> void:
 			if tab_node is ScrollContainer:
 				(tab_node as ScrollContainer).scroll_vertical = 100000   # down to the Market
 			await _frames(2)
-		"shop", "map", "house", "looks", "skills", "chronicle":
-			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel}[what]
+		"shop", "map", "house", "trials", "looks", "skills", "chronicle":
+			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "trials": TrialsPanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel}[what]
 			var p: Control = cls.new()
 			if "dynasty" in p:
 				p.dynasty = d

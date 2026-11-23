@@ -6,6 +6,7 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const CraftPanel := preload("res://ui/play/craft_panel.gd")
 const HeirloomPanel := preload("res://ui/play/heirloom_panel.gd")
+const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const WIDE := 760.0
 
 var dynasty: GameDynasty
@@ -44,7 +45,18 @@ func _build(column: float) -> void:
 		var looms := Kit.button("Heirlooms: have them reworked", func(): _heirlooms(), Vector2(column, 48))
 		looms.name = "Heirlooms"
 		_body.add_child(looms)
+	var trials := Kit.button("Trials: tests of the realms", func(): _trials(), Vector2(column, 48))
+	trials.name = "Trials"
+	_body.add_child(trials)
 	_body.add_child(Kit.button("Close", func(): queue_free(), Vector2(column, 48)))
+
+
+## The trials open over the house, as the heirlooms do.
+func _trials() -> void:
+	var panel: Control = TrialsPanel.new()
+	panel.dynasty = dynasty
+	panel.on_change = on_change
+	get_parent().add_child(panel)
 
 
 ## The heirlooms open over the house, as the workshop does.

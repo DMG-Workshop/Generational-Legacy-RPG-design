@@ -20,7 +20,7 @@ const STEP_KINDS := ["visit", "offering", "level"]
 const RISK_KINDS := ["hurt", "cost"]
 const TEXT_KEYS := ["no_trial", "not_placed", "realm_closed", "done_already", "one_at_a_time", "low_level", "wrong_class", "needs_trial", "quest_open",
 	"retry_wait", "started", "left", "not_ready", "no_active", "step_blocked", "need_place", "need_gold", "need_level", "no_step", "quest_done", "passed", "failed",
-	"hurt", "cost", "gain_stat", "gain_capped", "gain_unlock", "gain_legacy", "drawback", "fight_first", "fight_begins", "fight_not_run", "no_fight", "stage"]
+	"hurt", "cost", "gain_stat", "gain_capped", "gain_unlock", "gain_legacy", "drawback", "fight_first", "fight_begins", "fight_not_run", "no_fight", "stage", "preview_stat", "preview_lore"]
 
 static var _cache: Dictionary = {}
 static var _index: Dictionary = {}
@@ -153,6 +153,82 @@ static func next_step(d: GameDynasty, id: String) -> Dictionary:
 
 static func offering_cost(d: GameDynasty, step: Dictionary) -> int:
 	return int(round(float(step.get("gold", 0)) * GameData.enemy_scale(d.gen)))
+
+
+# ---------------------------------------------------------------- what a screen shows
+
+## What passing a trial would give, as words (nothing is applied): "max hp +4%", "a spell or feat your calling can use", with the
+## Pact's price and a Spirit gain's passing to heirs.
+static func gain_preview(id: String) -> String:
+	var t := trial(id)
+	if t.is_empty():
+		return ""
+	var gain: Dictionary = t["gain"]
+	var line := ""
+	if gain.has("lore"):
+		line = text("preview_lore")
+	else:
+		line = text("preview_stat", {"stat": str(gain["stat"]).replace("_", " "), "value": _percent(float(gain["value"]))})
+		if bool(gain.get("legacy", false)):
+			line += text("gain_legacy")
+	if t.has("drawback"):
+		line += text("drawback", {"stat": str(t["drawback"]["stat"]).replace("_", " "), "value": _percent(float(t["drawback"]["value"]))})
+	return line
+
+
+## One trial as a screen draws it: {id, name, focus, focus_name, realm, level, length, master, fight, gain, chance, steps_done,
+## steps_total, step_text, step_why, why, status}. `status` is passed, active, way (the way in is not done yet: `step_text` is the next
+## step and `step_why` why it cannot be done now, "" when it can), ready (it can be begun) or shut (it cannot: `why`). `chance` is
+## the percent chance of passing, -1 for a trial won by a fight. Reads only; no dice.
+static func describe(d: GameDynasty, id: String) -> Dictionary:
+	var t := trial(id)
+	if t.is_empty():
+		return {}
+	var steps: Array = t["quest"]["steps"]
+	var out := {"id": id, "name": str(t["name"]), "focus": str(t["focus"]), "focus_name": focus_name(str(t["focus"])), "realm": str(t["realm"]),
+		"level": int(t["gate"].get("level", 1)), "length": int(t["length"]), "master": str(t["master"]["name"]), "fight": bool(t.get("fight", false)),
+		"gain": gain_preview(id), "chance": -1, "steps_done": quest_steps_done(d, id), "steps_total": steps.size(), "step_text": "", "step_why": "", "why": "", "status": ""}
+	if not out["fight"]:
+		out["chance"] = int(round(chance(d.heir, id) * 100.0))
+	if done(d.heir, id):
+		out["status"] = "passed"
+	elif str(active(d).get("id", "")) == id:
+		out["status"] = "active"
+	elif not quest_complete(d, id):
+		out["status"] = "way"
+		out["step_text"] = str(next_step(d, id).get("text", ""))
+		out["step_why"] = step_block(d, id)
+	else:
+		out["why"] = start_block(d, id)
+		out["status"] = "ready" if out["why"] == "" else "shut"
+	return out
+
+
+const _RANK := {"active": 0, "ready": 1, "way": 2, "shut": 3, "passed": 4}
+
+
+## The trials of this world that stand in a realm whose gate is open, as `describe` gives them: the one under way first, then those that
+## can be begun, those with a way in to do, those that cannot be begun, and the passed; by level within each.
+static func listing(d: GameDynasty) -> Array:
+	var out: Array = []
+	for p in placed_all(d.seed_value):
+		if GameRealms.gate_open(d, str(p["realm"])):
+			out.append(describe(d, str(p["id"])))
+	out.sort_custom(func(a, b):
+		if _RANK[a["status"]] != _RANK[b["status"]]:
+			return _RANK[a["status"]] < _RANK[b["status"]]
+		if a["level"] != b["level"]:
+			return a["level"] < b["level"]
+		return str(a["id"]) < str(b["id"]))
+	return out
+
+
+## Lets the world hours of the trial under way go by (the hours that are left, and a little over so the last one is not lost to rounding).
+## Returns the clock's messages; none when no trial is under way.
+static func wait_out(d: GameDynasty) -> Array:
+	if active(d).is_empty():
+		return []
+	return wait(d, remaining(d) + 0.01)
 
 
 # ---------------------------------------------------------------- the quest
