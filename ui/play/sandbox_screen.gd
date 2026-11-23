@@ -15,6 +15,7 @@ const ShopPanel := preload("res://ui/play/shop_panel.gd")
 const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
 const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
+const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const TalkPanel := preload("res://ui/play/talk_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
@@ -313,6 +314,16 @@ func _open_service(kind: String, tab: String) -> void:
 	add_child(panel)
 
 
+## The Trials panel over the map, from a trial's master at its site: the world waits while it is open. A fight it starts (a master met in battle)
+## is handed to the battle screen by the next frame, as any fight in the open world is.
+func _open_trials() -> void:
+	var panel: Control = TrialsPanel.new()
+	panel.dynasty = app.dynasty
+	panel.on_change = func(): _refresh_status()
+	panel.set_meta("modal", true)
+	add_child(panel)
+
+
 ## A wilds trader's panel over the map (GameWildsTrade): the world waits while it is open.
 func _open_merchant(lm: Dictionary) -> void:
 	var panel: Control = MerchantPanel.new()
@@ -401,6 +412,8 @@ func _use() -> void:
 		_open_service(str(r["open"]), str(r.get("tab", "")))
 	elif str(r.get("open", "")) == "merchant":
 		_open_merchant(r["landmark"])
+	elif str(r.get("open", "")) == "trials":
+		_open_trials()
 	elif r.has("who") and not (r["who"] as Dictionary).is_empty():
 		_say(str(r["who"]["id"]), str(r.get("bare", "")))   # a villager answered: their words show over their head
 		if not (r["choices"] as Array).is_empty():
@@ -702,6 +715,10 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 		items.append([float(w["z"]), "villager", w])
 	for e in GameDungeonArt.entrances_in(view):
 		items.append([float(e["rect"].end.y) - 0.1, "entrance", e])
+	if sb.storey() == 0:
+		for t in GameTrials.sites(d):
+			if view.has_point(Vector2i(int(t["x"]), int(t["z"]))):
+				items.append([float(int(t["z"])) + 0.5, "site", t])
 	for a in sb.creatures:
 		items.append([float(a["z"]) + 0.5, "creature", a])
 	for a in sb.landmark_dwellers():
@@ -735,6 +752,23 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					var fs := _figure_size(tex, cell) * float(w["scale"])
 					_stand(c, tex, p + Vector2(0, cell * 0.3), fs, _villager_flip(w, int(w["dx"]) < 0), dim, cell)
 					_bubble_pos[str(w["id"])] = p + Vector2(0, cell * 0.3 - fs.y)
+			"site":
+				var t: Dictionary = it[2]
+				var tp := origin + (Vector2(float(t["x"]) + 0.5, float(t["z"]) + 0.5) - centre) * cell + area * 0.5
+				var ring := Kit.good() if bool(t["passed"]) else Color(0.8, 0.55, 0.95)
+				c.draw_set_transform(tp + Vector2(0, cell * 0.3), 0.0, Vector2(1.0, 0.4))   # a ring of standing stones on the ground, in perspective
+				c.draw_arc(Vector2.ZERO, cell * 1.1, 0.0, TAU, 28, Color(ring.r, ring.g, ring.b, 0.9), maxf(2.0, cell * 0.12))
+				c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+				var mtex: Texture2D = SpriteArt.master(str(t["id"]))
+				if mtex == null:
+					mtex = SpriteArt.creature(str(t["master_id"]))
+				if mtex == null:
+					c.draw_circle(tp, maxf(2.0, cell * 0.3), ring)
+				else:
+					var ms := cell / 16.0 * float(setting("creature_pixel"))
+					var mw := minf(mtex.get_width() * ms, cell * float(setting("creature_max_tiles")))
+					var mh := mw * float(mtex.get_height()) / float(mtex.get_width())
+					_stand(c, mtex, tp + Vector2(0, cell * 0.3), Vector2(mw, mh), false, dim, cell)   # the art faces left, and so does the master (a mirrored figure is drawn a box to the right, see _stand)   # the art faces left; the master turns to the heir
 			"creature":
 				var a: Dictionary = it[2]
 				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):

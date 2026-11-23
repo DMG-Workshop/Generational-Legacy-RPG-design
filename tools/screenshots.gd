@@ -347,6 +347,10 @@ func _open_world(what: String) -> void:
 		var plot := GameBuild.base()
 		spot = Vector2i(int(plot["x"]), int(plot["z"])) + (Vector2i.ZERO if what == "homestead" else Vector2i(0, 4))   # inside the house, or at its door with the roof half lifted
 		_build_house()
+	if what == "trial_site":   # a trial the family has found: its master stands at its ring of stones
+		d.trials["steps"] = {str(GameTrials.placed(d.seed_value, "material")[0]["id"]): 1}
+		var site: Dictionary = GameTrials.sites(d)[0]
+		spot = Vector2i(int(site["x"]) + 2, int(site["z"]) + 2)
 	d.world.visit("hearthmere")
 	app.show_sandbox()
 	await _frames(3)

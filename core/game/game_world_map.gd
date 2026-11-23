@@ -6,6 +6,7 @@ class_name GameWorldMap
 extends RefCounted
 
 static var _cache: Dictionary = {}
+static var _tiles: Dictionary = {}   # "seed|trial" -> the tile a trial site stands on (a pure function, kept because the sandbox asks every frame)
 
 
 static func data() -> Dictionary:
@@ -86,6 +87,15 @@ static func landmark_markers(d: GameDynasty) -> Array:
 ## Where a trial of the open world stands as a tile: its place in the trials' square, stretched over the world, and moved to the nearest cell
 ## that is not water (a site is never under the sea). A pure function of the seed.
 static func trial_tile(d: GameDynasty, p: Dictionary) -> Vector2i:
+	var key := "%d|%s" % [d.seed_value, str(p.get("id", ""))]
+	if _tiles.has(key):
+		return _tiles[key]
+	var tile := _trial_tile(d, p)
+	_tiles[key] = tile
+	return tile
+
+
+static func _trial_tile(d: GameDynasty, p: Dictionary) -> Vector2i:
 	var area := maxi(1, int(GameTrials.setting("area")))
 	var size := GameWorldGen.size()
 	var x := clampi(int(p["x"]) * size / area, 0, size - 1)
