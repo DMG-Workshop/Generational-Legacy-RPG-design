@@ -103,7 +103,21 @@
       "dug": {"rows": ["........", ".dddddd.", "dDDDDDDd", "dDDDDDDd", "dDDDDDDd", "dDDDDDDd", ".dddddd.", "........"], "palette": {"d": [0.16, 0.1, 0.06, 0.8], "D": [0.07, 0.04, 0.02, 0.85]}}
     }
   },
+  "thing_menu": {
+    "heir": ["character", "pack"],
+    "creature": ["walk"],
+    "companion": ["walk"],
+    "person": ["talk", "walk"],
+    "landmark": ["use", "walk"],
+    "building": ["use", "walk"]
+  },
   "text": {
+    "act_character": "Open the character",
+    "act_pack": "Open the pack",
+    "act_walk": "Walk there",
+    "act_talk": "Go and talk",
+    "act_use": "Go there and use it",
+    "act_order": "Order: {order}",
     "not_a_step": "The heir can only step to a tile beside them.",
     "edge": "The edge of the world is there.",
     "no_route": "There is no way there from here.",

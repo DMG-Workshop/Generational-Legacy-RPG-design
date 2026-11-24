@@ -41,7 +41,7 @@ func _ready() -> void:
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
 	top.add_child(Kit.button("Close", func(): queue_free(), Vector2(100, 34)))
-	var how := Kit.label("Choose Change, then press a key. Escape cancels. The gamepad's buttons are fixed.", 14, Kit.dim())
+	var how := Kit.label("Choose Change, then press a key. Escape cancels. For the mouse, pick the button for each job; a button another job has changes places. The gamepad's buttons are fixed.", 14, Kit.dim())
 	how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(how)
 	rows = VBoxContainer.new()
@@ -50,7 +50,7 @@ func _ready() -> void:
 	said = Kit.label("", 14, Kit.good())
 	said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(said)
-	v.add_child(Kit.button("Reset every key", func(): _reset_all(), Vector2(0, 40)))
+	v.add_child(Kit.button("Reset every key and button", func(): _reset_all(), Vector2(0, 40)))
 	_rebuild()
 
 
@@ -58,6 +58,21 @@ func _rebuild() -> void:
 	for c in rows.get_children():
 		rows.remove_child(c)
 		c.queue_free()
+	for role in WorldInput.mouse_roles():
+		var r: String = role
+		var mrow := HBoxContainer.new()
+		mrow.add_theme_constant_override("separation", 6)
+		var mname := Kit.label(str(WorldInput.data()["mouse_roles"][r]["name"]), 15, Kit.TEXT)
+		mname.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mname.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		mrow.add_child(mname)
+		for b in WorldInput.mouse_buttons():
+			var button: String = b
+			var pick := Kit.button(button.capitalize(), func(): _mouse(r, button), Vector2(72, 34))
+			pick.name = "Mouse_%s_%s" % [r, button]
+			pick.disabled = WorldInput.mouse_name(r) == button
+			mrow.add_child(pick)
+		rows.add_child(mrow)
 	for action in WorldInput.actions():
 		var a: String = action
 		var row := HBoxContainer.new()
@@ -100,6 +115,11 @@ func _input(event: InputEvent) -> void:
 	_rebuild()
 
 
+func _mouse(role: String, button: String) -> void:
+	said.text = str(WorldInput.set_mouse(role, button)["text"])
+	_rebuild()
+
+
 func _reset(action: String) -> void:
 	said.text = str(WorldInput.reset(action)["text"])
 	_rebuild()
@@ -107,8 +127,9 @@ func _reset(action: String) -> void:
 
 func _reset_all() -> void:
 	WorldInput.reset_all()
+	WorldInput.reset_mouse()
 	waiting = ""
-	said.text = "Every key is back to its own."
+	said.text = "Every key and mouse button is back to its own."
 	_rebuild()
 
 

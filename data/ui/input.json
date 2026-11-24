@@ -13,8 +13,14 @@
     "zoom_min": 0.5,
     "zoom_max": 3.0,
     "zoom_step": 0.25,
-    "camera_follow_seconds": 0.2
+    "camera_follow_seconds": 0.2,
+    "walk_hold_seconds": 0.18
   },
+  "mouse_roles": {
+    "select": {"name": "Select: name, use, drag", "default": "left"},
+    "walk": {"name": "Walk (hold) and the menu of a thing (click)", "default": "right"}
+  },
+  "mouse_buttons": ["left", "right", "middle"],
   "text": {
     "no_action": "There is no such action.",
     "bad_key": "That is not a key the game knows.",
@@ -22,7 +28,11 @@
     "clash": "{key} is already {action}.",
     "too_many": "An action holds no more than {n} keys.",
     "set": "{action}: {keys}.",
-    "reset": "{action} is back to its own keys."
+    "reset": "{action} is back to its own keys.",
+    "mouse_set": "{role} is now the {button} button.",
+    "mouse_swap": "{role} is now the {button} button, and {other} took the {was} one.",
+    "mouse_reset": "The mouse buttons are back to their own.",
+    "mouse_bad": "That is not a mouse button the game uses."
   },
   "actions": {
     "world_move_up": {"name": "Move up", "keys": ["W", "Up"], "pad_buttons": ["dpad_up"], "pad_axes": [["left_y", -1]]},

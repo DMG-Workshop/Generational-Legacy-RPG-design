@@ -159,6 +159,98 @@ static func _save_overrides(now: Dictionary) -> void:
 	install()
 
 
+# ---------------------------------------------------------------- the mouse's buttons
+
+static var _mouse: Variant = null   # the player's own roles, {role: button name}; null until read from the settings file
+
+
+static func mouse_roles() -> Array:
+	return data()["mouse_roles"].keys()
+
+
+static func mouse_buttons() -> Array:
+	return data()["mouse_buttons"]
+
+
+## The saved roles, cleaned: only known roles and buttons the game uses, and no two roles on one button (the first role in the
+## data's order keeps it). A role not saved, or dropped, has its own default; so a damaged file cannot leave a role unbound.
+static func clean_mouse(raw: Variant) -> Dictionary:
+	var out := {}
+	if typeof(raw) != TYPE_DICTIONARY:
+		return out
+	var used := {}
+	for role in mouse_roles():
+		var own := str(data()["mouse_roles"][role]["default"])
+		var b: Variant = (raw as Dictionary).get(role, null)
+		if typeof(b) == TYPE_STRING and str(b) in mouse_buttons() and str(b) != own and not used.has(str(b)):
+			out[str(role)] = str(b)
+			used[str(b)] = true
+		else:
+			used[own] = true   # the role keeps its own button, so nothing else may take it
+	return out
+
+
+static func mouse_overrides() -> Dictionary:
+	if _mouse == null:
+		_mouse = clean_mouse(UiSettings.stored("mouse", {}))
+	return _mouse
+
+
+static func forget_mouse() -> void:
+	_mouse = null
+
+
+## The button name ("left", "right", "middle") a role answers to now.
+static func mouse_name(role: String) -> String:
+	if mouse_overrides().has(role):
+		return str(mouse_overrides()[role])
+	return str(data()["mouse_roles"].get(role, {}).get("default", ""))
+
+
+## The engine's button index for a role (MOUSE_BUTTON_LEFT...), or 0 for an unknown role.
+static func mouse_button(role: String) -> int:
+	return int(MOUSE.get(mouse_name(role), 0))
+
+
+## The role a button name has now, or "".
+static func mouse_owner(button: String) -> String:
+	for role in mouse_roles():
+		if mouse_name(str(role)) == button:
+			return str(role)
+	return ""
+
+
+## Gives a role a button. A button another role has changes places with it (so each role always has a button): {ok, text}.
+static func set_mouse(role: String, button: String) -> Dictionary:
+	if not data()["mouse_roles"].has(role):
+		return {"ok": false, "text": text("no_action")}
+	if not button in mouse_buttons():
+		return {"ok": false, "text": text("mouse_bad")}
+	var other := mouse_owner(button)
+	var was := mouse_name(role)
+	var now := mouse_overrides().duplicate(true)
+	now[role] = button
+	var vals := {"role": str(data()["mouse_roles"][role]["name"]).split(":")[0].split(" (")[0], "button": button}
+	var line := "mouse_set"
+	if other != "" and other != role:
+		now[other] = was
+		line = "mouse_swap"
+		vals["other"] = str(data()["mouse_roles"][other]["name"]).split(":")[0].split(" (")[0].to_lower()
+		vals["was"] = was
+	_save_mouse(now)
+	return {"ok": true, "text": text(line, vals)}
+
+
+static func reset_mouse() -> Dictionary:
+	_save_mouse({})
+	return {"ok": true, "text": text("mouse_reset")}
+
+
+static func _save_mouse(now: Dictionary) -> void:
+	_mouse = clean_mouse(now)
+	UiSettings.store("mouse", _mouse)
+
+
 # ---------------------------------------------------------------- bindings
 
 ## The events bound to an action, built from the data: keys, mouse buttons, pad buttons and pad axes.
@@ -311,13 +403,28 @@ static func validate() -> Array:
 		for k in s["reserved_keys"]:
 			if OS.find_keycode_from_string(str(k)) == KEY_NONE:
 				bad.append("input.json: reserved key '%s' is not a key the engine knows" % k)
-		for k in ["no_action", "bad_key", "reserved", "clash", "too_many", "set", "reset"]:
+		for k in ["no_action", "bad_key", "reserved", "clash", "too_many", "set", "reset", "mouse_set", "mouse_swap", "mouse_reset", "mouse_bad"]:
 			if not dat["text"].has(k):
 				bad.append("input.json: text.%s is missing" % k)
 		for action in dat["actions"]:
 			var nkeys: int = (dat["actions"][action].get("keys", []) as Array).size()
 			if nkeys > int(s["max_keys"]):
 				bad.append("input.json: action '%s' has more keys than max_keys" % action)
+	if typeof(dat.get("mouse_roles", null)) != TYPE_DICTIONARY or typeof(dat.get("mouse_buttons", null)) != TYPE_ARRAY or float(s.get("walk_hold_seconds", 0.0)) <= 0.0:
+		bad.append("input.json: mouse_roles, mouse_buttons and settings.walk_hold_seconds (above 0) are needed")
+	else:
+		var taken := {}
+		for role in ["select", "walk"]:
+			if not dat["mouse_roles"].has(role):
+				bad.append("input.json: mouse_roles.%s is missing" % role)
+				continue
+			var r: Dictionary = dat["mouse_roles"][role]
+			var own := str(r.get("default", ""))
+			if str(r.get("name", "")) == "" or not own in dat["mouse_buttons"] or not MOUSE.has(own):
+				bad.append("input.json: mouse role '%s' needs a name and a default button from mouse_buttons" % role)
+			if taken.has(own):
+				bad.append("input.json: mouse roles '%s' and '%s' share the %s button" % [taken[own], role, own])
+			taken[own] = role
 	var used := {}   # binding -> action
 	for action in dat["actions"]:
 		var a: Dictionary = dat["actions"][action]

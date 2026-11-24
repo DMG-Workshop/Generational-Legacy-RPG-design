@@ -69,6 +69,8 @@ var _bubble_pos := {}     # a person's id -> where their head was drawn last (sc
 var _banners := {}        # place -> the colour of its gate guards and banners
 var _tick_wait := 0.0
 var _save_wait := 0.0
+var _walk_press := Vector2.ZERO   # where and when the walk button went down (a quick click opens a thing's menu, a held one walks)
+var _walk_press_ms := 0
 var _press := Vector2.ZERO
 var _press_ms := 0
 
@@ -191,8 +193,8 @@ func _process(delta: float) -> void:
 	var mv: Vector2 = inp["move"]
 	if fingers.steering() and fingers.move().length() > 0.0:
 		mv = fingers.move()   # a finger on the stick steers over the keys
-	if mv.length() < 0.001 and mode == "walk" and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not UiSettings.touch():
-		mv = _mouse_walk()   # holding the right button walks toward the cursor
+	if mv.length() < 0.001 and mode == "walk" and _walk_held() and not UiSettings.touch():
+		mv = _mouse_walk()   # holding the walk button walks toward the cursor
 	_walk_wait -= delta
 	var stepped := false
 	if step_for(mv) != Vector2i.ZERO:
@@ -273,18 +275,94 @@ func _gui_input(event: InputEvent) -> void:
 		zoom = fingers.pinch(zoom)
 		queue_redraw()
 		return
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and not UiSettings.touch():
 		var e := event as InputEventMouseButton
 		var area := Vector2(size.x, size.y - BAR)
-		if e.pressed:
-			_press = e.position
-			_press_ms = Time.get_ticks_msec()
-			_double = e.double_click and not UiSettings.touch()
-		elif WorldInput.is_tap(_press, e.position, float(Time.get_ticks_msec() - _press_ms) / 1000.0):
-			if _double:
-				_double_click(e.position - Vector2(0, BAR), area)
+		if e.button_index == WorldInput.mouse_button("select"):
+			if e.pressed:
+				_press = e.position
+				_press_ms = Time.get_ticks_msec()
+				_double = e.double_click
+			elif WorldInput.is_tap(_press, e.position, float(Time.get_ticks_msec() - _press_ms) / 1000.0):
+				if _double:
+					_double_click(e.position - Vector2(0, BAR), area)
+				else:
+					_tap(e.position - Vector2(0, BAR), area)
+		elif e.button_index == WorldInput.mouse_button("walk"):
+			if e.pressed:
+				_walk_press = e.position
+				_walk_press_ms = Time.get_ticks_msec()
 			else:
-				_tap(e.position - Vector2(0, BAR), area)
+				# a quick click of the walk button on a thing opens what can be done with it (a held one has walked)
+				var quick := WorldInput.is_tap(_walk_press, e.position, float(Time.get_ticks_msec() - _walk_press_ms) / 1000.0)
+				_walk_press_ms = 0
+				if quick:
+					_thing_menu(e.position - Vector2(0, BAR), area, e.global_position)
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		var t := event as InputEventMouseButton   # touch emulated as a mouse: a tap, as before
+		var tarea := Vector2(size.x, size.y - BAR)
+		if t.pressed:
+			_press = t.position
+			_press_ms = Time.get_ticks_msec()
+			_double = false
+		elif WorldInput.is_tap(_press, t.position, float(Time.get_ticks_msec() - _press_ms) / 1000.0):
+			_tap(t.position - Vector2(0, BAR), tarea)
+
+
+## Whether the walk button has been down long enough to walk: a quick click is for the menu of a thing, so it does not take a step.
+func _walk_held() -> bool:
+	return _walk_press_ms > 0 and Input.is_mouse_button_pressed(WorldInput.mouse_button("walk")) \
+		and float(Time.get_ticks_msec() - _walk_press_ms) / 1000.0 >= WorldInput.setting("walk_hold_seconds")
+
+
+## The popup of what can be done with the thing under a click of the walk button (GameSandbox.thing_actions): over bare ground
+## nothing opens. Choosing walks there, goes and uses it, or opens the heir's character or pack, or gives a companion an order.
+func _thing_menu(p: Vector2, area: Vector2, at: Vector2) -> void:
+	if p.y < 0.0 or p.y > area.y or mode != "walk" or _modal_open():
+		return
+	var point := _point_at(p, area)
+	var named := sb.name_at(point.x, point.y)
+	var acts := sb.thing_actions(named)
+	if acts.is_empty():
+		return
+	var tile := tile_at(p, area, sb.heir, cam, _cell())
+	var menu := PopupMenu.new()
+	menu.set_meta("modal", true)
+	menu.add_item(str(named["name"]), 1000)
+	menu.set_item_disabled(0, true)
+	menu.add_separator()
+	for i in acts.size():
+		menu.add_item(str(acts[i]["label"]), i)
+	menu.id_pressed.connect(func(i: int):
+		if i < acts.size():
+			_thing_act.call_deferred(named, str(acts[i]["id"]), tile))
+	menu.popup_hide.connect(func(): menu.queue_free.call_deferred())
+	add_child(menu)
+	menu.popup(Rect2i(Vector2i(at), Vector2i.ZERO))
+
+
+## Does one choice of the thing menu.
+func _thing_act(named: Dictionary, action: String, tile: Vector2i) -> void:
+	match action:
+		"character":
+			_open_figure()
+		"pack":
+			_open_pack("")
+		"walk", "talk", "use":
+			var planned := sb.set_route(tile)
+			if planned["ok"]:
+				_use_when_there = action != "walk"
+				_walk_wait = 0.0
+				last_line = str(named["name"])
+			else:
+				last_line = str(planned["why"])
+			cam = Vector2.ZERO
+		_:
+			var r := sb.give_order(named, action)
+			last_line = str(r["text"])
+	_refresh_status()
+	queue_redraw()
 
 
 ## The direction toward the cursor from the heir while the right button is held (a unit vector; zero close to the heir).
