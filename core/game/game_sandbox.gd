@@ -638,6 +638,25 @@ func cycle_order(id: String) -> Dictionary:
 	return GameCompanions.set_order(d, id, next)
 
 
+## Sends a companion to a place with an order (`stay` holds it, `guard` guards it, `follow` brings them back to the heir): {ok, text}.
+## The order is the party member's, as `GameCompanions.set_order` has it; where they go is the runtime agent's post.
+func send_order(id: String, order: String, x: float, z: float) -> Dictionary:
+	var r := GameCompanions.set_order(d, id, order)
+	if r["ok"] and order != GameCompanions.FOLLOW:
+		companions = GameCompanions.place(companions, id, order, x, z)
+	return r
+
+
+## Gives an order to everyone in the party, or to the one companion `only` (""): the lines they say.
+func order_party(order: String, only: String = "") -> Array:
+	var lines: Array = []
+	for m in d.party.members:
+		if only == "" or str(m["id"]) == only:
+			var r := GameCompanions.set_order(d, str(m["id"]), order)
+			lines.append(str(r["text"]))
+	return lines
+
+
 ## The storey the build controls work on: 0 is the ground floor, 1 and up are above it (not saved; a visit starts on the ground).
 var build_level := 0
 
