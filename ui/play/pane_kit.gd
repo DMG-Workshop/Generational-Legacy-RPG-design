@@ -6,6 +6,7 @@
 extends RefCounted
 
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const WorldInput := preload("res://ui/play/world_input.gd")
 const PATH := "res://data/ui/pane.json"
 
 static var _cache: Dictionary = {}
@@ -122,8 +123,8 @@ static func build(host: Control, title: String) -> VBoxContainer:
 	host.set_meta("pane_room", size.x - 2.0 * float(setting("padding")) - 20.0)
 	host.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventMouseButton and ev.pressed:
-			if ev.button_index == MOUSE_BUTTON_RIGHT:
-				close(host)   # a right click on a pane's face closes it
+			if ev.button_index == WorldInput.mouse_button("walk"):
+				close(host)   # a click of the walk button (the right one, unless the player moved it) on a pane's face closes it
 			else:
 				host.move_to_front())   # a click anywhere on it raises it
 	var face := PanelContainer.new()

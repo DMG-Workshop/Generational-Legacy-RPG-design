@@ -375,24 +375,24 @@ func name_at(fx: float, fz: float) -> Dictionary:
 	var reach := float(setting("name_reach"))
 	var here := Vector2(fx, fz)
 	var found := {"best": {}, "dist": reach + 1.0}   # (a lambda changes what it is handed, not the variables around it)
-	var consider := func(kind: String, nm: String, x: float, z: float, slack: float = 0.0):
+	var consider := func(kind: String, nm: String, x: float, z: float, slack: float = 0.0, id: String = ""):
 		var dist := maxf(0.0, Vector2(x, z).distance_to(here) - slack)
 		if dist <= reach and dist < float(found["dist"]) and nm != "":
 			found["dist"] = dist
-			found["best"] = {"kind": kind, "name": nm}
+			found["best"] = {"kind": kind, "name": nm, "id": id}
 	consider.call("heir", d.heir.name, float(heir.x) + 0.5, float(heir.y) + 0.5)
 	for a in creatures:
 		var def := {}
 		for c in GameData.creatures:
 			if str(c["id"]) == str(a["id"]):
 				def = c
-		consider.call("creature", str(def.get("name", a["id"])), float(a["x"]), float(a["z"]))
+		consider.call("creature", str(def.get("name", a["id"])), float(a["x"]), float(a["z"]), 0.0, str(a["id"]))
 	for a in companions:
 		var nm := ""
 		for m in d.party.members:
 			if str(m["id"]) == str(a["id"]):
 				nm = str(m.get("name", a["id"]))
-		consider.call("companion", nm, float(a["x"]), float(a["z"]))
+		consider.call("companion", nm, float(a["x"]), float(a["z"]), 0.0, str(a["id"]))
 	if storey() == 0:
 		for w in GameVillagers.walkers_near(d, fx, fz, reach + 1.0, GameDay.hour(d)):
 			consider.call("person", str(w["job"]), float(w["x"]), float(w["z"]))
@@ -404,6 +404,31 @@ func name_at(fx: float, fz: float) -> Dictionary:
 			if not b.is_empty():
 				consider.call("building", _building_name(b), fx, fz)
 	return found["best"]
+
+
+## What the heir can do with a thing `name_at` found, for the popup the mouse opens over it: [{id, label}], in the order the data
+## lists them (`thing_menu` in sandbox.json, labels in `text`). A companion also offers each order but the one it has. Pure: nothing
+## here is done, the screen does what an id says. Empty for what is not a thing.
+func thing_actions(named: Dictionary) -> Array:
+	var out: Array = []
+	if named.is_empty():
+		return out
+	var kind := str(named.get("kind", ""))
+	for id in data()["thing_menu"].get(kind, []):
+		out.append({"id": str(id), "label": _text("act_" + str(id))})
+	if kind == "companion" and d.party.has_member(str(named.get("id", ""))):
+		var now := str(d.party.member(str(named["id"])).get("order", GameCompanions.FOLLOW))
+		for o in GameCompanions.ORDERS:
+			if o != now:
+				out.append({"id": "order:" + str(o), "label": _text("act_order", {"order": GameCompanions.order_name(str(o))})})
+	return out
+
+
+## Does what a companion's order action says (`order:<order>` for the thing's id): {ok, text}.
+func give_order(named: Dictionary, action: String) -> Dictionary:
+	if not action.begins_with("order:") or str(named.get("kind", "")) != "companion":
+		return {"ok": false, "text": ""}
+	return GameCompanions.set_order(d, str(named.get("id", "")), action.trim_prefix("order:"))
 
 
 func _building_name(b: Dictionary) -> String:
