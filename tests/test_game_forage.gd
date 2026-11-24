@@ -168,10 +168,9 @@ func test_screen() -> void:
 	scr.sb.creatures.clear()
 	var site := _node_site(d)
 	scr.sb.heir = site[1]
-	var buttons := scr.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text == "Forage")
-	ok(buttons.size() == 1, "the bar has a Forage button")
+	ok(scr.slots.has("forage") and scr.slot_ids.find("forage") == 2, "the bar has a Forage slot (the third, key 3)")
 	var stock := GameCraft.describe(d)
-	(buttons[0] as Button).pressed.emit()
+	scr.slots["forage"].pressed.call()
 	ok(GameCraft.describe(d) != stock, "pressing it gathers")
 	scr.queue_free()
 	fake.queue_free()

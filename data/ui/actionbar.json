@@ -1,0 +1,124 @@
+{
+ "note": "The open world's action bar on a desktop window with a mouse (ui/play/action_slot.gd, checked by tools/check_data.gd): eight numbered slots that stay where they are (a slot that does not apply is dimmed, not removed), each answering to its number key (the action world_slot_<n> in input.json) as well as a click, and two small buttons for the Menu and the world map. `action` is the key action whose first key the tooltip also names. A touch screen keeps its own text buttons (docs/MOBILE.md).",
+ "settings": {
+  "slot_px": 44,
+  "gap": 4,
+  "glyph_scale": 3
+ },
+ "slots": [
+  {
+   "id": "use",
+   "label": "Use",
+   "glyph": "use",
+   "action": "world_interact",
+   "color": [
+    0.95,
+    0.85,
+    0.45
+   ]
+  },
+  {
+   "id": "dig",
+   "label": "Dig",
+   "glyph": "dig",
+   "action": "world_dig",
+   "color": [
+    0.75,
+    0.62,
+    0.45
+   ]
+  },
+  {
+   "id": "forage",
+   "label": "Forage",
+   "glyph": "forage",
+   "color": [
+    0.55,
+    0.85,
+    0.5
+   ]
+  },
+  {
+   "id": "build",
+   "label": "Build",
+   "glyph": "build",
+   "action": "world_build",
+   "color": [
+    0.85,
+    0.6,
+    0.4
+   ]
+  },
+  {
+   "id": "cast",
+   "label": "Cast",
+   "glyph": "cast",
+   "color": [
+    0.6,
+    0.7,
+    1.0
+   ]
+  },
+  {
+   "id": "orders",
+   "label": "Orders",
+   "glyph": "orders",
+   "color": [
+    0.9,
+    0.5,
+    0.5
+   ]
+  },
+  {
+   "id": "up",
+   "label": "Climb up",
+   "glyph": "up",
+   "action": "world_climb_up",
+   "color": [
+    0.8,
+    0.8,
+    0.85
+   ]
+  },
+  {
+   "id": "down",
+   "label": "Climb down",
+   "glyph": "down",
+   "action": "world_climb_down",
+   "color": [
+    0.8,
+    0.8,
+    0.85
+   ]
+  }
+ ],
+ "extras": [
+  {
+   "id": "menu",
+   "label": "Menu",
+   "glyph": "menu",
+   "action": "world_cancel",
+   "color": [
+    0.85,
+    0.85,
+    0.9
+   ]
+  },
+  {
+   "id": "map",
+   "label": "World map",
+   "glyph": "map",
+   "action": "world_panel_map",
+   "color": [
+    0.7,
+    0.9,
+    0.8
+   ]
+  }
+ ],
+ "text": {
+  "cast_none": "There is no spell to cast here.",
+  "tip": "{label}  ({keys})",
+  "tip_plain": "{label}"
+ }
+}
