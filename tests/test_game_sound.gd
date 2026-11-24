@@ -145,10 +145,7 @@ func test_build() -> void:
 				loud = true
 				break
 		ok(loud, "%s's stream holds sound" % name)
-		if Sound.is_track(name):
-			ok(w.loop_mode == AudioStreamWAV.LOOP_FORWARD and w.loop_begin == 0 and w.loop_end == want, "%s loops from end to start" % name)
-		else:
-			ok(w.loop_mode == AudioStreamWAV.LOOP_DISABLED, "%s plays once" % name)
+		ok(w.loop_mode == AudioStreamWAV.LOOP_DISABLED, "%s is not looped by the engine (the player restarts a track)" % name)
 	ok(total <= float(dat["limits"]["max_total_seconds"]), "all of it is %.1f seconds, within the cap" % total)
 	ok(Sound.rate_of("title") == int(dat["music_rate"]) and Sound.rate_of("hit") == int(dat["rate"]), "tracks are built at the music rate, cues at the cue rate")
 	# the pieces of the builder
