@@ -1,6 +1,6 @@
 ## Subclasses (roadmap item 60, first part): the data and its validator, the perk arithmetic (plain and founded, with a
 ## floor), what taking one costs and who can, picking one at the founding, a child born to the calling (on dice that
-## are not the dynasty's), what the Breeder's perks do to finding, keeping, breeding and selling, saving (old and
+## are not the dynasty's), what the Tamer's perks do to finding, keeping, breeding and selling, saving (old and
 ## damaged saves), and the screens (the title screen's pick, the Chronicle's Subclass tab). With no subclass every
 ## number is exactly what it was.
 ## Run: godot --headless --path . -s res://tests/test_game_subclass.gd
@@ -64,7 +64,7 @@ func _with(edit: Callable, body: Callable) -> void:
 
 func test_data() -> void:
 	ok(GameSubclass.validate().is_empty(), "subclasses.json is sound: %s" % str(GameSubclass.validate()))
-	ok(GameSubclass.has("breeder") and not GameSubclass.has("nonesuch") and GameSubclass.name_of("breeder") == "Breeder", "the Breeder exists")
+	ok(GameSubclass.has("breeder") and not GameSubclass.has("nonesuch") and GameSubclass.name_of("breeder") == "Tamer", "the Tamer exists")
 	_with(func(x): x["subclasses"][0]["perks"]["telepathy"] = 2.0, func(): ok(not GameSubclass.validate().is_empty(), "an unknown perk is found"))
 	_with(func(x): x["subclasses"][0]["perks"]["find_mult"] = 0.0, func(): ok(not GameSubclass.validate().is_empty(), "a perk of zero is found"))
 	_with(func(x): x["subclasses"][0]["perks"] = {}, func(): ok(not GameSubclass.validate().is_empty(), "a subclass with no perks is found"))
@@ -105,7 +105,7 @@ func test_cost_and_take() -> void:
 	var gold := d.heir.gold
 	var line := GameSubclass.take(d, "breeder")
 	ok(d.heir.subclass == "breeder" and not d.heir.subclass_founded and gold - d.heir.gold == base, "taking pays and sets it, not founded")
-	ok("takes up the calling of a Breeder" in line and d.journal.back() == line, "and tells it, in the journal too: %s" % line)
+	ok("takes up the calling of a Tamer" in line and d.journal.back() == line, "and tells it, in the journal too: %s" % line)
 	ok(GameSubclass.why_not(d, "breeder") != "" and GameSubclass.take(d, "breeder") == "", "taking the same again is refused")
 	var poor := dyn()
 	poor.heir.gold = 10
@@ -122,7 +122,7 @@ func test_cost_and_take() -> void:
 		ok(price == int(round(300.0 * GameData.enemy_scale(c.gen) * 2.0)), "changing costs double")
 		var before := c.heir.gold
 		var l := GameSubclass.take(c, "keeper")
-		ok(c.heir.subclass == "keeper" and not c.heir.subclass_founded and before - c.heir.gold == price and "gives up the calling of a Breeder" in l, "a change pays double and is no longer founded: %s" % l))
+		ok(c.heir.subclass == "keeper" and not c.heir.subclass_founded and before - c.heir.gold == price and "gives up the calling of a Tamer" in l, "a change pays double and is no longer founded: %s" % l))
 
 
 func test_founding() -> void:
@@ -146,7 +146,7 @@ func test_succession() -> void:
 		var line := GameSubclass.on_succession(d, d.heir, c)
 		if line != "":
 			born += 1
-			ok(c.subclass == "breeder" and c.subclass_founded and "is born to the calling of a Breeder" in line, "a child born to it is founded") if born == 1 else null
+			ok(c.subclass == "breeder" and c.subclass_founded and "is born to the calling of a Tamer" in line, "a child born to it is founded") if born == 1 else null
 	var rate := float(born) / float(tries)
 	ok(absf(rate - 0.5) < 0.07, "about half the children are born to the calling (%.3f)" % rate)
 	var p := dyn(3)
@@ -201,22 +201,22 @@ func test_effects() -> void:
 	var base := GameFinding.chance(none.heir, "wolf")
 	var plain := GameFinding.chance(tk.heir, "wolf")
 	var founded := GameFinding.chance(br.heir, "wolf")
-	ok(is_equal_approx(plain, base * 1.4) and is_equal_approx(founded, base * 1.6), "a Breeder finds young more often, a founded one more so (%s, %s, %s)" % [base, plain, founded])
+	ok(is_equal_approx(plain, base * 1.4) and is_equal_approx(founded, base * 1.6), "a Tamer finds young more often, a founded one more so (%s, %s, %s)" % [base, plain, founded])
 	# keep
 	var e0 := GameRoster.add(none, "wolf", "A")
 	var e1 := GameRoster.add(tk, "wolf", "A")
 	var e2 := GameRoster.add(br, "wolf", "A")
-	ok(GameRanch.yearly_keep(e0, none) == GameRanch.yearly_keep(e0) and GameRanch.yearly_keep(e1, tk) < GameRanch.yearly_keep(e0, none) and GameRanch.yearly_keep(e2, br) < GameRanch.yearly_keep(e1, tk), "keeping costs less for a Breeder, and still less for a founded one")
+	ok(GameRanch.yearly_keep(e0, none) == GameRanch.yearly_keep(e0) and GameRanch.yearly_keep(e1, tk) < GameRanch.yearly_keep(e0, none) and GameRanch.yearly_keep(e2, br) < GameRanch.yearly_keep(e1, tk), "keeping costs less for a Tamer, and still less for a founded one")
 	# selling
 	for e in [e0, e1, e2]:
 		e["stage"] = "adult"
 		e["mood"] = 100
-	ok(GameRanch.sell_price(e1, tk) > GameRanch.sell_price(e0, none) and GameRanch.sell_price(e2, br) > GameRanch.sell_price(e1, tk), "a Breeder sells creatures dearer")
+	ok(GameRanch.sell_price(e1, tk) > GameRanch.sell_price(e0, none) and GameRanch.sell_price(e2, br) > GameRanch.sell_price(e1, tk), "a Tamer sells creatures dearer")
 	ok(GameRanch.sell_price(e0) == GameRanch.sell_price(e0, none), "with no subclass a price is exactly what it was")
 	# fertility
 	var m := {"species": "wolf", "traits": []}
 	var f := {"species": "wolf", "traits": []}
-	ok(GameBreeding.fertility(m, f, none) == GameBreeding.fertility(m, f) and GameBreeding.fertility(m, f, tk) > GameBreeding.fertility(m, f, none), "a Breeder's pairs are more fertile, others exactly as before")
+	ok(GameBreeding.fertility(m, f, none) == GameBreeding.fertility(m, f) and GameBreeding.fertility(m, f, tk) > GameBreeding.fertility(m, f, none), "a Tamer's pairs are more fertile, others exactly as before")
 	# mutation: with a certain-ish chance the perk shows in the births
 	var muts := [0, 0]
 	for s in range(1, 401):
@@ -233,7 +233,7 @@ func test_effects() -> void:
 			GameBreeding._cache = saved
 			if d.roster.size() > 2 and not d.roster[2]["traits"].is_empty():
 				muts[i] += 1
-	ok(muts[1] > muts[0], "a Breeder's young mutate more often (%d against %d of 400)" % [muts[1], muts[0]])
+	ok(muts[1] > muts[0], "a Tamer's young mutate more often (%d against %d of 400)" % [muts[1], muts[0]])
 	# no subclass: the whole pipeline is unchanged
 	var a := dyn(9)
 	var b := dyn(9)
@@ -321,7 +321,7 @@ func test_screens() -> void:
 				title = c
 	ok(title != null, "the title screen is up")
 	if title != null:
-		ok(title.subclass_pick.item_count == 21 and title.subclass_pick.get_item_text(0) == "None" and title.subclass_pick.get_item_text(1) == "Breeder", "it offers None, the Breeder and the nineteen other callings")
+		ok(title.subclass_pick.item_count == 21 and title.subclass_pick.get_item_text(0) == "None" and title.subclass_pick.get_item_text(1) == "Tamer", "it offers None, the Tamer and the nineteen other callings")
 		ok(title.subclass_ids.size() == 21 and title.subclass_ids.slice(0, 2) == ["", "breeder"] and title.subclass_pick.selected == 0, "with none chosen to begin with")
 		title.subclass_pick.selected = 1
 		title._refresh()
@@ -356,12 +356,12 @@ func test_screens() -> void:
 	await _frames(2)
 	ok(_find_label(tab, "No subclass.") != null, "it says there is none")
 	var price := GameText.num(GameSubclass.cost(d, "breeder"))
-	var btn := _find_button(tab, "Take up the Breeder (%s gold)" % price)
-	ok(btn != null and not btn.disabled, "and offers the Breeder, with its price")
+	var btn := _find_button(tab, "Take up the Tamer (%s gold)" % price)
+	ok(btn != null and not btn.disabled, "and offers the Tamer, with its price")
 	btn.pressed.emit()
 	await _frames(2)
 	ok(d.heir.subclass == "breeder" and not d.heir.subclass_founded and changes[0] == 1, "taking it sets it, and tells the screen behind")
-	ok(_find_label(tab, "Subclass: Breeder (taken up).") != null, "the tab says what the heir is")
+	ok(_find_label(tab, "Subclass: Tamer (taken up).") != null, "the tab says what the heir is")
 	ok(_find_label(tab, "The chance of finding eggs and young: 40% more") != null, "and what it does at its plain strength")
 	d.heir.gold = 5
 	d.heir.subclass = ""
@@ -373,7 +373,7 @@ func test_screens() -> void:
 	var tab2 := _tab(c2, "Subclass")
 	(tab2.get_parent() as TabContainer).current_tab = tab2.get_index()
 	await _frames(2)
-	var poor := _find_button(tab2, "Take up the Breeder (%s gold)" % price)
+	var poor := _find_button(tab2, "Take up the Tamer (%s gold)" % price)
 	ok(poor != null and poor.disabled and _find_label(tab2, "Not enough gold (%s needed)." % price) != null, "without the gold the button is off and says why")
 	app.queue_free()
 	await _frames(2)

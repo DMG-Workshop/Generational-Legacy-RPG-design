@@ -1,5 +1,5 @@
 ## Subclasses (roadmap item 60): a calling layered on an heir's class, none or one, picked when the dynasty is
-## founded, taken later for gold, or passed to a child. Twenty callings (the Breeder and nineteen crafts and trades).
+## founded, taken later for gold, or passed to a child. Twenty callings (the Tamer, whose id is still `breeder` so old saves, replays and the harness keep working, and nineteen crafts and trades).
 ## Perks are multipliers on numbers the rules already have (creatures, the forge, the shops, loot, mining, building,
 ## farming, companions, the heir's own fights); the heir who is "founded" in it (chose it at the founding, or was
 ## born to it) gets them stronger. Each calling also has its own works: items in data/items/items.json that carry a

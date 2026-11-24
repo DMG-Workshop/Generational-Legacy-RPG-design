@@ -10,7 +10,7 @@ extends SceneTree
 var fails := 0
 var checks := 0
 
-const NAMES := ["Breeder", "Runescribe", "Armorer", "Bladewright", "Enchanter", "Alchemist", "Artificer", "Gemwright", "Hidewright", "Trapsmith", "Spiritbinder", "Wildcaller", "Feastwright", "Wayfinder", "Delver", "Stonewright", "Greenwarden", "Steadholder", "Caravaneer", "Venomwright"]
+const NAMES := ["Tamer", "Runescribe", "Armorer", "Bladewright", "Enchanter", "Alchemist", "Artificer", "Gemwright", "Hidewright", "Trapsmith", "Spiritbinder", "Wildcaller", "Feastwright", "Wayfinder", "Delver", "Stonewright", "Greenwarden", "Steadholder", "Caravaneer", "Venomwright"]
 
 
 func ok(cond: bool, what: String) -> void:
@@ -58,7 +58,8 @@ func test_roster() -> void:
 	var ids := {}
 	for s in defs:
 		ids[str(s["id"])] = true
-		ok(str(s["id"]) == str(s["name"]).to_lower(), "%s has an id that is its name in lower case" % s["name"])
+		var legacy: bool = str(s["id"]) == "breeder" and str(s["name"]) == "Tamer"   # renamed after saves, replays and the harness already used the id
+		ok(legacy or str(s["id"]) == str(s["name"]).to_lower(), "%s has an id that is its name in lower case" % s["name"])
 		ok(str(s["about"]).length() > 40, "%s says what it is" % s["name"])
 		ok((s["perks"] as Dictionary).size() >= 3 and (s["perks"] as Dictionary).size() <= 5, "%s has three to five perks" % s["name"])
 		ok(float(s.get("price_mult", 1.0)) > 0.0, "%s has a price" % s["name"])
