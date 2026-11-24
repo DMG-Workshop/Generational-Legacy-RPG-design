@@ -209,10 +209,9 @@ func test_screen() -> void:
 	await process_frame
 	await process_frame
 	scr.sb.creatures.clear()
-	var buttons := scr.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text == "Map")
-	ok(buttons.size() == 1, "the bar has a Map button")
+	ok(scr.slots.has("map"), "the bar has a Map button")
 	ok(not scr._modal_open(), "(no panel open)")
-	(buttons[0] as Button).pressed.emit()
+	scr.slots["map"].pressed.call()
 	await process_frame
 	ok(scr._modal_open(), "pressing it opens the world map")
 	var tick: int = scr.sb.tick
