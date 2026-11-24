@@ -18,6 +18,9 @@ const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const TalkPanel := preload("res://ui/play/talk_panel.gd")
+const HousePanel := preload("res://ui/play/house_panel.gd")
+const Chronicle := preload("res://ui/play/chronicle_panel.gd")
+const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
 const BAR := 56.0
@@ -102,7 +105,7 @@ func _ready() -> void:
 	bar.size = Vector2(maxf(0.0, size.x - 16.0), BAR - 8.0)
 	bar.add_theme_constant_override("separation", 6)
 	add_child(bar)
-	bar.add_child(Kit.button("Back", func(): app.show_state(), Vector2(88, BAR - 12)))
+	bar.add_child(Kit.button("Menu", func(): _open_menu(), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Dig", func(): _dig(), Vector2(72, BAR - 12)))
 	bar.add_child(Kit.button("Forage", func(): _forage(), Vector2(88, BAR - 12)))
 	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
@@ -216,7 +219,7 @@ func _process(delta: float) -> void:
 		_save()
 		_save_wait = float(setting("save_seconds"))
 	if inp["cancel"]:
-		app.show_state()
+		_open_menu()
 		return
 	if inp["interact"]:
 		_use()
@@ -399,6 +402,49 @@ func _open_cast() -> void:
 	menu.popup_hide.connect(func(): menu.queue_free.call_deferred())
 	add_child(menu)
 	menu.popup_centered()
+
+
+## The menu over the map (the bar's Menu button, Escape, B): the family's screens as popups over the world, which waits while
+## one is open, so the player does not leave the map for the text game unless they ask ("The text screen" is the old Back).
+func _open_menu() -> void:
+	var menu := PopupMenu.new()
+	menu.set_meta("modal", true)
+	var rows: Array = [
+		["Back to the map", Callable()],
+		["The family house", func(): _open_popup(HousePanel)],
+		["Chronicle", func(): _open_popup(Chronicle)],
+		["Skill trees", func(): _open_popup(SkillTreePanel)],
+		["Gear", func(): _open_gear()],
+		["The text screen", func(): app.show_state()],
+	]
+	for i in rows.size():
+		menu.add_item(str(rows[i][0]), i)
+	menu.id_pressed.connect(func(i: int):
+		var act: Callable = rows[i][1]
+		if act.is_valid():
+			act.call_deferred())
+	menu.popup_hide.connect(func(): menu.queue_free.call_deferred())
+	add_child(menu)
+	menu.popup_centered()
+
+
+## One of the family's panels over the map, as a modal: the world waits while it is open.
+func _open_popup(panel_script: Script) -> void:
+	var panel: Control = panel_script.new()
+	panel.dynasty = app.dynasty
+	panel.on_change = func(): _refresh_status()
+	panel.set_meta("modal", true)
+	add_child(panel)
+
+
+## The shop panel's Gear tab on its own, over the map.
+func _open_gear() -> void:
+	var panel: Control = ShopPanel.new()
+	panel.gear_only = true
+	panel.dynasty = app.dynasty
+	panel.on_change = func(): _refresh_status()
+	panel.set_meta("modal", true)
+	add_child(panel)
 
 
 ## The Use action: in by the door the heir stands at, or out by the entrance of the interior they are in.

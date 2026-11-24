@@ -166,7 +166,7 @@ func set_open_world_first(on: bool) -> void:
 	UiSettings.set_open_world_first(on)
 
 
-## The open world (roadmap items 39 and 51): the sandbox screen over the life. Back returns to the state's screen.
+## The open world (roadmap items 39 and 51): the sandbox screen over the life. Its Menu (Escape) opens the family's screens as popups over the map; "The text screen" returns to the state's screen.
 func show_sandbox() -> void:
 	var s := SandboxScreen.new()
 	s.app = self
