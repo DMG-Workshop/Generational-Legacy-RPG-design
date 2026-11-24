@@ -31,14 +31,16 @@ static func capacity(h: GameHeir) -> float:
 	var cap := (float(setting("base_capacity")) + float(setting("per_strength")) * h.stat("str")) * GameSubclass.perk(h, "carry_mult")
 	if not h.trials_done.is_empty():   # a Body trial's gain
 		cap *= 1.0 + GameTrials.bonus(h, "carry_weight")
-	return cap
+	GameBags.normalize(h)
+	return cap + GameBags.carry_bonus(h)   # what the bags add (nothing without one)
 
 
 ## What the heir carries now: the pack, what is worn, and the healing potions.
 static func carried(h: GameHeir) -> float:
 	var w := float(h.potions) * float(setting("potion_weight"))
+	GameBags.normalize(h)
 	for id in h.inventory:
-		w += GameItems.weight_of(str(id))
+		w += GameBags.weight(h, str(id))   # a bag counts with what is in it (an ordinary item is just its weight)
 	for id in h.equipment.values():
 		if str(id) != "":
 			w += GameItems.weight_of(str(id))
@@ -79,6 +81,9 @@ static func drop(d: GameDynasty, id: String) -> String:
 	var h := d.heir
 	if id not in h.inventory:
 		return text("cannot_drop", {"name": GameItems.item_name(id)})
+	var held := GameBags.why_not_let_go(h, id)
+	if held != "":
+		return held   # a bag is not left behind with things in it
 	h.inventory.erase(id)
 	if not GameItems.owns(h, id):
 		h.tainted_gear.erase(id)

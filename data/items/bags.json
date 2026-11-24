@@ -1,0 +1,15 @@
+{
+  "note": "Bags (core/game/game_bags.gd, checked by tools/check_data.gd). A bag is an item in items.json with a `bag` block: `slots` (how many things it holds), `carry` (what it adds to the most the heir can carry), `lighten` (the share of the weight of what is inside it that does not count; only a magic bag lightens) and `magic` (a magic bag cannot be put inside another bag, but any other bag can go inside it). Bags nest without limit: only each bag's own slots stop it. Each bag the heir owns is its own thing, named `<id>#<n>` (a Belt Pouch is `pouch#1`), so two satchels hold different things. What a bag holds is in `GameHeir.bags`.",
+  "text": {
+    "put": "{h} puts the {item} in the {bag}.",
+    "took": "{h} takes the {item} out of the {bag}.",
+    "not_carried": "{h} is not carrying the {item}.",
+    "no_such_bag": "{h} has no {bag}.",
+    "not_a_bag": "The {bag} is not a bag.",
+    "into_itself": "The {bag} cannot go inside itself, or inside what it holds.",
+    "magic_in_bag": "The {item} is magic, and will not go inside another bag.",
+    "full": "The {bag} is full ({slots} things).",
+    "not_in_bag": "The {item} is not in the {bag}.",
+    "bag_not_empty": "The {bag} still holds something: empty it first."
+  }
+}
