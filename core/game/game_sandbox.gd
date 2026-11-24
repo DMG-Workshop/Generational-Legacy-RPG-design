@@ -366,6 +366,51 @@ func use() -> Dictionary:
 	return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 
 
+## What stands at a point of the open world, for the screen to name when it is clicked: {kind, name}, or {} for bare ground. The
+## nearest of the heir, a creature, a companion, someone out of doors, a landmark of the wilds and a building of a town, within
+## `name_reach` tiles (sandbox.json). Pure: nothing changes and no die is drawn.
+func name_at(fx: float, fz: float) -> Dictionary:
+	if space != "world":
+		return {}
+	var reach := float(setting("name_reach"))
+	var here := Vector2(fx, fz)
+	var found := {"best": {}, "dist": reach + 1.0}   # (a lambda changes what it is handed, not the variables around it)
+	var consider := func(kind: String, nm: String, x: float, z: float, slack: float = 0.0):
+		var dist := maxf(0.0, Vector2(x, z).distance_to(here) - slack)
+		if dist <= reach and dist < float(found["dist"]) and nm != "":
+			found["dist"] = dist
+			found["best"] = {"kind": kind, "name": nm}
+	consider.call("heir", d.heir.name, float(heir.x) + 0.5, float(heir.y) + 0.5)
+	for a in creatures:
+		var def := {}
+		for c in GameData.creatures:
+			if str(c["id"]) == str(a["id"]):
+				def = c
+		consider.call("creature", str(def.get("name", a["id"])), float(a["x"]), float(a["z"]))
+	for a in companions:
+		var nm := ""
+		for m in d.party.members:
+			if str(m["id"]) == str(a["id"]):
+				nm = str(m.get("name", a["id"]))
+		consider.call("companion", nm, float(a["x"]), float(a["z"]))
+	if storey() == 0:
+		for w in GameVillagers.walkers_near(d, fx, fz, reach + 1.0, GameDay.hour(d)):
+			consider.call("person", str(w["job"]), float(w["x"]), float(w["z"]))
+		if found["best"].is_empty():   # the ground itself, named only when no one stands on it
+			for lm in GameWildsSites.within(d, fx, fz, reach + 2.0):
+				consider.call("landmark", GameWildsSites.name_of(lm), float(lm["x"]) + 0.5, float(lm["z"]) + 0.5, 0.5)
+		if found["best"].is_empty():
+			var b := GameTown.at(int(floor(fx)), int(floor(fz)))
+			if not b.is_empty():
+				consider.call("building", _building_name(b), fx, fz)
+	return found["best"]
+
+
+func _building_name(b: Dictionary) -> String:
+	var kind := str(b["kind"]).replace("_", " ").capitalize()
+	return kind
+
+
 ## The people who have spoken first today (their id -> the day) and when anyone last did (the world clock's seconds): runtime only,
 ## so a new visit may be greeted again. The decision itself is GameTalk's, a pure function of the seed, the person, the day and the tile.
 var talk_seen := {}

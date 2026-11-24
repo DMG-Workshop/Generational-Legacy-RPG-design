@@ -29,7 +29,7 @@ The keyboard keeps its own bindings (`data/ui/input.json`); the mouse is added b
 ## Slices
 
 1. **The pane kit.** A `Pane` control in `ui/play/` (a draggable window with a face, border, title, close, and a memory of where it was left), its look in `data/ui/pane.json` (colours, border pieces, sizes; checked by `tools/check_data.gd`), and a pane layer on the open world screen that holds them. The existing map menu, shop, house, chronicle and skill panels open as panes over the world instead of full-screen overlays. Windows only: a phone keeps the full-screen panels (`docs/MOBILE.md`) until a touch version is designed.
-2. **The mouse scheme.** Hold right to walk, single click for a name, double click to use, right click on a pane to close it, and a popup of actions on a thing. The Use button stays for touch. Remappable like the other actions (`WorldInput`).
+2. **The mouse scheme** (built, except a popup of actions on a thing and remapping the mouse: hold right to walk, a click names, a double click uses, a right click closes a pane; `tests/test_game_mouse.gd`). Hold right to walk, single click for a name, double click to use, right click on a pane to close it, and a popup of actions on a thing. The Use button stays for touch. Remappable like the other actions (`WorldInput`).
 3. **The status pane and the minimap.** Status bars from the heir's health, mana and carry weight; the minimap from `GameWorldMap`'s sampling, centred on the heir; the journal pane from `GameSandbox.log` and the status line.
 4. **The figure pane and the pack.** The figure from `SpriteArt.figure` and the worn items; the pack as icons. Drag and drop calls the same core functions the gear panel calls (`wear`, `drop`, buying and selling); the panes never compute a result.
 
