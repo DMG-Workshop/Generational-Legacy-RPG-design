@@ -149,10 +149,9 @@ static func stream(name: String) -> AudioStreamWAV:
 	w.mix_rate = rate
 	w.stereo = false
 	w.data = pcm(samples(def, rate))
-	if is_track(name):
-		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		w.loop_begin = 0
-		w.loop_end = w.data.size() / 2
+	# A track is not looped by the engine: its loop wrap crashed the Android audio thread (a native SIGSEGV
+	# about one track length after launch). The music player starts it again when it ends (_music_done); a
+	# track ends in silence, so the join is as clean as a loop.
 	_streams[name] = w
 	built += 1
 	return w
@@ -265,6 +264,7 @@ func _ready() -> void:
 		_voices.append(p)
 	_music = AudioStreamPlayer.new()
 	add_child(_music)
+	_music.finished.connect(_music_done)
 
 
 ## Leaving the tree (the game closing, a test ending): everything stops, so the audio server lets the streams go.
@@ -315,6 +315,12 @@ func music(track: String) -> void:
 		music_log = music_log.slice(LOG_KEEP / 2)
 	_music.stream = stream(track)
 	if has_output():
+		_music.play()
+
+
+## The track ran out: play it again (a track loops). Stopping or changing the music never gets here.
+func _music_done() -> void:
+	if playing != "" and has_output():
 		_music.play()
 
 
