@@ -9,6 +9,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
 const RadialMenu := preload("res://ui/play/radial_menu.gd")
+const ActionSlot := preload("res://ui/play/action_slot.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchControls := preload("res://ui/play/touch_controls.gd")
 const CraftPanel := preload("res://ui/play/craft_panel.gd")
@@ -43,6 +44,8 @@ var _scales := {}           # companions: "id:level" -> their size against a hum
 var house_size := 3         # the index of the size of house the Raise house button builds (GameSandbox.house_sizes)
 var house_preview := false  # whether the house's footprint is drawn (after the size button was pressed)
 var house_button: Button
+var slots := {}              # the action bar's slots by id (a desktop window with a mouse; empty on a touch screen)
+var slot_ids: Array = []     # the numbered ones, in order
 var cast_button: Button     # Cast, shown only in a dungeon: the heir's spells that work outside a fight (GameCasting.self_castable)
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
@@ -120,18 +123,10 @@ func _ready() -> void:
 	bar.size = Vector2(maxf(0.0, size.x - 16.0), BAR - 8.0)
 	bar.add_theme_constant_override("separation", 6)
 	add_child(bar)
-	bar.add_child(Kit.button("Menu", func(): _open_menu(), Vector2(88, BAR - 12)))
-	bar.add_child(Kit.button("Dig", func(): _dig(), Vector2(72, BAR - 12)))
-	bar.add_child(Kit.button("Forage", func(): _forage(), Vector2(88, BAR - 12)))
-	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
-	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
-	bar.add_child(Kit.button("Map", func(): _open_world_map(), Vector2(64, BAR - 12)))
-	bar.add_child(Kit.button("Use", func(): _use(), Vector2(64, BAR - 12)))
-	cast_button = Kit.button("Cast", func(): _open_cast(), Vector2(64, BAR - 12))
-	cast_button.visible = false
-	bar.add_child(cast_button)
-	bar.add_child(Kit.button("Up", func(): _climb(-1), Vector2(64, BAR - 12)))
-	bar.add_child(Kit.button("Down", func(): _climb(1), Vector2(72, BAR - 12)))
+	if UiSettings.touch():
+		_old_buttons(bar)   # a touch screen keeps its text buttons
+	else:
+		_make_slots(bar)
 	status = Kit.label("", 14, Kit.dim())
 	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status.clip_text = true
@@ -313,6 +308,91 @@ func _gui_input(event: InputEvent) -> void:
 			_tap(t.position - Vector2(0, BAR), tarea)
 
 
+## The text buttons of the bar, as a touch screen has them.
+func _old_buttons(bar: HBoxContainer) -> void:
+	bar.add_child(Kit.button("Menu", func(): _open_menu(), Vector2(88, BAR - 12)))
+	bar.add_child(Kit.button("Dig", func(): _dig(), Vector2(72, BAR - 12)))
+	bar.add_child(Kit.button("Forage", func(): _forage(), Vector2(88, BAR - 12)))
+	bar.add_child(Kit.button("Build", func(): _set_mode("walk" if mode == "build" else "build"), Vector2(88, BAR - 12)))
+	bar.add_child(Kit.button("Orders", func(): _toggle_orders(), Vector2(96, BAR - 12)))
+	bar.add_child(Kit.button("Map", func(): _open_world_map(), Vector2(64, BAR - 12)))
+	bar.add_child(Kit.button("Use", func(): _use(), Vector2(64, BAR - 12)))
+	cast_button = Kit.button("Cast", func(): _open_cast(), Vector2(64, BAR - 12))
+	cast_button.visible = false
+	bar.add_child(cast_button)
+	bar.add_child(Kit.button("Up", func(): _climb(-1), Vector2(64, BAR - 12)))
+	bar.add_child(Kit.button("Down", func(): _climb(1), Vector2(72, BAR - 12)))
+
+
+## The action bar on a desktop window with a mouse: the Menu and the map, then eight numbered slots (data/ui/actionbar.json).
+func _make_slots(bar: HBoxContainer) -> void:
+	slots.clear()
+	slot_ids.clear()
+	for def in ActionSlot.data()["extras"]:
+		var xid := str(def["id"])
+		var extra: Control = ActionSlot.make(def, "", func(): _slot_do(xid))
+		slots[xid] = extra
+		bar.add_child(extra)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(12, 0)
+	bar.add_child(gap)
+	var n := 0
+	for def in ActionSlot.data()["slots"]:
+		n += 1
+		var sid := str(def["id"])
+		var slot: Control = ActionSlot.make(def, str(n), func(): _slot_do(sid))
+		slots[sid] = slot
+		slot_ids.append(sid)
+		bar.add_child(slot)
+
+
+## What a slot does, from its click or its number key.
+func _slot_do(id: String) -> void:
+	if mode == "build" and id not in ["build", "menu", "map"]:
+		return   # the build bar has the controls while building
+	match id:
+		"menu":
+			_open_menu()
+		"map":
+			_toggle_panel("map")
+		"use":
+			_use()
+		"dig":
+			_dig()
+		"forage":
+			_forage()
+		"build":
+			_set_mode("walk" if mode == "build" else "build")
+		"cast":
+			if _can_cast():
+				_open_cast()
+			else:
+				last_line = ActionSlot.text("cast_none")
+		"orders":
+			_toggle_orders()
+		"up":
+			_climb(-1)
+		"down":
+			_climb(1)
+	_refresh_slots()
+
+
+func _can_cast() -> bool:
+	return GameDungeons.is_dungeon(sb.space) and not GameCasting.self_castable(app.dynasty).is_empty()
+
+
+## Dims the slots that do not apply and lights the ones whose mode is on.
+func _refresh_slots() -> void:
+	if slots.is_empty():
+		return
+	if slots.has("cast"):
+		slots["cast"].set_state(not _can_cast(), false)
+	if slots.has("build"):
+		slots["build"].set_state(false, mode == "build")
+	if slots.has("orders") and orders_panel != null:
+		slots["orders"].set_state(false, orders_panel.visible)
+
+
 ## Whether the walk button has been down long enough to walk: a quick click is for the menu of a thing, so it does not take a step.
 func _walk_held() -> bool:
 	return _walk_press_ms > 0 and Input.is_mouse_button_pressed(WorldInput.mouse_button("walk")) \
@@ -490,6 +570,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not event.is_pressed():
 		return
+	if not _modal_open():
+		for i in slot_ids.size():
+			if event.is_action_pressed("world_slot_%d" % (i + 1)):
+				get_viewport().set_input_as_handled()
+				_slot_do(str(slot_ids[i]))
+				return
 	for id in _panel_ids():
 		if event.is_action_pressed("world_panel_" + id):
 			get_viewport().set_input_as_handled()
@@ -1019,6 +1105,7 @@ func _refresh_status() -> void:
 		line = room if line == "" else line
 	if level_button != null:
 		level_button.text = "Level: %s" % sb.level_name()
+	_refresh_slots()
 	if cast_button != null:
 		cast_button.visible = GameDungeons.is_dungeon(sb.space) and not GameCasting.self_castable(d).is_empty()
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
