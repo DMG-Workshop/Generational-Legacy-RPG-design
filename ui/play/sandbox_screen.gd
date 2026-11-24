@@ -18,6 +18,12 @@ const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const TalkPanel := preload("res://ui/play/talk_panel.gd")
+const PaneKit := preload("res://ui/play/pane_kit.gd")
+const StatusPane := preload("res://ui/play/status_pane.gd")
+const MinimapPane := preload("res://ui/play/minimap_pane.gd")
+const JournalPane := preload("res://ui/play/journal_pane.gd")
+const FigurePane := preload("res://ui/play/figure_pane.gd")
+const PackPane := preload("res://ui/play/pack_pane.gd")
 const HousePanel := preload("res://ui/play/house_panel.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
@@ -55,6 +61,7 @@ var last_line := ""
 var _walk_wait := 0.0
 var _greet_wait := 0.0
 var _name_tag := {}       # what a click just named: {text, point (tiles), until (msec)}; drawn over it for a moment
+var _hud_wait := 0.0       # seconds to the next refresh of the panes that show the heir and the ground
 var _use_when_there := false   # a double click on something out of reach: use it when the walk gets there
 var _double := false      # the press now down was the second of a double click
 var _bubbles := {}        # a person's id -> {text, until (msec)}: what they just said, over their head
@@ -156,6 +163,7 @@ func _ready() -> void:
 		_make_action_buttons()
 	_refresh_status()
 	_sync_tiles()
+	_open_hud.call_deferred()   # the panes that stay up (once the screen has its size)
 
 
 func _process(delta: float) -> void:
@@ -168,6 +176,10 @@ func _process(delta: float) -> void:
 	if d.battle != null:
 		_open_fight()   # a creature has caught the heir: the fight is played over the map, which stays where it is
 		return
+	_hud_wait -= delta
+	if _hud_wait <= 0.0:
+		_hud_wait = 0.25
+		_refresh_panes()
 	if _modal_open():
 		return   # the workshop is open: the world waits
 	var inp := WorldInput.read()
@@ -306,7 +318,7 @@ func _double_click(p: Vector2, area: Vector2) -> void:
 		_tap(p, area)   # bare ground: a double click only walks there, like a click
 		return
 	if named["kind"] == "heir":
-		_use()
+		_open_figure()   # a double click on yourself opens your character: the figure and what is worn
 		return
 	if absi(tile.x - sb.heir.x) <= 1 and absi(tile.y - sb.heir.y) <= 1:
 		_use()
@@ -362,8 +374,8 @@ func _tap(p: Vector2, area: Vector2) -> void:
 
 ## Shows a panel over the map as a pane (on a window wide enough for one, see PaneKit): marked so `Kit.overlay` builds it as a window,
 ## and a panel of the same kind that is already open is raised instead of opened twice.
-func _add_pane(panel: Control) -> void:
-	var key: String = panel.get_script().resource_path.get_file().get_basename()
+func _add_pane(panel: Control, suffix: String = "") -> void:
+	var key: String = panel.get_script().resource_path.get_file().get_basename() + suffix
 	for c in get_children():
 		if c.has_meta("pane") and str(c.get_meta("pane")) == key and not c.is_queued_for_deletion():
 			c.move_to_front()
@@ -499,6 +511,11 @@ func _open_menu() -> void:
 		["The family house", func(): _open_popup(HousePanel)],
 		["Chronicle", func(): _open_popup(Chronicle)],
 		["Skill trees", func(): _open_popup(SkillTreePanel)],
+		["Character", func(): _open_figure()],
+		["Pack", func(): _open_pack("")],
+		["Status", func(): _toggle_hud(StatusPane)],
+		["Nearby map", func(): _toggle_hud(MinimapPane)],
+		["Journal", func(): _toggle_hud(JournalPane)],
 		["Gear", func(): _open_gear()],
 		["The text screen", func(): app.show_state()],
 	]
@@ -511,6 +528,63 @@ func _open_menu() -> void:
 	menu.popup_hide.connect(func(): menu.queue_free.call_deferred())
 	add_child(menu)
 	menu.popup_centered()
+
+
+## The panes that stay up while you play: status, the ground nearby and the journal (each one the player has not closed), in a window
+## wide enough for panes and with a mouse.
+func _open_hud() -> void:
+	if UiSettings.compact(self) or UiSettings.touch():
+		return
+	for script in [StatusPane, MinimapPane, JournalPane]:
+		var key: String = script.resource_path.get_file().get_basename()
+		if PaneKit.wanted(key):
+			_open_hud_pane(script)
+
+
+func _open_hud_pane(script: Script) -> void:
+	var panel: Control = script.new()
+	panel.dynasty = app.dynasty
+	if "sb" in panel:
+		panel.sb = sb
+	panel.set_meta("pane_hud", true)
+	_add_pane(panel)
+
+
+## The Menu's switch for a pane that stays up: open it, or close it (and have it stay closed).
+func _toggle_hud(script: Script) -> void:
+	var key: String = script.resource_path.get_file().get_basename()
+	for c in get_children():
+		if c.has_meta("pane") and str(c.get_meta("pane")) == key and not c.is_queued_for_deletion():
+			PaneKit.close(c)
+			return
+	PaneKit.want(key)
+	_open_hud_pane(script)
+
+
+## The character pane: a double click on the heir, or the Menu. Not a modal: the world goes on while it is open.
+func _open_figure() -> void:
+	var panel: Control = FigurePane.new()
+	panel.dynasty = app.dynasty
+	panel.on_change = func(): _refresh_status()
+	panel.on_pack = func(): _open_pack("")
+	_add_pane(panel)
+
+
+## The pack (bag "") or what a bag holds, as a pane (one for each bag).
+func _open_pack(bag: String) -> void:
+	var panel: Control = PackPane.new()
+	panel.dynasty = app.dynasty
+	panel.bag = bag
+	panel.on_change = func(): _refresh_status()
+	panel.on_open_bag = func(id: String): _open_pack(id)
+	_add_pane(panel, "" if bag == "" else ":" + bag)
+
+
+## What the panes that show the heir (and the world) draw is brought up to date a few times a second.
+func _refresh_panes() -> void:
+	for c in get_children():
+		if c.has_meta("pane") and not c.is_queued_for_deletion() and c.has_method("refresh"):
+			c.refresh()
 
 
 ## One of the family's panels over the map, as a modal: the world waits while it is open.

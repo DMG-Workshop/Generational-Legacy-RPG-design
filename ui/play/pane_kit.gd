@@ -42,12 +42,46 @@ static func size_for(key: String, room: Vector2) -> Vector2:
 	return Vector2(minf(want.x, room.x - 2.0 * m), minf(want.y, room.y - 2.0 * m))
 
 
+## The corner a pane is set in when it has never been moved, or null (the middle).
+static func place_for(key: String, size: Vector2, room: Vector2) -> Variant:
+	var pl: Variant = data().get("places", {}).get(key)
+	if typeof(pl) != TYPE_ARRAY or (pl as Array).size() != 4:
+		return null
+	var x := float(pl[2]) if str(pl[0]) == "left" else room.x - size.x - float(pl[2])
+	var y := float(pl[3]) if str(pl[1]) == "top" else room.y - size.y - float(pl[3])
+	return Vector2(x, y)
+
+
+## Whether a pane that stays up (the status, minimap and journal) is meant to be open: until the player closes it.
+static func wanted(key: String) -> bool:
+	return bool(UiSettings.stored("pane_open_" + _stored(key), true))
+
+
+## A pane's key as a settings.cfg key (no colons or number signs).
+static func _stored(key: String) -> String:
+	return key.replace(":", "_").replace("#", "_")
+
+
+## Remembers that a pane that stays up is wanted again (the Menu opens it).
+static func want(key: String) -> void:
+	UiSettings.store("pane_open_" + _stored(key), true)
+
+
+## Closes a pane; one that stays up is remembered as closed.
+static func close(host: Control) -> void:
+	if host.has_meta("pane_hud"):
+		UiSettings.store("pane_open_" + _stored(str(host.get_meta("pane"))), false)
+	host.queue_free()
+
+
 ## Where a pane starts: where it was left, or centred and shifted a little for each pane already open.
 static func start_position(host: Control, key: String, size: Vector2, room: Vector2, open: int) -> Vector2:
-	var saved: Variant = UiSettings.stored("pane_" + key, [])
+	var saved: Variant = UiSettings.stored("pane_" + _stored(key), [])
 	var pos: Vector2
 	if typeof(saved) == TYPE_ARRAY and (saved as Array).size() == 2 and (saved[0] is float or saved[0] is int) and (saved[1] is float or saved[1] is int):
 		pos = Vector2(float(saved[0]), float(saved[1]))
+	elif place_for(key.get_slice(":", 0), size, room) != null:
+		pos = place_for(key.get_slice(":", 0), size, room)
 	else:
 		pos = (room - size) * 0.5 + Vector2(1, 1) * float(setting("cascade")) * float(open)
 	return clamp_to(pos, size, room)
@@ -71,9 +105,10 @@ static func _box(color: Color, border: Color = Color(0, 0, 0, 0), width: int = 0
 
 ## Builds the pane on `host` and returns its content box (as `Kit.overlay` does).
 static func build(host: Control, title: String) -> VBoxContainer:
-	var key := str(host.get_meta("pane"))
+	var key := str(host.get_meta("pane"))   # the panel's name, and for a bag's pane ":" and the bag
+	var base := key.get_slice(":", 0)
 	var room := UiSettings.room(host)
-	var size := size_for(key, room)
+	var size := size_for(base, room)
 	var siblings := 0
 	var parent := host.get_parent()
 	if parent != null:
@@ -88,7 +123,7 @@ static func build(host: Control, title: String) -> VBoxContainer:
 	host.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventMouseButton and ev.pressed:
 			if ev.button_index == MOUSE_BUTTON_RIGHT:
-				host.queue_free()   # a right click on a pane's face closes it
+				close(host)   # a right click on a pane's face closes it
 			else:
 				host.move_to_front())   # a click anywhere on it raises it
 	var face := PanelContainer.new()
@@ -120,23 +155,23 @@ static func build(host: Control, title: String) -> VBoxContainer:
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(t)
-	var close := Button.new()
-	close.text = "X"
-	close.focus_mode = Control.FOCUS_NONE
-	close.custom_minimum_size = Vector2(36, 0)
-	close.add_theme_color_override("font_color", color("close_text"))
-	close.pressed.connect(func(): host.queue_free())
-	row.add_child(close)
+	var x_button := Button.new()
+	x_button.text = "X"
+	x_button.focus_mode = Control.FOCUS_NONE
+	x_button.custom_minimum_size = Vector2(36, 0)
+	x_button.add_theme_color_override("font_color", color("close_text"))
+	x_button.pressed.connect(func(): close(host))
+	row.add_child(x_button)
 	var drag := {"on": false}
 	bar.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT:
 			drag["on"] = ev.pressed
 			host.move_to_front()
 			if not ev.pressed:
-				UiSettings.store("pane_" + key, [host.position.x, host.position.y])
+				UiSettings.store("pane_" + _stored(key), [host.position.x, host.position.y])
 		elif ev is InputEventMouseMotion and drag["on"]:
 			host.position = clamp_to(host.position + (ev as InputEventMouseMotion).relative, host.size, UiSettings.room(host)))
-	host.set_meta("back_close", func(): host.queue_free())
+	host.set_meta("back_close", func(): close(host))
 	v.set_meta("overlay", host)
 	return v
 
@@ -152,15 +187,21 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var ds: Variant = dat["settings"]["default_size"]
-	if typeof(ds) != TYPE_ARRAY or (ds as Array).size() != 2 or float(ds[0]) < 320 or float(ds[1]) < 240:
-		bad.append("pane.json: default_size must be [width, height], at least 320 by 240")
+	if typeof(ds) != TYPE_ARRAY or (ds as Array).size() != 2 or float(ds[0]) < 180 or float(ds[1]) < 120:
+		bad.append("pane.json: default_size must be [width, height], at least 180 by 120")
 	for k in ["margin", "title_height", "cascade", "keep_visible", "padding"]:
 		if float(dat["settings"][k]) < 0.0:
 			bad.append("pane.json: settings.%s must not be negative" % k)
+	for k in dat.get("places", {}):
+		var pl: Variant = dat["places"][k]
+		if typeof(pl) != TYPE_ARRAY or (pl as Array).size() != 4 or str(pl[0]) not in ["left", "right"] or str(pl[1]) not in ["top", "bottom"]:
+			bad.append("pane.json: places.%s must be [left or right, top or bottom, x offset, y offset]" % k)
+		elif not dat["sizes"].has(k):
+			bad.append("pane.json: places.%s has no size" % k)
 	for name in dat["sizes"]:
 		var s: Variant = dat["sizes"][name]
-		if typeof(s) != TYPE_ARRAY or (s as Array).size() != 2 or float(s[0]) < 320 or float(s[1]) < 240:
-			bad.append("pane.json: size of %s must be [width, height], at least 320 by 240" % name)
+		if typeof(s) != TYPE_ARRAY or (s as Array).size() != 2 or float(s[0]) < 180 or float(s[1]) < 120:
+			bad.append("pane.json: size of %s must be [width, height], at least 180 by 120" % name)
 		elif not FileAccess.file_exists("res://ui/play/%s.gd" % name):
 			bad.append("pane.json: sizes names %s, which is no panel script" % name)
 	for k in ["face", "border", "title_bar", "title_text", "close_text"]:

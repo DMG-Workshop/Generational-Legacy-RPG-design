@@ -1,7 +1,10 @@
 {
-  "note": "Panes (docs/PLAYER_INTERFACE.md, slice 1; ui/play/pane_kit.gd, checked by tools/check_data.gd). On a desktop-sized window a panel opened over the open world is a pane: a window with a face, a border and a title bar that is dragged, raised when clicked and remembered where it was left (in settings.cfg, never the save). On a narrow window or a touch screen the same panel is the full-screen overlay it always was. `sizes` gives a panel its own size by the name of its script (without .gd); `default_size` is for the rest. A size is cut to the room the window has less `margin` on each side.",
+  "note": "Panes (docs/PLAYER_INTERFACE.md, slice 1; ui/play/pane_kit.gd, checked by tools/check_data.gd). On a desktop-sized window a panel opened over the open world is a pane: a window with a face, a border and a title bar that is dragged, raised when clicked and remembered where it was left (in settings.cfg, never the save). On a narrow window or a touch screen the same panel is the full-screen overlay it always was. `sizes` gives a panel its own size by the name of its script (without .gd); `default_size` is for the rest. A size is cut to the room the window has less `margin` on each side. `places` puts a pane that has never been moved in a corner (an edge to hug horizontally, one vertically, and the offsets from them) instead of the middle: the status, minimap and journal panes, which stay up while you play. A pane the player closes stays closed (`pane_open_<name>` in settings.cfg) until the Menu opens it again.",
   "settings": {
-    "default_size": [880, 600],
+    "default_size": [
+      880,
+      600
+    ],
     "margin": 12,
     "title_height": 38,
     "cascade": 28,
@@ -9,16 +12,66 @@
     "padding": 10
   },
   "sizes": {
-    "shop_panel": [1040, 640],
-    "craft_panel": [1000, 640],
-    "chronicle_panel": [1040, 640],
-    "skill_tree_panel": [1040, 640],
-    "house_panel": [820, 600],
-    "trials_panel": [900, 620],
-    "merchant_panel": [900, 620],
-    "tavern_panel": [900, 620],
-    "board_panel": [900, 620],
-    "talk_panel": [640, 420]
+    "shop_panel": [
+      1040,
+      640
+    ],
+    "craft_panel": [
+      1000,
+      640
+    ],
+    "chronicle_panel": [
+      1040,
+      640
+    ],
+    "skill_tree_panel": [
+      1040,
+      640
+    ],
+    "house_panel": [
+      820,
+      600
+    ],
+    "trials_panel": [
+      900,
+      620
+    ],
+    "merchant_panel": [
+      900,
+      620
+    ],
+    "tavern_panel": [
+      900,
+      620
+    ],
+    "board_panel": [
+      900,
+      620
+    ],
+    "talk_panel": [
+      640,
+      420
+    ],
+    "status_pane": [
+      270,
+      210
+    ],
+    "minimap_pane": [
+      230,
+      270
+    ],
+    "journal_pane": [
+      460,
+      200
+    ],
+    "figure_pane": [
+      400,
+      540
+    ],
+    "pack_pane": [
+      440,
+      430
+    ]
   },
   "colors": {
     "face": "#1a1828",
@@ -26,5 +79,25 @@
     "title_bar": "#2e2a42",
     "title_text": "#e0b341",
     "close_text": "#e8e4f0"
+  },
+  "places": {
+    "status_pane": [
+      "left",
+      "top",
+      12,
+      64
+    ],
+    "minimap_pane": [
+      "right",
+      "top",
+      12,
+      64
+    ],
+    "journal_pane": [
+      "left",
+      "bottom",
+      12,
+      12
+    ]
   }
 }

@@ -1,0 +1,21 @@
+{
+  "note": "Item icons (docs/PLAYER_INTERFACE.md, slice 4; ui/play/item_icon.gd, checked by tools/check_data.gd): each item is drawn as a small pixel picture, made in code from these rows and never from a file. `glyphs` are 12 rows of 12 characters ('.' is clear, 'a' the main colour, 'b' a lighter one, 'c' a darker one, 'o' the outline); an item takes the glyph its slot names, else its kind, else `default`; its colours come from the first of its material's tags that `tag_colors` lists (tier brightens it a little), else `default_color`.",
+  "slot_glyph": {"weapon": "sword", "armor": "armor", "trinket": "ring"},
+  "kind_glyph": {"bag": "bag", "potion": "flask", "remedy": "flask", "vial": "flask", "toxin": "flask", "drink": "flask", "scroll": "scroll", "book": "scroll", "map": "scroll", "food": "loaf", "gem": "gem", "light": "torch", "tool": "tool", "ore": "gem"},
+  "tag_colors": {"metal": [0.62, 0.66, 0.74], "wood": [0.55, 0.38, 0.2], "leather": [0.66, 0.46, 0.28], "cloth": [0.85, 0.8, 0.66], "gem": [0.35, 0.78, 0.82], "herb": [0.4, 0.7, 0.34], "bone": [0.86, 0.84, 0.74], "scale": [0.74, 0.3, 0.26], "magic": [0.68, 0.45, 0.9], "food": [0.82, 0.62, 0.34], "precious": [0.95, 0.8, 0.3], "glass": [0.6, 0.85, 0.9], "stone": [0.55, 0.55, 0.52]},
+  "default_color": [0.62, 0.6, 0.7],
+  "outline": [0.08, 0.07, 0.11],
+  "glyphs": {
+    "default": ["............", "............", "...oooooo...", "..oaaaaaao..", "..oabbbbao..", "..oabbbbao..", "..oabbbbao..", "..oaaaaaao..", "...oooooo...", "............", "............", "............"],
+    "sword": ["..........oo", ".........oba", "........obao", ".......obao.", "......obao..", "..o..obao...", "...oobao....", "....oao.....", "...ooao.....", "..obo.oo....", "..oo........", "............"],
+    "armor": ["..oo....oo..", ".oaaoooaaao.", "oabaaaaaabao", "oaabbaabbaao", ".oaabbbbaao.", "..oabbbbao..", "..oaabbaao..", "..oaaaaaao..", "..oaaccaao..", "...oaccao...", "....oooo....", "............"],
+    "ring": ["............", "....oooo....", "...oabbo....", "..oa..bao...", "..oa...ao...", "..oa...ao...", "..ob...bo...", "...oabao....", "....ooo.....", "............", "............", "............"],
+    "bag": ["....oooo....", "...oaaaao...", "....oaao....", "...oaaaao...", "..oabbbbao..", ".oabbbbbbao.", ".oabbbbbbao.", ".oabbbbbbao.", ".oaabbbbaao.", ".ocaaaaaaco.", "..oooooooo..", "............"],
+    "flask": ["....oooo....", "....oaao....", "....oaao....", "...oabbao...", "..oabbbbao..", ".oabbbbbbao.", ".oabbbbbbao.", ".oaabbbbaao.", "..oaaaaaao..", "...oooooo...", "............", "............"],
+    "scroll": ["..oooooooo..", ".oabbbbbbao.", ".oabaaaabao.", ".oabbbbbbao.", ".oabaaaabao.", ".oabbbbbbao.", ".oabaaabbao.", ".oabbbbbbao.", "..oooooooo..", "............", "............", "............"],
+    "loaf": ["............", "............", "...oooooo...", "..oabbbbao..", ".oabbabbbao.", ".oabbbbabao.", ".oaabbbbaao.", "..ocaaaaco..", "...oooooo...", "............", "............", "............"],
+    "gem": ["............", "...oooooo...", "..oabbbbao..", ".oabbaabbao.", ".oabaaaabao.", "..oabaabao..", "...oabbao...", "....oaao....", ".....oo.....", "............", "............", "............"],
+    "torch": ["......oo....", ".....obbo...", "....obbbo...", ".....obo....", ".....oao....", ".....oao....", ".....oao....", ".....oao....", ".....oao....", ".....ooo....", "............", "............"],
+    "tool": [".....ooo....", "....oabbo...", "....oabbo...", ".....oao....", ".....oao....", ".....oao....", ".....oao....", ".....oao....", ".....oao....", ".....ooo....", "............", "............"]
+  }
+}

@@ -13,6 +13,8 @@ const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const Kit := preload("res://ui/play/ui_kit.gd")
 const ShopPanel := preload("res://ui/play/shop_panel.gd")
+const PackPane := preload("res://ui/play/pack_pane.gd")
+const FigurePane := preload("res://ui/play/figure_pane.gd")
 const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const TavernPanel := preload("res://ui/play/tavern_panel.gd")
 const BoardPanel := preload("res://ui/play/board_panel.gd")
@@ -753,6 +755,16 @@ func test_every_tooltip_reachable() -> void:
 		mp.queue_free()
 		await _frames(2)
 		d.heir.gold = was_gold
+	# the pack and the figure pane, whose squares carry tooltips (a hold shows an item's name and what it does)
+	d.heir.inventory = ["iron_sword", "leather_armor", "satchel"]
+	for panel in [PackPane, FigurePane]:
+		var ip: Control = panel.new()
+		ip.dynasty = d
+		app.current.add_child(ip)
+		await _frames(3)
+		await _probe(ip, "item_slot.gd")
+		ip.queue_free()
+		await _frames(2)
 	var m: Control = MapPanel.new()
 	m.dynasty = d
 	m.on_travel = func(_to): pass
