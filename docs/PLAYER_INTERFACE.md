@@ -1,16 +1,16 @@
-# The player interface, in the spirit of Ultima Online
+# The player interface
 
-The player interface should have the feel of Ultima Online's: a world you act in with the mouse, with small windows over it that you arrange yourself. **It is inspired by that game, not a copy of it.** The names, the art, the layout, the colours and the exact controls are this game's own. Take the ideas below (what the interface is *for*), not Ultima Online's own pictures, window designs or wording. This file is the plan. Nothing in it is built yet, and each slice below is its own pull request.
+The player interface is mouse-first: a world you act in directly, with small windows over it that you arrange yourself. It is this game's own. The older mouse-driven RPGs it learns from are an influence on the ideas below (what the interface is *for*), and nothing more: the names, the art, the layout, the colours and the exact controls are all ours. This file is the plan. Nothing in it is built yet, and each slice below is its own pull request.
 
-## The ideas we take
+## The ideas
 
-The shape of how that client worked, nothing more. Every look and number here is ours to choose, and where this file says "as in UO" it names the idea, not a design to match.
+Every look and number here is ours to choose; the table names the idea, not a design to match.
 
 **Windows over the world.** Everything the player opens (their figure and gear, their pack, their status, a shop, a skill list) is a small window over the world, not a full screen. A window has a face, a border and a title in this game's own look (the family's heraldry and the dynasty theme, not parchment scrolls copied from another game). Windows are dragged by their face, stay where they were left, and several are open at once. The world keeps running behind them. We call them **panes** in the code and the data, not gumps.
 
 **The mouse does everything.**
 
-| Action | UO | Here |
+| Action | The idea | Here |
 |---|---|---|
 | Walk | hold the right mouse button; the character runs toward the cursor | the same idea, in the open world |
 | Look at something | single left click: its name floats over it | same |
@@ -37,6 +37,6 @@ The rules stay out of the interface, as always: the panes read dynasty state and
 
 ## Open questions
 
-- **A third bar.** UO had stamina. The heir has health and mana only. Either the third bar is left out, or something the game already has (the age of the heir, the carry weight against the limit) takes its place. Left out until decided.
+- **A third bar.** Older games of this kind gave a third bar for stamina. The heir has health and mana only. Either the third bar is left out, or something the game already has (the age of the heir, the carry weight against the limit) takes its place. Left out until decided.
 - **Item icons.** The pack needs a small picture for each item. Items have none today (gear has looks for the figure only), so slice 4 starts with a set of icons of our own, in the existing art style (`docs/ART_STYLE.md`).
 - **Art.** The face and border art is drawn from data like the rest of the art, not from files, and is designed for this game, not traced from another.
