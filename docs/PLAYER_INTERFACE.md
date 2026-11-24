@@ -22,7 +22,7 @@ Every look and number here is ours to choose; the table names the idea, not a de
 
 The keyboard keeps its own bindings (`data/ui/input.json`); the mouse is added beside them, not instead of them.
 
-**The heir's state is always on screen.** A small status pane with name, health and mana, and a minimap of the nearby ground, each placed where this game's layout wants them.
+**The heir's state is always on screen.** A small status pane with name, health, mana and a third bar for **carry weight against the limit** (`GameCarry.carried` over `GameCarry.capacity`; it turns to the warning colour once the heir is burdened), and a minimap of the nearby ground, each placed where this game's layout wants them.
 
 **The figure pane** is the heir drawn in their gear, with a slot for each worn thing (head, body, hands, weapon, shield, feet) around them, a button for each of the other panes, and the title and name written under it. **The pack** is a pane with the carried items as icons on a grid, which can be dragged out, and a weight line.
 
@@ -30,13 +30,16 @@ The keyboard keeps its own bindings (`data/ui/input.json`); the mouse is added b
 
 1. **The pane kit.** A `Pane` control in `ui/play/` (a draggable window with a face, border, title, close, and a memory of where it was left), its look in `data/ui/pane.json` (colours, border pieces, sizes; checked by `tools/check_data.gd`), and a pane layer on the open world screen that holds them. The existing map menu, shop, house, chronicle and skill panels open as panes over the world instead of full-screen overlays. Windows only: a phone keeps the full-screen panels (`docs/MOBILE.md`) until a touch version is designed.
 2. **The mouse scheme.** Hold right to walk, single click for a name, double click to use, right click on a pane to close it, and a popup of actions on a thing. The Use button stays for touch. Remappable like the other actions (`WorldInput`).
-3. **The status pane and the minimap.** Status bars from the heir's health and mana; the minimap from `GameWorldMap`'s sampling, centred on the heir; the journal pane from `GameSandbox.log` and the status line.
+3. **The status pane and the minimap.** Status bars from the heir's health, mana and carry weight; the minimap from `GameWorldMap`'s sampling, centred on the heir; the journal pane from `GameSandbox.log` and the status line.
 4. **The figure pane and the pack.** The figure from `SpriteArt.figure` and the worn items; the pack as icons. Drag and drop calls the same core functions the gear panel calls (`wear`, `drop`, buying and selling); the panes never compute a result.
 
 The rules stay out of the interface, as always: the panes read dynasty state and call its methods. No slice changes any seeded result.
 
+## Decided
+
+- **The third bar is carry weight against the limit.** The heir has health and mana only, and no stamina, so the status pane's third bar shows what they carry against what they can carry.
+
 ## Open questions
 
-- **A third bar.** Older games of this kind gave a third bar for stamina. The heir has health and mana only. Either the third bar is left out, or something the game already has (the age of the heir, the carry weight against the limit) takes its place. Left out until decided.
 - **Item icons.** The pack needs a small picture for each item. Items have none today (gear has looks for the figure only), so slice 4 starts with a set of icons of our own, in the existing art style (`docs/ART_STYLE.md`).
 - **Art.** The face and border art is drawn from data like the rest of the art, not from files, and is designed for this game, not traced from another.
