@@ -2,6 +2,7 @@
 extends RefCounted
 
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const PaneKit := preload("res://ui/play/pane_kit.gd")
 
 const BG := Color("#14121c")
 const PANEL := Color("#221f30")
@@ -143,12 +144,16 @@ static func overlay_margin(host: Control) -> Vector2:
 
 ## The width an overlay's contents can use.
 static func overlay_room(host: Control) -> float:
+	if host.has_meta("pane_room"):   # a pane is as wide as it is, not as wide as the window
+		return float(host.get_meta("pane_room")) + 2.0 * overlay_margin(host).x + 20.0
 	return UiSettings.room(host).x - 2.0 * overlay_margin(host).x - 20.0
 
 
 ## A modal overlay on `host`: dimmed backdrop, bordered panel, title row with Close.
 ## Returns the content box; the overlay itself is `box.get_meta("overlay")`.
 static func overlay(host: Control, title: String) -> VBoxContainer:
+	if PaneKit.available(host):   # opened over the open world on a desktop-sized window: a window of its own
+		return PaneKit.build(host, title)
 	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)

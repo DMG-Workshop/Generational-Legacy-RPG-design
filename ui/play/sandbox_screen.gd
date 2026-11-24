@@ -288,13 +288,26 @@ func _tap(p: Vector2, area: Vector2) -> void:
 	queue_redraw()
 
 
+## Shows a panel over the map as a pane (on a window wide enough for one, see PaneKit): marked so `Kit.overlay` builds it as a window,
+## and a panel of the same kind that is already open is raised instead of opened twice.
+func _add_pane(panel: Control) -> void:
+	var key: String = panel.get_script().resource_path.get_file().get_basename()
+	for c in get_children():
+		if c.has_meta("pane") and str(c.get_meta("pane")) == key and not c.is_queued_for_deletion():
+			c.move_to_front()
+			panel.free()
+			return
+	panel.set_meta("pane", key)
+	add_child(panel)
+
+
 ## The workshop over the map, at the family's forge: while it is open the world waits and the keys do nothing here.
 func _open_workshop(forge: String) -> void:
 	var panel: Control = CraftPanel.new()
 	panel.dynasty = app.dynasty
 	panel.on_change = func(): _refresh_status()
 	panel.forge = forge
-	add_child(panel)
+	_add_pane(panel)
 
 
 ## A town's service over the map, from the person who runs it (GamePeople): shop (on its tab), tavern or notice board. The world
@@ -314,7 +327,7 @@ func _open_service(kind: String, tab: String) -> void:
 	panel.dynasty = app.dynasty
 	panel.on_change = func(): _refresh_status()
 	panel.set_meta("modal", true)
-	add_child(panel)
+	_add_pane(panel)
 
 
 ## The Trials panel over the map, from a trial's master at its site: the world waits while it is open. A fight it starts (a master met in battle)
@@ -324,7 +337,7 @@ func _open_trials() -> void:
 	panel.dynasty = app.dynasty
 	panel.on_change = func(): _refresh_status()
 	panel.set_meta("modal", true)
-	add_child(panel)
+	_add_pane(panel)
 
 
 ## A wilds trader's panel over the map (GameWildsTrade): the world waits while it is open.
@@ -334,7 +347,7 @@ func _open_merchant(lm: Dictionary) -> void:
 	panel.landmark = lm
 	panel.on_change = func(): _refresh_status()
 	panel.set_meta("modal", true)
-	add_child(panel)
+	_add_pane(panel)
 
 
 ## The world map over the open world (GameWorldMap): the world waits while it is open.
@@ -434,7 +447,7 @@ func _open_popup(panel_script: Script) -> void:
 	panel.dynasty = app.dynasty
 	panel.on_change = func(): _refresh_status()
 	panel.set_meta("modal", true)
-	add_child(panel)
+	_add_pane(panel)
 
 
 ## The shop panel's Gear tab on its own, over the map.
@@ -444,7 +457,7 @@ func _open_gear() -> void:
 	panel.dynasty = app.dynasty
 	panel.on_change = func(): _refresh_status()
 	panel.set_meta("modal", true)
-	add_child(panel)
+	_add_pane(panel)
 
 
 ## The Use action: in by the door the heir stands at, or out by the entrance of the interior they are in.
@@ -481,7 +494,7 @@ func _open_talk(r: Dictionary) -> void:
 	panel.first = str(r.get("bare", ""))
 	panel.on_say = func(line: String): last_line = line
 	panel.set_meta("modal", true)
-	add_child(panel)
+	_add_pane(panel)
 
 
 ## Up or down the stairs the heir stands at (`GameSandbox.climb`); the line says why not.
