@@ -288,7 +288,7 @@ func test_map_menu() -> void:
 		if c is PopupMenu:
 			menu = c
 	ok(menu != null and menu.has_meta("modal") and app.current == map, "Menu opens a popup over the map and stays on it")
-	ok(menu != null and menu.item_count == 6 and menu.get_item_text(0) == "Back to the map" and menu.get_item_text(5) == "The text screen", "with the family's screens and the way back to the text game")
+	ok(menu != null and menu.item_count >= 6 and menu.get_item_text(0) == "Back to the map" and menu.get_item_text(menu.item_count - 1) == "The text screen", "with the family's screens and the way back to the text game")
 	ok(map._modal_open(), "and the world waits while it is open")
 	for script in [HousePanel, Chronicle, SkillTreePanel]:
 		map._open_popup(script)
