@@ -277,8 +277,18 @@ func _exit_tree() -> void:
 	playing = ""
 
 
-## Plays a cue once. Nothing happens with sound effects off, or for a name that is no cue ("" included).
-func cue(name: String) -> void:
+## The cue of a creature's cry ("" for a creature the data gives no voice).
+static func creature_cue(creature_id: String) -> String:
+	return str(data().get("creature_voices", {}).get(creature_id, ""))
+
+
+## A creature's cry: when it is hurt, or lower and slower when it dies. Silent for a creature with no voice.
+func creature(creature_id: String, dying: bool = false) -> void:
+	cue(creature_cue(creature_id), 0.7 if dying else 1.0)
+
+
+## Plays a cue once (`pitch` scales it: below 1 is lower). Nothing happens with sound effects off, or for a name that is no cue ("" included).
+func cue(name: String, pitch: float = 1.0) -> void:
 	if not on("sound") or not data()["cues"].has(name):
 		return
 	cue_log.append(name)
@@ -289,7 +299,7 @@ func cue(name: String) -> void:
 	var jitter := float(data()["pitch_jitter"])
 	p.stream = stream(name)
 	p.volume_db = db("sound")
-	p.pitch_scale = 1.0 + _dice.randf_range(-jitter, jitter)
+	p.pitch_scale = pitch * (1.0 + _dice.randf_range(-jitter, jitter))
 	if has_output():
 		p.play()
 
@@ -383,6 +393,9 @@ static func validate() -> Array:
 			bad.append("sound.json: %s is missing" % k)
 	if not bad.is_empty():
 		return bad
+	for id in dat.get("creature_voices", {}):
+		if not dat["cues"].has(str(dat["creature_voices"][id])):
+			bad.append("sound.json: creature_voices gives '%s' the cue '%s', which does not exist" % [id, dat["creature_voices"][id]])
 	for k in ["rate", "music_rate"]:
 		if int(dat[k]) < 8000 or int(dat[k]) > 48000:
 			bad.append("sound.json: %s must be 8000 to 48000 samples a second" % k)
@@ -479,6 +492,8 @@ static func validate() -> Array:
 		used[str(tr)] = true
 		if not dat["tracks"].has(str(tr)):
 			bad.append("sound.json: ages names '%s', which is not a track" % tr)
+	for id in dat.get("creature_voices", {}):
+		used[str(dat["creature_voices"][id])] = true
 	for name in (dat["cues"] as Dictionary).keys() + (dat["tracks"] as Dictionary).keys():
 		if not used.has(name):
 			bad.append("sound.json: '%s' is never played" % name)

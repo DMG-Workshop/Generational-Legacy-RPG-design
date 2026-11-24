@@ -1846,6 +1846,8 @@ func _play_all(events: Array) -> void:
 func _play_one(ev: Dictionary) -> void:
 	var by := int(ev.get("by", -1))
 	app.sound.event(ev)   # the event's cue, if the data gives it one
+	if str(ev.get("side", "")) == "enemy" and ev["type"] in ["damage", "death"] and int(ev.get("index", -1)) in range(b.enemies.size()):
+		app.sound.creature(str(b.enemies[int(ev["index"])]["id"]), ev["type"] == "death")   # the foe's cry
 	match ev["type"]:
 		"cast":
 			_lunge(_unit_node(by), 22.0)

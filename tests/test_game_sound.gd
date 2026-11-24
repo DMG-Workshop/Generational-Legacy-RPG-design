@@ -53,6 +53,7 @@ func _run() -> void:
 	test_cache()
 	test_events()
 	test_tracks()
+	await test_creatures()
 	test_settings()
 	await test_playing()
 	await test_fight()
@@ -274,6 +275,32 @@ func test_settings() -> void:
 	_wipe()
 
 
+# ---------------------------------------------------------------- creature cries
+
+func test_creatures() -> void:
+	var voices: Dictionary = Sound.data()["creature_voices"]
+	var wild := 0
+	for c in GameData.creatures:
+		if bool(c.get("farm", false)):
+			continue
+		wild += 1
+		ok(voices.has(str(c["id"])), "%s has a cry" % c["id"])
+	ok(wild > 20, "there are creatures to give voices (%d)" % wild)
+	for id in voices:
+		ok(Sound.data()["cues"].has(str(voices[id])) and Sound.is_track(str(voices[id])) == false, "%s's cry is a cue" % id)
+		ok(GameData.creatures.any(func(c): return str(c["id"]) == str(id)), "%s is a creature" % id)
+	ok(Sound.creature_cue("wolf") == "cry_growl" and Sound.creature_cue("sheep") == "" and Sound.creature_cue("") == "", "a creature's cry is looked up; farm animals and nothing have none")
+	_broken(func(dat): dat["creature_voices"]["wolf"] = "no_such_cry", "a cry that is no cue is found")
+	var s: Node = Sound.new()
+	root.add_child(s)
+	await _frames(1)
+	s.creature("wolf")
+	s.creature("wolf", true)
+	s.creature("sheep")
+	ok(s.cue_log == ["cry_growl", "cry_growl"], "a hurt and a dying cry play, a creature with no voice is silent: %s" % str(s.cue_log))
+	s.queue_free()
+
+
 # ---------------------------------------------------------------- playing
 
 func test_playing() -> void:
@@ -405,9 +432,11 @@ func test_fight() -> void:
 		Sound.choose("music", "medium")
 		app.sound.refresh()
 		var on: Dictionary = await _shown(c)
-		var heard: Array = app.sound.cue_log.duplicate()
+		var heard: Array = app.sound.cue_log.filter(func(n): return not str(n).begins_with("cry_"))   # the foes' cries are checked on their own
+		var cries: Array = app.sound.cue_log.filter(func(n): return str(n).begins_with("cry_"))
 		ok(app.sound.playing == "battle", "%s: the fight's track plays" % tag)
 		ok(heard == on["want"], "%s: the screen asked for its events' cues in order (%d heard, %d wanted)" % [tag, heard.size(), on["want"].size()])
+		ok(not cries.is_empty(), "%s: the foes cried out (%d cries)" % [tag, cries.size()])
 		ok(heard.size() > 5 and heard.has("hit") and heard[heard.size() - 1] == on["result"], "%s: blows were heard and the last cue is the %s" % [tag, on["result"]])
 		for t in on["types"]:
 			heard_types[t] = true
