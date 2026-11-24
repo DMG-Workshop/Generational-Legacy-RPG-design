@@ -15,6 +15,8 @@ static var _labels_loaded := false
 
 static func item_def(id: String) -> Dictionary:
 	GameData.load_all()
+	if "#" in id:   # a bag the heir owns (`satchel#2`) is what its base item is
+		id = id.get_slice("#", 0)
 	if GameLoot.is_generated(id):
 		return GameLoot.build(id)
 	return GameData.items.get(id, {})
@@ -246,6 +248,9 @@ static func sell(d: GameDynasty, id: String) -> String:
 		return GameMessages.text("life", "buys_gear_none", {"place": d.world.here()["name"]})
 	if id not in h.inventory:
 		return GameMessages.text("life", "not_in_pack", {"item": item_name(id)})
+	var held := GameBags.why_not_let_go(h, id)
+	if held != "":
+		return held   # a bag is not sold with things in it
 	var gold := sell_price(d, id)
 	h.inventory.erase(id)
 	if not owns(h, id):
