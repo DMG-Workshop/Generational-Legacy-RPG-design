@@ -268,7 +268,7 @@ func test_figure_and_pack() -> void:
 			menu = c
 	var names: Array = []
 	for i in menu.item_count:
-		names.append(menu.get_item_text(i))
+		names.append(menu.get_item_text(i).split("  (")[0])   # a label may end with its key, "Pack  (B)"
 	ok("Character" in names and "Pack" in names and "Status" in names and "Nearby map" in names and "Journal" in names, "the Menu lists the character, the pack and the panes that stay up: %s" % str(names))
 	app.queue_free()
 	await _frames(2)
