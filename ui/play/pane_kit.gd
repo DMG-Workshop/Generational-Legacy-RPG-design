@@ -87,7 +87,10 @@ static func build(host: Control, title: String) -> VBoxContainer:
 	host.set_meta("pane_room", size.x - 2.0 * float(setting("padding")) - 20.0)
 	host.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventMouseButton and ev.pressed:
-			host.move_to_front())   # a click anywhere on it raises it
+			if ev.button_index == MOUSE_BUTTON_RIGHT:
+				host.queue_free()   # a right click on a pane's face closes it
+			else:
+				host.move_to_front())   # a click anywhere on it raises it
 	var face := PanelContainer.new()
 	face.add_theme_stylebox_override("panel", _box(color("face"), color("border"), 2))
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

@@ -54,6 +54,9 @@ var level_button: Button
 var last_line := ""
 var _walk_wait := 0.0
 var _greet_wait := 0.0
+var _name_tag := {}       # what a click just named: {text, point (tiles), until (msec)}; drawn over it for a moment
+var _use_when_there := false   # a double click on something out of reach: use it when the walk gets there
+var _double := false      # the press now down was the second of a double click
 var _bubbles := {}        # a person's id -> {text, until (msec)}: what they just said, over their head
 var _bubble_pos := {}     # a person's id -> where their head was drawn last (screen)
 var _banners := {}        # place -> the colour of its gate guards and banners
@@ -176,9 +179,12 @@ func _process(delta: float) -> void:
 	var mv: Vector2 = inp["move"]
 	if fingers.steering() and fingers.move().length() > 0.0:
 		mv = fingers.move()   # a finger on the stick steers over the keys
+	if mv.length() < 0.001 and mode == "walk" and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not UiSettings.touch():
+		mv = _mouse_walk()   # holding the right button walks toward the cursor
 	_walk_wait -= delta
 	var stepped := false
 	if step_for(mv) != Vector2i.ZERO:
+		_use_when_there = false
 		sb.route = []
 		if mode == "build":
 			facing_dir = step_for(mv)   # in build mode the stick aims the piece; the heir stays where they are
@@ -191,6 +197,11 @@ func _process(delta: float) -> void:
 		sb.walk_one()
 		_walk_wait = float(GameSandbox.setting("walk_seconds"))
 		stepped = true
+		if _use_when_there and sb.route.is_empty():   # a double click out of reach: they have arrived, so use it
+			_use_when_there = false
+			_use()
+	elif _use_when_there and sb.route.is_empty():
+		_use_when_there = false
 	if stepped:
 		cam = Vector2.ZERO   # the view follows the heir while they walk
 	_greet_wait -= delta
@@ -256,14 +267,75 @@ func _gui_input(event: InputEvent) -> void:
 		if e.pressed:
 			_press = e.position
 			_press_ms = Time.get_ticks_msec()
+			_double = e.double_click and not UiSettings.touch()
 		elif WorldInput.is_tap(_press, e.position, float(Time.get_ticks_msec() - _press_ms) / 1000.0):
-			_tap(e.position - Vector2(0, BAR), area)
+			if _double:
+				_double_click(e.position - Vector2(0, BAR), area)
+			else:
+				_tap(e.position - Vector2(0, BAR), area)
+
+
+## The direction toward the cursor from the heir while the right button is held (a unit vector; zero close to the heir).
+func _mouse_walk() -> Vector2:
+	var area := Vector2(size.x, size.y - BAR)
+	return walk_toward(get_local_mouse_position() - Vector2(0, BAR), area, cam, _cell(), float(setting("walk_deadzone_cells")))
+
+
+## The direction from the heir to a point of the map area (the heir is at its centre, less the camera's shift): a unit vector, or zero
+## within `dead` cells of the heir.
+static func walk_toward(p: Vector2, area: Vector2, cam_tiles: Vector2, cell: float, dead: float) -> Vector2:
+	var off := p - area * 0.5 + cam_tiles * -cell
+	if off.length() < dead * cell:
+		return Vector2.ZERO
+	return off.normalized()
+
+
+## The point of the open world under a screen position, in tiles (fractions kept).
+func _point_at(p: Vector2, area: Vector2) -> Vector2:
+	return Vector2(sb.heir) + cam + (p - area * 0.5) / _cell() + Vector2(0.5, 0.5)
+
+
+## A double click, with a mouse: use what is clicked. Beside the heir (or on them), Use at once; further off, walk there and use it
+## when they arrive. Nothing is used on bare ground, where it only walks.
+func _double_click(p: Vector2, area: Vector2) -> void:
+	if p.y < 0.0 or p.y > area.y or mode != "walk":
+		return
+	var tile := tile_at(p, area, sb.heir, cam, _cell())
+	var named := sb.name_at(_point_at(p, area).x, _point_at(p, area).y)
+	if named.is_empty():
+		_tap(p, area)   # bare ground: a double click only walks there, like a click
+		return
+	if named["kind"] == "heir":
+		_use()
+		return
+	if absi(tile.x - sb.heir.x) <= 1 and absi(tile.y - sb.heir.y) <= 1:
+		_use()
+		return
+	var planned := sb.set_route(tile)
+	if planned["ok"]:
+		_use_when_there = true
+		_walk_wait = 0.0
+		last_line = str(named["name"])
+	else:
+		last_line = str(planned["why"])
+	cam = Vector2.ZERO
+	queue_redraw()
 
 
 func _tap(p: Vector2, area: Vector2) -> void:
 	if p.y < 0.0 or p.y > area.y:
 		return
+	_use_when_there = false
 	var tile := tile_at(p, area, sb.heir, cam, _cell())
+	if mode == "walk" and not UiSettings.touch():   # with a mouse, a click on a thing names it, over it, and goes no further
+		var point := _point_at(p, area)
+		var named := sb.name_at(point.x, point.y)
+		if not named.is_empty():
+			_name_tag = {"text": str(named["name"]), "point": point, "until": Time.get_ticks_msec() + int(float(setting("name_seconds")) * 1000.0)}
+			last_line = str(named["name"])
+			_refresh_status()
+			queue_redraw()
+			return
 	var dx := tile.x - sb.heir.x
 	var dz := tile.y - sb.heir.y
 	if mode == "build":
@@ -859,6 +931,24 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				else:
 					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
 	_paint_bubbles(c)
+	_paint_name(c, origin, area, centre, cell)
+
+
+## What a click just named, over the thing for a moment.
+func _paint_name(c: Control, origin: Vector2, area: Vector2, centre: Vector2, cell: float) -> void:
+	if _name_tag.is_empty():
+		return
+	if int(_name_tag["until"]) < Time.get_ticks_msec():
+		_name_tag = {}
+		return
+	var font := ThemeDB.fallback_font
+	var text := str(_name_tag["text"])
+	var at: Vector2 = origin + (Vector2(_name_tag["point"]) - Vector2(0.5, 0.5) - centre) * cell + area * 0.5 - Vector2(0, cell * 0.9)
+	var sz := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
+	var box := Rect2(at + Vector2(-sz.x * 0.5 - 6.0, -sz.y - 4.0), sz + Vector2(12.0, 6.0))
+	c.draw_style_box(Kit.style(Color(0.1, 0.09, 0.14, 0.9), 5, Color(0.88, 0.7, 0.25)), box)
+	c.draw_string(font, box.position + Vector2(6.0, sz.y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.9, 0.88, 0.94))
+	queue_redraw()
 
 
 ## One piece of a town's wall: a wall, a tower, the tower by a gate (with the town's banner), or the arch or beam over a gate's passage

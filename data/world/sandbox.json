@@ -12,11 +12,14 @@
     "log_lines": 200,
     "route_nodes": 4000,
     "walk_seconds": 0.2,
-    "tick_seconds": 0.25
+    "tick_seconds": 0.25,
+    "name_reach": 0.9
   },
   "reveal": {"near": 1.5, "far": 4.5, "steps": 4, "max_roof_cells": 600},
   "view": {
     "cell_px": 16.0,
+    "name_seconds": 2.5,
+    "walk_deadzone_cells": 0.6,
     "cam_tiles_per_second": 12.0,
     "move_threshold": 0.2,
     "save_seconds": 60.0,
