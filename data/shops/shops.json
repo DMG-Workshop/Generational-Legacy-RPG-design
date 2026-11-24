@@ -871,11 +871,13 @@
      "ids": [
       "linen_shirt",
       "wool_tunic",
-      "travel_cloak"
+      "travel_cloak",
+      "travel_sack",
+      "pouch"
      ],
      "count": [
       3,
-      3
+      4
      ],
      "tier_max": 9
     },
@@ -958,11 +960,12 @@
      "tags": [],
      "ids": [
       "leather_boots",
-      "leather_belt"
+      "leather_belt",
+      "satchel"
      ],
      "count": [
       2,
-      2
+      3
      ],
      "tier_max": 9
     },

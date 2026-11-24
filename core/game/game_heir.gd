@@ -46,6 +46,7 @@ var spouse: GameHeir = null
 var heirloom_bonus: float = 0.0
 var equipment: Dictionary = {"weapon": "", "armor": "", "trinket": ""}   # slot -> item id
 var inventory: Array = []    # item ids carried but not worn
+var bags: Dictionary = {}    # what each bag holds ({bag instance id: [item ids]}), see GameBags; empty without bags
 var spells: Array = []       # spell ids known (see GameCombat)
 var spell_news: Array = []   # spells learned since the dynasty last announced them
 var skill_news: Array = []   # class skill ids opened since the dynasty last announced them (see GameSkills)
@@ -288,6 +289,9 @@ func to_dict() -> Dictionary:
 		"feat_level": feat_level, "feat_news": feat_news, "downtime": downtime, "skill_tree": GameSkillTree.to_dict(self),
 		"spouse": spouse.to_dict() if spouse != null else null,
 	}
+	var held := GameBags.to_dict(self)
+	if not held.is_empty():   # only once something is in a bag
+		out["bags"] = held
 	if shirt != "":   # only once chosen, so a save (and its golden digest) is unchanged until then
 		out["shirt"] = shirt
 	if not trials_done.is_empty():   # only once a trial is passed
@@ -334,6 +338,7 @@ static func from_dict(d: Dictionary) -> GameHeir:
 	h.heirloom_bonus = float(d["heirloom_bonus"])
 	h.equipment = d.get("equipment", {"weapon": "", "armor": "", "trinket": ""})
 	h.inventory = Array(d.get("inventory", []))
+	h.bags = GameBags.load_state(d.get("bags", {}), h.inventory)
 	h.spells = Array(d.get("spells", [])).filter(func(id): return not GameCombat.spell(str(id)).is_empty())
 	h.spell_news = Array(d.get("spell_news", [])).filter(func(id): return id in h.spells)
 	h.diseases = GameDisease.load_list(d.get("diseases", []))
