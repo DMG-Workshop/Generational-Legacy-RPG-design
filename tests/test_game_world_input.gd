@@ -112,7 +112,7 @@ func test_install() -> void:
 	var counts := {}
 	for action in WorldInput.actions():
 		counts[action] = InputMap.action_get_events(action).size()
-	ok(counts["world_move_up"] == 4 and counts["world_dig"] == 3 and counts["world_pan"] == 1, "with its bindings (move up has 4, dig 3, drag the view 1)")
+	ok(counts["world_move_up"] == 4 and counts["world_dig"] == 2 and counts["world_pan"] == 1, "with its bindings (move up has 4, dig 2, drag the view 1)")
 	WorldInput.install()
 	WorldInput.install()
 	var same := true
@@ -183,7 +183,7 @@ func test_events() -> void:
 	ok(Input.is_action_pressed("world_dig") and not Input.is_action_pressed("world_build"), "X digs")
 	await _pad(JOY_BUTTON_X, false)
 	await _mouse(MOUSE_BUTTON_RIGHT, true)
-	ok(Input.is_action_pressed("world_build"), "the right mouse button builds")
+	ok(not Input.is_action_pressed("world_build"), "the right mouse button no longer builds (it walks and opens a thing's menu)")
 	await _mouse(MOUSE_BUTTON_RIGHT, false)
 	await _key(KEY_E, true)
 	ok(Input.is_action_pressed("world_dig"), "E digs too")
