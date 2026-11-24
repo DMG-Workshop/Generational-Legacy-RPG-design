@@ -459,8 +459,8 @@ static func _landmark_problems(k: String, def: Dictionary, known: Callable) -> A
 			cells += 1
 			if not known.call(str(g)):
 				bad.append("wilds.json: the landmark '%s' draws the glyph '%s', which is not drawn" % [k, g])
-	if cells == 0 or layout.size() > 3 or layout.any(func(r): return (r as Array).size() > 3):
-		bad.append("wilds.json: the landmark '%s' needs a layout of 1 to 3 tiles each way with something in it" % k)
+	if cells == 0 or layout.size() > 5 or layout.any(func(r): return (r as Array).size() > 5):
+		bad.append("wilds.json: the landmark '%s' needs a layout of 1 to 5 tiles each way with something in it" % k)
 	var c: Array = def["center"]
 	if c.size() != 2 or int(c[1]) < 0 or int(c[1]) >= layout.size() or int(c[0]) < 0 or int(c[0]) >= (layout[int(c[1])] as Array).size() or str(layout[int(c[1])][int(c[0])]) == ".":
 		bad.append("wilds.json: the landmark '%s' has a center that is not on one of its glyphs" % k)

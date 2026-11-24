@@ -57,7 +57,15 @@ static func image(kind: String, style: int = 0, w: int = 3, h: int = 2, door_sca
 	var wall_l := Color.html(str(pal["wall"][0]))
 	var wall_d := Color.html(str(pal["wall"][1]))
 	var feats: Array = def.get("features", [])
-	var roof_end := 3 + roundi(float(ch - 6) * 0.4)   # where the roof's shingles end (13 on a two-tile building)
+	# the door is made for the tallest who lives there, with headroom: a person is `figure_tiles` tall, so a human's door is a little over
+	# that. A small building thins its roof so the wall can hold it (a door never reaches into the roof), and a very tall resident's door
+	# is as tall as the wall allows.
+	var dd: Dictionary = data()["door"]
+	var person_px := float(TILE) * float(GameSandbox.data()["view"]["figure_tiles"])
+	var want := roundi(person_px * float(dd["headroom"]) * door_scale)
+	var most := ch - 4 - int(dd["min_roof"]) - 2 - int(dd["above"])
+	var dh := clampi(want, 11, maxi(11, most))
+	var roof_end := mini(3 + roundi(float(ch - 6) * 0.4), maxi(int(dd["min_roof"]), ch - 4 - dh - int(dd["above"])))   # where the roof's shingles end
 	var wall_top := roof_end + 2
 	var dcx := ((w - 1) / 2) * TILE + TILE / 2   # the door's middle: the bottom-middle tile's
 	# wall
@@ -89,9 +97,8 @@ static func image(kind: String, style: int = 0, w: int = 3, h: int = 2, door_sca
 			_r(img, wx, wy, ws, ws, _col("glass"))
 			_r(img, wx + ws / 2 - 1, wy, 1, ws, _col("glass_dark"))
 			_r(img, wx, wy + ws / 2, ws, 1, _col("glass_dark"))
-	# door: as tall as a person needs, so on a tall wall it is taller than the small one
-	var dh := clampi(roundi(float(wall_h) * 0.7 * door_scale), 11, maxi(11, wall_h - 4))
-	var dw := 8 if dh < 20 else (10 if door_scale < 1.4 else 12)
+	# door: its height is `dh` above; as wide as the race needs, up to a whole tile
+	var dw := clampi(roundi(float(dd["width"]) * minf(door_scale, 1.6)), 8, TILE)
 	var dy := ch - 2 - dh
 	var door := _col("glow") if feats.has("glow") else _col("door")
 	_r(img, dcx - dw / 2, dy, dw, dh, _col("door_dark"))
@@ -237,7 +244,7 @@ static func inside_image(kind: String, w: int = 3, h: int = 2) -> Image:
 	_r(img, cw - 3, 0, 3, ch, wall)
 	_r(img, 0, 3, cw, 1, wall.darkened(0.3))
 	var dcx := ((w - 1) / 2) * TILE + TILE / 2
-	_r(img, dcx - 4, ch - 3, 8, 3, _col("door"))   # the door, in the south wall
+	_r(img, dcx - 5, ch - 3, 10, 3, _col("door"))   # the door, in the south wall
 	for f in def.get("furniture", []):
 		_furniture(img, str(f), ins, cw, ch)
 	return _outline_box(img)
@@ -487,11 +494,14 @@ static func _dot(img: Image, x: int, y: int, c: Color) -> void:
 static func validate() -> Array:
 	var bad: Array = []
 	var dat := data()
-	for k in ["outline", "colors", "styles", "kinds"]:
+	for k in ["outline", "colors", "styles", "kinds", "door"]:
 		if not dat.has(k):
 			bad.append("buildings.json: %s is missing" % k)
 	if not bad.is_empty():
 		return bad
+	var dd: Dictionary = dat["door"]
+	if float(dd.get("headroom", 0.0)) < 1.0 or float(dd.get("headroom", 0.0)) > 1.5 or int(dd.get("width", 0)) < 8 or int(dd.get("width", 0)) > TILE or int(dd.get("min_roof", 0)) < 6 or int(dd.get("above", -1)) < 2:
+		bad.append("buildings.json: door needs headroom 1 to 1.5 (of a person's height), width 8 to a tile, min_roof 6 or more and above 2 or more")
 	if not Color.html_is_valid(str(dat["outline"])):
 		bad.append("buildings.json: outline is not a colour")
 	var needed := ["door", "door_dark", "glass", "glass_dark", "shutter", "gold", "flag", "stone", "stone_dark", "glow", "iron", "crate", "crate_dark", "sign", "mug", "wood", "wood_dark", "paper", "paper2", "lamp", "white", "barrel", "hoop", "stripe_red", "stripe_blue"]

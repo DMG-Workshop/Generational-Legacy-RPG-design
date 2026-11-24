@@ -936,6 +936,8 @@ func _open_gear() -> void:
 ## The Use action: in by the door the heir stands at, or out by the entrance of the interior they are in.
 func _use() -> void:
 	var r := sb.use()
+	if sb.space != "world":
+		_warm_figures()   # inside: the figures of this building are made before they are drawn
 	last_line = str(r["text"])
 	cam = Vector2.ZERO
 	if str(r.get("open", "")) == "workshop":
@@ -1212,8 +1214,7 @@ func _paint(c: Control) -> void:
 	elif GameDungeons.is_dungeon(sb.space):
 		_paint_dungeon(c, origin, area, centre, cell, colors)
 	else:
-		var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
-		c.draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+		_paint_interior(c, origin, area, centre, cell, colors)
 	if mode == "build" and outdoors:
 		var gp := origin + (Vector2(sb.heir + facing_dir) - centre) * cell + area * 0.5
 		var legal := sb.build_check(build_kind, facing_dir.x, facing_dir.y) == ""
@@ -1472,6 +1473,36 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 			c.draw_rect(Rect2(at, Vector2(cell, cell)).grow(0.5), Color(float(tint[0]), float(tint[1]), float(tint[2]), dark))
 
 
+## The inside of a town building or the family's house: the person who works there and the heir, each as their figure, the one further
+## north first. (A circle only where there is no art, as everywhere.)
+func _paint_interior(c: Control, origin: Vector2, area: Vector2, centre: Vector2, cell: float, colors: Dictionary) -> void:
+	var d: GameDynasty = app.dynasty
+	var items: Array = []   # [depth, kind, thing]
+	for pr in GamePeople.in_space(sb.space):
+		items.append([float(GamePeople.cell_of(pr).y) + 1.0, "person", pr])
+	items.append([float(sb.heir.y) + 1.0, "heir", null])
+	items.sort_custom(func(p, q): return p[0] < q[0])
+	var service: Dictionary = GameVillagers.data()["service"].get(str(GameSpaces.space(sb.space).get("layout", "")), {})
+	for it in items:
+		if str(it[1]) == "person":
+			var t := GamePeople.cell_of(it[2])
+			var p := origin + (Vector2(t) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
+			var tex: Texture2D = null
+			if not service.is_empty():
+				tex = SpriteArt.hero(str(service["race"]), str(service["class"]), Color.html(str(service["color"])))
+			if tex == null:
+				c.draw_circle(p, maxf(3.0, cell * 0.35), _rgb(colors["companion"]))
+			else:
+				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(service["race"])), false, Color.WHITE, cell)
+		else:
+			var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
+			var tex: Texture2D = SpriteArt.figure(d.heir)
+			if tex == null:
+				c.draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
+			else:
+				_stand(c, tex, hp + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell)
+
+
 ## Makes the figures of everyone who may be drawn now, together: the villagers, the heir and the companions (a figure first made while
 ## drawing makes the atlas upload mid-frame, which blanks the sprites drawn before it in that frame).
 func _warm_figures() -> void:
@@ -1480,6 +1511,9 @@ func _warm_figures() -> void:
 	SpriteArt.figure(d.heir)
 	for pr in GameDungeons.layout(sb.space).get("people", []):
 		SpriteArt.hero(str(pr["race"]), str(pr["class"]), Color.html(str(pr["color"])))
+	var service: Dictionary = GameVillagers.data()["service"].get(str(GameSpaces.space(sb.space).get("layout", "")), {})
+	if not service.is_empty():
+		SpriteArt.hero(str(service["race"]), str(service["class"]), Color.html(str(service["color"])))   # the one who works in the building we are in
 	for m in d.party.members:
 		_party_figure(str(m["id"]))
 	for b in GameTown.all():

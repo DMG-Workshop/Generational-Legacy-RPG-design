@@ -1,6 +1,7 @@
 {
  "note": "The buildings of the open world's towns (ui/play/building_art.gd paints them, core/game/game_town.gd says where they stand; checked by tools/check_data.gd). Each is 48 by 32 pixels, three tiles by two: a roof over a wall with a door and windows, then the `features` of its kind. A kind has its own `roof` and `wall` colours ([light, dark]) or is `styled` (a plain house or the family house takes one of `styles`, picked from the place's name). `board` is the notice board, a shape of its own. Nothing is random: the same kind and style paint the same pixels. Shops (data/shops/shops.json) are kinds of their own: a sign with an icon from `icons` (8 by 8: x the colour, o its shade), and the furniture and features of the trade.",
  "outline": "#1b1626",
+  "door": {"headroom": 1.12, "width": 12, "min_roof": 10, "above": 5},
  "colors": {
   "door": "#6b4a2a",
   "door_dark": "#3f2a16",
