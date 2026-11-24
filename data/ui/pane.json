@@ -1,0 +1,30 @@
+{
+  "note": "Panes (docs/PLAYER_INTERFACE.md, slice 1; ui/play/pane_kit.gd, checked by tools/check_data.gd). On a desktop-sized window a panel opened over the open world is a pane: a window with a face, a border and a title bar that is dragged, raised when clicked and remembered where it was left (in settings.cfg, never the save). On a narrow window or a touch screen the same panel is the full-screen overlay it always was. `sizes` gives a panel its own size by the name of its script (without .gd); `default_size` is for the rest. A size is cut to the room the window has less `margin` on each side.",
+  "settings": {
+    "default_size": [880, 600],
+    "margin": 12,
+    "title_height": 38,
+    "cascade": 28,
+    "keep_visible": 80,
+    "padding": 10
+  },
+  "sizes": {
+    "shop_panel": [1040, 640],
+    "craft_panel": [1000, 640],
+    "chronicle_panel": [1040, 640],
+    "skill_tree_panel": [1040, 640],
+    "house_panel": [820, 600],
+    "trials_panel": [900, 620],
+    "merchant_panel": [900, 620],
+    "tavern_panel": [900, 620],
+    "board_panel": [900, 620],
+    "talk_panel": [640, 420]
+  },
+  "colors": {
+    "face": "#1a1828",
+    "border": "#e0b341",
+    "title_bar": "#2e2a42",
+    "title_text": "#e0b341",
+    "close_text": "#e8e4f0"
+  }
+}
