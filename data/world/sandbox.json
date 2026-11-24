@@ -112,6 +112,9 @@
     "building": ["use", "walk"]
   },
   "text": {
+    "selected": "{name} is selected: right click to send them, T Y U O P to give an order.",
+    "deselected": "{name} is no longer selected.",
+    "nobody": "There is no one to give that order.",
     "act_character": "Open the character",
     "act_pack": "Open the pack",
     "act_walk": "Walk there",

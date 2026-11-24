@@ -112,6 +112,27 @@ static func load_gathered(v: Variant) -> Dictionary:
 
 # ---------------------------------------------------------------- agents
 
+## Sends a companion to a place with an order: the same agents back with theirs given the order and a post at (x, z), its work forgotten,
+## so a `stay` holds that place and a `guard` guards it (the order itself is the party member's, see `set_order`). The old agents are not
+## changed; an id with no agent gives them back as they are.
+static func place(agents: Array, id: String, order: String, x: float, z: float) -> Array:
+	var out: Array = []
+	for a in agents:
+		var b: Dictionary = (a as Dictionary).duplicate(true)
+		if str(b["id"]) == id and ORDERS.has(order):
+			b["order"] = order
+			b["post_x"] = x
+			b["post_z"] = z
+			b["plan"] = []
+			b["target"] = {}
+			b["work"] = 0
+			b["haul"] = false
+			b["alerted"] = false
+			b["scanned"] = -1000000
+		out.append(b)
+	return out
+
+
 ## A companion in the open world: where they are, their post (where they stand when given an order) and what they are doing.
 static func new_agent(uid: int, id: String, x: float, z: float) -> Dictionary:
 	return {"uid": uid, "id": id, "x": x, "z": z, "post_x": x, "post_z": z, "order": FOLLOW, "mode": "hold", "plan": [], "target": {},

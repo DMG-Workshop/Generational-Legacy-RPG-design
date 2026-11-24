@@ -73,6 +73,7 @@ var _bubble_pos := {}     # a person's id -> where their head was drawn last (sc
 var _banners := {}        # place -> the colour of its gate guards and banners
 var _tick_wait := 0.0
 var _save_wait := 0.0
+var selected_companion := ""   # the companion a click chose (a right click then sends them; the order keys give them an order)
 var _radial: Control = null   # the panel ring while it is up
 var _radial_down_ms := 0
 var _walk_press := Vector2.ZERO   # where and when the walk button went down (a quick click opens a thing's menu, a held one walks)
@@ -406,6 +407,8 @@ func _thing_menu(p: Vector2, area: Vector2, at: Vector2) -> void:
 		return
 	var point := _point_at(p, area)
 	var named := sb.name_at(point.x, point.y)
+	if selected_companion != "" and _send_selected(named, point):
+		return
 	var acts := sb.thing_actions(named)
 	if acts.is_empty():
 		return
@@ -506,6 +509,8 @@ func _tap(p: Vector2, area: Vector2) -> void:
 		if not named.is_empty():
 			_name_tag = {"text": str(named["name"]), "point": point, "until": Time.get_ticks_msec() + int(float(setting("name_seconds")) * 1000.0)}
 			last_line = str(named["name"])
+			if str(named["kind"]) == "companion":
+				last_line = _select(str(named["id"]), str(named["name"]))
 			_refresh_status()
 			queue_redraw()
 			return
@@ -546,6 +551,51 @@ func _add_pane(panel: Control, suffix: String = "") -> void:
 	add_child(panel)
 
 
+## A click on a companion chooses them, or lets them go if they are the one chosen. The line to say.
+func _select(id: String, nm: String) -> String:
+	if selected_companion == id:
+		selected_companion = ""
+		return str(GameSandbox.data()["text"]["deselected"]).format({"name": nm})
+	selected_companion = id
+	return str(GameSandbox.data()["text"]["selected"]).format({"name": nm})
+
+
+## A quick click of the walk button with a companion chosen sends them, as in a strategy game: on bare ground they hold that place, on a
+## creature they guard it, on the heir they come back to follow. Anything else is the popup as usual. True when it sent them.
+func _send_selected(named: Dictionary, point: Vector2) -> bool:
+	if not sb.d.party.has_member(selected_companion):
+		selected_companion = ""
+		return false
+	var spot := Vector2(floorf(point.x) + 0.5, floorf(point.y) + 0.5)
+	var r: Dictionary
+	if named.is_empty():
+		r = sb.send_order(selected_companion, "stay", spot.x, spot.y)
+	elif str(named["kind"]) == "creature":
+		r = sb.send_order(selected_companion, "guard", float(point.x), float(point.y))
+	elif str(named["kind"]) == "heir":
+		r = sb.send_order(selected_companion, GameCompanions.FOLLOW, 0.0, 0.0)
+	else:
+		return false
+	last_line = str(r["text"])
+	if r["ok"]:
+		_save()
+	_refresh_orders()
+	_refresh_status()
+	return true
+
+
+## An order key: the chosen companion, or everyone in the party when none is chosen, takes the order.
+func _order_key(order: String) -> void:
+	if not sb.d.party.has_member(selected_companion):
+		selected_companion = ""
+	var lines := sb.order_party(order, selected_companion)
+	last_line = " ".join(lines) if not lines.is_empty() else str(GameSandbox.data()["text"]["nobody"])
+	if not lines.is_empty():
+		_save()
+	_refresh_orders()
+	_refresh_status()
+
+
 ## The first key a panel answers to, as "  (C)" for a menu label, or "" with none.
 func _key_hint(id: String) -> String:
 	var keys: Array = WorldInput.keys_of("world_panel_" + id)
@@ -571,6 +621,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed():
 		return
 	if not _modal_open():
+		for o in GameCompanions.ORDERS:
+			if event.is_action_pressed("world_order_" + str(o)):
+				get_viewport().set_input_as_handled()
+				_order_key(str(o))
+				return
 		for i in slot_ids.size():
 			if event.is_action_pressed("world_slot_%d" % (i + 1)):
 				get_viewport().set_input_as_handled()
@@ -1266,6 +1321,11 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					continue
 				var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 				var tex: Texture2D = _party_figure(str(a["id"]))
+				if str(a["id"]) == selected_companion:   # the chosen one stands in a ring, and their post is marked
+					c.draw_arc(p + Vector2(0, cell * 0.3), cell * 0.7, 0.0, TAU, 28, Kit.ACCENT, 2.0)
+					if str(a["order"]) in ["stay", "guard", "watch", "gather"]:
+						var post := origin + (Vector2(float(a["post_x"]), float(a["post_z"])) - centre) * cell + area * 0.5
+						c.draw_rect(Rect2(post - Vector2(3, 3), Vector2(6, 6)), Kit.ACCENT, false, 1.5)
 				if tex == null:
 					c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 				else:
