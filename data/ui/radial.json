@@ -1,0 +1,49 @@
+{
+  "note": "The ring of panels the player holds a key to open (ui/play/radial_menu.gd, checked by tools/check_data.gd). Each item is a panel `id` whose key is the action world_panel_<id> in input.json, so the ring and the keys cannot disagree. The ring is drawn round the mouse; holding the key and moving toward an item then releasing opens it, and a quick tap (under tap_seconds) leaves the ring up for a click. dead_radius is the middle where nothing is chosen; slot_w and slot_h are one item's box.",
+  "settings": {
+    "radius": 96,
+    "dead_radius": 28,
+    "slot_w": 104,
+    "slot_h": 40,
+    "tap_seconds": 0.25,
+    "margin": 8
+  },
+  "items": [
+    {
+      "id": "character",
+      "label": "Character"
+    },
+    {
+      "id": "pack",
+      "label": "Pack"
+    },
+    {
+      "id": "map",
+      "label": "World map"
+    },
+    {
+      "id": "journal",
+      "label": "Journal"
+    },
+    {
+      "id": "skills",
+      "label": "Skill trees"
+    },
+    {
+      "id": "house",
+      "label": "The house"
+    },
+    {
+      "id": "chronicle",
+      "label": "Chronicle"
+    },
+    {
+      "id": "gear",
+      "label": "Gear"
+    }
+  ],
+  "text": {
+    "hint": "Move toward one and let go",
+    "sticky_hint": "Click one, or Tab again to close"
+  }
+}

@@ -8,6 +8,7 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const RadialMenu := preload("res://ui/play/radial_menu.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchControls := preload("res://ui/play/touch_controls.gd")
 const CraftPanel := preload("res://ui/play/craft_panel.gd")
@@ -69,6 +70,8 @@ var _bubble_pos := {}     # a person's id -> where their head was drawn last (sc
 var _banners := {}        # place -> the colour of its gate guards and banners
 var _tick_wait := 0.0
 var _save_wait := 0.0
+var _radial: Control = null   # the panel ring while it is up
+var _radial_down_ms := 0
 var _walk_press := Vector2.ZERO   # where and when the walk button went down (a quick click opens a thing's menu, a held one walks)
 var _walk_press_ms := 0
 var _press := Vector2.ZERO
@@ -463,6 +466,111 @@ func _add_pane(panel: Control, suffix: String = "") -> void:
 	add_child(panel)
 
 
+## The first key a panel answers to, as "  (C)" for a menu label, or "" with none.
+func _key_hint(id: String) -> String:
+	var keys: Array = WorldInput.keys_of("world_panel_" + id)
+	return "  (%s)" % str(keys[0]) if not keys.is_empty() else ""
+
+
+## The panel keys and the panel ring. A key opens its panel and the same key closes it; the ring key (Tab) opens a ring of the panels round
+## the mouse for as long as it is held. Read here, not in `_process`, so they work with a panel open, when the world waits; a key a text
+## field has taken never arrives.
+func _unhandled_input(event: InputEvent) -> void:
+	if _fight != null or not (event is InputEventKey) or (event as InputEventKey).echo:
+		return
+	if event.is_action_pressed("world_radial"):
+		get_viewport().set_input_as_handled()
+		if _radial != null:
+			_radial_close("")   # the ring left up by a tap: the key again puts it away
+		else:
+			_radial_open()
+		return
+	if event.is_action_released("world_radial"):
+		_radial_release()
+		return
+	if not event.is_pressed():
+		return
+	for id in _panel_ids():
+		if event.is_action_pressed("world_panel_" + id):
+			get_viewport().set_input_as_handled()
+			_toggle_panel(id)
+			return
+
+
+## The panels the keys and the ring open, in the ring's order.
+func _panel_ids() -> Array:
+	return RadialMenu.data()["items"].map(func(it): return str(it["id"])) + ["status", "nearby"]
+
+
+## A panel's key (or its place in the ring): open it, or close it if it is up.
+func _toggle_panel(id: String) -> void:
+	match id:
+		"character":
+			_toggle_pane("figure_pane", func(): _open_figure())
+		"pack":
+			_toggle_pane("pack_pane", func(): _open_pack(""))
+		"house":
+			_toggle_pane("house_panel", func(): _open_popup(HousePanel))
+		"chronicle":
+			_toggle_pane("chronicle_panel", func(): _open_popup(Chronicle))
+		"skills":
+			_toggle_pane("skill_tree_panel", func(): _open_popup(SkillTreePanel))
+		"gear":
+			_toggle_pane("shop_panel", func(): _open_gear())
+		"status":
+			_toggle_hud(StatusPane)
+		"nearby":
+			_toggle_hud(MinimapPane)
+		"journal":
+			_toggle_hud(JournalPane)
+		"map":
+			for c in get_children():
+				if c.get_script() == WorldMapPanel and not c.is_queued_for_deletion():
+					c.queue_free()
+					return
+			_open_world_map()
+
+
+func _toggle_pane(key: String, opener: Callable) -> void:
+	for c in get_children():
+		if c.has_meta("pane") and str(c.get_meta("pane")) == key and not c.is_queued_for_deletion():
+			PaneKit.close(c)
+			return
+	opener.call()
+
+
+func _radial_open() -> void:
+	if UiSettings.touch():
+		return
+	_radial = RadialMenu.make(get_local_mouse_position(), size)
+	_radial.set_meta("modal", true)   # the world waits while the ring is up
+	_radial.chosen.connect(_radial_close)
+	_radial_down_ms = Time.get_ticks_msec()
+	add_child(_radial)
+
+
+## The ring key was let go: choose what the mouse is toward, or (a quick tap with nothing chosen) leave the ring up for a click.
+func _radial_release() -> void:
+	if _radial == null or _radial.sticky:
+		return
+	var held := float(Time.get_ticks_msec() - _radial_down_ms) / 1000.0
+	if _radial.picked() != "" or held >= RadialMenu.setting("tap_seconds"):
+		_radial_close(_radial.picked())
+	else:
+		_radial.sticky = true
+		_radial.queue_redraw()
+
+
+func _radial_close(id: String) -> void:
+	if _radial == null:
+		return
+	var ring := _radial
+	_radial = null
+	ring.queue_free()
+	if id != "":
+		_toggle_panel.call_deferred(id)
+
+
 ## The workshop over the map, at the family's forge: while it is open the world waits and the keys do nothing here.
 func _open_workshop(forge: String) -> void:
 	var panel: Control = CraftPanel.new()
@@ -586,15 +694,15 @@ func _open_menu() -> void:
 	menu.set_meta("modal", true)
 	var rows: Array = [
 		["Back to the map", Callable()],
-		["The family house", func(): _open_popup(HousePanel)],
-		["Chronicle", func(): _open_popup(Chronicle)],
-		["Skill trees", func(): _open_popup(SkillTreePanel)],
-		["Character", func(): _open_figure()],
-		["Pack", func(): _open_pack("")],
-		["Status", func(): _toggle_hud(StatusPane)],
-		["Nearby map", func(): _toggle_hud(MinimapPane)],
-		["Journal", func(): _toggle_hud(JournalPane)],
-		["Gear", func(): _open_gear()],
+		["The family house" + _key_hint("house"), func(): _toggle_panel("house")],
+		["Chronicle" + _key_hint("chronicle"), func(): _toggle_panel("chronicle")],
+		["Skill trees" + _key_hint("skills"), func(): _toggle_panel("skills")],
+		["Character" + _key_hint("character"), func(): _toggle_panel("character")],
+		["Pack" + _key_hint("pack"), func(): _toggle_panel("pack")],
+		["Status" + _key_hint("status"), func(): _toggle_panel("status")],
+		["Nearby map" + _key_hint("nearby"), func(): _toggle_panel("nearby")],
+		["Journal" + _key_hint("journal"), func(): _toggle_panel("journal")],
+		["Gear" + _key_hint("gear"), func(): _toggle_panel("gear")],
 		["The text screen", func(): app.show_state()],
 	]
 	for i in rows.size():
