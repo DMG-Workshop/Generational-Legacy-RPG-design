@@ -9,6 +9,9 @@ const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const HousePanel := preload("res://ui/play/house_panel.gd")
+const Chronicle := preload("res://ui/play/chronicle_panel.gd")
+const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const GameApp := preload("res://ui/play/game_app.gd")
 const SUCCESSION := "succession"
 
@@ -37,6 +40,7 @@ func _run() -> void:
 	await test_title()
 	await test_menu()
 	await test_boot()
+	await test_map_menu()
 	DirAccess.remove_absolute(UiSettings.path)
 	print("start world tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -264,4 +268,40 @@ func test_boot() -> void:
 	await _frames(3)
 	ok(broken.current is TitleScreen, "a saved house that cannot be read falls back to the title")
 	broken.queue_free()
+	await _frames(2)
+
+
+## Back and Escape in the open world open a menu of popups over the map; the player is not sent to the text game unless they pick it.
+func test_map_menu() -> void:
+	UiSettings.set_open_world_first(true)
+	var app := await _app()
+	app.new_game("Tess", "warrior", "faetouched", 7)
+	await _frames(2)
+	app.show_sandbox()
+	await _frames(3)
+	var map: Node = app.current
+	ok(map is SandboxScreen, "the open world is up")
+	map._open_menu()
+	await _frames(2)
+	var menu: PopupMenu = null
+	for c in map.get_children():
+		if c is PopupMenu:
+			menu = c
+	ok(menu != null and menu.has_meta("modal") and app.current == map, "Menu opens a popup over the map and stays on it")
+	ok(menu != null and menu.item_count == 6 and menu.get_item_text(0) == "Back to the map" and menu.get_item_text(5) == "The text screen", "with the family's screens and the way back to the text game")
+	ok(map._modal_open(), "and the world waits while it is open")
+	for script in [HousePanel, Chronicle, SkillTreePanel]:
+		map._open_popup(script)
+		await _frames(2)
+		var found := false
+		for c in map.get_children():
+			if c.get_script() == script and c.has_meta("modal"):
+				found = true
+				c.queue_free()
+		ok(found and app.current == map, "%s opens over the map as a modal, not as a new screen" % script.resource_path.get_file())
+		await _frames(2)
+	map._open_gear()
+	await _frames(2)
+	ok(app.current == map and map._modal_open(), "Gear opens over the map too")
+	app.queue_free()
 	await _frames(2)
