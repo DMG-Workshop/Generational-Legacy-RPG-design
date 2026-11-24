@@ -71,7 +71,7 @@ func _ready() -> void:
 	# last session ended properly (after a bad close the title offers the error report first). Otherwise, and for a house that
 	# cannot be loaded, the title.
 	if boot_in_world and UiSettings.open_world_first() and not closed_badly and GameSaves.newest() > 0:
-		continue_game(true)
+		continue_game(true, true)
 	if current == null:
 		show_title()
 
@@ -142,10 +142,12 @@ func new_game(p_name: String, class_id: String, bloodline: String, p_seed: int, 
 		_open_world_first()
 
 
-func continue_game(open_world: bool = false) -> void:
+func continue_game(open_world: bool = false, booting: bool = false) -> void:
 	var d := GameDynasty.load_from_disk()
 	if d == null:
 		return
+	if booting and d.battle != null:
+		return   # a launch never drops the player into a fight that was left open: the title comes first, and Continue resumes it
 	dynasty = d
 	show_state()
 	if open_world:
