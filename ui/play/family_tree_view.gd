@@ -46,6 +46,7 @@ func _card(gen: Variant, h: Dictionary) -> Control:
 	name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	UiSkin.dress_title(name)
 	name.add_theme_font_size_override("font_size", 15)
+	UiSkin.dress_font(name, "title")
 	name.add_theme_constant_override("outline_size", 2)
 	name.custom_minimum_size.y = 24.0
 	rib.add_child(name)

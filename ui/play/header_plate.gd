@@ -18,19 +18,23 @@ func show_for(p_who: String, p_gold: int) -> void:
 
 
 func _font_size() -> int:
-	return int(UiSkin.hud("plate_text"))
+	return UiSkin.pick("plate", int(UiSkin.hud("plate_text")), ThemeDB.fallback_font)[1]
+
+
+func _font() -> Font:
+	return UiSkin.pick("plate", int(UiSkin.hud("plate_text")), ThemeDB.fallback_font)[0]
 
 
 func _width() -> float:
 	var px := float(UiSkin.pixel())
-	var f := ThemeDB.fallback_font
+	var f := _font()
 	var fs := _font_size()
 	return px * 6.0 + px * 8.0 + px * 2.0 + f.get_string_size(str(gold), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + px * 5.0 + f.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 
 
 func _draw() -> void:
 	var px := float(UiSkin.pixel())
-	var f := ThemeDB.fallback_font
+	var f := _font()
 	var fs := _font_size()
 	var h := f.get_height(fs) + px * 4.0
 	var box := Rect2(Vector2(0, roundf((size.y - h) * 0.5)), Vector2(size.x, h))

@@ -54,8 +54,10 @@ func _draw() -> void:
 	var x := float(iw + 2 * S)
 	var frac := 0.0 if pb.max_value <= 0.0 else clampf(float(pb.value) / float(pb.max_value), 0.0, 1.0)
 	draw_texture(UiSkin.bar_tex(int(size.x - x), int(size.y), frac, str(spec["colors"])), Vector2(x, 0))
-	var font: Font = get_theme_default_font()
-	var fs := int(UiSkin.piece("bar")["text_size"])
+	var pf: Array = UiSkin.pick("bar", int(UiSkin.piece("bar")["text_size"]), get_theme_default_font())
+	var font: Font = pf[0]
+	var fs: int = pf[1]
 	var at := Vector2(x + 4 * S, (size.y + float(fs) * 0.7) * 0.5)
-	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, ink)
+	var ol := int(UiSkin.font_role("bar").get("outline", 3)) if UiSkin.font_for("bar") == font else 3
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ol, ink)
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiSkin.pal("bar_text"))

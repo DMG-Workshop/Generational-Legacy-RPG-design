@@ -54,6 +54,7 @@ static func ribbon(l: Label, size: int = 0) -> Control:
 	UiSkin.dress_title(l)
 	if size > 0:
 		l.add_theme_font_size_override("font_size", size)
+		UiSkin.dress_font(l, "title")
 	l.mouse_filter = Control.MOUSE_FILTER_PASS
 	p.add_child(l)
 	return p
@@ -100,6 +101,8 @@ static func _dress(n: Node, host: Control) -> void:
 	elif n is Label or n is RichTextLabel:
 		if face_of(n, host) == "parch":
 			UiSkin.dress(n, host, "parch")
+		elif n is Label and face_of(n, host) != "well" and not n.has_meta("skin_pixel_font"):
+			UiSkin.dress_heading(n)   # a heading on the night sky
 	elif n is LineEdit:
 		UiSkin.dress_field(n)
 	elif n is Button and not (n is CheckBox) and not n.has_meta("skin_keep"):

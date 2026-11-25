@@ -39,6 +39,7 @@ static func ribbon(l: Label, size: int = 14, outline: int = 2) -> PanelContainer
 	r.set_meta("skin_face", true)
 	UiSkin.dress_title(l)
 	l.add_theme_font_size_override("font_size", size)
+	UiSkin.dress_font(l, "title")
 	l.add_theme_constant_override("outline_size", outline)
 	r.add_child(l)
 	return r

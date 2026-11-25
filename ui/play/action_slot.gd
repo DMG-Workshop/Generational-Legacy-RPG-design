@@ -143,8 +143,9 @@ func _draw_skinned() -> void:
 		draw_texture_rect(tex, Rect2(at + o * px, gsize), false, Color(UiSkin.pal("ink"), a))
 	draw_texture_rect(tex, Rect2(at, gsize), false, Color(tint, a))
 	if badge != "":
-		var font := ThemeDB.fallback_font
-		var fs := int(UiSkin.hud("badge_size"))
+		var pf: Array = UiSkin.pick("badge", int(UiSkin.hud("badge_size")), ThemeDB.fallback_font)
+		var font: Font = pf[0]
+		var fs: int = pf[1]
 		var sz := font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 		var pad := Vector2(float(UiSkin.piece("badge")["content"][0]), float(UiSkin.piece("badge")["content"][1])) * px
 		var box := Rect2(Vector2.ONE * px * 3.0, Vector2(maxf(sz.x, font.get_height(fs) * 0.6) + pad.x * 2.0, font.get_height(fs) + pad.y * 2.0))

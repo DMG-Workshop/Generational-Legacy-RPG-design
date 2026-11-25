@@ -62,6 +62,7 @@ static func dress_button(b: Button) -> void:
 	b.add_theme_color_override("font_pressed_color", UiSkin.pal("ink"))
 	b.add_theme_color_override("font_hover_pressed_color", UiSkin.pal("ink"))
 	b.add_theme_color_override("font_disabled_color", UiSkin.pal("ink_dim"))
+	UiSkin.dress_font(b, "button")
 	b.set_meta("skin_done", true)
 
 
@@ -128,6 +129,7 @@ static func tabs(host: Control, tc: TabContainer) -> void:
 	tc.add_theme_color_override("font_outline_color", UiSkin.pal("ink"))
 	tc.add_theme_constant_override("outline_size", 2)
 	tc.add_theme_constant_override("side_margin", 0)
+	UiSkin.dress_font(tc, "tab")
 
 
 ## A toggle button that is a tab (the shops' row of shops): wood, and the open one lit.
@@ -146,6 +148,7 @@ static func tab_button(host: Control, b: Button) -> void:
 	b.add_theme_color_override("font_disabled_color", UiSkin.pal("wood_dim"))
 	b.add_theme_color_override("font_outline_color", UiSkin.pal("ink"))
 	b.add_theme_constant_override("outline_size", 2)
+	UiSkin.dress_font(b, "tab")
 	b.set_meta("skin_done", true)
 
 

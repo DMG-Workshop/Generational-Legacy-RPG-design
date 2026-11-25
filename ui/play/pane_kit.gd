@@ -162,6 +162,7 @@ static func build(host: Control, title: String) -> VBoxContainer:
 	t.add_theme_color_override("font_color", color("title_text"))
 	if skinned:
 		UiSkin.dress_title(t)
+		UiSkin.dress_font(t, "title", 20)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(t)
