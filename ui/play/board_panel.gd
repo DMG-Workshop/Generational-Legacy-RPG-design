@@ -2,6 +2,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const PanelSkin := preload("res://ui/play/panel_skin.gd")
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
@@ -101,7 +102,7 @@ func _wrap(text: String, size: int, color: Color) -> Label:
 
 ## Card frame with the quest's name and kind; returns the inner box.
 func _card(list: VBoxContainer, q: Dictionary) -> VBoxContainer:
-	var p := Kit.panel()
+	var p := PanelSkin.row(self)
 	list.add_child(p)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 3)

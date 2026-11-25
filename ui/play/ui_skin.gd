@@ -446,7 +446,7 @@ static func dress_button(b: Button) -> void:
 	b.add_theme_color_override("font_color", pal("parch_hi"))
 	b.add_theme_color_override("font_hover_color", pal("gold_hi"))
 	b.add_theme_color_override("font_pressed_color", pal("gold_hi"))
-	b.add_theme_color_override("font_disabled_color", pal("slot_lo"))
+	b.add_theme_color_override("font_disabled_color", pal("slot_dim"))   # (quiet but readable on the slot)
 	b.set_meta("skin_done", true)
 
 

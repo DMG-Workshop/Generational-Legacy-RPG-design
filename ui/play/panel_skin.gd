@@ -34,6 +34,7 @@ static func row(host: Control, color: Color = Kit.PANEL) -> PanelContainer:
 	sb.content_margin_bottom = float(c[1] * s) + 2.0
 	p.add_theme_stylebox_override("panel", sb)
 	p.set_meta("skin_row", true)
+	p.ready.connect(func(): retint(host, p))   # whatever was put in it, once it is all there
 	return p
 
 
