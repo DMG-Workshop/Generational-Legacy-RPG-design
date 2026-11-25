@@ -548,7 +548,6 @@ func _fill_creatures() -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		box.add_child(row)
 		var text := VBoxContainer.new()
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(text)
@@ -566,7 +565,7 @@ func _fill_creatures() -> void:
 		row.add_child(btns)
 		if GameBreeding.can_set(e) or e.get("breeding", false):
 			var on: bool = e.get("breeding", false)
-			var bb := Kit.button(GameBreeding.text("breed_on" if on else "breed_off", {}), func(): _breed(id, not on), Vector2(190, 0))
+			var bb := PanelSkin.button(self, GameBreeding.text("breed_on" if on else "breed_off", {}), func(): _breed(id, not on), Vector2(190, 0))
 			bb.disabled = not alive
 			btns.add_child(bb)
 		var acts: Array = ["sell", "free"]
@@ -579,9 +578,15 @@ func _fill_creatures() -> void:
 				label = GameFarm.text(("sure_" if sure else "") + "slaughter", {"gold": GameText.num(GameFarm.slaughter_value(e))})
 			else:
 				label = GameRanch.text(("sure_" if sure else "") + act, {"gold": price})
-			var b := Kit.button(label, func(): _creature_action(id, act), Vector2(190, 0))
+			var b := PanelSkin.button(self, label, func(): _creature_action(id, act), Vector2(190, 0))
 			b.disabled = not alive
 			btns.add_child(b)
+		if PanelSkin.on(self):   # an inset slot round the row (added once it is full, so its text is dressed in one go)
+			var slot := PanelSkin.row(self)
+			slot.add_child(row)
+			box.add_child(slot)
+		else:
+			box.add_child(row)
 	_fill_market(box, alive)
 
 
@@ -661,7 +666,7 @@ func _fill_market(box: VBoxContainer, alive: bool) -> void:
 	box.add_child(row)
 	for species in GameFarm.market_species():
 		var why := GameFarm.why_not_buy(dynasty, str(species))
-		var b := Kit.button(GameFarm.text("buy", {"young": GameFarm.young_name(str(species)), "gold": GameText.num(GameFarm.price(str(species)))}) + " - " + GameCombat.creature_def(str(species)).get("name", species), func(): _buy(str(species)), Vector2(0, 0))
+		var b := PanelSkin.button(self, GameFarm.text("buy", {"young": GameFarm.young_name(str(species)), "gold": GameText.num(GameFarm.price(str(species)))}) + " - " + GameCombat.creature_def(str(species)).get("name", species), func(): _buy(str(species)), Vector2(0, 0))
 		b.disabled = not alive or why != ""
 		row.add_child(b)
 		if why != "" and shown_why == "" and alive and (why == GameFarm.text("not_in_town") or why == GameFarm.text("no_room")):
