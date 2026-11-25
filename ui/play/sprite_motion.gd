@@ -76,6 +76,9 @@ static func images(img: Image, kind: String, id: String) -> Dictionary:
 	var lift := int(p.get("lift_rows", 3))
 	if bool(p.get("legs", false)) and lift >= 2:
 		var runs := _runs(img, base)
+		if runs.size() == 1 and int(runs[0][1]) - int(runs[0][0]) >= 5:   # one piece (a robe, a long body): its halves are the legs
+			var mid := (int(runs[0][0]) + int(runs[0][1]) + 1) / 2
+			runs = [[runs[0][0], mid - 1], [mid, runs[0][1]]]
 		if runs.size() >= 2:
 			var groups := [[], []]
 			for i in runs.size():

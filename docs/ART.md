@@ -174,3 +174,16 @@ Each layer is one `op` with its own settings. Colours run from lit to shaded, or
 
 Props are grids in the sprites' format, without the reserved keys, drawn standing on their bottom row.
 `SceneryArt.validate()` reports unknown layers, props and colours.
+
+## Animation
+
+Walk and idle frames and battle effects are made in code, so no extra art is kept. `ui/play/sprite_motion.gd` derives a
+sprite's frames (`base`, `squash`, `lift_a`, `lift_b`) by taking a row out of its upper body (a breath, a step's bob, a
+wing beat) or out of a leg's columns (a lifted foot); the sprite keeps its size, margins and outline, and
+`SpriteArt.frame_problems` holds every frame to the rules in `docs/ART_STYLE.md`. `data/art/animation.json` has the
+sequences (a four-frame walk, a two-frame idle), the timing, the shapes (`walker`, `flyer`, `blob`, `still`) and the
+overrides per class and creature. The map shows the walk while something has moved in the last `move_hold` seconds, the
+idle otherwise; reduced motion shows the plain sprite. `ui/play/battle_fx.gd` draws the effects of `data/art/effects.json`
+(slash, spark, gather, bolt and burst per element in the element's colour, shield, dust, puff, sparkle) at the figures'
+pixel size, from the events the battle screen already plays; reduced motion shows none. Cosmetic only: no dice of the
+dynasty's, nothing saved.
