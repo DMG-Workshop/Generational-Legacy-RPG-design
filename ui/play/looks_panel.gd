@@ -5,6 +5,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
+const PanelSkin := preload("res://ui/play/panel_skin.gd")
 const WIDE := 760.0
 const SWATCH := Vector2(104, 40)
 
@@ -51,9 +52,13 @@ func _build() -> void:
 	for by in range(-1, dynasty.party.members.size()):
 		var person := unit(by)
 		var at := by
-		var b := Kit.button(person.name, func(): who = at; _build(), Vector2(160, 40))
+		var b := PanelSkin.button(self, person.name, func(): who = at; _build(), Vector2(160, 40))
 		b.clip_text = true
-		if by == who:
+		if PanelSkin.on(self):   # wooden tabs, the one chosen lit in gold
+			PanelSkin.tab_button(self, b)
+			b.toggle_mode = true
+			b.set_pressed_no_signal(by == who)
+		elif by == who:
 			b.add_theme_stylebox_override("normal", Kit.style(Kit.PANEL_LIGHT, 6, Kit.ACCENT))
 		people.add_child(b)
 
@@ -61,7 +66,6 @@ func _build() -> void:
 	var shirt: Dictionary = SpriteArt.shirts()[SpriteArt.shirt_index(u)] if not SpriteArt.shirts().is_empty() else {}
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
-	_body.add_child(row)
 	var tex := SpriteArt.figure(u)
 	if tex != null:
 		var fig := TextureRect.new()
@@ -75,33 +79,48 @@ func _build() -> void:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(info)
-	info.add_child(Kit.label(u.name, 20, Kit.TEXT))
+	info.add_child(PanelSkin.label(self, u.name, 20, Kit.TEXT))
 	var picked := dynasty.shirt_of(who) == "" or str(shirt.get("id", "")) != dynasty.shirt_of(who)
-	var line := Kit.label("Shirt: %s%s" % [shirt.get("name", "-"), ", picked at random" if picked else ""], 15, Kit.dim())
+	var line := PanelSkin.label(self, "Shirt: %s%s" % [shirt.get("name", "-"), ", picked at random" if picked else ""], 15, Kit.dim())
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(line)
+	_slot(row)
 
 	var swatches := HFlowContainer.new()
 	swatches.add_theme_constant_override("h_separation", 8)
 	swatches.add_theme_constant_override("v_separation", 8)
-	_body.add_child(swatches)
 	for s in SpriteArt.shirts():
 		swatches.add_child(_swatch(s, str(s["id"]) == str(shirt.get("id", ""))))
+	_slot(swatches)
 
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 8)
 	_body.add_child(bottom)
-	var rnd := Kit.button("Random", func(): _pick(""), Vector2(160, 44))
+	var rnd := PanelSkin.button(self, "Random", func(): _pick(""), Vector2(160, 44))
 	rnd.disabled = picked
 	bottom.add_child(rnd)
-	bottom.add_child(Kit.button("Close", func(): queue_free(), Vector2(160, 44)))
+	bottom.add_child(PanelSkin.button(self, "Close", func(): queue_free(), Vector2(160, 44)))
+	if PanelSkin.on(self) and picked:   # why Random is shut, as text
+		var why := PanelSkin.reason(self, "Already at random: pick a colour to set it.", false)
+		why.name = "Reason"
+		_body.add_child(why)
+
+
+## Adds `n` to the body, in an inset slot when skinned (built whole first, so the slot's colours are made once it is all there).
+func _slot(n: Control) -> void:
+	if PanelSkin.on(self):
+		var r := PanelSkin.row(self)
+		r.add_child(n)
+		_body.add_child(r)
+	else:
+		_body.add_child(n)
 
 
 ## A shirt to choose: a button in its own colour with its name, the worn one ringed in gold.
 func _swatch(s: Dictionary, worn: bool) -> Button:
 	var id := str(s["id"])
 	var c := Color.html(str(s["color"]))
-	var b := Kit.button(str(s["name"]), func(): _pick(id), SWATCH)
+	var b := PanelSkin.button(self, str(s["name"]), func(): _pick(id), SWATCH)
 	b.add_theme_font_size_override("font_size", 14)
 	var ring := Kit.ACCENT if worn else c.darkened(0.4)
 	b.add_theme_stylebox_override("normal", Kit.style(c, 6, ring))
@@ -111,6 +130,7 @@ func _swatch(s: Dictionary, worn: bool) -> Button:
 	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		b.add_theme_color_override(k, ink)
 	b.set_meta("shirt", id)
+	b.set_meta("skin_keep", true)   # its colour is its own; the pane's key look must not replace it
 	return b
 
 

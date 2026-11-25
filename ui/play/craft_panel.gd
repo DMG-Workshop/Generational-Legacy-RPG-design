@@ -121,7 +121,6 @@ func _build() -> void:
 		_tabs = TabContainer.new()
 		_tabs.name = "Sections"
 		PanelSkin.tabs(self, _tabs)
-		_tabs.tab_changed.connect(func(i: int): _tab = i)
 		_body.add_child(_tabs)
 	_build_make()
 	_build_brew()
@@ -129,7 +128,8 @@ func _build() -> void:
 	_build_salvage()
 	if _tabs != null:
 		_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
-	_body.add_child(Kit.button("Close", func(): queue_free(), Vector2(_column, 48)))
+		_tabs.tab_changed.connect(func(i: int): _tab = i)   # (connected last: adding the pages would reset it)
+	_body.add_child(PanelSkin.button(self, "Close", func(): queue_free(), Vector2(_column, 48)))
 
 
 # ---------------------------------------------------------------- make
@@ -204,7 +204,7 @@ func _build_make() -> void:
 	var chosen: Array = picks.filter(func(x): return x != "")
 	var p := GameCraft.plan(dynasty, form_id, mat_id, chosen, forge)
 	box.add_child(_wrap(_preview(p), 15, Kit.TEXT, true))
-	var make := Kit.button("Make it", func(): _make(chosen), Vector2(_kw(), 48))
+	var make := PanelSkin.button(self, "Make it", func(): _make(chosen), Vector2(_kw(), 48))
 	make.name = "MakeButton"
 	make.disabled = not p["ok"]
 	_key(box, make, int(p["fee"]) if p.has("fee") else -1)
@@ -253,7 +253,7 @@ func _build_brew() -> void:
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override("separation", 2)
 		row.add_child(_wrap("%s: %d from %s and %s gold." % [str(p["name"]).capitalize(), int(p["makes"]), ", ".join(parts), GameText.num(int(p["fee"]))], 15, Kit.TEXT, true))
-		var b := Kit.button("Brew", func(): _say(GameCraft.brew(dynasty, bid, forge)), Vector2(_kw(), 44))
+		var b := PanelSkin.button(self, "Brew", func(): _say(GameCraft.brew(dynasty, bid, forge)), Vector2(_kw(), 44))
 		b.name = "Brew"
 		b.disabled = not p["ok"]
 		_key(row, b, int(p["fee"]))
@@ -277,7 +277,7 @@ func _build_works() -> void:
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override("separation", 2)
 		row.add_child(_wrap(GameSubclass.work_line(dynasty, wid, forge), 15, Kit.TEXT, true))
-		var b := Kit.button(GameSubclass.text("works_make"), func(): _say(GameSubclass.make(dynasty, wid, forge)), Vector2(_kw(), 44))
+		var b := PanelSkin.button(self, GameSubclass.text("works_make"), func(): _say(GameSubclass.make(dynasty, wid, forge)), Vector2(_kw(), 44))
 		b.name = "Work"
 		b.disabled = not p["ok"]
 		_key(row, b, int(p["fee"]) if p.has("fee") else -1)
@@ -306,7 +306,7 @@ func _build_salvage() -> void:
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override("separation", 2)
 		row.add_child(_wrap("%s (x%d): gives %s." % [GameItems.item_name(iid), dynasty.heir.inventory.count(iid), ", ".join(parts)], 15, Kit.TEXT, true))
-		var b := Kit.button("Break up", func(): _salvage(iid), Vector2(_kw(), 44))
+		var b := PanelSkin.button(self, "Break up", func(): _salvage(iid), Vector2(_kw(), 44))
 		b.name = "Salvage"
 		if confirm_salvage == iid:
 			b.text = "Sure?"

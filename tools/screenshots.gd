@@ -22,6 +22,8 @@ const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
 const HousePanel := preload("res://ui/play/house_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const LooksPanel := preload("res://ui/play/looks_panel.gd")
+const CraftPanel := preload("res://ui/play/craft_panel.gd")
+const HeirloomPanel := preload("res://ui/play/heirloom_panel.gd")
 const MapPanel := preload("res://ui/play/map_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const TMP := "user://screenshots_tmp/"
@@ -313,6 +315,13 @@ func _screen(what: String) -> void:
 			await _frames(2)
 		"shop", "map", "house", "trials", "looks", "skills", "chronicle":
 			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "trials": TrialsPanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel}[what]
+			if _arg("panel", "") != "":   # (look-only) another panel in the "looks" shot: panel=craft or panel=heirlooms
+				cls = {"craft": CraftPanel, "heirlooms": HeirloomPanel}[_arg("panel", "")]
+				GameCraft.add_material(d, "iron", 6)
+				GameCraft.add_material(d, "leather", 3)
+				d.heirlooms.append({"name": "Wolfsbane", "boss": "the Wolf King", "gen": 1})
+				d.heirlooms.append({"name": "Ashen Crown", "boss": "the Ash Queen", "gen": 1, "level": 2, "worked_gen": 1, "smiths": ["Tess"]})
+				d.heir.inventory.append("steel_sword")
 			var p: Control = cls.new()
 			if "dynasty" in p:
 				p.dynasty = d

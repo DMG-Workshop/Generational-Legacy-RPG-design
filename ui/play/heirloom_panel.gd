@@ -63,7 +63,7 @@ func _build() -> void:
 			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			text.add_child(line)
 		var label := "Rework (%s gold)" % GameText.num(int(h["cost"])) if int(h["cost"]) >= 0 else "Finished"
-		var b := Kit.button(label, func(): _rework(i), Vector2(200, 0))
+		var b := PanelSkin.button(self, label, func(): _rework(i), Vector2(200, 0))
 		b.disabled = str(h["why_not"]) != ""
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		if PanelSkin.on(self) and int(h["cost"]) >= 0:   # a coin and the price, so the cost reads at a glance
@@ -75,7 +75,7 @@ func _build() -> void:
 		else:
 			row.add_child(b)
 		_put(row)
-	_body.add_child(Kit.button("Close", func(): queue_free(), Vector2(0, 48)))
+	_body.add_child(PanelSkin.button(self, "Close", func(): queue_free(), Vector2(0, 48)))
 
 
 ## Where a row goes: an inset slot when skinned, the body as it was otherwise. The row is added to the slot, which holds it.
