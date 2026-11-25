@@ -1,5 +1,7 @@
 # Art style
 
+> The direction for the whole screen (the interface, the world's light, the order of work) is in `docs/ART_DIRECTION.md`. This file is still the rule for a sprite.
+
 How new art is made so it matches the art there is: the palette, the outline, the light, the sizes and the
 facing. `docs/ART.md` says how art is stored and drawn; this says how it should look. The numbers below are in
 `data/art/style.json`, and `SpriteArt.style_problems()` holds every class figure and creature to the ones a
