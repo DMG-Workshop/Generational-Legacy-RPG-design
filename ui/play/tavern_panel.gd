@@ -3,6 +3,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const PanelSkin := preload("res://ui/play/panel_skin.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 const OLD := Color("#e8a05a")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 
@@ -214,7 +215,7 @@ func _offer_card(id: String) -> Control:
 	side.add_child(Kit.label("Fee: %s" % ("waived" if fee == 0 else "%s gold" % GameText.num(fee)), 14, Kit.good() if fee == 0 else Kit.TEXT))
 	side.add_child(Kit.label("Upkeep: %s a year" % GameText.num(p.upkeep(d, id)), 14))
 	var block := p.hire_block(d, id)
-	var btn := Kit.button("Hire", func(): _hire(id), Vector2(150, 34))
+	var btn := PanelSkin.button(self, "Hire", func(): _hire(id), Vector2(150, 34))
 	btn.disabled = block != ""
 	if block != "":
 		btn.tooltip_text = block
@@ -264,12 +265,12 @@ func _member_card(m: Dictionary) -> Control:
 	v.add_child(gauges)
 	gauges.add_child(_gauge("HP %s / %s" % [GameText.num(u.hp), GameText.num(u.max_hp())], Kit.good(), u.max_hp(), u.hp))
 	gauges.add_child(_gauge("MP %s / %s" % [GameText.num(u.mp), GameText.num(u.max_mp())], Kit.MP_BLUE, maxf(1.0, u.max_mp()), u.mp))
-	var tb := Kit.button("Skill tree", func(): _tree(id), Vector2(120, 34))
+	var tb := PanelSkin.button(self, "Skill tree", func(): _tree(id), Vector2(120, 34))
 	var pts := GameSkillTree.points(u)
 	tb.tooltip_text = "%s's skill tree%s." % [u.name, "" if pts == 0 else " (%s point%s to spend)" % [GameText.num(pts), "" if pts == 1 else "s"]]
 	side.add_child(tb)
 	var label := "Confirm" if confirm_id == id else "Dismiss"
-	var btn := Kit.button(label, func(): _dismiss(id), Vector2(120, 34))
+	var btn := PanelSkin.button(self, label, func(): _dismiss(id), Vector2(120, 34))
 	btn.tooltip_text = "Pay off %s. They go home and will come back without a fee." % u.name
 	side.add_child(btn)
 	if confirm_id == id:
@@ -287,7 +288,11 @@ func _gauge(text: String, color: Color, max_value: float, value: float) -> VBoxC
 	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	g.add_theme_constant_override("separation", 2)
 	g.add_child(Kit.label(text, 13))
-	g.add_child(Kit.bar(color, max_value, value, Vector2(0, 8)))
+	var pb := Kit.bar(color, max_value, value, Vector2(0, 8))
+	if PanelSkin.on(self):   # a slim segmented bar: red for health, blue for mana (the numbers are above it)
+		UiSkin.dress_thin_bar(pb, "mp" if color == Kit.MP_BLUE else "hp")
+		pb.custom_minimum_size.y = 10.0
+	g.add_child(pb)
 	return g
 
 

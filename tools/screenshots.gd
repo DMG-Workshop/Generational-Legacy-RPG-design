@@ -319,6 +319,16 @@ func _screen(what: String) -> void:
 			await _frames(2)
 		"shop", "map", "house", "trials", "looks", "skills", "chronicle", "tavern", "board":
 			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "trials": TrialsPanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel, "tavern": TavernPanel, "board": BoardPanel}[what]
+			if what == "board":   # (look-only) a notice or two taken up, so the board has progress to show
+				var posted: Array = GameData.quests.filter(func(q): return d.quests.is_posted(d, q))
+				if not posted.is_empty():
+					var town: String = str(posted[0]["giver"])
+					d.world.visit(town)
+					d.world.location = town
+					for q in d.quests.postings(d, town).slice(0, 2):
+						d.quests.accept(d, str(q["id"]))
+					if d.quests.postings(d, town).is_empty() and not d.quests.active.is_empty():
+						d.quests.active[0]["progress"] = 1
 			var p: Control = cls.new()
 			if "dynasty" in p:
 				p.dynasty = d
