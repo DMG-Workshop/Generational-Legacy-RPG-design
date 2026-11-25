@@ -61,14 +61,18 @@ func _ready() -> void:
 	tabs.add_child(_factions_tab())
 	tabs.add_child(_creatures_tab())
 	tabs.add_child(_subclass_tab())
-	var stats := Kit.rich()
-	stats.name = "Statistics"
-	stats.text = _stats_text()
-	tabs.add_child(stats)
-	var ages := Kit.rich()
-	ages.name = "Ages"
-	ages.text = _ages_text()
-	tabs.add_child(ages)
+	if PanelSkin.on(self):   # drawn: parchment cards with ribbon headings, inset figure rows and segmented bars
+		tabs.add_child(_page("Statistics", _stats_page))
+		tabs.add_child(_page("Ages", _ages_page))
+	else:
+		var stats := Kit.rich()
+		stats.name = "Statistics"
+		stats.text = _stats_text()
+		tabs.add_child(stats)
+		var ages := Kit.rich()
+		ages.name = "Ages"
+		ages.text = _ages_text()
+		tabs.add_child(ages)
 	var ech := Kit.rich()
 	ech.name = "Echoes & Heirlooms"
 	ech.text = _echo_text()
@@ -193,6 +197,103 @@ func _stats_text() -> String:
 		lines.append(" - generation %s: %s gold" % [_n(g["gen"]), _n(g["gold"])])
 	lines.append(Kit.quiet_bb("Heirs folded into the Ages keep their deaths and counts, but not their gold."))
 	return "\n".join(lines)
+
+
+## A scrolling page of cards for a skinned tab; `fill` puts the cards in the box it is given.
+func _page(tab_name: String, fill: Callable) -> Control:
+	var sc := ScrollContainer.new()
+	sc.name = tab_name
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 8)
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 12)
+	pad.add_child(box)
+	sc.add_child(pad)
+	fill.call(box)
+	return sc
+
+
+## The Statistics tab as cards (same figures as `_stats_text`, which stays the plain version).
+func _stats_page(page: VBoxContainer) -> void:
+	var st := GameStats.summary(dynasty)
+	var gens := int(st["generations"])
+	var reached: Array = st["ages_reached"]
+	var b := PanelSkin.section(self, page, "Heirs")
+	b.add_child(PanelSkin.figure(self, "Heirs who lived", _n(st["heirs"])))
+	b.add_child(PanelSkin.figure(self, "Generations", _n(gens)))
+	b.add_child(PanelSkin.figure(self, "Now in Age", _n(st["age"])))
+	b.add_child(PanelSkin.figure(self, "Ages reached", "Age %s" % _n(reached[0]) if reached.size() == 1 else "Age %s to %s" % [_n(reached[0]), _n(reached[-1])]))
+	if GameHardMode.any(dynasty):
+		var hb := PanelSkin.section(self, page, GameHardMode.text("stats_head"))
+		for l in GameHardMode.lines(dynasty):
+			hb.add_child(PanelSkin.note(str(l)))
+	var seen := int(dynasty.flags.get(str(GameWorldEvents.setting("counter_flag")), 0))
+	if seen > 0:
+		var wb := PanelSkin.section(self, page, "The world")
+		wb.add_child(PanelSkin.note("%s  The house has lived through %s great event%s." % [GameWorldEvents.describe(dynasty), _n(seen), "" if seen == 1 else "s"]))
+	var cb := PanelSkin.section(self, page, "Deaths by cause")
+	var causes: Array = st["causes"]
+	if causes.is_empty():
+		cb.add_child(PanelSkin.note("None yet.", true))
+	var top := 1
+	for c in causes:
+		top = maxi(top, int(c[1]))
+	for c in causes:
+		cb.add_child(PanelSkin.figure(self, str(c[0]).left(1).to_upper() + str(c[0]).substr(1), _n(c[1]), float(int(c[1])) / float(top)))
+	var lb := PanelSkin.section(self, page, "Legends and the greatest heir")
+	lb.add_child(PanelSkin.figure(self, "Legends slain", "%s (%s kind%s)" % [_n(st["legends"]), _n(st["legend_kinds"]), "" if int(st["legend_kinds"]) == 1 else "s"]))
+	var best: Dictionary = st["best"]
+	if best.is_empty():
+		lb.add_child(PanelSkin.figure(self, "Greatest heir", "none yet"))
+	else:
+		lb.add_child(PanelSkin.figure(self, "Greatest heir: %s, %s %s (generation %s)" % [best["name"], GameData.races[best["race_id"]]["name"], GameData.classes[best["class_id"]]["name"], _n(best["gen"])], "level %s" % _n(best["level"])))
+	var gb := PanelSkin.section(self, page, "Average gold at death, by Age")
+	var top_gold := 1
+	for a in st["gold_by_age"]:
+		top_gold = maxi(top_gold, int(a["average"]))
+	for a in st["gold_by_age"]:
+		if int(a["known"]) == 0:
+			gb.add_child(PanelSkin.figure(self, "Age %s" % _n(a["age"]), "not recorded"))
+		else:
+			gb.add_child(PanelSkin.figure(self, "Age %s, from %s heir%s" % [_n(a["age"]), _n(a["known"]), "" if int(a["known"]) == 1 else "s"], "%s gold" % _n(a["average"]), float(int(a["average"])) / float(top_gold)))
+	var kb := PanelSkin.section(self, page, "Gold of the heirs kept in full")
+	var top_kept := 1
+	for g in st["gold"]:
+		top_kept = maxi(top_kept, int(g["gold"]))
+	for g in st["gold"]:
+		kb.add_child(PanelSkin.figure(self, "Generation %s" % _n(g["gen"]), "%s gold" % _n(g["gold"]), float(int(g["gold"])) / float(top_kept)))
+	kb.add_child(PanelSkin.note("Heirs folded into the Ages keep their deaths and counts, but not their gold.", true, 13))
+
+
+## The Ages tab as cards: one per Age, with its heirs, greatest heir, legends and the dead (a bar for each cause).
+func _ages_page(page: VBoxContainer) -> void:
+	var d := dynasty
+	var rows := d.ages.age_rows(d)
+	for row in rows:
+		var g: Dictionary = row["greatest"]
+		var b := PanelSkin.section(self, page, "Age %s" % _n(row["age"]))
+		b.add_child(PanelSkin.figure(self, "Generations %s to %s" % [_n(row["from"]), _n(row["to"])], "%s heir%s" % [_n(row["heirs"]), "" if int(row["heirs"]) == 1 else "s"]))
+		b.add_child(PanelSkin.figure(self, "Greatest: %s, %s %s (generation %s)" % [g["name"], GameData.races[g["race_id"]]["name"], GameData.classes[g["class_id"]]["name"], _n(g["gen"])], "level %s" % _n(g["level"])))
+		var legends: Array = (row["legends"] as Array).map(func(l): return "%s (%s, generation %s)" % [d._creature_name(l["id"]), l["by"], _n(l["gen"])])
+		b.add_child(PanelSkin.figure(self, "Legends slain: %s" % (", ".join(legends) if not legends.is_empty() else "none"), "%s" % _n(legends.size())))
+		var causes: Dictionary = row["causes"]
+		var keys := causes.keys()
+		keys.sort_custom(func(x, y): return int(causes[x]) > int(causes[y]) or (int(causes[x]) == int(causes[y]) and str(x) < str(y)))
+		var top := 1
+		for k in keys:
+			top = maxi(top, int(causes[k]))
+		for k in keys:
+			b.add_child(PanelSkin.figure(self, "Deaths %s%s" % ["of " if k == "old age" else "", k], _n(causes[k]), float(int(causes[k])) / float(top)))
+	if d.state == "life" and (rows.is_empty() or int(rows.back()["age"]) < d.age_number()):
+		var nb := PanelSkin.section(self, page, "Age %s" % _n(d.age_number()))
+		nb.add_child(PanelSkin.note("Begun in generation %s." % _n(d.gen - d.era_gen() + 1)))
+	if page.get_child_count() == 0:
+		page.add_child(PanelSkin.note("No Age has been told yet.", true))
+	page.add_child(PanelSkin.note("An Age lasts %s generations. Legends rise again when a new one begins." % _n(GameAges.age_length()), true, 13))
 
 
 ## One entry per Age lived through: its heirs, the greatest of them, the legends slain, the dead.

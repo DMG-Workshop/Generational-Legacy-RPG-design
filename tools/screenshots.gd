@@ -24,6 +24,8 @@ const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const LooksPanel := preload("res://ui/play/looks_panel.gd")
 const MapPanel := preload("res://ui/play/map_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
+const TavernPanel := preload("res://ui/play/tavern_panel.gd")
+const BoardPanel := preload("res://ui/play/board_panel.gd")
 const TMP := "user://screenshots_tmp/"
 const DESKTOP := Vector2i(1280, 720)
 const PHONE := Vector2i(844, 390)
@@ -197,6 +199,8 @@ func _shoot(shot: Array) -> Image:
 	await _frames(3)
 	app.closed_badly = false   # a run of this tool that was killed is not something to draw on the title
 	var what: String = shot[3]
+	if _arg("show", "") != "":   # (look-only) draw another screen in this shot
+		what = _arg("show", "")
 	if what == "title":
 		app.show_title()
 	else:
@@ -285,6 +289,8 @@ func _screen(what: String) -> void:
 			var cp := ChroniclePanel.new()
 			cp.dynasty = d
 			cp.on_change = func(): pass
+			if _arg("pane", "") == "1":
+				cp.set_meta("pane", "chronicle_panel")
 			app.current.add_child(cp)
 			await _frames(3)
 			for tc in cp.get_children():
@@ -311,8 +317,8 @@ func _screen(what: String) -> void:
 			if tab_node is ScrollContainer:
 				(tab_node as ScrollContainer).scroll_vertical = 100000   # down to the Market
 			await _frames(2)
-		"shop", "map", "house", "trials", "looks", "skills", "chronicle":
-			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "trials": TrialsPanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel}[what]
+		"shop", "map", "house", "trials", "looks", "skills", "chronicle", "tavern", "board":
+			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "trials": TrialsPanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel, "tavern": TavernPanel, "board": BoardPanel}[what]
 			var p: Control = cls.new()
 			if "dynasty" in p:
 				p.dynasty = d
