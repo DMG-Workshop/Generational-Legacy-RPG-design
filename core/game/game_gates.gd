@@ -19,6 +19,7 @@ static var _seed := -1
 static var _placed: Dictionary = {}      # gate id -> {x, z, fx, fz} for the seed
 static var _order: Array = []            # the ids in data order
 static var _thefts: Dictionary = {}      # "seed|gate" -> {upto: year, list: [[year, slot]]}
+static var _starts: Dictionary = {}      # "seed|gate|slot" -> what the world did to a slot before any repair (kept: the screen asks every frame)
 
 
 static func data() -> Dictionary:
@@ -109,6 +110,7 @@ static func _ensure(d: GameDynasty) -> void:
 	_placed = {}
 	_order = []
 	_thefts = {}
+	_starts = {}
 	for g in data()["gates"]:
 		var id := str(g["id"])
 		var t := _find(d, g)
@@ -276,6 +278,14 @@ static func _rng(d: GameDynasty, tag: String, a: Variant, b: Variant = 0) -> Ran
 ## What the world did to a slot before anyone repaired it: {ordinal 0 whole to 2 broken, stripped}. The `whole` slots of the gate with the lowest
 ## rolls are whole; the rest are dealt worn, broken or stripped by `start_split`.
 static func start_of(d: GameDynasty, id: String, slot: int) -> Dictionary:
+	_ensure(d)
+	var key := "%d|%s|%d" % [d.seed_value, id, slot]
+	if not _starts.has(key):
+		_starts[key] = _start_of(d, id, slot)
+	return _starts[key]
+
+
+static func _start_of(d: GameDynasty, id: String, slot: int) -> Dictionary:
 	var g := def(id)
 	var n := slot_count(id)
 	var rolls: Array = []
@@ -560,6 +570,12 @@ static func _near_gate(d: GameDynasty, id: String, at: Vector2i) -> bool:
 	return Vector2(at - t).length() <= float(setting("reach")) + 0.001
 
 
+## What the Runescribe's calling does to a price: the setting `key` (a multiplier) for a Runescribe, 1 for anyone else. Kept in gates.json, not among
+## the subclass perks, because the repair of a gate is not a thing a perk of the catalog rules.
+static func scribe_mult(d: GameDynasty, key: String) -> float:
+	return float(setting(key)) if d.heir.subclass == str(setting("scribe")) else 1.0
+
+
 ## What cutting a slot again costs: {silver, gold} for its state (0 for a whole one). The gold is scaled by the gate's size, the rune and the
 ## generation, and halved for a Runescribe; a Runescribe also needs less silver to relay a stripped slot.
 static func repair_cost(d: GameDynasty, id: String, slot: int, st: String) -> Dictionary:
@@ -568,10 +584,10 @@ static func repair_cost(d: GameDynasty, id: String, slot: int, st: String) -> Di
 		return {"silver": 0, "gold": 0}
 	var rune := str(runes_of(id)[slot])
 	var gold := float(row["gold"]) * float(setting("size_cost")[str(def(id)["size"])]) * float(rune_def(rune).get("cost", 1.0)) * GameData.enemy_scale(d.gen)
-	gold *= GameSubclass.perk(d.heir, "rune_fee_mult")
+	gold *= scribe_mult(d, "scribe_fee_mult")
 	var silver := float(row["silver"])
 	if st == "stripped":
-		silver *= GameSubclass.perk(d.heir, "rune_silver_mult")
+		silver *= scribe_mult(d, "scribe_silver_mult")
 	return {"silver": maxi(1, int(round(silver))), "gold": maxi(1, int(ceil(gold)))}
 
 
@@ -1012,7 +1028,7 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var s: Dictionary = dat["settings"]
-	for k in ["reach", "see_range", "search", "flat_max", "min_gap", "front_search", "year_cap", "theft_chance", "wear_jitter", "dark_at", "start_split", "sizes", "size_cost", "repair", "silver", "silver_price", "silver_buy_max", "charge", "travel", "known_at_start", "lore", "scribe"]:
+	for k in ["reach", "see_range", "search", "flat_max", "min_gap", "front_search", "year_cap", "theft_chance", "wear_jitter", "dark_at", "start_split", "sizes", "size_cost", "repair", "silver", "silver_price", "silver_buy_max", "charge", "travel", "known_at_start", "lore", "scribe", "scribe_fee_mult", "scribe_silver_mult"]:
 		if not s.has(k):
 			bad.append("gates.json: settings.%s is missing" % k)
 	if not bad.is_empty():
@@ -1041,6 +1057,9 @@ static func validate() -> Array:
 		bad.append("gates.json: the charge material is no material")
 	if float(s["travel"].get("base_seconds", -1.0)) < 0.0 or float(s["travel"].get("cap_seconds", 0.0)) < float(s["travel"].get("base_seconds", 0.0)):
 		bad.append("gates.json: travel needs a base of 0 or more and a cap at least the base")
+	for k in ["scribe_fee_mult", "scribe_silver_mult"]:
+		if float(s[k]) <= 0.0 or float(s[k]) > 1.0:
+			bad.append("gates.json: %s must be above 0 and at most 1 (the Runescribe pays no more than others)" % k)
 	if not GameSubclass.has(str(s["scribe"])):
 		bad.append("gates.json: settings.scribe is no subclass")
 	for r in s["known_at_start"]:

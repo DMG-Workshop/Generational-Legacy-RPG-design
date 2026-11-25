@@ -228,6 +228,21 @@ static func rect_of(d: GameDynasty, id: String) -> Rect2i:
 	return Rect2i(t.x - 1, t.y - 3, int(data()["w"]), int(data()["h"]))
 
 
+## Makes the pictures of the gates in a rect (and of a realm's return gate) before anything is drawn: a texture first made while the canvas is being
+## drawn blanks what was drawn before it in that frame (and the renderer dislikes it), so the screen asks for them here, each frame, cheaply (they are kept).
+static func warm(d: GameDynasty, view: Rect2i, realm: String = "") -> void:
+	if realm != "":
+		arrival_arch(realm)
+		return
+	for g in in_view(d, view):
+		texture_of(d, str(g["id"]))
+
+
+## The return gate in a realm's arrival ground.
+static func arrival_arch(realm: String) -> Texture2D:
+	return texture("lit", ["whole", "whole", "whole", "whole", "whole"], ["door", "return", "light", "road", "deep"], false, realm.hash() & 0xffff)
+
+
 ## The gates whose picture shows in a rect of tiles: [{id, rect}].
 static func in_view(d: GameDynasty, view: Rect2i) -> Array:
 	var out: Array = []
@@ -304,9 +319,7 @@ static func paint_arrival(c: Control, realm: String, cells: Dictionary, origin: 
 			elif (h % 11) == 1:
 				var dot := Rect2(at + Vector2(cell * 0.4, cell * 0.4), Vector2(maxf(1.0, cell * 0.12), maxf(1.0, cell * 0.12)))
 				c.draw_rect(dot, (lk["glow"] as Color) * Color(1, 1, 1, 0.55) * tint)
-	var states := ["whole", "whole", "whole", "whole", "whole"]
-	var runes := ["door", "return", "light", "road", "deep"]
-	var arch := texture("lit", states, runes, false, realm.hash() & 0xffff)
+	var arch := arrival_arch(realm)
 	var top := origin + (Vector2(-1, -3) - centre) * cell + area * 0.5
 	c.draw_texture_rect(arch, Rect2(top, Vector2(3, 4) * cell), false, tint)
 

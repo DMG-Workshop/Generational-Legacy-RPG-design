@@ -1253,6 +1253,8 @@ func _sync_tiles() -> void:
 	tile_view.show_view(centre, area * 0.5 / cell + Vector2(1, 1))
 	tile_view.set_heir(float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5)   # the lids of the family's houses lift as they come near
 	tile_view.place(Vector2.ZERO, area, centre, cell, light)
+	var half := area / (2.0 * cell) + Vector2(4, 4)
+	GateArt.warm(d, Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0)), sb.realm_here())   # the arches' pictures are made here, not while drawing
 
 
 ## What is drawn over the tiles: the night's tint, the route, creatures, companions, the build ghost, the heir and the touch stick.

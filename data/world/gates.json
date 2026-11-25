@@ -59,6 +59,8 @@
    "road"
   ],
   "scribe": "runescribe",
+  "scribe_fee_mult": 0.5,
+  "scribe_silver_mult": 0.67,
   "lore": {
    "ruin": 0.35,
    "standing_stones": 0.3,

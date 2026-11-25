@@ -89,8 +89,9 @@ Size cost: small 0.8, medium 1.0, grand 1.3, great 1.6. At the first generation 
 to touch up when worn and about 31 gold, 2 silver when broken, so the family's 300 starting gold mends a small ruin; a great gate is
 a project of several generations.
 
-The Runescribe pays half the gold (`rune_fee_mult` 0.5) and only two of the three silver to relay a stripped slot (`rune_silver_mult`
-0.67), and **knows every rune**.
+The Runescribe pays half the gold (`scribe_fee_mult` 0.5) and only two of the three silver to relay a stripped slot (`scribe_silver_mult`
+0.67), and **knows every rune**. These are settings in gates.json, not perks of the subclass catalog: a repair is not one of the things
+a perk rules, and the catalog's own tests hold every perk to a range and to a count.
 
 ### Learning the runes (three sources, all in data)
 

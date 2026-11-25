@@ -488,13 +488,14 @@ func test_runescribe() -> void:
 	var s2 := int(GameGates.repair_cost(scribe, gate, 0, "stripped")["silver"])
 	ok(s2 < s1, "and a stripped slot takes less silver: %d against %d" % [s2, s1])
 	ok(int(GameGates.repair_cost(plain, gate, 0, "broken")["silver"]) == int(GameGates.repair_cost(scribe, gate, 0, "broken")["silver"]), "a broken slot takes the same silver")
-	# the perk is read from the data
-	var sub: Dictionary = GameSubclass.def("runescribe")
-	var keep := float(sub["perks"]["rune_fee_mult"])
-	sub["perks"]["rune_fee_mult"] = 1.0
-	ok(int(GameGates.repair_cost(scribe, gate, 0, "broken")["gold"]) > g2, "setting the perk back to 1 puts the fee back at once")
-	sub["perks"]["rune_fee_mult"] = keep
-	ok(GameSubclass.perk(plain.heir, "rune_fee_mult") == 1.0 and GameSubclass.perk(plain.heir, "rune_silver_mult") == 1.0, "with no calling the perks are exactly 1")
+	# the numbers are read from the data
+	var st: Dictionary = GameGates.data()["settings"]
+	var keep := float(st["scribe_fee_mult"])
+	st["scribe_fee_mult"] = 1.0
+	ok(int(GameGates.repair_cost(scribe, gate, 0, "broken")["gold"]) > g2, "setting the Runescribe's discount to 1 puts the fee back at once")
+	st["scribe_fee_mult"] = keep
+	ok(GameGates.scribe_mult(plain, "scribe_fee_mult") == 1.0 and GameGates.scribe_mult(plain, "scribe_silver_mult") == 1.0, "with no calling the multipliers are exactly 1")
+	ok(not GameSubclass.data()["perks"].has("rune_fee_mult"), "(the subclass catalog is untouched)")
 
 
 func test_realm_flag() -> void:
