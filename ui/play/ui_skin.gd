@@ -7,7 +7,8 @@ extends RefCounted
 
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const PATH := "res://data/ui/skin.json"
-const PIECES := ["panel", "frame", "ribbon", "inset", "bar", "header"]
+const PIECES := ["panel", "frame", "ribbon", "inset", "bar", "header", "plate", "badge"]
+const HUD_KEYS := ["slot_px", "glyph_pixels", "gap", "badge_size", "dim_alpha", "wash", "header_tile", "bar_y", "plate_text"]
 const PALETTE_KEYS := ["ink", "brown", "parch", "parch_hi", "parch_lo", "wood", "wood_hi", "wood_lo", "gold", "gold_dk", "gold_hi",
 		"crimson", "crimson_hi", "crimson_dk", "slot_bg", "slot_lo", "track", "bar_text", "ink_dim", "ink_good", "ink_bad", "ink_blue",
 		"ink_good_cb", "ink_bad_cb", "wood_text", "wood_dim", "wood_good", "wood_bad", "wood_blue", "wood_accent", "wood_good_cb",
@@ -49,6 +50,17 @@ static func piece(name: String) -> Dictionary:
 ## wide and has a mouse. Anywhere else the older look stays.
 static func active(host: Control) -> bool:
 	return host != null and host.has_meta("pane") and not UiSettings.compact(host) and not UiSettings.touch()
+
+
+## Whether the pieces over the open world (action bar, header, ring, thing menu) wear the skin: a wide window with a mouse. They are
+## not panes, so this does not ask for the pane meta.
+static func hud_active(n: Control) -> bool:
+	return n != null and not UiSettings.compact(n) and not UiSettings.touch()
+
+
+## A number of the `hud` block of the data.
+static func hud(key: String) -> float:
+	return float(data()["hud"][key])
 
 
 ## The pane a control is in, or null.
@@ -300,6 +312,42 @@ static func header_tex(w: int, h: int) -> ImageTexture:
 	return _keep(k, _tex(i))
 
 
+## A small parchment plate (a ring item, a thing menu's choice, a name tag): ink outline, a brown or, lit, gold line inside it, a bevel.
+static func plate_tex(w: int, h: int, lit: bool = false) -> ImageTexture:
+	var k := _key("plate", "%d,%d,%s" % [w, h, lit])
+	if _memo.has(k):
+		return _memo[k]
+	var m := int(piece("plate")["margin"])
+	var lw := maxi(_logical(w), 2 * m + 1)
+	var lh := maxi(_logical(h), 2 * m + 1)
+	var i := _img(lw, lh, pal("parch_hi") if lit else pal("parch"))
+	_rect(i, 2, 2, lw - 4, 1, pal("parch_hi"))
+	_rect(i, 2, 2, 1, lh - 4, pal("parch_hi"))
+	_rect(i, 2, lh - 3, lw - 4, 1, pal("parch_lo"))
+	_rect(i, lw - 3, 2, 1, lh - 4, pal("parch_lo"))
+	_ring(i, 1, pal("gold") if lit else pal("brown"))
+	_ring(i, 0, pal("ink"))
+	if lit:
+		_rect(i, 2, 2, lw - 4, 1, pal("gold_dk"))   # (the lit line is doubled: gold outside, its shade inside)
+		_rect(i, 2, lh - 3, lw - 4, 1, pal("gold_dk"))
+		_rect(i, 2, 2, 1, lh - 4, pal("gold_dk"))
+		_rect(i, lw - 3, 2, 1, lh - 4, pal("gold_dk"))
+	return _keep(k, _tex(i))
+
+
+## A small ink badge for light text (a key, the gold in the header): ink with a wooden line inside it, a gold one when lit.
+static func badge_tex(w: int, h: int, lit: bool = false) -> ImageTexture:
+	var k := _key("badge", "%d,%d,%s" % [w, h, lit])
+	if _memo.has(k):
+		return _memo[k]
+	var m := int(piece("badge")["margin"])
+	var lw := maxi(_logical(w), 2 * m + 1)
+	var lh := maxi(_logical(h), 2 * m + 1)
+	var i := _img(lw, lh, pal("ink"))
+	_ring(i, 1, pal("gold_dk") if lit else pal("wood_hi"))
+	return _keep(k, _tex(i))
+
+
 ## A one-colour 8 by 8 picture from rows of "#" and ".", white so it can be tinted when drawn.
 static func icon_tex(name: String) -> ImageTexture:
 	var k := "icon|" + name
@@ -355,6 +403,48 @@ static func inset_box(lit: bool = false) -> StyleBoxTexture:
 	var p := piece("inset")
 	var b: Array = p["base"]
 	return _nine("inset", inset_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), lit), int(p["margin"]), [p["content"], p["content"]], str(lit))
+
+
+static func plate_box(lit: bool = false) -> StyleBoxTexture:
+	var p := piece("plate")
+	var b: Array = p["base"]
+	return _nine("plate", plate_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), lit), int(p["margin"]), p["content"], str(lit))
+
+
+static func badge_box(lit: bool = false) -> StyleBoxTexture:
+	var p := piece("badge")
+	var b: Array = p["base"]
+	return _nine("badge", badge_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), lit), int(p["margin"]), p["content"], str(lit))
+
+
+## The header's wooden strip: a row of planks `h` tall, tiled across (a tile holds `header_tile` planks, so the seams stay even).
+static func header_strip(h: float) -> TextureRect:
+	var r := TextureRect.new()
+	r.texture = header_tex(int(piece("header")["plank"]) * int(hud("header_tile")) * pixel(), int(h))
+	r.stretch_mode = TextureRect.STRETCH_TILE
+	r.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	r.offset_bottom = h
+	r.set_meta("skin_done", true)
+	return r
+
+
+## A popup menu (the thing menu) as a parchment sheet whose pointed-at choice is a lit plate.
+static func dress_popup(m: PopupMenu) -> void:
+	m.add_theme_stylebox_override("panel", panel_box())
+	m.add_theme_stylebox_override("hover", plate_box(true))
+	var sep := StyleBoxFlat.new()
+	sep.bg_color = pal("brown")
+	sep.content_margin_top = 1.0
+	sep.content_margin_bottom = 1.0
+	m.add_theme_stylebox_override("separator", sep)
+	m.add_theme_color_override("font_color", pal("ink"))
+	m.add_theme_color_override("font_hover_color", pal("ink"))
+	m.add_theme_color_override("font_disabled_color", pal("crimson_dk"))
+	m.add_theme_color_override("font_separator_color", pal("ink"))
+	m.add_theme_constant_override("v_separation", 8)
+	m.add_theme_constant_override("outline_size", 0)
 
 
 ## The face of a pane: parchment, or wood.
@@ -523,7 +613,7 @@ static func validate(dat: Dictionary = {}) -> Array:
 	var bad: Array = []
 	if d.is_empty():
 		return ["skin.json: missing or not an object"]
-	for k in ["pixel", "shadow", "faces", "title", "pieces", "icons", "bars", "variants", "text_maps", "contrast"]:
+	for k in ["pixel", "shadow", "faces", "title", "pieces", "hud", "icons", "bars", "variants", "text_maps", "contrast"]:
 		if not d.has(k):
 			bad.append("skin.json: %s is missing" % k)
 	if not bad.is_empty():
@@ -538,7 +628,7 @@ static func validate(dat: Dictionary = {}) -> Array:
 			bad.append("skin.json: pieces.%s is missing" % name)
 	if not bad.is_empty():
 		return bad
-	for name in ["panel", "frame", "ribbon", "inset"]:
+	for name in ["panel", "frame", "ribbon", "inset", "plate", "badge"]:
 		var pc: Dictionary = d["pieces"][name]
 		var b: Variant = pc.get("base")
 		if typeof(b) != TYPE_ARRAY or (b as Array).size() != 2 or float(b[0]) != floorf(float(b[0])) or float(b[1]) != floorf(float(b[1])):
@@ -548,6 +638,14 @@ static func validate(dat: Dictionary = {}) -> Array:
 	for k in d["faces"]:
 		if str(d["faces"][k]) not in ["parch", "wood"]:
 			bad.append("skin.json: faces.%s must be parch or wood" % k)
+	if typeof(d["hud"]) != TYPE_DICTIONARY:
+		bad.append("skin.json: hud must be an object")
+	else:
+		for f in HUD_KEYS:
+			if not (d["hud"] as Dictionary).has(f) or typeof(d["hud"][f]) not in [TYPE_INT, TYPE_FLOAT] or float(d["hud"][f]) <= 0.0:
+				bad.append("skin.json: hud.%s must be a number above 0" % f)
+		if bad.is_empty() and (int(d["hud"]["slot_px"]) % int(d["pixel"]) != 0 or int(d["hud"]["slot_px"]) < 9 * int(d["pixel"])):
+			bad.append("skin.json: hud.slot_px must be a whole multiple of the pixel, wide enough for a slot's frame and its picture")
 	for k in ["bar"]:
 		for f in ["height", "segment_every", "segment_at", "icon_scale", "text_size"]:
 			if not (d["pieces"][k] as Dictionary).has(f) or float(d["pieces"][k][f]) < 1.0:

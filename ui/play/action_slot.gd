@@ -5,6 +5,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 const BAR_PATH := "res://data/ui/actionbar.json"
 const ICON_PATH := "res://data/art/action_icons.json"
 
@@ -20,6 +21,7 @@ var dim := false           # does not apply now
 var active := false        # its mode is on
 var pressed: Callable = Callable()
 var hover := false
+var skinned := false       # drawn with the interface skin (a wide window with a mouse), set by the screen that makes it
 
 
 static func data() -> Dictionary:
@@ -71,7 +73,7 @@ static func tip_for(def: Dictionary, number: String) -> String:
 
 
 ## A slot made from one entry of `slots` or `extras`, `number` being "1".."8" or "".
-static func make(def: Dictionary, number: String, on_press: Callable) -> Control:
+static func make(def: Dictionary, number: String, on_press: Callable, skinned_look: bool = false) -> Control:
 	var slot: Control = load("res://ui/play/action_slot.gd").new()
 	slot.id = str(def["id"])
 	slot.glyph = str(def["glyph"])
@@ -80,7 +82,8 @@ static func make(def: Dictionary, number: String, on_press: Callable) -> Control
 	slot.badge = number
 	slot.pressed = on_press
 	slot.tooltip_text = tip_for(def, number)
-	var px := setting("slot_px")
+	slot.skinned = skinned_look
+	var px := UiSkin.hud("slot_px") if skinned_look else setting("slot_px")
 	slot.custom_minimum_size = Vector2(px, px)
 	slot.mouse_filter = Control.MOUSE_FILTER_STOP
 	return slot
@@ -110,6 +113,9 @@ func _notification(what: int) -> void:
 
 
 func _draw() -> void:
+	if skinned:
+		_draw_skinned()
+		return
 	var fill := Color("#4a3f78") if active else (Color("#34304e") if hover else Color("#26233a"))
 	draw_style_box(Kit.style(fill, 6, Kit.ACCENT if active else Color("#4a4666")), Rect2(Vector2.ZERO, size))
 	var sc := setting("glyph_scale")
@@ -118,6 +124,33 @@ func _draw() -> void:
 	draw_texture_rect(texture(glyph), Rect2((size - gsize) * 0.5 + Vector2(0, 2), gsize), false, colour)
 	if badge != "":
 		draw_string(ThemeDB.fallback_font, Vector2(4, 12), badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Kit.dim() if not dim else Color(1, 1, 1, 0.3))
+
+
+## The slot as an inset square of the skin: gold frame (and a wash of gold) while its mode is on or the mouse is over it, the picture in
+## its colour with a one-pixel ink outline, the key in a small ink badge, and a slot that does not apply dimmed, never removed.
+func _draw_skinned() -> void:
+	var px := float(UiSkin.pixel())
+	var lit := active or hover
+	draw_style_box(UiSkin.inset_box(lit), Rect2(Vector2.ZERO, size))
+	var inner := Rect2(Vector2.ONE * px * 3.0, size - Vector2.ONE * px * 6.0)
+	if active:
+		draw_rect(inner, Color(UiSkin.pal("gold"), UiSkin.hud("wash")))
+	var gsize := Vector2(8, 8) * px * UiSkin.hud("glyph_pixels")
+	var at := (size - gsize) * 0.5 + Vector2(0, px)
+	var tex := texture(glyph)
+	var a := UiSkin.hud("dim_alpha") if dim else 1.0
+	for o in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1), Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
+		draw_texture_rect(tex, Rect2(at + o * px, gsize), false, Color(UiSkin.pal("ink"), a))
+	draw_texture_rect(tex, Rect2(at, gsize), false, Color(tint, a))
+	if badge != "":
+		var font := ThemeDB.fallback_font
+		var fs := int(UiSkin.hud("badge_size"))
+		var sz := font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var pad := Vector2(float(UiSkin.piece("badge")["content"][0]), float(UiSkin.piece("badge")["content"][1])) * px
+		var box := Rect2(Vector2.ONE * px * 3.0, Vector2(maxf(sz.x, font.get_height(fs) * 0.6) + pad.x * 2.0, font.get_height(fs) + pad.y * 2.0))
+		draw_style_box(UiSkin.badge_box(active), box)
+		var col := UiSkin.pal("gold_hi") if active else UiSkin.pal("parch_hi")
+		draw_string(font, box.position + Vector2((box.size.x - sz.x) * 0.5, pad.y + font.get_ascent(fs)), badge, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(col, 0.5 if dim else 1.0))
 
 
 static func validate() -> Array:

@@ -5,6 +5,7 @@
 extends RefCounted
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 const HIGHLIGHT := Color("#3d3860")
 const SKIP_W := 96.0
@@ -31,7 +32,17 @@ static func make(tip: Dictionary, width: float, on_skip: Callable) -> Control:
 	skip.add_theme_font_size_override("font_size", 13)
 	skip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(skip)
+	p.tree_entered.connect(func(): _dress(p, body, skip))   # a wide window with a mouse gets the skin's plate; the old look stays elsewhere
 	return p
+
+
+## The strip as a parchment plate with ink text and a slot-style button.
+static func _dress(p: PanelContainer, body: Label, skip: Button) -> void:
+	if not UiSkin.hud_active(p):
+		return
+	p.add_theme_stylebox_override("panel", UiSkin.plate_box(false))
+	body.add_theme_color_override("font_color", UiSkin.pal("ink"))
+	UiSkin.dress_button(skip)
 
 
 ## Marks the buttons a tip points at: those whose text starts with one of its `highlight` words.

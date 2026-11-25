@@ -99,9 +99,18 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   the ground, the character and pack panes inset slots (`item_slot.gd`). Panel code is unchanged: labels and kit buttons added under a
   pane are dressed as they are added (`UiSkin.watch`), with light-on-dark colours turned to inks, so every panel that opens as a pane
   reads on parchment. A compact window, a touch screen and the full-screen overlays keep the old dark look.
-- **Not built yet:** the title and life screens, the action bar and header (the wooden header texture exists but is not drawn), the
-  ring and thing menu, icon outlines, panels' own inner boxes (a `Kit.panel` inside a pane stays dark), a touch version of the skin,
-  and the pixel font (the engine's font is used; the bar words and the ribbon titles are where it would show most).
+- **Step 3, the header, slots and ring (desktop only):** the action bar sits on a wooden strip (`UiSkin.header_strip`, the header texture
+  tiled by whole planks), each slot an inset square (`ActionSlot` skinned) that is gold-lit when its mode is on or the mouse is over it,
+  with a gold wash while on, its 8 by 8 picture at 2 skin pixels with a one-pixel ink outline, its key in a small light-on-ink badge
+  (`UiSkin.badge_box`), and a slot that does not apply drawn dim, never removed. `header_plate.gd` at the end of the bar shows the gold
+  (coin icon) and the heir's name in an ink badge; the status line is light on the planks. The panel ring is a wooden hub with parchment
+  plates (`UiSkin.plate_box`), a gold frame on the one pointed at; the thing menu is a parchment sheet with a lit plate under the choice
+  pointed at (`UiSkin.dress_popup`); name tags and speech bubbles are plates; the tutorial tip strip dresses itself as a plate when it
+  enters the tree on a wide window with a mouse. `UiSkin.hud_active(host)` is the test (not a pane, so it does not ask for the pane meta).
+  The `hud` block of `skin.json` holds the sizes and `UiSkin.validate` checks it, with more contrast pairs for the keys and the gold.
+- **Not built yet:** the title and life screens, icon outlines for items and creatures, panels' own inner boxes (a `Kit.panel` inside a pane
+  stays dark), a touch version of the skin, panel buttons in the header (the ring and the Menu slot open the panels), and the pixel font
+  (the engine's font is used; the bar words and the ribbon titles are where it would show most).
 
 The touch layout keeps its current interface until a touch version of the skin is designed (`docs/MOBILE.md`).
 

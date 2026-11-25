@@ -10,7 +10,13 @@
     "ribbon": { "base": [24, 15], "margin": 5, "stitch_at": 3, "stitch_every": 2, "content": [4, 1] },
     "inset": { "base": [16, 16], "margin": 3, "content": 2 },
     "bar": { "height": 11, "segment_every": 6, "segment_at": 7, "icon_scale": 1, "text_size": 13 },
-    "header": { "plank": 36, "speck": 0.07, "height": 28 }
+    "header": { "plank": 36, "speck": 0.07, "height": 28 },
+    "plate": { "base": [16, 16], "margin": 3, "content": [3, 2] },
+    "badge": { "base": [8, 8], "margin": 2, "content": [2, 1] }
+  },
+  "hud": {
+    "note": "The pieces over the open world on a desktop window (the action bar, the header, the panel ring, the thing menu, name tags and speech bubbles; ui/play/action_slot.gd, radial_menu.gd, header_plate.gd, sandbox_screen.gd). slot_px is a multiple of the pixel; glyph_pixels is how many pixels of the skin one pixel of an 8 by 8 action picture takes; dim_alpha is how much of a picture shows when its slot does not apply, and wash how much gold lies over a slot that is on; header_tile is how many planks one tile of the header holds.",
+    "slot_px": 48, "glyph_pixels": 2, "gap": 4, "badge_size": 11, "dim_alpha": 0.35, "wash": 0.22, "header_tile": 8, "bar_y": 2, "plate_text": 14
   },
   "icons": {
     "heart": [".##.##..", "########", "########", "########", ".######.", "..####..", "...##...", "........"],
@@ -74,6 +80,10 @@
     { "fg": "ink_good_cb", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "good news on parchment, colour-blind" },
     { "fg": "ink_bad_cb", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "bad news on parchment, colour-blind" },
     { "fg": "gold_hi", "bg": "crimson", "min": 5.0, "min_hc": 10.0, "why": "a ribbon's title" },
+    { "fg": "parch_hi", "bg": "ink", "min": 9.0, "min_hc": 15.0, "why": "a key in its badge, and the hint under the panel ring" },
+    { "fg": "gold_hi", "bg": "ink", "min": 7.0, "min_hc": 15.0, "why": "the key of a slot that is on, and the gold in the header" },
+    { "fg": "crimson_dk", "bg": "parch_hi", "min": 7.0, "min_hc": 15.0, "why": "a thing menu's title, and a ring item pointed at" },
+    { "fg": "ink_dim", "bg": "parch_hi", "min": 4.5, "min_hc": 10.0, "why": "the key under a ring item" },
     { "fg": "bar_text", "bg": "ink", "min": 15.0, "min_hc": 15.0, "why": "light text on a bar or a slot, over its ink outline" },
     { "fg": "parch_hi", "bg": "slot_bg", "min": 7.0, "min_hc": 10.0, "why": "text in a slot" },
     { "fg": "wood_text", "bg": "wood", "min": 6.0, "min_hc": 10.0, "why": "text on wood" },
