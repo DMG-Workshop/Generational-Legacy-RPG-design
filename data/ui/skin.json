@@ -1,0 +1,88 @@
+{
+  "note": "The interface skin (docs/ART_DIRECTION.md; ui/play/ui_skin.gd, checked by UiSkin.validate in tools/check_data.gd): the palette, the sizes of the pieces and the contrast figures. It skins what is drawn as a pane over the open world on a desktop-sized window; a touch screen or a compact window keeps the older look. `pixel` is the size of one pixel of the skin's art in UI units (the world's pixel at the default zoom); the pieces are made at that size and drawn at whole multiples, never smoothed. Each `variants` entry is a full palette; `high_contrast` is the one the accessibility option picks. `contrast` lists pairs of palette names with the least contrast ratio each must keep in every variant (`min_hc` for the high-contrast variant, which may ask for more). `text_maps` says which palette colour stands in for the colours the dark overlay look uses (by hex) where a label sits on a parchment or a wood face.",
+  "pixel": 2,
+  "shadow": { "offset": [5, 6], "alpha": 0.35 },
+  "faces": { "default": "parch", "minimap_pane": "wood" },
+  "title": { "text": "gold_hi", "outline": "crimson_dk", "outline_size": 3, "size": 20 },
+  "pieces": {
+    "panel": { "base": [48, 48], "margin": 9, "bevel": 2, "stud": 5, "stud_at": 3, "speck": 0.05, "content": 6 },
+    "frame": { "base": [24, 24], "margin": 6, "content": 5 },
+    "ribbon": { "base": [24, 15], "margin": 5, "stitch_at": 3, "stitch_every": 2, "content": [4, 1] },
+    "inset": { "base": [16, 16], "margin": 3, "content": 2 },
+    "bar": { "height": 11, "segment_every": 6, "segment_at": 7, "icon_scale": 1, "text_size": 13 },
+    "header": { "plank": 36, "speck": 0.07, "height": 28 }
+  },
+  "icons": {
+    "heart": [".##.##..", "########", "########", "########", ".######.", "..####..", "...##...", "........"],
+    "gem": ["...##...", "..####..", ".######.", "########", ".######.", "..####..", "...##...", "........"],
+    "pouch": ["..####..", "...##...", ".######.", "########", "########", "########", ".######.", "........"],
+    "coin": ["..####..", ".######.", "###..###", "##.##.##", "##.##.##", "###..###", ".######.", "..####.."]
+  },
+  "bars": {
+    "hp": { "icon": "heart", "colors": "hp" },
+    "mp": { "icon": "gem", "colors": "mp" },
+    "load": { "icon": "pouch", "colors": "carry" },
+    "load_bad": { "icon": "pouch", "colors": "hp" }
+  },
+  "variants": {
+    "standard": {
+      "ink": "#2a1c14", "brown": "#6b4a2b",
+      "parch": "#d9c597", "parch_hi": "#ecdcb0", "parch_lo": "#b99f6c",
+      "wood": "#5a3d24", "wood_hi": "#74512f", "wood_lo": "#46301c",
+      "gold": "#e0b341", "gold_dk": "#9a6f1c", "gold_hi": "#f4d37a",
+      "crimson": "#8e2f2f", "crimson_hi": "#b04545", "crimson_dk": "#5c1c1c",
+      "slot_bg": "#4b3b2b", "slot_lo": "#8f7650", "track": "#4a3a2c",
+      "bar_text": "#ffffff",
+      "ink_dim": "#6b4a2b", "ink_good": "#1f5f2a", "ink_bad": "#8a1c1c", "ink_blue": "#1d4a8f",
+      "ink_good_cb": "#0d4f80", "ink_bad_cb": "#7a4300",
+      "wood_text": "#ecdcb0", "wood_dim": "#d8c9a6", "wood_good": "#a8e0a0", "wood_bad": "#ffb0a8", "wood_blue": "#b8d4ff", "wood_accent": "#f4d37a",
+      "wood_good_cb": "#9fd8f5", "wood_bad_cb": "#ffc766",
+      "hp": ["#e0605a", "#c8483f", "#8e2a28"],
+      "mp": ["#7fb2ff", "#4f86e0", "#2c5299"],
+      "carry": ["#e0b341", "#c49a2c", "#8a6a1c"]
+    },
+    "high_contrast": {
+      "ink": "#000000", "brown": "#000000",
+      "parch": "#ffffff", "parch_hi": "#ffffff", "parch_lo": "#d4d4d4",
+      "wood": "#1c1c1c", "wood_hi": "#4a4a4a", "wood_lo": "#000000",
+      "gold": "#ffd75e", "gold_dk": "#c79a00", "gold_hi": "#ffff80",
+      "crimson": "#7a0000", "crimson_hi": "#a00000", "crimson_dk": "#3a0000",
+      "slot_bg": "#1a1a1a", "slot_lo": "#d0d0d0", "track": "#000000",
+      "bar_text": "#ffffff",
+      "ink_dim": "#333333", "ink_good": "#004d12", "ink_bad": "#7a0000", "ink_blue": "#002a80",
+      "ink_good_cb": "#003a66", "ink_bad_cb": "#5c3000",
+      "wood_text": "#ffffff", "wood_dim": "#e6e6e6", "wood_good": "#b8ffb0", "wood_bad": "#ffc0b8", "wood_blue": "#cce0ff", "wood_accent": "#ffff80",
+      "wood_good_cb": "#b8e6ff", "wood_bad_cb": "#ffd080",
+      "hp": ["#ff7a70", "#d02a20", "#6a0000"],
+      "mp": ["#a0c8ff", "#2a62d0", "#0a2a70"],
+      "carry": ["#ffe27a", "#b88a00", "#5c4300"]
+    }
+  },
+  "text_maps": {
+    "parch": { "#e8e4f0": "ink", "#8d88a0": "ink_dim", "#c4bfd6": "ink_dim", "#e0b341": "crimson_dk", "#6fcf6f": "ink_good", "#e0605a": "ink_bad", "#5a8fe0": "ink_blue", "#56b4e9": "ink_good_cb", "#e69f00": "ink_bad_cb", "#6a8f6a": "ink_good", "#ffd75e": "crimson_dk" },
+    "wood": { "#e8e4f0": "wood_text", "#8d88a0": "wood_dim", "#c4bfd6": "wood_dim", "#e0b341": "wood_accent", "#6fcf6f": "wood_good", "#e0605a": "wood_bad", "#5a8fe0": "wood_blue", "#56b4e9": "wood_good_cb", "#e69f00": "wood_bad_cb", "#6a8f6a": "wood_good", "#ffd75e": "wood_accent" }
+  },
+  "contrast": [
+    { "fg": "ink", "bg": "parch", "min": 9.0, "min_hc": 15.0, "why": "text on parchment" },
+    { "fg": "ink", "bg": "parch_hi", "min": 9.0, "min_hc": 15.0, "why": "text on the lit parchment" },
+    { "fg": "ink", "bg": "parch_lo", "min": 6.0, "min_hc": 10.0, "why": "text on the shaded parchment" },
+    { "fg": "crimson_dk", "bg": "parch", "min": 7.0, "min_hc": 15.0, "why": "a label in dark crimson on parchment" },
+    { "fg": "ink_dim", "bg": "parch", "min": 4.5, "min_hc": 10.0, "why": "quiet text on parchment" },
+    { "fg": "ink_good", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "good news on parchment" },
+    { "fg": "ink_bad", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "bad news on parchment" },
+    { "fg": "ink_blue", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "blue text on parchment" },
+    { "fg": "ink_good_cb", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "good news on parchment, colour-blind" },
+    { "fg": "ink_bad_cb", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "bad news on parchment, colour-blind" },
+    { "fg": "gold_hi", "bg": "crimson", "min": 5.0, "min_hc": 10.0, "why": "a ribbon's title" },
+    { "fg": "bar_text", "bg": "ink", "min": 15.0, "min_hc": 15.0, "why": "light text on a bar or a slot, over its ink outline" },
+    { "fg": "parch_hi", "bg": "slot_bg", "min": 7.0, "min_hc": 10.0, "why": "text in a slot" },
+    { "fg": "wood_text", "bg": "wood", "min": 6.0, "min_hc": 10.0, "why": "text on wood" },
+    { "fg": "wood_dim", "bg": "wood", "min": 4.5, "min_hc": 10.0, "why": "quiet text on wood" },
+    { "fg": "wood_accent", "bg": "wood", "min": 4.5, "min_hc": 10.0, "why": "gold text on wood" },
+    { "fg": "wood_good", "bg": "wood", "min": 4.5, "min_hc": 7.0, "why": "good news on wood" },
+    { "fg": "wood_bad", "bg": "wood", "min": 4.5, "min_hc": 7.0, "why": "bad news on wood" },
+    { "fg": "wood_blue", "bg": "wood", "min": 4.5, "min_hc": 7.0, "why": "blue text on wood" },
+    { "fg": "wood_good_cb", "bg": "wood", "min": 4.5, "min_hc": 7.0, "why": "good news on wood, colour-blind" },
+    { "fg": "wood_bad_cb", "bg": "wood", "min": 4.5, "min_hc": 7.0, "why": "bad news on wood, colour-blind" }
+  ]
+}

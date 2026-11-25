@@ -1,0 +1,57 @@
+{
+  "note": "The light of the open world as it is drawn (ui/play/ground_art.gd makes the shadow tiles, ui/play/world_look.gd draws the rest, ui/play/tile_view.gd and ui/play/sandbox_screen.gd use them, tools/check_data.gd checks it). The sun is in the north-west (docs/ART_STYLE.md), so shadows fall to the south-east. `shadow`: a soft ellipse of `color` on the ground under what stands on it; `shapes` are drawn in a tile of 16 pixels (centre cx, cy and radii rx, ry in pixels, `alpha` at the core), `kinds` says which standing thing (a node or decor glyph) throws which shape, and `building` is the offset (in tiles) and fade of a town building's shadow, drawn as `layers` soft boxes. `grade`: the colour of the light laid over the map: the tint of GameDay.look at up to `night_alpha` as the light fails, and the warm sun on the day (`sun_color` at `sun_alpha` of full sun). `glow`: at night (the sun's light under `from_sun`) a soft additive halo of `radius` tiles round hearths, anvils, forges, camp fires and lit windows; `flicker` is how far its strength wanders (still with reduced motion). `weather`: rain streaks and snow flakes drawn over the map from GameDay.look's `precip` (`count` for a 1280 by 720 view, scaled by `intensity` of the weather; `fall` is screen heights a second), off with reduced motion; `fog_alpha` is how much a fog greys the view. `vignette`: the soft dark at the edge of the map, darker by `night_boost` at night.",
+  "shadow": {
+    "color": [0.04, 0.03, 0.09],
+    "shapes": {
+      "tree": {"cx": 10.0, "cy": 13.5, "rx": 6.0, "ry": 2.4, "alpha": 0.36},
+      "small_tree": {"cx": 9.5, "cy": 13.5, "rx": 4.5, "ry": 1.9, "alpha": 0.3},
+      "rock": {"cx": 9.5, "cy": 13.0, "rx": 5.5, "ry": 2.2, "alpha": 0.34},
+      "bush": {"cx": 9.0, "cy": 13.5, "rx": 4.0, "ry": 1.6, "alpha": 0.26},
+      "block": {"cx": 9.5, "cy": 13.5, "rx": 7.0, "ry": 2.6, "alpha": 0.34}
+    },
+    "kinds": {
+      "oak_tree": "tree", "yew_tree": "tree", "birch_tree": "tree", "pine_tree": "tree", "snow_pine": "tree",
+      "willow_tree": "tree", "ancient_tree": "tree", "fae_tree": "tree", "giant_fungus": "tree", "dead_tree": "small_tree",
+      "outcrop": "rock", "boulder": "rock", "standing_stone": "rock", "cairn": "rock", "crystal": "rock", "rubble": "bush",
+      "ruin_wall": "block", "herb_patch": "bush", "fern": "bush", "bone_pile": "bush", "fallen_log": "bush",
+      "tent_red": "block", "tent_green": "block", "tent_blue": "block", "wagon": "block", "haystack": "block",
+      "shrine": "block", "well": "block", "cot_wall": "block", "cot_door_low": "block", "crate": "bush", "scarecrow": "bush", "hedge": "bush"
+    },
+    "building": {"dx": 0.32, "dy": 0.14, "grow": 0.1, "alpha": 0.3, "layers": 3}
+  },
+  "grade": {"sun_color": [1.0, 0.92, 0.74], "sun_alpha": 0.1, "night_alpha": 0.5},
+  "glow": {
+    "from_sun": 0.55,
+    "texture_px": 64,
+    "falloff": 2.0,
+    "flicker": 0.12,
+    "flicker_hz": 3.1,
+    "tiles": {
+      "hearth": {"color": [1.0, 0.56, 0.2], "radius": 3.2, "strength": 0.75},
+      "anvil": {"color": [1.0, 0.45, 0.15], "radius": 2.4, "strength": 0.5}
+    },
+    "glyphs": {
+      "campfire": {"color": [1.0, 0.6, 0.22], "radius": 3.4, "strength": 0.8},
+      "lava_crack": {"color": [1.0, 0.36, 0.1], "radius": 1.8, "strength": 0.5},
+      "fae_glow": {"color": [0.5, 1.0, 0.8], "radius": 2.2, "strength": 0.5},
+      "wisp": {"color": [0.6, 0.9, 1.0], "radius": 2.0, "strength": 0.55},
+      "fae_stone": {"color": [0.6, 0.8, 1.0], "radius": 2.2, "strength": 0.5},
+      "shrine": {"color": [0.9, 0.9, 1.0], "radius": 2.0, "strength": 0.35}
+    },
+    "buildings": {
+      "forge": {"color": [1.0, 0.5, 0.18], "radius": 3.4, "strength": 0.8, "at": [0.5, 0.7]},
+      "smelter": {"color": [1.0, 0.5, 0.18], "radius": 3.2, "strength": 0.7, "at": [0.5, 0.7]},
+      "glassblower": {"color": [1.0, 0.55, 0.2], "radius": 2.8, "strength": 0.6, "at": [0.5, 0.7]},
+      "tavern": {"color": [1.0, 0.76, 0.4], "radius": 3.2, "strength": 0.7, "at": [0.5, 0.7]},
+      "default": {"color": [1.0, 0.8, 0.45], "radius": 2.2, "strength": 0.45, "at": [0.5, 0.7]}
+    }
+  },
+  "weather": {
+    "rain": {"count": 150, "length_px": 14.0, "width_px": 1.5, "fall": 1.6, "slant": 0.22, "color": [0.76, 0.84, 0.96, 0.5]},
+    "snow": {"count": 110, "size_px": 3.0, "fall": 0.22, "sway_px": 14.0, "color": [1.0, 1.0, 1.0, 0.85]},
+    "intensity": {"rain": 1.0, "storm": 1.8, "snow": 1.0},
+    "fog_alpha": 0.3,
+    "fog_color": [0.8, 0.83, 0.86]
+  },
+  "vignette": {"texture_px": 96, "inner": 0.55, "strength": 0.5, "night_boost": 0.35, "color": [0.02, 0.02, 0.05]}
+}

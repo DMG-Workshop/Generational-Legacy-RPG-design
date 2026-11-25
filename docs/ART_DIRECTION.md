@@ -2,7 +2,7 @@
 
 This is the plan for making the game look more modern while staying pixel art. It does not change a rule. `docs/ART_STYLE.md`
 still says how a sprite is drawn (outline, colours, size, facing); this says what the whole screen should feel like and in what
-order to get there. Nothing here is built into the game yet: the picture below is a mock-up.
+order to get there. Steps 1 and 2 below are built for the panes over the open world (see "What is built"); the picture below is the mock-up they follow.
 
 | Now | Mock-up |
 |---|---|
@@ -86,6 +86,22 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
 6. **Animation.** Walk and idle frames for figures and creatures, and an animation and effect for each battle action.
 7. **A blocky 3D trial.** A separate, small experiment (like the iso rendering trial) that draws the same cells as blocks, to
    see what it costs on a phone. Only if the earlier steps leave us wanting it.
+
+### What is built
+
+- **Step 1, the skin as data:** `data/ui/skin.json` and `ui/play/ui_skin.gd`. The palette has a standard and a high-contrast variant (white
+  panels, black ink; the accessibility option picks it), the contrast figures above are a list of pairs that `UiSkin.validate`
+  checks in both variants (it is part of `tools/check_data.gd`), and every texture is built once, kept, and made at a whole multiple of
+  the pixel size (`UiSkin.pixel()`; at a UI scale of 1.25 the pixel is 4, never 2.5). Panels, ribbons, slots and frames are nine patches that tile, so
+  they fit any pane size without smoothing.
+- **Step 2, panes:** `PaneKit` draws a pane's face (parchment, or wood for the minimap), shadow, ribbon title and slot-style close
+  button with it. The status pane has segmented heart, gem and pouch bars (`ui/play/skin_bar.gd`), the minimap an ink and gold edge round
+  the ground, the character and pack panes inset slots (`item_slot.gd`). Panel code is unchanged: labels and kit buttons added under a
+  pane are dressed as they are added (`UiSkin.watch`), with light-on-dark colours turned to inks, so every panel that opens as a pane
+  reads on parchment. A compact window, a touch screen and the full-screen overlays keep the old dark look.
+- **Not built yet:** the title and life screens, the action bar and header (the wooden header texture exists but is not drawn), the
+  ring and thing menu, icon outlines, panels' own inner boxes (a `Kit.panel` inside a pane stays dark), a touch version of the skin,
+  and the pixel font (the engine's font is used; the bar words and the ribbon titles are where it would show most).
 
 The touch layout keeps its current interface until a touch version of the skin is designed (`docs/MOBILE.md`).
 

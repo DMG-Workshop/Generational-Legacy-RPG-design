@@ -1,0 +1,37 @@
+{
+  "timing": {
+    "walk_frame": 0.13,
+    "idle_frame": 0.6,
+    "idle_spread": 0.5,
+    "move_hold": 0.3
+  },
+  "sequences": {
+    "walk": ["lift_a", "squash", "lift_b", "squash"],
+    "idle": ["base", "squash"]
+  },
+  "shapes": {
+    "walker": {"legs": true, "squash": "above_legs"},
+    "flyer": {"legs": false, "squash": "fraction", "squash_fraction": 0.6},
+    "blob": {"legs": false, "squash": "fraction", "squash_fraction": 0.75},
+    "still": {"legs": false, "squash": "none"}
+  },
+  "figure": {"shape": "walker", "lift_rows": 5, "squash_window": 8},
+  "creature": {"shape": "walker", "lift_rows": 3, "squash_window": 5},
+  "classes": {},
+  "creatures": {
+    "harpy": {"shape": "flyer"},
+    "fire_imp": {"shape": "flyer"},
+    "wraith": {"shape": "flyer"},
+    "rift_shade": {"shape": "flyer"},
+    "star_eater": {"shape": "flyer"},
+    "time_wraith": {"shape": "flyer"},
+    "the_unmade": {"shape": "flyer"},
+    "glimmer_moth": {"shape": "flyer"},
+    "bee": {"shape": "flyer"},
+    "slime": {"shape": "blob"},
+    "ash_wyrm": {"shape": "blob"},
+    "lich_acolyte": {"shape": "blob"},
+    "vaerthax": {"shape": "blob"},
+    "hollow_king": {"shape": "blob"}
+  }
+}

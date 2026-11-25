@@ -5,6 +5,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 const ItemSlot := preload("res://ui/play/item_slot.gd")
 
 var dynasty: GameDynasty
@@ -52,7 +53,13 @@ func _build() -> void:
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	top.add_child(pic)
+	if UiSkin.in_skin(self):   # the figure stands in an inset box
+		var well := PanelContainer.new()
+		well.add_theme_stylebox_override("panel", UiSkin.inset_box(false))
+		well.add_child(pic)
+		top.add_child(well)
+	else:
+		top.add_child(pic)
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 8)
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -12,6 +12,7 @@ const UiSettings := preload("res://ui/play/ui_settings.gd")
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const SceneryArt := preload("res://ui/play/scenery_art.gd")
 const FigurePose := preload("res://ui/play/figure_pose.gd")
+const BattleFx := preload("res://ui/play/battle_fx.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
 const Sound := preload("res://ui/play/sound.gd")
 const AREA := Color("#ff9a3c")
@@ -1854,7 +1855,12 @@ func _play_one(ev: Dictionary) -> void:
 			var el := str(ev.get("element", ""))
 			_move(_party_pose(by), "cast", Color(GameCombat.element_color(el)) if el != "" else Kit.ACCENT)
 			_float_text(_unit_node(by).position + Vector2(0, -30), str(ev["name"]), Color(GameCombat.element_color(el)) if el != "" else Kit.ACCENT, 20)
-			for t in ev.get("targets", []):
+			_fx("cast", el, _body("player", by), _body("player", by))
+			var hits: Array = ev.get("targets", [])
+			if not hits.is_empty() and int(hits[0]) < enemy_nodes.size():
+				_fx("bolt", el, _body("player", by), _body("enemy", int(hits[0])), false, true)
+			for t in hits:
+				_fx("burst", el, _body("enemy", int(t)), _body("enemy", int(t)), false, false, float(data_fx("travel_seconds")))
 				if ev.get("aoe", false):
 					_pulse(enemy_nodes[t]["mark"])
 		"damage":
@@ -1863,6 +1869,9 @@ func _play_one(ev: Dictionary) -> void:
 					_lunge(_unit_node(by), 22.0)
 					_move(_party_pose(by), "attack")
 				_move(_foe_pose(ev["index"]), "hurt")
+				if int(ev.get("cast", 0)) == 0:
+					_fx("attack", "", _body("enemy", ev["index"]), _body("enemy", ev["index"]), false, false, 0.08)
+					_fx("crit" if ev["crit"] else "hit", "", _body("enemy", ev["index"]), _body("enemy", ev["index"]), false, false, 0.12)
 				var en: Dictionary = enemy_nodes[ev["index"]]
 				var txt := GameText.num(int(ev["amount"])) + ("!" if ev["crit"] else "")
 				if ev.get("shatter", false):
@@ -1874,6 +1883,8 @@ func _play_one(ev: Dictionary) -> void:
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 				_move(_foe_pose(ev["index"]), "attack")
 				_move(_party_pose(int(ev["ally"])), "hurt")
+				_fx("attack", "", _body("ally", ev["ally"]), _body("ally", ev["ally"]), true, false, 0.08)
+				_fx("hit", "", _body("ally", ev["ally"]), _body("ally", ev["ally"]), false, false, 0.12)
 				var an: Dictionary = ally_nodes[ev["ally"]]
 				_float_text(an["root"].position + Vector2(34, -6), _hurt_text(ev), Kit.bad())
 				_flash(an["body"])
@@ -1882,10 +1893,13 @@ func _play_one(ev: Dictionary) -> void:
 				_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 				_move(_foe_pose(ev["index"]), "attack")
 				_move(hero_pose, "hurt")
+				_fx("attack", "", _body("player", -1), _body("player", -1), true, false, 0.08)
+				_fx("hit", "", _body("player", -1), _body("player", -1), false, false, 0.12)
 				_float_text(hero_node.position + Vector2(40, 0), _hurt_text(ev), Kit.bad())
 				_flash(hero_node.get_child(0))
 				_step_heir_hp(-int(ev["amount"]))
 		"heal":
+			_fx("heal", "", _body("ally" if ev["side"] == "ally" else "player", int(ev.get("ally", -1))), _body("ally" if ev["side"] == "ally" else "player", int(ev.get("ally", -1))))
 			if ev["side"] == "ally":
 				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), GameText.signed(int(ev["amount"])), Kit.good())
 				_step_ally_hp(ev["ally"], int(ev["amount"]))
@@ -1926,17 +1940,20 @@ func _play_one(ev: Dictionary) -> void:
 					_lunge(_unit_node(by), 22.0)
 					_move(_party_pose(by), "attack")
 				_move(_foe_pose(ev["index"]), "dodge")
+				_fx("dodge", "", _body("enemy", ev["index"]), _body("enemy", ev["index"]))
 				var en4: Dictionary = enemy_nodes[ev["index"]]
 				_float_text(en4["root"].position + Vector2(en4["w"] * 0.2, 6), "dodge", Kit.dim())
 				return
 			_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 			_move(_foe_pose(ev["index"]), "attack")
 			_move(_party_pose(int(ev["ally"]) if ev["side"] == "ally" else -1), "dodge")
+			_fx("dodge", "", _body("ally" if ev["side"] == "ally" else "player", int(ev.get("ally", -1))), _body("ally" if ev["side"] == "ally" else "player", int(ev.get("ally", -1))), true)
 			if ev["side"] == "ally":
 				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.dim())
 			else:
 				_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.dim())
 		"ko":
+			_fx("defeat", "", _body("ally", ev["ally"]), _body("ally", ev["ally"]))
 			_knock_out(ev["ally"])
 			for en3 in enemy_nodes:   # the foes lose the toughness that companion's presence gave them
 				en3["hp"].value *= float(ev.get("foe_scale", 1.0))
@@ -1944,6 +1961,7 @@ func _play_one(ev: Dictionary) -> void:
 		"death":
 			var en2: Dictionary = enemy_nodes[ev["index"]]
 			en2["mark"].visible = false
+			_fx("defeat", "", _body("enemy", ev["index"]), _body("enemy", ev["index"]))
 			if en2["pose"] != null:
 				en2["pose"].fall()
 			var t := create_tween()
@@ -1953,7 +1971,11 @@ func _play_one(ev: Dictionary) -> void:
 				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), UiSettings.motion_time(0.3))
 		"defend":
 			_move(_party_pose(by), "guard")
+			_fx("guard", "", _body("player", by), _body("player", by))
 			_float_text(_unit_node(by).position + Vector2(30, 0), "guard", Kit.MP_BLUE)
+		"flee":   # the party runs: a puff of dust and the hero away
+			_fx("flee", "", _body("player", -1), _body("player", -1))
+			_move(hero_pose, "flee")
 		"cover":   # a standing cover steps in front of a hurt member
 			_float_text(_unit_node(int(ev["by"])).position + Vector2(30, 0), "covers", Kit.MP_BLUE)
 		"act":   # a party member's move begins: their chip lights up
@@ -2086,6 +2108,36 @@ func _move(pose: Control, move: String, tint: Color = Color(0, 0, 0, 0)) -> void
 		pose.play(move, tint)
 
 
+## The clear body under a figure: the hero's (`by` below 0 or on the "player" side), a companion's or a foe's.
+func _body(side: String, i: int) -> Control:
+	match side:
+		"enemy":
+			return enemy_nodes[i]["body"] if i >= 0 and i < enemy_nodes.size() else null
+		"ally":
+			return ally_nodes[i]["body"] if i >= 0 and i < ally_nodes.size() else null
+	if i >= 0 and i < ally_nodes.size():
+		return ally_nodes[i]["body"]
+	return hero_node.get_child(0) if hero_node != null and hero_node.get_child_count() > 0 else null
+
+
+func data_fx(key: String) -> Variant:
+	return BattleFx.data().get(key, 0.0)
+
+
+## Shows an action's effect (BattleFx) over the figure `at_body`, or, with `path`, flying from `from_body` to it. A
+## look only: it adds nodes to the arena and nothing to the battle. `flip` turns it to face left, as a foe's blow does.
+func _fx(action: String, element: String, from_body: Control, at_body: Control, flip: bool = false, path: bool = false, delay: float = 0.0) -> void:
+	if from_body == null or at_body == null or arena == null:
+		return
+	var px: float = float(hero_pose.px) if hero_pose != null else 3.0
+	var at := arena.make_canvas_position_local(at_body.get_global_rect().get_center())
+	var start := arena.make_canvas_position_local(from_body.get_global_rect().get_center())
+	if path:
+		BattleFx.play(arena, action, element, start, px, at, false, delay)
+	else:
+		BattleFx.play(arena, action, element, at if BattleFx.place(action) != "caster" else start, px, Vector2.INF, flip, delay)
+
+
 ## A short step towards the other side and back, so it is clear who acted.
 func _lunge(node: Control, dx: float) -> void:
 	if UiSettings.reduced_motion():   # the step is motion only: who acted is still in the log
@@ -2126,7 +2178,11 @@ func _float_text(pos: Vector2, text: String, color: Color, size: int = 26) -> vo
 	var t := create_tween()
 	t.set_parallel(true)
 	if not UiSettings.reduced_motion():   # with reduced motion the number stays put and fades
-		t.tween_property(l, "position:y", pos.y - 50, 0.7)
+		l.pivot_offset = l.get_combined_minimum_size() * 0.5
+		l.scale = Vector2(1.5, 1.5)   # it pops in, then rises on a small arc
+		t.tween_property(l, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t.tween_property(l, "position:y", pos.y - 50, 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(l, "position:x", pos.x + float(posmod(text.hash(), 15) - 7), 0.7)
 	t.tween_property(l, "modulate:a", 0.0, 0.7)
 	t.chain().tween_callback(l.queue_free)
 

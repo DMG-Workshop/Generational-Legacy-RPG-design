@@ -31,6 +31,7 @@ const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
+const SpriteMotion := preload("res://ui/play/sprite_motion.gd")
 const BAR := 56.0
 
 var app: Node
@@ -54,10 +55,14 @@ var actions: VBoxContainer           # Dig and Place under the thumb, shown only
 var status: Label
 var map: Control          # clips the tile view to the map area, under the bar and the overlay
 var tile_view: TileView   # the ground, as tile chunks
+var glow_layer: Control   # over the map: the glow of hearths, forges and lit windows at night (WorldLook)
+var sky_layer: Control    # over that: fog, rain, snow and the vignette (WorldLook)
 var overlay: Control      # the route, buildings, creatures, heir, ghost and stick, over the tiles
 var _figures := {}        # companion id and level -> their figure's texture (SpriteArt)
 var _last_x := {}         # creature or companion -> where it was drawn last (the look only)
 var _east := {}           # creature or companion -> whether it last moved east
+var _last_pos := {}       # key -> where it was drawn last, to tell whether it moves (the walk frames; the look only)
+var _moved_at := {}       # key -> the second it last moved
 var _fight: Control = null   # the battle screen, hosted over the map while a creature's fight is on
 var piece_button: Button
 var level_button: Button
@@ -119,6 +124,10 @@ func _ready() -> void:
 	overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST   # pixel art stays crisp
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
+	glow_layer = WorldLook.make_layer(_paint_glow, true)   # the night's lights, added to the picture
+	add_child(glow_layer)
+	sky_layer = WorldLook.make_layer(_paint_sky, false)   # fog, rain, snow and the soft dark at the edge
+	add_child(sky_layer)
 	var bar := HBoxContainer.new()
 	bar.position = Vector2(8, 4)
 	bar.size = Vector2(maxf(0.0, size.x - 16.0), BAR - 8.0)
@@ -257,7 +266,12 @@ func _process(delta: float) -> void:
 		_build()
 	_refresh_status()
 	_sync_tiles()
+	SpriteArt.begin_batch()
+	_warm_frames()   # a creature that has just come into the world: its frames are made before the draw, never in it
+	SpriteArt.end_batch()
 	overlay.queue_redraw()
+	glow_layer.queue_redraw()
+	sky_layer.queue_redraw()
 	queue_redraw()
 
 
@@ -1192,6 +1206,9 @@ func _sync_tiles() -> void:
 
 ## What is drawn over the tiles: the night's tint, the route, creatures, companions, the build ghost, the heir and the touch stick.
 func _paint(c: Control) -> void:
+	if glow_layer != null:
+		glow_layer.queue_redraw()   # the lights and the sky are drawn with the overlay (also when the screen is held still)
+		sky_layer.queue_redraw()
 	var d: GameDynasty = app.dynasty
 	var area := Vector2(size.x, size.y - BAR)
 	var origin := Vector2(0, BAR)
@@ -1199,12 +1216,8 @@ func _paint(c: Control) -> void:
 	var colors: Dictionary = GameSandbox.data()["colors"]
 	var look := GameDay.look(d)
 	var centre := Vector2(sb.heir) + cam
-	var tint: Array = look["tint"]
-	var night_alpha := (1.0 - float(look["light"])) * 0.5
-	if sb.space != "world":
-		night_alpha = 0.0   # indoors: no night, and none of the open world's route, creatures or companions to draw
-	if night_alpha > 0.0:
-		c.draw_rect(Rect2(origin, area), Color(float(tint[0]), float(tint[1]), float(tint[2]), night_alpha))
+	if sb.space == "world":
+		WorldLook.paint_grade(c, Rect2(origin, area), look)   # the sun's warmth by day, the night's tint as the light fails (indoors: no night, and none of the open world's route, creatures or companions to draw)
 	var outdoors := sb.space == "world"   # indoors none of the open world's route, creatures or companions is on this floor
 	for i in range(sb.route.size() if outdoors else 0):
 		var rp := origin + (Vector2(sb.route[i]) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
@@ -1230,6 +1243,34 @@ func _paint(c: Control) -> void:
 		var radius := WorldInput.setting("touch_stick_radius_px")
 		c.draw_arc(origin + fingers.origin, radius, 0.0, TAU, 40, Color(base, 0.5), 3.0)
 		c.draw_circle(origin + fingers.knob(), radius * 0.35, Color(_rgb(colors["stick_knob"]), 0.7))
+
+
+## The night's lights, drawn added to the picture: hearths and anvils the family built, camp fires and other glyphs that shine, and the
+## lit windows of the town's buildings (WorldLook). Only the open world has any.
+func _paint_glow(c: Control) -> void:
+	if sb == null or sb.space != "world":
+		return
+	var look := GameDay.look(app.dynasty)
+	if WorldLook.night_glow(look) <= 0.0:
+		return
+	var area := Vector2(size.x, size.y - BAR)
+	var cell := _cell()
+	var centre := Vector2(sb.heir) + cam
+	var half := area / (2.0 * cell) + Vector2(4, 4)
+	var view := Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0))
+	WorldLook.paint_glow(c, WorldLook.glow_sources(app.dynasty, tile_view, view), look, cell, Vector2(0, BAR), area, centre)
+
+
+## Fog, then rain or snow, then the vignette over the map (the weather only in the open world, and not with reduced motion).
+func _paint_sky(c: Control) -> void:
+	if sb == null:
+		return
+	var look := GameDay.look(app.dynasty)
+	var rect := Rect2(Vector2(0, BAR), Vector2(size.x, size.y - BAR))
+	if sb.space == "world":
+		WorldLook.paint_fog(c, rect, look)
+		WorldLook.paint_weather(c, rect, look)
+	WorldLook.paint_vignette(c, rect, look)
 
 
 ## What stands on the open world's ground, drawn back to front (the ones further north first, so the ones in front cover them): the
@@ -1268,6 +1309,7 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				var at := origin + (Vector2(float(b["x"]), float(b["z"])) - centre) * cell + area * 0.5
 				var box := Rect2(at, Vector2(float(b["w"]), float(b["h"])) * cell)
 				var lid := GameReveal.alpha(GameReveal.distance_to(Rect2i(int(b["x"]), int(b["z"]), int(b["w"]), int(b["h"])), float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5))
+				WorldLook.paint_building_shadow(c, box, cell)
 				var inside: Texture2D = BuildingArt.inside(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"])) if lid < 1.0 else null
 				if inside != null:   # the roof thins and the rooms show, with the people who live there
 					c.draw_texture_rect(inside, box, false, dim)
@@ -1284,7 +1326,7 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				var tex := _villager_tex(w)
 				if tex != null:
 					var fs := _figure_size(tex, cell) * float(w["scale"])
-					_stand(c, tex, p + Vector2(0, cell * 0.3), fs, _villager_flip(w, int(w["dx"]) < 0), dim, cell)
+					_stand(c, _shown(_villager_frames(w), tex, "v%s" % w["id"], Vector2(float(w["x"]), float(w["z"]))), p + Vector2(0, cell * 0.3), fs, _villager_flip(w, int(w["dx"]) < 0), dim, cell)
 					_bubble_pos[str(w["id"])] = p + Vector2(0, cell * 0.3 - fs.y)
 			"site":
 				var t: Dictionary = it[2]
@@ -1315,7 +1357,7 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					var s := cell / 16.0 * float(setting("creature_pixel"))
 					var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
 					var h := w * float(tex.get_height()) / float(tex.get_width())
-					_stand(c, tex, p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell)   # the art faces left
+					_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell)   # the art faces left
 			"companion":
 				var a: Dictionary = it[2]
 				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
@@ -1330,14 +1372,14 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				if tex == null:
 					c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 				else:
-					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell)   # the art faces right
+					_stand(c, _shown(_party_frames(str(a["id"])), tex, "p%s" % a["id"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell)   # the art faces right
 			"heir":
 				var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 				var tex: Texture2D = SpriteArt.figure(d.heir)
 				if tex == null:
 					c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 				else:
-					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
+					_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
 	_paint_bubbles(c)
 	_paint_name(c, origin, area, centre, cell)
 
@@ -1431,7 +1473,7 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 			if tex == null:
 				c.draw_circle(p, maxf(3.0, cell * 0.35), Color.html(str(pr["color"])))
 			else:
-				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(pr["race"])), false, Color.WHITE, cell)
+				_stand(c, _shown(SpriteArt.hero_frames(str(pr["race"]), str(pr["class"]), Color.html(str(pr["color"]))), tex, "d%s" % pr.get("id", "%s,%s" % [pr["x"], pr["z"]]), Vector2(float(pr["x"]), float(pr["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(pr["race"])), false, Color.WHITE, cell)
 		elif str(it[1]) == "companion":
 			var a: Dictionary = it[2]
 			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
@@ -1439,7 +1481,7 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 			if tex == null:
 				c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 			else:
-				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), Color.WHITE, cell)
+				_stand(c, _shown(_party_frames(str(a["id"])), tex, "p%s" % a["id"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), Color.WHITE, cell)
 		elif str(it[1]) == "foe":
 			var a: Dictionary = it[2]
 			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
@@ -1450,14 +1492,14 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 				var s := cell / 16.0 * float(setting("creature_pixel"))
 				var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
 				var h := w * float(tex.get_height()) / float(tex.get_width())
-				_stand(c, tex, p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), Color.WHITE, cell)
+				_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), Color.WHITE, cell)
 		else:
 			var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 			var tex: Texture2D = SpriteArt.figure(d.heir)
 			if tex == null:
 				c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 			else:
-				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell)
+				_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell)
 	var th := GameDungeonArt.theme(sb.space)
 	if th.is_empty():
 		return
@@ -1519,10 +1561,60 @@ func _warm_figures() -> void:
 	for b in GameTown.all():
 		for r in GameVillagers.residents(b):
 			_villager_tex(r)
+			_villager_frames(r)
 	for g in GameWalls.all_gates():
 		for r in GameVillagers.guards(g):
 			_villager_tex(r)
+			_villager_frames(r)
+	_warm_frames()
 	SpriteArt.end_batch()
+
+
+## Makes the walk and idle frames of everyone who may be drawn: the heir, the companions, the dungeon's people, the
+## villagers and the creatures about (with the figures, in a batch: see _warm_figures). Frames made while drawing would
+## blank the sprites drawn before them, so this runs before each frame is drawn, and costs a lookup once they are made.
+func _warm_frames() -> void:
+	var d: GameDynasty = app.dynasty
+	SpriteArt.figure_frames(d.heir)
+	for m in d.party.members:
+		_party_frames(str(m["id"]))
+	for pr in GameDungeons.layout(sb.space).get("people", []):
+		SpriteArt.hero_frames(str(pr["race"]), str(pr["class"]), Color.html(str(pr["color"])))
+	for a in sb.creatures:
+		SpriteArt.creature_frames(str(a["id"]))
+	for a in sb.denizens:
+		SpriteArt.creature_frames(str(a["id"]))
+	for a in sb.landmark_dwellers():
+		SpriteArt.creature_frames(str(a["id"]))
+
+
+## The frame to draw for something at `pos`: its walk frames while it has moved in the last moment, its idle ones
+## otherwise, and the plain `tex` when it has no frames. Cosmetic state only, kept per `key`, like _faces_right.
+func _shown(frames: Dictionary, tex: Texture2D, key: String, pos: Vector2) -> Texture2D:
+	if frames.is_empty():
+		return tex
+	var now := float(Time.get_ticks_msec()) / 1000.0
+	var before: Variant = _last_pos.get(key)
+	if before != null and (before as Vector2).distance_to(pos) > 0.001:
+		_moved_at[key] = now
+	_last_pos[key] = pos
+	return SpriteMotion.pick(frames, key, SpriteMotion.still_moving(float(_moved_at.get(key, -1000.0)), now), now)
+
+
+## A villager's frames, as _villager_tex is their picture.
+func _villager_frames(r: Dictionary) -> Dictionary:
+	if str(r.get("creature", "")) != "":
+		return SpriteArt.creature_frames(str(r["creature"]))
+	return SpriteArt.hero_frames(str(r["race"]), str(r["class"]), Color.html(str(r["color"])))
+
+
+## A companion's frames, kept for as long as they stay the same level (like _party_figure).
+func _party_frames(id: String) -> Dictionary:
+	var d: GameDynasty = app.dynasty
+	var m: Dictionary = d.party.member(id)
+	if m.is_empty():
+		return {}
+	return SpriteArt.figure_frames(d.party.unit(d, m))
 
 
 ## A villager's picture: a person's figure in their race's colours, or a monster's own art.
@@ -1560,7 +1652,7 @@ func _paint_residents(c: Control, b: Dictionary, at: Vector2, cell: float, dim: 
 		else:
 			var rs := _figure_size(tex, cell) * float(r["scale"])
 			var feet := at + (Vector2(cellv) + Vector2(0.5, 0.85)) * cell
-			_stand(c, tex, feet, rs, _villager_flip(r, false), dim, cell)
+			_stand(c, _shown(_villager_frames(r), tex, "v%s" % r["id"], Vector2(b["x"], b["z"]) + Vector2(cellv)), feet, rs, _villager_flip(r, false), dim, cell)
 			_bubble_pos[str(r["id"])] = feet - Vector2(0, rs.y)
 
 

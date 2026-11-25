@@ -3,6 +3,7 @@ extends RefCounted
 
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const PaneKit := preload("res://ui/play/pane_kit.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 const BG := Color("#14121c")
 const PANEL := Color("#221f30")
@@ -48,9 +49,21 @@ static func bad_fill(normal: Color) -> Color:
 	return BAD_CB.darkened(0.7) if UiSettings.colour_blind() else normal
 
 
-## Quiet text as BBCode, in the current quiet colour (so high contrast reaches it too).
-static func quiet_bb(text: String) -> String:
-	return "[color=#%s]%s[/color]" % [dim().to_html(false), text]
+## Quiet text as BBCode, in the current quiet colour (so high contrast reaches it too). `on_parchment`: the text sits on a pane's
+## parchment face (`on_face`), where the quiet colour is a brown ink.
+static func quiet_bb(text: String, on_parchment: bool = false) -> String:
+	return "[color=#%s]%s[/color]" % [(ink(dim()) if on_parchment else dim()).to_html(false), text]
+
+
+## The colour to use for `c` where text sits on a pane's parchment: the kit's light-on-dark colours become inks (docs/ART_DIRECTION.md).
+## Panes dress their labels by themselves (UiSkin.watch); this is for colours put in BBCode or set after the label is made.
+static func ink(c: Color) -> Color:
+	return UiSkin.on_face(c, "parch")
+
+
+## The same for text on a pane's wooden face.
+static func on_wood(c: Color) -> Color:
+	return UiSkin.on_face(c, "wood")
 
 
 static func style(color: Color, radius: int = 6, border: Color = Color(0, 0, 0, 0)) -> StyleBoxFlat:

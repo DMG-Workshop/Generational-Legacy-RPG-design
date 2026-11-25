@@ -1,0 +1,35 @@
+## A segmented bar of the interface skin (ui/play/ui_skin.gd): drawn over a ProgressBar that keeps the value and the range, with the
+## bar's picture at the left and its words over the fill. Rendering only.
+extends Control
+
+const UiSkin := preload("res://ui/play/ui_skin.gd")
+
+var pb: ProgressBar
+var kind := "hp"
+var text := ""
+
+func _init() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+
+func _draw() -> void:
+	var spec: Dictionary = UiSkin.data()["bars"][kind]
+	var S: int = UiSkin.pixel()
+	var sc: int = int(UiSkin.piece("bar")["icon_scale"])
+	var icon: Texture2D = UiSkin.icon_tex(str(spec["icon"]))
+	var iw := 8 * sc * S
+	var colors: Array = UiSkin.triple(str(spec["colors"]))
+	var ink: Color = UiSkin.pal("ink")
+	for o in [Vector2(S, 0), Vector2(-S, 0), Vector2(0, S), Vector2(0, -S)]:
+		draw_texture_rect(icon, Rect2(Vector2(0, (size.y - iw) * 0.5) + o, Vector2(iw, iw)), false, ink)
+	draw_texture_rect(icon, Rect2(Vector2(0, (size.y - iw) * 0.5), Vector2(iw, iw)), false, colors[1])
+	var x := float(iw + 2 * S)
+	var frac := 0.0 if pb.max_value <= 0.0 else clampf(float(pb.value) / float(pb.max_value), 0.0, 1.0)
+	draw_texture(UiSkin.bar_tex(int(size.x - x), int(size.y), frac, str(spec["colors"])), Vector2(x, 0))
+	var font: Font = get_theme_default_font()
+	var fs := int(UiSkin.piece("bar")["text_size"])
+	var at := Vector2(x + 4 * S, (size.y + float(fs) * 0.7) * 0.5)
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, ink)
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiSkin.pal("bar_text"))

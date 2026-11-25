@@ -1,0 +1,76 @@
+{
+  "note": "The look of the open world's ground (ui/play/ground_art.gd draws it, ui/play/tile_view.gd uses it, tools/check_data.gd checks it). Each ground kind (a biome, water, deep water, snow, ford) has `variants`: one weight for each look it can take, 2 to 4, and a tile takes one by a hash of its place, never a die, so a given tile always looks the same and its neighbours differ. A variant is the kind's flat colour (tiles.colors in data/world/sandbox.json) with its `patterns` scattered over it, each pattern a `type` (speck, tuft, pebble, streak, crack, flake), a `count` of them, and either a `shift` (lighter above 0, darker below, of the base colour) or a `color`. Water has `glints` too: a shimmer of light dashes that sway across `frames` frames (`sway` is how far each is moved in each frame, `pulse` how bright it is), played at `water_fps` frames a second, and still (the first frame) with reduced motion. `edges` makes the soft joins: where two land kinds meet, the kind with the higher `rank` bleeds a ragged, fading band onto the other (`profile` is how far in it reaches in each pixel of the side, `alphas` how solid each pixel row is); where water meets land the water tile gets a light foam edge (`foam`). Nothing here is random and nothing changes the world: it is only how it is drawn.",
+  "settings": {"grid_darken": 0.0, "max_variants": 4, "water_frames": 4, "water_fps": 2.2},
+  "kinds": {
+    "plains": {"variants": [4, 3, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.07, "count": 7},
+      {"type": "speck", "shift": 0.06, "count": 5},
+      {"type": "tuft", "color": [0.39, 0.62, 0.29], "count": 2}
+    ]},
+    "forest": {"variants": [4, 3, 3], "patterns": [
+      {"type": "speck", "shift": -0.12, "count": 9},
+      {"type": "speck", "color": [0.22, 0.45, 0.2], "count": 4},
+      {"type": "tuft", "color": [0.12, 0.28, 0.14], "count": 2}
+    ]},
+    "hills": {"variants": [4, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.08, "count": 6},
+      {"type": "speck", "shift": 0.07, "count": 5},
+      {"type": "tuft", "color": [0.48, 0.55, 0.3], "count": 1},
+      {"type": "pebble", "color": [0.58, 0.56, 0.5], "count": 1}
+    ]},
+    "mountains": {"variants": [3, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.1, "count": 7},
+      {"type": "speck", "shift": 0.08, "count": 5},
+      {"type": "pebble", "color": [0.6, 0.58, 0.56], "count": 2},
+      {"type": "crack", "color": [0.3, 0.28, 0.27], "count": 1}
+    ]},
+    "swamp": {"variants": [4, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.1, "count": 7},
+      {"type": "streak", "color": [0.17, 0.27, 0.22], "count": 2},
+      {"type": "streak", "color": [0.3, 0.4, 0.3], "count": 1},
+      {"type": "tuft", "color": [0.28, 0.42, 0.24], "count": 1}
+    ]},
+    "tundra": {"variants": [4, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.06, "count": 6},
+      {"type": "speck", "color": [0.58, 0.66, 0.72], "count": 3},
+      {"type": "flake", "color": [0.96, 0.98, 1.0], "count": 3}
+    ]},
+    "coast": {"variants": [4, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.08, "count": 8},
+      {"type": "speck", "shift": 0.07, "count": 4},
+      {"type": "streak", "shift": 0.09, "count": 2},
+      {"type": "pebble", "color": [0.62, 0.58, 0.5], "count": 1}
+    ]},
+    "volcanic": {"variants": [3, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.12, "count": 8},
+      {"type": "speck", "color": [0.42, 0.34, 0.32], "count": 4},
+      {"type": "crack", "color": [0.62, 0.24, 0.1], "count": 1}
+    ]},
+    "snow": {"variants": [4, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.05, "count": 6},
+      {"type": "flake", "color": [1.0, 1.0, 1.0], "count": 4},
+      {"type": "speck", "color": [0.62, 0.7, 0.82], "count": 2}
+    ]},
+    "water": {"variants": [3, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.05, "count": 3}
+    ], "glints": {"shift": 0.22, "count": 3, "len": 3, "sway": [0, 1, 2, 1], "pulse": [0.45, 1.0, 0.7, 0.25]}},
+    "ocean": {"variants": [3, 3, 2], "patterns": [
+      {"type": "speck", "shift": -0.05, "count": 3}
+    ], "glints": {"shift": 0.2, "count": 3, "len": 3, "sway": [0, 1, 2, 1], "pulse": [0.45, 1.0, 0.7, 0.25]}},
+    "deep": {"variants": [3, 2, 2], "patterns": [
+      {"type": "speck", "shift": -0.1, "count": 4}
+    ], "glints": {"shift": 0.16, "count": 2, "len": 3, "sway": [0, 1, 2, 1], "pulse": [0.3, 0.8, 1.0, 0.4]}},
+    "ford": {"variants": [3, 2, 2], "patterns": [
+      {"type": "speck", "shift": -0.06, "count": 3},
+      {"type": "pebble", "color": [0.58, 0.6, 0.56], "count": 2}
+    ], "glints": {"shift": 0.2, "count": 2, "len": 2, "sway": [0, 1, 2, 1], "pulse": [0.35, 0.9, 0.6, 0.2]}}
+  },
+  "edges": {
+    "rank": {"ocean": 0, "deep": 0, "water": 1, "ford": 2, "swamp": 10, "coast": 11, "plains": 12, "forest": 13, "hills": 14, "tundra": 15, "volcanic": 16, "mountains": 17, "snow": 18},
+    "water_kinds": ["ocean", "deep", "water", "ford"],
+    "alphas": [0.95, 0.75, 0.45, 0.2],
+    "profile": [3, 4, 3, 2, 4, 3, 3, 4, 2, 3, 4, 3, 2, 3, 4, 3],
+    "corner_reach": 4,
+    "foam": {"color": [0.92, 0.96, 1.0], "alphas": [0.85, 0.5, 0.22], "profile": [2, 3, 2, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3, 2, 2, 3], "corner_reach": 3}
+  }
+}

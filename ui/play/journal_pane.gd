@@ -4,6 +4,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 var dynasty: GameDynasty
 var sb: GameSandbox
@@ -28,5 +29,5 @@ func refresh() -> void:
 	_seen = sb.log.size()
 	var out: Array = []
 	for e in sb.log.slice(maxi(0, sb.log.size() - lines)):
-		out.append(Kit.quiet_bb(str(e["text"])) if str(e.get("kind", "")) in ["talk", "arrived"] else str(e["text"]))
+		out.append(Kit.quiet_bb(str(e["text"]), UiSkin.in_skin(self)) if str(e.get("kind", "")) in ["talk", "arrived"] else str(e["text"]))
 	_text.text = "\n".join(out)
