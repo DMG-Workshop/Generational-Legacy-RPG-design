@@ -14,6 +14,7 @@ var dynasty: GameDynasty
 var bag := ""                   # "" is the pack itself; a bag's id shows what is in that bag
 var on_change := Callable()     # func(): the pack changed; the other panes redraw
 var on_open_bag := Callable()   # func(bag_id): open that bag's pane
+var on_smoke := Callable()      # func() -> String: break a smoke pot where the heir stands, and say what came of it (the open world's screen)
 var _grid: GridContainer
 var _head: Label
 var _line: Label
@@ -88,6 +89,8 @@ func _build() -> void:
 		_grid.add_child(sq)
 	if _picked != "":
 		_actions.add_child(Kit.label(GameItems.item_name(_picked), 13, Kit.ACCENT))
+		if _picked == GameSmoke.item_id():
+			_actions.add_child(Kit.button("Use", func(): _say(_light()), Vector2(70, 32)))
 		if GameItems.slot_of(_picked) in GameItems.SLOTS:
 			_actions.add_child(Kit.button("Wear", func(): _say(GameItems.equip(dynasty, _picked)), Vector2(70, 32)))
 		if bag != "":
@@ -105,8 +108,15 @@ func _open(id: String) -> void:
 	if GameBags.is_bag(id):
 		if on_open_bag.is_valid():
 			on_open_bag.call(id)
+	elif id == GameSmoke.item_id():
+		_say(_light())
 	elif GameItems.slot_of(id) in GameItems.SLOTS:
 		_say(GameItems.equip(dynasty, id))
+
+
+## A smoke pot is broken in the open world (the screen's `on_smoke` says what came of it); nowhere else has smoke.
+func _light() -> String:
+	return str(on_smoke.call()) if on_smoke.is_valid() else GameSmoke.text("indoors")
 
 
 func _say(text: String) -> void:

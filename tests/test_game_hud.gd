@@ -145,6 +145,24 @@ func test_hud() -> void:
 		if ("%d of %d" % [d.heir.hp, d.heir.max_hp()]) in t:
 			found = true
 	ok(found, "the status pane shows the heir's health as it is now")
+	# the experience bar: level, xp and what the next level takes, and the bar's own fill
+	var xp_text := "Lv %s  %s / %s" % [GameText.num(d.heir.level), GameText.num(d.heir.xp), GameText.num(d.heir.xp_to_next())]
+	ok(xp_text in " | ".join(_labels(status)), "the status pane shows the experience toward the next level: %s" % xp_text)
+	ok(status._bars.has("xp") and (status._bars["xp"]["bar"] as ProgressBar).max_value == float(maxi(1, d.heir.xp_to_next())), "on a bar of its own that runs to the next level")
+	d.heir.xp = d.heir.xp_to_next() / 2
+	status.refresh()
+	ok((status._bars["xp"]["bar"] as ProgressBar).value == float(d.heir.xp), "and fills as experience comes")
+	ok(not status._smoke.visible, "no smoke timer with no cloud")
+	d.world_seconds = 10.0
+	GameSmoke.light(d, 5.0, 5.0)
+	status.refresh()
+	ok(status._smoke.visible and status._smoke.text == "Smoke 3:00", "a burning cloud shows its time: %s" % status._smoke.text)
+	d.world_seconds = 70.0
+	status.refresh()
+	ok(status._smoke.text == "Smoke 2:00", "and counts down: %s" % status._smoke.text)
+	d.smoke = {}
+	status.refresh()
+	ok(not status._smoke.visible, "and goes when the cloud does")
 	map.sb.log.append({"kind": "talk", "text": "A test line of the journal."})
 	journal.refresh()
 	var journal_text := ""
