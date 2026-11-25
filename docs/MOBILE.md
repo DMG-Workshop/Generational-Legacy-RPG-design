@@ -14,6 +14,10 @@ which git ignores.
 
 On a phone the game starts at 125% text size. Change it under **Menu > Text size**
 (100%, 125%, 150%); the choice is saved on the device, not in the dynasty save.
+The skin's pixel font (Silkscreen) is crisp only at whole multiples of its 8-pixel grid, so it follows the text size: at 100% it
+is used at 16 and 24, at 150% at 16 and 32, and at 125% (a phone's start) almost nothing is near a crisp size, so the engine's font
+stays; **Menu > Accessibility > Plain font** turns it off everywhere. Body text never uses it. A button whose words do not fit in the
+pixel font goes back to the engine's font by itself. (`UiSkin.font_size_for`, `data/ui/skin.json` `font`.)
 Every screen fits a phone at every size (checked at 1280x720, 1600x720, 2400x1080,
 1280x800 and 960x540, the 20:9 shapes with a notch): what does not fit scrolls.
 On a short screen the skill tree moves its points, buttons and tree tabs into the

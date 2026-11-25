@@ -54,12 +54,19 @@ outline and accent family):
 - **Ribbon:** a crimson title strip, lit on top, shaded under, ink outline, gold stitching. Pane titles and section heads.
 - **Slot:** an inset square for an item, an action or a stat. Selected or on: a gold frame. Not available: dimmed, not removed.
 - **Bar:** an ink frame, a dark track, a segmented fill with a lit top and a shaded bottom. Red, blue and gold keep their jobs.
+- **Button:** one family with two faces, so a button always matches what it sits on. A key has a lit top and left, a shaded bottom and
+  right, an ink outline and a stud in each corner. On parchment it is a parchment key with ink text and one-pixel gold studs; on wood or
+  the night sky it is a wooden plank with light text and two-pixel studs. States, the same on both: normal; pointed at (a gold frame, the
+  studs lit, the text gold on wood and crimson on parchment); pressed (sunk and shaded); shut (flat and dull, the text quiet but
+  readable); chosen (crimson inside the gold frame, gold text). The keyboard or a pad adds a gold ring outside the button (never only
+  a colour change). A tab is the wooden cousin: ink outline, a lit top edge, the open one lighter with a gold frame. The label colour of
+  every face and state is in `skin.json` with its contrast, checked in both palettes and the high-contrast variant.
 - **Header:** wooden planks, an ink edge and a gold line. It carries the action slots and the status line.
 - **Icons:** action pictures are 8 by 8 and item pictures 12 by 12, each in one colour with a one-pixel ink outline, drawn at whole-number scale.
 
 **Text.** Ink on parchment (9.7 to 1). Light text on a bar or a slot has an ink outline. Labels in dark crimson (7.6 to 1). Gold
-on crimson is only 4.1 to 1, so ribbon text is the lighter gold `#f4d37a` (5.6 to 1) or at least 18 pixels. A pixel font is
-needed (see the open questions); until then the engine's font is used.
+on crimson is only 4.1 to 1, so ribbon text is the lighter gold `#f4d37a` (5.6 to 1) or at least 18 pixels. Text is set in **Silkscreen** (see Pixel font
+below) where it is crisp, in the engine's font elsewhere.
 
 **Light.** One warm key light from the top left, as in the sprites. Night is a cool tint (the day clock already gives it). Fires,
 forges and lit windows glow. A soft vignette lowers the corners a little. These are overlays, so they cost nothing in the art.
@@ -80,7 +87,7 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
 2. **Panes and panels.** The pane kit and the panels draw with the skin: status, nearby, journal, character, pack, house, shops.
    The title and life screens follow.
 3. **The header, slots and icons.** The action bar, the ring, the thing menu and the item icons get their outlines and frames.
-4. **A pixel font.** Needs a font file under a licence we can ship.
+4. **A pixel font.** Done: Silkscreen, as data (`font` in `skin.json`), with a Plain font accessibility option.
 5. **The world.** Ground tiles with texture and soft edges between kinds, moving water, soft shadows, weather and glow. Sprites
    keep the rules in `docs/ART_STYLE.md`.
 6. **Animation.** Walk and idle frames for figures and creatures, and an animation and effect for each battle action.
@@ -110,21 +117,41 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   The `hud` block of `skin.json` holds the sizes and `UiSkin.validate` checks it, with more contrast pairs for the keys and the gold.
 - **Not built yet:** the title and life screens, icon outlines for items and creatures, panels' own inner boxes (a `Kit.panel` inside a pane
   stays dark), a touch version of the skin, panel buttons in the header (the ring and the Menu slot open the panels), and the pixel font
-  (the engine's font is used; the bar words and the ribbon titles are where it would show most).
+  (done afterwards: see Pixel font).
+- **Pixel font:** Silkscreen (`assets/fonts`, OFL) for ribbon titles, bar words, plate and badge text, buttons, tabs and headings, through `UiSkin.font_for`, `font_size_for`, `dress_font` and `pick`; sizes snap to whole multiples of the font's pixel at the player's text size and fall back to the engine's font where none is near; `body` text never uses it; high contrast takes the bold face; the Plain font option turns it off. `tests/test_game_skin_font.gd`.
 - **Step 2, big panels:** the house, chronicle, shops, quest board, tavern and the skill tree's side column draw with `PanelSkin`
   (`ui/play/panel_skin.gd`) when they are a skinned pane: each row or card is an inset slot with its text on the slot's brown (palette `slot_dim`,
   `slot_good`, `slot_bad`, the `slot` text map, contrast pairs in `skin.json`), prices carry the gold coin, the chronicle's tabs and the
-  shops' tabs are wood with the open one lit in gold (`tab` piece), action keys are raised parchment (`button` piece: normal, hover, pressed,
-  disabled), the house's levels are segmented bars, a row that cannot be bought keeps its reason line in readable ink, and the family tree
+  shops' tabs are wood with the open one lit in gold (`tab` piece), action keys are parchment keys (the button family, below), the house's levels are segmented bars, a row that cannot be bought keeps its reason line in readable ink, and the family tree
   is drawn as parchment cards with crimson name ribbons joined by ink lines (`family_tree_view.gd`; the old text stays on a compact window or a
-  touch screen). Not yet: the workshop, heirlooms, trials and looks panels (they get the pane's face and labels but keep dark inner boxes),
-  the skill tree's canvas, and bars in the tavern and quest board.
+  touch screen). Not yet: the skill tree's canvas, and bars in the tavern and quest board.
+- **Step 2, the overlay panels (workshop, heirlooms, trials, looks):** the same look as the house and shops, when the panel is a skinned pane.
+  The workshop's Make, Brew, calling's Works and Break up sections are wooden tabs (the open one is kept over a rebuild), each with a crimson
+  ribbon heading (`PanelSkin.heading`) and its lines as inset slots; the fee of a piece, brew or work carries a gold coin before its key, a
+  dropdown is a raised key with a parchment list (`PanelSkin.option`), and a shut key's reason is a line of text in the slot's quiet ink
+  (`PanelSkin.reason`). Heirlooms are a slot each with the level as a segmented bar and the price over the Rework key; trials are a slot each,
+  the master's portrait in an inset frame (`PanelSkin.frame`) and the hours spent a segmented bar; the looks panel's people are wooden tabs
+  (the chosen one lit), the figure and the shirt swatches sit in slots (the swatches keep their own colours, `skin_keep`) and a shut Random says
+  why. Opened from a house that is a pane, the workshop, heirlooms and trials open as panes too (`HousePanel._open_over`). Every key is a
+  raised parchment key; a compact window, a touch screen and the full-screen overlays keep the old look and the old rich layout exactly
+  (the workshop stays one long list). `tests/test_game_skin_overlays_a.gd` checks.
+  touch screen). Not yet: the workshop, heirlooms, trials and looks panels (they get the pane's face and labels but keep dark inner boxes).
+- **Step 2, overlays part B:** the chronicle's Statistics and Ages tabs are stacks of parchment cards, each with a small crimson ribbon heading
+  and inset rows (name at the left, numbers right-aligned in a column, a segmented bar for causes of death and gold); the Creatures tab has an
+  inset slot per creature and raised keys (and the market's); the tavern's Hire, Skill tree and Dismiss keys are raised and a member's health and
+  mana are slim segmented bars; the quest board's kill progress is a segmented bar. The skill tree canvas is a shaded-parchment bed with plate
+  node cards (a lit gold-edged plate for a node open to buy or taken, tinted gold once taken; a plain plate when open but not affordable; a dimmed
+  one when locked; a crimson ribbon with light words for a keystone) and ink right-angled links (heavy crimson where learned); the wooden tabs
+  and keys match the other panels, and the side column's key to the cards is reworded for the new colours. Node tints are in `skin.json` `tree`
+  and checked by `UiSkin.validate` (ink on the tinted card 4.5 to 1, 7 to 1 in high contrast). Compact windows and touch keep the old look.
+  Not done: the smithy, ranch pens, hatchery and nursery screens named in the brief do not exist as panels in this tree (shops and the chronicle's
+  creature tab were already slot rows); the night-sky option for the tree.
 - **The battle screen's frame:** `ui/play/battle_skin.gd` puts the skin on what is round the battle view (the figures, effects and
   animation are untouched). The arena has the wooden frame; the log, the command panel, the skill, spell, feat and poison lists and the
   result are parchment panels. The command panel's title (whose move is asked, or the reaction question) is a crimson ribbon, and the
   result's verdict a ribbon of its own (gold for a win or an escape, the red of the wood face for a defeat; the word says it too).
-  Buttons are the new `button` piece: a lit parchment face, an ink outline, a gold stud in each corner, lit gold studs and frame when
-  pointed at, a gold ring for the keyboard or a pad, flat and dim when not available. The rows of a list are inset slots. The log is ink
+  Buttons are parchment keys of the button family (a lit face, an ink outline, a gold stud in each corner, lit gold studs and frame when
+  pointed at, a gold ring for the keyboard or a pad, flat and dim when not available). The rows of a list are inset slots. The log is ink
   on parchment with the newest line on a gold highlight (ink on gold, not gold on parchment, which cannot be read). The bars on the
   plates and the party strip's chips are slim segmented bars, red for health and blue for mana (no picture at this size: the numbers are
   on the plate). A compact window or a touch screen keeps the older dark look, as the panes do. Not done: the party strip's chip faces
@@ -132,22 +159,25 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
 - **Not built yet:** the title and life screens, the action bar and header (the wooden header texture exists but is not drawn), the
 - **Step 2, the full-screen text screens:** the title, the life screen, the succession and ending screens and the menu and controls panels wear the
   skin on every device (`SkinScreen.apply`, `UiSkin.screen_active`, the data's `screens`): a night-sky backdrop (colour bands, a tile of stars, a
-  strip of hills; still, so nothing to turn off for reduced motion), parchment panels with ink text, crimson ribbon titles, wooden buttons with
-  gold studs (a gold frame when pointed at, crimson when chosen, flat and dark when shut, a gold ring for the keyboard or a pad), light text fields,
+  strip of hills; still, so nothing to turn off for reduced motion), parchment panels with ink text, crimson ribbon titles, wooden planks of the
+  button family (a gold frame when pointed at, crimson when chosen, flat and dark when shut, a gold ring for the keyboard or a pad), light text fields,
   segmented bars for health, mana and experience, and a dark well for the journal. A phone gets it as well, with whole-pixel art at 4 screen pixels
   at 125%; the buttons keep their fingertip height. The contrast of headings on the sky, coloured news on the well and the text of planks and
   fields is checked in both palettes by `UiSkin.validate`. The overlay panels opened from the life screen (shops, the chronicle, the house) keep
   their own look until they are done.
 - **Not built yet:** the action bar and header (the wooden header texture exists but is not drawn), the
   ring and thing menu, icon outlines, panels' own inner boxes (a `Kit.panel` inside a pane stays dark), a touch version of the skin,
-  and the pixel font (the engine's font is used; the bar words and the ribbon titles are where it would show most).
+  and the pixel font (done afterwards: see Pixel font).
 
 The touch layout keeps its current interface until a touch version of the skin is designed (`docs/MOBILE.md`).
 
 ## Open questions
 
-- **Which font?** The game has no font file of its own. A pixel font under the SIL Open Font Licence would do; someone has to pick
-  one that reads well at 13 to 18 pixels and has the accented letters the pseudo-language needs.
+- **Which font?** Decided: **Silkscreen** (Jason Kottke, SIL Open Font License 1.1, from the Google Fonts repository; licence text and
+  README in `assets/fonts/`). A capitals-style 8-pixel font, so it is for short text only: ribbon titles, bar words, plates, badges,
+  buttons, tabs and headings. Paragraphs, the log, tips and tooltips stay in the engine's font (readability). It is crisp at 8, 16 and 24
+  at 100% text size, 16 and 32 at 150% and 32 at 125%; where no crisp size is near the text keeps the engine's font. Still open: a
+  second, lower-case pixel font for longer text (Pixelify Sans or m6x11 are candidates), and sizes for 125%, where phones start.
 - **Where does the art come from?** Code can make the interface and clean generated sprites, as now. A real step up in the
   world's look wants hand-drawn or licensed tiles and figures, which the game can take in place of the generated ones without
   other changes. Generative tools are also a choice, with a licence and a consistency cost; The Shattered Isles' page says it

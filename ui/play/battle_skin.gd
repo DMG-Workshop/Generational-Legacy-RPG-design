@@ -1,5 +1,5 @@
 ## The interface skin (ui/play/ui_skin.gd) on the frame around the battle: the command panel, the log, the lists, the result and the
-## bars on the figures' plates. The look is the same pieces as the panes over the open world (parchment, a crimson ribbon, gold-studded
+## bars on the figures' plates. The look is the same pieces as the panes over the open world (parchment, a crimson ribbon, button-family
 ## buttons, segmented bars, inset slots); a touch screen or a compact window keeps the older dark look, as everywhere else. Nothing
 ## here changes a rule, a die or an event: it only dresses what the battle screen builds. Rendering only.
 extends RefCounted
@@ -39,6 +39,7 @@ static func ribbon(l: Label, size: int = 14, outline: int = 2) -> PanelContainer
 	r.set_meta("skin_face", true)
 	UiSkin.dress_title(l)
 	l.add_theme_font_size_override("font_size", size)
+	UiSkin.dress_font(l, "title")
 	l.add_theme_constant_override("outline_size", outline)
 	r.add_child(l)
 	return r
@@ -60,7 +61,7 @@ static func face_of(n: Node) -> Control:
 	return null
 
 
-## Dresses what is added under `host` from now on: a kit button in the top bar or on a parchment panel (not a menu opened over the screen) becomes a gold-studded button (but not a chip of the party
+## Dresses what is added under `host` from now on: a kit button in the top bar or on a parchment panel (not a menu opened over the screen) becomes a parchment key (the button family) (but not a chip of the party
 ## strip, which has its own looks), and the labels and the rows of a parchment panel read on parchment. Stops when `host` leaves.
 static func watch(host: Control) -> void:
 	var tree := host.get_tree()
@@ -80,7 +81,7 @@ static func dress(n: Node) -> void:
 		return
 	if n is Button:
 		if n.has_meta("tap_base") and not n.has_meta("skin_keep") and not _in_strip(n) and (face_of(n) != null or _under_meta(n, BUTTONS_META)):
-			UiSkin.dress_battle_button(n)
+			UiSkin.dress_button(n, "parch")
 		return
 	var face := face_of(n)
 	if face == null:

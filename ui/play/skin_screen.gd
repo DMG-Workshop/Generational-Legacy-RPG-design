@@ -4,7 +4,7 @@
 ## `Kit.panel`, `Kit.label` and `Kit.button` as before:
 ##   - a kit panel (the meta `kit_panel`) becomes parchment, and the labels in it read in ink (`UiSkin.dress`); a panel marked `skin_well`
 ##     becomes the dark well a journal reads in and keeps its light text;
-##   - a button becomes a wooden plank with studs, gold-lit when pointed at; a text box a light field; a rule a brown line;
+##   - a button becomes a wooden plank of the button family, gold-lit when pointed at; a text box a light field; a rule a brown line;
 ##   - labels on the night sky keep their light colours; a title goes in a ribbon (`ribbon`).
 ## What an overlay panel (a node with its own script, added under the screen) holds is left to that panel. Rendering only.
 extends RefCounted
@@ -54,6 +54,7 @@ static func ribbon(l: Label, size: int = 0) -> Control:
 	UiSkin.dress_title(l)
 	if size > 0:
 		l.add_theme_font_size_override("font_size", size)
+		UiSkin.dress_font(l, "title")
 	l.mouse_filter = Control.MOUSE_FILTER_PASS
 	p.add_child(l)
 	return p
@@ -100,10 +101,12 @@ static func _dress(n: Node, host: Control) -> void:
 	elif n is Label or n is RichTextLabel:
 		if face_of(n, host) == "parch":
 			UiSkin.dress(n, host, "parch")
+		elif n is Label and face_of(n, host) != "well" and not n.has_meta("skin_pixel_font"):
+			UiSkin.dress_heading(n)   # a heading on the night sky
 	elif n is LineEdit:
 		UiSkin.dress_field(n)
 	elif n is Button and not (n is CheckBox) and not n.has_meta("skin_keep"):
-		UiSkin.dress_screen_button(n)
+		UiSkin.dress_button(n, "wood")
 	elif n is HSeparator and face_of(n, host) == "parch":
 		n.add_theme_stylebox_override("separator", UiSkin.rule_box())
 	elif n is ProgressBar and n.has_meta("skin_bar_kind") and not n.has_meta("skin_bar"):

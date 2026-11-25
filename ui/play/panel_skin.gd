@@ -52,17 +52,7 @@ static func button(host: Control, text: String, callback: Callable, min_size: Ve
 
 
 static func dress_button(b: Button) -> void:
-	b.add_theme_stylebox_override("normal", UiSkin.button_box("normal"))
-	b.add_theme_stylebox_override("hover", UiSkin.button_box("hover"))
-	b.add_theme_stylebox_override("hover_pressed", UiSkin.button_box("pressed"))
-	b.add_theme_stylebox_override("pressed", UiSkin.button_box("pressed"))
-	b.add_theme_stylebox_override("disabled", UiSkin.button_box("disabled"))
-	b.add_theme_color_override("font_color", UiSkin.pal("ink"))
-	b.add_theme_color_override("font_hover_color", UiSkin.pal("crimson_dk"))
-	b.add_theme_color_override("font_pressed_color", UiSkin.pal("ink"))
-	b.add_theme_color_override("font_hover_pressed_color", UiSkin.pal("ink"))
-	b.add_theme_color_override("font_disabled_color", UiSkin.pal("ink_dim"))
-	b.set_meta("skin_done", true)
+	UiSkin.dress_button(b, "parch")
 
 
 ## A price: a gold coin and the number (the words "gold" are left to the label round it). Unskinned: just the number in gold.
@@ -115,37 +105,39 @@ static func retint(host: Control, n: Node) -> void:
 static func tabs(host: Control, tc: TabContainer) -> void:
 	if not on(host):
 		return
-	tc.add_theme_stylebox_override("tab_unselected", UiSkin.tab_box("off"))
+	tc.add_theme_stylebox_override("tab_unselected", UiSkin.tab_box("normal"))
 	tc.add_theme_stylebox_override("tab_hovered", UiSkin.tab_box("hover"))
 	tc.add_theme_stylebox_override("tab_selected", UiSkin.tab_box("on"))
-	tc.add_theme_stylebox_override("tab_disabled", UiSkin.tab_box("off"))
+	tc.add_theme_stylebox_override("tab_disabled", UiSkin.tab_box("normal"))
 	tc.add_theme_stylebox_override("tab_focus", StyleBoxEmpty.new())
 	tc.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	tc.add_theme_color_override("font_unselected_color", UiSkin.pal("wood_text"))
-	tc.add_theme_color_override("font_hovered_color", UiSkin.pal("wood_text"))
-	tc.add_theme_color_override("font_selected_color", UiSkin.pal("gold_hi"))
-	tc.add_theme_color_override("font_disabled_color", UiSkin.pal("wood_dim"))
+	tc.add_theme_color_override("font_unselected_color", UiSkin.tab_text("normal"))
+	tc.add_theme_color_override("font_hovered_color", UiSkin.tab_text("hover"))
+	tc.add_theme_color_override("font_selected_color", UiSkin.tab_text("on"))
+	tc.add_theme_color_override("font_disabled_color", UiSkin.tab_text("disabled"))
 	tc.add_theme_color_override("font_outline_color", UiSkin.pal("ink"))
 	tc.add_theme_constant_override("outline_size", 2)
 	tc.add_theme_constant_override("side_margin", 0)
+	UiSkin.dress_font(tc, "tab")
 
 
 ## A toggle button that is a tab (the shops' row of shops): wood, and the open one lit.
 static func tab_button(host: Control, b: Button) -> void:
 	if not on(host):
 		return
-	b.add_theme_stylebox_override("normal", UiSkin.tab_box("off"))
+	b.add_theme_stylebox_override("normal", UiSkin.tab_box("normal"))
 	b.add_theme_stylebox_override("hover", UiSkin.tab_box("hover"))
 	b.add_theme_stylebox_override("pressed", UiSkin.tab_box("on"))
 	b.add_theme_stylebox_override("hover_pressed", UiSkin.tab_box("on"))
-	b.add_theme_stylebox_override("disabled", UiSkin.tab_box("off"))
-	b.add_theme_color_override("font_color", UiSkin.pal("wood_text"))
-	b.add_theme_color_override("font_hover_color", UiSkin.pal("wood_text"))
-	b.add_theme_color_override("font_pressed_color", UiSkin.pal("gold_hi"))
-	b.add_theme_color_override("font_hover_pressed_color", UiSkin.pal("gold_hi"))
-	b.add_theme_color_override("font_disabled_color", UiSkin.pal("wood_dim"))
+	b.add_theme_stylebox_override("disabled", UiSkin.tab_box("normal"))
+	b.add_theme_color_override("font_color", UiSkin.tab_text("normal"))
+	b.add_theme_color_override("font_hover_color", UiSkin.tab_text("hover"))
+	b.add_theme_color_override("font_pressed_color", UiSkin.tab_text("on"))
+	b.add_theme_color_override("font_hover_pressed_color", UiSkin.tab_text("on"))
+	b.add_theme_color_override("font_disabled_color", UiSkin.tab_text("disabled"))
 	b.add_theme_color_override("font_outline_color", UiSkin.pal("ink"))
 	b.add_theme_constant_override("outline_size", 2)
+	UiSkin.dress_font(b, "tab")
 	b.set_meta("skin_done", true)
 
 
@@ -155,3 +147,103 @@ static func progress(host: Control, value: float, max_value: float, kind: String
 	if on(host):
 		UiSkin.dress_bar(pb, kind)
 	return pb
+
+
+## A section's heading: a small crimson ribbon with the words in gold when skinned, else the kit's gold label.
+static func heading(host: Control, text: String, size: int = 18) -> Control:
+	if not on(host):
+		return Kit.label(text, size, Kit.ACCENT)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.ribbon_box())
+	p.set_meta("skin_heading", true)
+	var l := Kit.label(text, size)
+	UiSkin.dress_title(l)
+	l.add_theme_font_size_override("font_size", size)
+	p.add_child(l)
+	return p
+
+
+## The line that says why a key is shut, as text (never a tooltip), wrapped; `slot` when it sits in a slot row.
+static func reason(host: Control, text: String, slot: bool = true, size: int = 14) -> Label:
+	var l := label(host, text, size, Kit.dim()) if slot else Kit.label(text, size, Kit.dim())
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return l
+
+
+## A dropdown dressed as a raised key with a parchment list; unskinned, as it is.
+static func option(host: Control, ob: OptionButton) -> void:
+	if on(host):
+		dress_button(ob)
+		UiSkin.dress_popup(ob.get_popup())
+
+
+## A small framed square for a picture (a portrait) in a slot row: an inset frame, or the kit's dark box when not skinned.
+static func frame(host: Control, old: StyleBox) -> StyleBox:
+	return UiSkin.inset_box(false) if on(host) else old
+
+
+## A parchment card with a small crimson ribbon for its heading (a section of a page: the chronicle's Statistics and Ages). Added to `parent`;
+## returns the box to fill. Unskinned: a plain gold heading in `parent` itself, which is the box returned.
+static func section(host: Control, parent: Control, title: String, size: int = 15) -> VBoxContainer:
+	if not on(host):
+		parent.add_child(Kit.label(title, size + 2, Kit.ACCENT))
+		return parent as VBoxContainer
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UiSkin.panel_box())
+	card.set_meta("skin_face", true)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	card.add_child(v)
+	if title != "":
+		var rib := PanelContainer.new()
+		var rsb: StyleBoxTexture = UiSkin.ribbon_box().duplicate()   # a little more room, so the stitching stays clear of the words
+		rsb.content_margin_left = 14.0
+		rsb.content_margin_right = 14.0
+		rsb.content_margin_top = 6.0
+		rsb.content_margin_bottom = 6.0
+		rib.add_theme_stylebox_override("panel", rsb)
+		rib.set_meta("skin_face", true)
+		rib.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		var l := Label.new()
+		l.text = title
+		UiSkin.dress_title(l)
+		l.add_theme_font_size_override("font_size", size)
+		l.add_theme_constant_override("outline_size", 2)
+		rib.add_child(l)
+		v.add_child(rib)
+	parent.add_child(card)
+	return v
+
+
+## One figure of a page as an inset row: the name at the left, an optional segmented bar (`frac` 0 to 1; below 0 for none) and the value
+## right-aligned in a column of its own so the numbers line up. Skinned only (callers keep their plain text otherwise).
+static func figure(host: Control, name: String, value: String, frac: float = -1.0, value_color: Color = Kit.TEXT, bar_w: float = 150.0) -> Control:
+	var r := row(host)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 10)
+	r.add_child(hb)
+	var n := Kit.label(name, 15, Kit.TEXT)
+	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hb.add_child(n)
+	if frac >= 0.0:
+		var pb := progress(host, clampf(frac, 0.0, 1.0) * 1000.0, 1000.0, "load")
+		pb.custom_minimum_size.x = bar_w
+		pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hb.add_child(pb)
+	if value != "":
+		var v := Kit.label(value, 15, value_color)
+		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		v.custom_minimum_size.x = 96.0
+		hb.add_child(v)
+	return r
+
+
+## A line of plain words in a card (ink on parchment, wrapped).
+static func note(text: String, quiet: bool = false, size: int = 14) -> Label:
+	var l := Kit.label(text, size, Kit.dim() if quiet else Kit.TEXT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return l

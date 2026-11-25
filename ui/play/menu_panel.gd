@@ -90,6 +90,7 @@ func _ready() -> void:
 		["colour_blind", "Colour-blind colours", "Good and bad news in blue and orange, not green and red."],
 		["high_contrast", "High contrast", "Quiet text in a brighter grey."],
 		["reduced_motion", "Reduced motion", "No sliding or lunging in fights; numbers fade where they are."],
+		["plain_font", "Plain font", "Titles, buttons and bars in the usual font, not the pixel font."],
 	]
 	for opt in options:
 		var key: String = opt[0]

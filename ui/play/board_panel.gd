@@ -3,6 +3,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const PanelSkin := preload("res://ui/play/panel_skin.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 var dynasty: GameDynasty
 var on_change: Callable   # call after anything that changes the dynasty; the life screen refreshes
@@ -131,7 +132,7 @@ func _offer_card(list: VBoxContainer, q: Dictionary) -> void:
 	v.add_child(row)
 	var id: String = q["id"]
 	var why := d.quests.accept_block(d, id)
-	var b := Kit.button("Accept", func(): _act(d.quests.accept(d, id)), Vector2(110, 32))
+	var b := PanelSkin.button(self, "Accept", func(): _act(d.quests.accept(d, id)), Vector2(110, 32))
 	b.disabled = why != ""
 	row.add_child(b)
 	if why != "":
@@ -155,6 +156,9 @@ func _active_card(list: VBoxContainer, e: Dictionary) -> void:
 	row.add_child(task)
 	if GameQuests.kind(q) == "kill":
 		var pb := Kit.bar(Kit.good() if complete else Kit.ACCENT, goal, int(e["progress"]), Vector2(120, 14))
+		if PanelSkin.on(self):   # the segmented gold bar of the skin (full, and the count beside it, when the task is done)
+			UiSkin.dress_bar(pb, "load")
+			pb.custom_minimum_size.x = 140.0
 		pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(pb)
 		row.add_child(Kit.label("%d / %d" % [int(e["progress"]), goal], 14))
@@ -167,14 +171,14 @@ func _active_card(list: VBoxContainer, e: Dictionary) -> void:
 	buttons.add_theme_constant_override("v_separation", 6)
 	v.add_child(buttons)
 	if complete:
-		var turn := Kit.button("Turn in", func(): _act(qs.turn_in(d, id)), Vector2(110, 32))
+		var turn := PanelSkin.button(self, "Turn in", func(): _act(qs.turn_in(d, id)), Vector2(110, 32))
 		turn.disabled = not here
 		buttons.add_child(turn)
 	if confirm_abandon == id:
-		buttons.add_child(Kit.button("Really abandon", func(): _abandon(id), Vector2(150, 32)))
-		buttons.add_child(Kit.button("Keep it", func(): confirm_abandon = ""; _build([]), Vector2(100, 32)))
+		buttons.add_child(PanelSkin.button(self, "Really abandon", func(): _abandon(id), Vector2(150, 32)))
+		buttons.add_child(PanelSkin.button(self, "Keep it", func(): confirm_abandon = ""; _build([]), Vector2(100, 32)))
 	else:
-		buttons.add_child(Kit.button("Abandon", func(): confirm_abandon = id; _build([]), Vector2(110, 32)))
+		buttons.add_child(PanelSkin.button(self, "Abandon", func(): confirm_abandon = id; _build([]), Vector2(110, 32)))
 	var state := ""
 	if complete:
 		state = "Done. Claim the reward here." if here else "Done. Report to the board in %s." % GameQuests.place_name(q["giver"])

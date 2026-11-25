@@ -22,8 +22,12 @@ const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
 const HousePanel := preload("res://ui/play/house_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const LooksPanel := preload("res://ui/play/looks_panel.gd")
+const CraftPanel := preload("res://ui/play/craft_panel.gd")
+const HeirloomPanel := preload("res://ui/play/heirloom_panel.gd")
 const MapPanel := preload("res://ui/play/map_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
+const TavernPanel := preload("res://ui/play/tavern_panel.gd")
+const BoardPanel := preload("res://ui/play/board_panel.gd")
 const TMP := "user://screenshots_tmp/"
 const DESKTOP := Vector2i(1280, 720)
 const PHONE := Vector2i(844, 390)
@@ -126,7 +130,7 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(TMP)
 	GameDynasty.save_path = TMP + "save.json"
 	UiSettings.path = TMP + "settings.cfg"
-	UiSettings.scale = 1.0
+	UiSettings.scale = float(OS.get_environment("SHOT_SCALE")) if OS.get_environment("SHOT_SCALE") != "" else 1.0
 	TouchHint.finger = false
 	UiSettings.set_access("reduced_motion", true)
 	var made: Array = []
@@ -197,6 +201,8 @@ func _shoot(shot: Array) -> Image:
 	await _frames(3)
 	app.closed_badly = false   # a run of this tool that was killed is not something to draw on the title
 	var what: String = shot[3]
+	if _arg("show", "") != "":   # (look-only) draw another screen in this shot
+		what = _arg("show", "")
 	if what == "title":
 		app.show_title()
 	else:
@@ -285,6 +291,8 @@ func _screen(what: String) -> void:
 			var cp := ChroniclePanel.new()
 			cp.dynasty = d
 			cp.on_change = func(): pass
+			if _arg("pane", "") == "1":
+				cp.set_meta("pane", "chronicle_panel")
 			app.current.add_child(cp)
 			await _frames(3)
 			for tc in cp.get_children():
@@ -311,8 +319,25 @@ func _screen(what: String) -> void:
 			if tab_node is ScrollContainer:
 				(tab_node as ScrollContainer).scroll_vertical = 100000   # down to the Market
 			await _frames(2)
-		"shop", "map", "house", "trials", "looks", "skills", "chronicle":
-			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "trials": TrialsPanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel}[what]
+		"shop", "map", "house", "trials", "looks", "skills", "chronicle", "tavern", "board":
+			var cls = {"shop": ShopPanel, "map": MapPanel, "house": HousePanel, "trials": TrialsPanel, "looks": LooksPanel, "skills": SkillTreePanel, "chronicle": ChroniclePanel, "tavern": TavernPanel, "board": BoardPanel}[what]
+			if _arg("panel", "") != "":   # (look-only) another panel in the "looks" shot: panel=craft or panel=heirlooms
+				cls = {"craft": CraftPanel, "heirlooms": HeirloomPanel}[_arg("panel", "")]
+				GameCraft.add_material(d, "iron", 6)
+				GameCraft.add_material(d, "leather", 3)
+				d.heirlooms.append({"name": "Wolfsbane", "boss": "the Wolf King", "gen": 1})
+				d.heirlooms.append({"name": "Ashen Crown", "boss": "the Ash Queen", "gen": 1, "level": 2, "worked_gen": 1, "smiths": ["Tess"]})
+				d.heir.inventory.append("steel_sword")
+			if what == "board":   # (look-only) a notice or two taken up, so the board has progress to show
+				var posted: Array = GameData.quests.filter(func(q): return d.quests.is_posted(d, q))
+				if not posted.is_empty():
+					var town: String = str(posted[0]["giver"])
+					d.world.visit(town)
+					d.world.location = town
+					for q in d.quests.postings(d, town).slice(0, 2):
+						d.quests.accept(d, str(q["id"]))
+					if d.quests.postings(d, town).is_empty() and not d.quests.active.is_empty():
+						d.quests.active[0]["progress"] = 1
 			var p: Control = cls.new()
 			if "dynasty" in p:
 				p.dynasty = d
@@ -324,6 +349,8 @@ func _screen(what: String) -> void:
 				for i in int(_arg("gens", "0")):
 					d._die("old age")
 					d.choose_heir(0)
+			if what == "shop" and _arg("shoptab", "") != "":   # (look-only) open on another of the town's shops
+				p.start_tab = _arg("shoptab", "")
 			if _arg("pane", "") == "1":   # as a pane over the world, where the interface skin is worn (a look-only option)
 				p.set_meta("pane", p.get_script().resource_path.get_file().get_basename())
 			app.current.add_child(p)

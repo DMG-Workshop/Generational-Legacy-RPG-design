@@ -62,9 +62,9 @@ static func store(key: String, value: Variant) -> bool:
 
 
 ## The accessibility options (the menu's Accessibility row): colour-blind colours, high contrast and
-## reduced motion. Each is a yes or no in settings.cfg; a file from before they existed, or a damaged
+## reduced motion and plain font. Each is a yes or no in settings.cfg; a file from before they existed, or a damaged
 ## value, reads as off.
-const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion"]
+const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion", "plain_font"]
 
 
 static func access_on(key: String) -> bool:
@@ -82,6 +82,11 @@ static func high_contrast() -> bool:
 
 static func reduced_motion() -> bool:
 	return access_on("reduced_motion")
+
+
+## Plain font: every skinned text in the engine's font, not the pixel font (UiSkin.font_on).
+static func plain_font() -> bool:
+	return access_on("plain_font")
 
 
 ## A tween's time in seconds, or none when reduced motion is on: changes then show at once.

@@ -5,6 +5,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const PanelSkin := preload("res://ui/play/panel_skin.gd")
 const WIDE := 760.0
 
 var dynasty: GameDynasty
@@ -17,6 +18,8 @@ var confirm_salvage: String = ""   # a fine piece waiting for a second tap befor
 var _body: VBoxContainer
 var _column := WIDE
 var note: Label
+var _tabs: TabContainer   # the sections as wooden tabs, in the skinned pane look only
+var _tab := 0
 
 
 func _ready() -> void:
@@ -37,29 +40,96 @@ func _ready() -> void:
 	_build()
 
 
-func _wrap(text: String, size: int = 15, color: Color = Kit.dim()) -> Label:
-	var l := Kit.label(text, size, color)
+## A wrapped line; `slot` when it stands in a slot row (its ink is made for the slot's brown, and it fills the row rather than a column).
+func _wrap(text: String, size: int = 15, color: Color = Kit.dim(), slot: bool = false) -> Label:
+	var l := PanelSkin.label(self, text, size, color) if slot else Kit.label(text, size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(_column, 0)
+	l.custom_minimum_size = Vector2(0.0 if PanelSkin.on(self) else _column, 0)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return l
 
 
+## The width a key asks for: the column in the old look, the row's own in the skinned one.
+func _kw() -> float:
+	return 0.0 if PanelSkin.on(self) else _column
+
+
+## Where a section goes: a tab page when skinned (the open tab is kept over a rebuild), else the body as it was.
+func _page(title: String) -> Control:
+	if not PanelSkin.on(self):
+		return _body
+	var m := MarginContainer.new()
+	m.name = title
+	m.add_theme_constant_override("margin_top", 8)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	m.add_child(v)
+	_tabs.add_child(m)
+	return v
+
+
+## A slot row to put a section's lines in: the container itself when not skinned.
+func _slot(target: Control) -> Control:
+	if not PanelSkin.on(self):
+		return target
+	var r := PanelSkin.row(self)
+	target.add_child(r)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	r.add_child(v)
+	return v
+
+
+## A row (a container of lines) added to a page, as an inset slot when skinned.
+func _put(target: Control, row: Control) -> void:
+	if PanelSkin.on(self):
+		var r := PanelSkin.row(self)
+		r.add_child(row)
+		target.add_child(r)
+	else:
+		target.add_child(row)
+
+
+## A key, with the price (a coin and the gold) before it when skinned; `fee` is -1 for none.
+func _key(box: Control, b: Button, fee: int) -> void:
+	if PanelSkin.on(self) and fee >= 0:
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 10)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_child(PanelSkin.cost(self, fee, dynasty.heir.gold >= fee, 17))
+		line.add_child(b)
+		box.add_child(line)
+	else:
+		box.add_child(b)
+
+
 func _build() -> void:
+	_tabs = null
 	for c in _body.get_children():
 		_body.remove_child(c)
 		c.queue_free()
 	var d := dynasty
-	_body.add_child(_wrap("In the stores: %s." % GameCraft.describe(d)))
+	var top := _slot(_body)
+	top.add_child(_wrap("In the stores: %s." % GameCraft.describe(d), 15, Kit.dim(), true))
 	var forge_line := "There is a forge here." if d.world.has_service("forge") else GameCraft.text("no_forge")
 	if forge == "home":
 		forge_line = "This is the family's own forge: the fee is %d%% of a town forge's." % int(round(float(GameCraft.setting("home_fee_mult")) * 100.0))
-	_body.add_child(_wrap("Gold: %s. %s" % [GameText.num(d.heir.gold), forge_line]))
+	top.add_child(_wrap("Gold: %s. %s" % [GameText.num(d.heir.gold), forge_line], 15, Kit.dim(), true))
 	note = _wrap("", 15, Kit.TEXT)
 	_body.add_child(note)
+	if PanelSkin.on(self):
+		_tabs = TabContainer.new()
+		_tabs.name = "Sections"
+		PanelSkin.tabs(self, _tabs)
+		_body.add_child(_tabs)
 	_build_make()
 	_build_brew()
 	_build_works()
 	_build_salvage()
+	if _tabs != null:
+		_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
+		_tabs.tab_changed.connect(func(i: int): _tab = i)   # (connected last: adding the pages would reset it)
+	_body.add_child(PanelSkin.button(self, "Close", func(): queue_free(), Vector2(_column, 48)))
 
 
 # ---------------------------------------------------------------- make
@@ -90,7 +160,9 @@ func _fix_choices() -> void:
 
 func _build_make() -> void:
 	_fix_choices()
-	_body.add_child(Kit.label("Make a piece", 18, Kit.ACCENT))
+	var page := _page("Make")
+	page.add_child(PanelSkin.heading(self, "Make a piece"))
+	var box := _slot(page)
 	var form_pick := OptionButton.new()
 	form_pick.name = "FormPick"
 	var forms := _forms()
@@ -99,7 +171,7 @@ func _build_make() -> void:
 		if str(forms[i]["id"]) == form_id:
 			form_pick.select(i)
 	form_pick.item_selected.connect(func(i: int): form_id = str(forms[i]["id"]); _build())
-	_body.add_child(_pair("Form", form_pick))
+	box.add_child(_pair("Form", form_pick))
 	var mats := GameCraft.materials_for(form_id)
 	var mat_pick := OptionButton.new()
 	mat_pick.name = "MaterialPick"
@@ -109,7 +181,7 @@ func _build_make() -> void:
 		if m == mat_id:
 			mat_pick.select(i)
 	mat_pick.item_selected.connect(func(i: int): mat_id = str(mats[i]); _build())
-	_body.add_child(_pair("Material", mat_pick))
+	box.add_child(_pair("Material", mat_pick))
 	var allowed := GameCraft.essences_for(form_id, mat_id)
 	var owned: Array = allowed.filter(func(a): return GameCraft.essence_have(dynasty, str(a)) > 0)
 	for slot in int(GameCraft.setting("max_essences")):
@@ -128,28 +200,29 @@ func _build_make() -> void:
 				at = pick.item_count - 1
 		pick.select(at)
 		pick.item_selected.connect(func(i: int): picks[s] = str(pick.get_item_metadata(i)) if i > 0 else ""; _build())
-		_body.add_child(_pair("Essence %d" % (s + 1), pick))
+		box.add_child(_pair("Essence %d" % (s + 1), pick))
 	var chosen: Array = picks.filter(func(x): return x != "")
 	var p := GameCraft.plan(dynasty, form_id, mat_id, chosen, forge)
-	_body.add_child(_wrap(_preview(p), 15, Kit.TEXT))
-	var make := Kit.button("Make it", func(): _make(chosen), Vector2(_column, 48))
+	box.add_child(_wrap(_preview(p), 15, Kit.TEXT, true))
+	var make := PanelSkin.button(self, "Make it", func(): _make(chosen), Vector2(_kw(), 48))
 	make.name = "MakeButton"
 	make.disabled = not p["ok"]
-	_body.add_child(make)
+	_key(box, make, int(p["fee"]) if p.has("fee") else -1)
 	if not p["ok"]:
-		var reason := _wrap(str(p["why"]))
+		var reason := _wrap(str(p["why"]), 15, Kit.dim(), true)
 		reason.name = "MakeReason"
-		_body.add_child(reason)
+		box.add_child(reason)
 
 
 func _pair(title: String, pick: OptionButton) -> Control:
 	var row := HBoxContainer.new()
-	var t := Kit.label(title, 15, Kit.dim())
+	var t := PanelSkin.label(self, title, 15, Kit.dim())
 	t.custom_minimum_size = Vector2(90, 0)
 	row.add_child(t)
 	pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pick.custom_minimum_size = Vector2(0, UiSettings.tap_h(38))
 	pick.clip_text = true
+	PanelSkin.option(self, pick)
 	row.add_child(pick)
 	return row
 
@@ -169,7 +242,8 @@ func _make(chosen: Array) -> void:
 # ---------------------------------------------------------------- brew
 
 func _build_brew() -> void:
-	_body.add_child(Kit.label("Brew at the forge", 18, Kit.ACCENT))
+	var page := _page("Brew")
+	page.add_child(PanelSkin.heading(self, "Brew at the forge"))
 	for id in GameCraft.brews() + GameCraft.calling_brews(dynasty.heir):
 		var bid: String = id
 		var p := GameCraft.brew_plan(dynasty, bid, forge)
@@ -178,14 +252,14 @@ func _build_brew() -> void:
 			parts.append("%d %s" % [int(p["cost"][m]), GameMaterials.name_of(str(m)).to_lower()])
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override("separation", 2)
-		row.add_child(_wrap("%s: %d from %s and %s gold." % [str(p["name"]).capitalize(), int(p["makes"]), ", ".join(parts), GameText.num(int(p["fee"]))], 15, Kit.TEXT))
-		var b := Kit.button("Brew", func(): _say(GameCraft.brew(dynasty, bid, forge)), Vector2(_column, 44))
+		row.add_child(_wrap("%s: %d from %s and %s gold." % [str(p["name"]).capitalize(), int(p["makes"]), ", ".join(parts), GameText.num(int(p["fee"]))], 15, Kit.TEXT, true))
+		var b := PanelSkin.button(self, "Brew", func(): _say(GameCraft.brew(dynasty, bid, forge)), Vector2(_kw(), 44))
 		b.name = "Brew"
 		b.disabled = not p["ok"]
-		row.add_child(b)
+		_key(row, b, int(p["fee"]))
 		if not p["ok"]:
-			row.add_child(_wrap(str(p["why"]), 14))
-		_body.add_child(row)
+			row.add_child(_wrap(str(p["why"]), 14, Kit.dim(), true))
+		_put(page, row)
 
 
 # ---------------------------------------------------------------- the calling's works
@@ -195,26 +269,28 @@ func _build_works() -> void:
 	var calling := dynasty.heir.subclass
 	if calling == "":
 		return
-	_body.add_child(Kit.label(GameSubclass.text("works_head", {"name": GameSubclass.name_of(calling)}), 18, Kit.ACCENT))
+	var page := _page("Works")
+	page.add_child(PanelSkin.heading(self, GameSubclass.text("works_head", {"name": GameSubclass.name_of(calling)})))
 	for id in GameSubclass.works(calling):
 		var wid: String = id
 		var p := GameSubclass.work_plan(dynasty, wid, forge)
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override("separation", 2)
-		row.add_child(_wrap(GameSubclass.work_line(dynasty, wid, forge), 15, Kit.TEXT))
-		var b := Kit.button(GameSubclass.text("works_make"), func(): _say(GameSubclass.make(dynasty, wid, forge)), Vector2(_column, 44))
+		row.add_child(_wrap(GameSubclass.work_line(dynasty, wid, forge), 15, Kit.TEXT, true))
+		var b := PanelSkin.button(self, GameSubclass.text("works_make"), func(): _say(GameSubclass.make(dynasty, wid, forge)), Vector2(_kw(), 44))
 		b.name = "Work"
 		b.disabled = not p["ok"]
-		row.add_child(b)
+		_key(row, b, int(p["fee"]) if p.has("fee") else -1)
 		if not p["ok"]:
-			row.add_child(_wrap(str(p["why"]), 14))
-		_body.add_child(row)
+			row.add_child(_wrap(str(p["why"]), 14, Kit.dim(), true))
+		_put(page, row)
 
 
 # ---------------------------------------------------------------- salvage
 
 func _build_salvage() -> void:
-	_body.add_child(Kit.label("Break up gear from the pack", 18, Kit.ACCENT))
+	var page := _page("Break up")
+	page.add_child(PanelSkin.heading(self, "Break up gear from the pack"))
 	var listed := {}
 	for id in dynasty.heir.inventory:
 		var iid: String = id
@@ -229,16 +305,15 @@ func _build_salvage() -> void:
 			parts.append("1 essence of %s" % GameCraft._affix_label(str(a)))
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override("separation", 2)
-		row.add_child(_wrap("%s (x%d): gives %s." % [GameItems.item_name(iid), dynasty.heir.inventory.count(iid), ", ".join(parts)], 15, Kit.TEXT))
-		var b := Kit.button("Break up", func(): _salvage(iid), Vector2(_column, 44))
+		row.add_child(_wrap("%s (x%d): gives %s." % [GameItems.item_name(iid), dynasty.heir.inventory.count(iid), ", ".join(parts)], 15, Kit.TEXT, true))
+		var b := PanelSkin.button(self, "Break up", func(): _salvage(iid), Vector2(_kw(), 44))
 		b.name = "Salvage"
 		if confirm_salvage == iid:
 			b.text = "Sure?"
 		row.add_child(b)
-		_body.add_child(row)
+		_put(page, row)
 	if listed.is_empty():
-		_body.add_child(_wrap("Nothing in the pack to break up."))
-	_body.add_child(Kit.button("Close", func(): queue_free(), Vector2(_column, 48)))
+		page.add_child(_wrap("Nothing in the pack to break up."))
 
 
 ## A plain piece breaks up at once; anything worth more than a plain piece asks a second time.
