@@ -72,6 +72,14 @@ const SHOTS := [
 	["phone_battle", PHONE, true, "battle:kingshold"],
 ]
 
+## Look-only extras (never compared, never stored): the world map with a town's card up, and the town with a map pin set, whose minimap
+## shows the arrow. Made only when named in `only=`.
+const LOOK_SHOTS := [
+	["world_map", DESKTOP, false, "worldmap"],
+	["world_map_phone", PHONE, true, "worldmap"],
+	["world_pin", DESKTOP, false, "worldpin"],
+]
+
 ## The pictures for a store page: the same screens, bigger. Nothing compares them; they are made on demand.
 const STORE_DESKTOP := Vector2i(1920, 1080)
 const STORE_PHONE := Vector2i(2532, 1170)
@@ -135,7 +143,7 @@ func _run() -> void:
 	UiSettings.set_access("reduced_motion", true)
 	var made: Array = []
 	var screen := DisplayServer.screen_get_size()
-	for shot in (STORE_SHOTS if mode == "store" else SHOTS):
+	for shot in (STORE_SHOTS if mode == "store" else SHOTS + (LOOK_SHOTS if mode == "render" and not names.is_empty() else [])):
 		if shot[1].x > screen.x or shot[1].y > screen.y:
 			print("The display is %dx%d, too small for %s (%dx%d): see the top of tools/screenshots.gd." % [screen.x, screen.y, shot[0], shot[1].x, shot[1].y])
 			quit(2)
@@ -246,7 +254,7 @@ func _screen(what: String) -> void:
 		await _interior(what)
 		return
 	match what:
-		"town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
+		"worldmap", "worldpin", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
 			await _open_world(what)
 		"life":
 			pass
@@ -380,7 +388,7 @@ func _select_tab(n: Node, name: String) -> void:
 
 ## The open world with the party in it: the home town with its buildings and two creatures near, or a river with its fords.
 func _open_world(what: String) -> void:
-	var town := what == "town"
+	var town := what in ["town", "worldmap", "worldpin"]
 	var spot := Vector2i(160, 296) if town else Vector2i(143, 206)
 	if WILDS_SPOTS.has(what):
 		var wa := GameWorldGen.anchor(str(WILDS_SPOTS[what][0]))
@@ -433,6 +441,18 @@ func _open_world(what: String) -> void:
 	await _frames(2)   # (the world is held still, so the map is drawn again by hand once everything is made: a figure made while drawing blanks those drawn before it in that frame)
 	scr.overlay.queue_redraw()
 	await _frames(2)
+	if what == "worldpin":   # (look-only) a pin on Kingshold: the arrow on the minimap, the line in the status pane
+		GameTravel.set_pin(d, "kingshold")
+		scr._refresh_panes()
+		scr._refresh_status()
+		await _frames(2)
+	if what == "worldmap":   # (look-only) the world map with a town's card up
+		scr._open_world_map()
+		await _frames(3)
+		for c in scr.get_children():
+			if c.has_method("select"):
+				c.select(_arg("town", "ironford"))
+		await _frames(3)
 
 
 ## The inside of a town building (`interior:<town>/<service>`): the heir at the way out, the person who works there across the floor, both as

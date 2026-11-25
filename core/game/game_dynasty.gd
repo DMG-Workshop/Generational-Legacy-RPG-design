@@ -17,6 +17,7 @@ var echoes: Array = []          # [{kind,key,text,strength,gen}]
 var heirlooms: Array = []       # [{name, boss, gen}]
 var clock_carry: float = 0.0    # years the world clock has been fed but not yet lived through (see GameClock); saved only when above 0
 var world_seconds: float = 0.0  # seconds the world clock has run, the day follows from it (see GameDay); saved only when above 0
+var map_pin: Dictionary = {}    # the place or point the family has pinned on the world map: {place: id} or {x, z, name} (see GameTravel); saved only when set
 var house_titles: Array = []    # ids of the house titles the dynasty has earned (see GameTitles); saved only once there is one
 var achievements: Dictionary = {}   # milestones the house has reached, id -> {gen, year, heir} (see GameAchievements); saved only once there is one
 var hard: Dictionary = {}       # hard-mode options chosen at the founding (see GameHardMode); saved only when one is on
@@ -1088,6 +1089,8 @@ func to_dict() -> Dictionary:
 		out["world_seconds"] = world_seconds
 	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
 		out["clock_carry"] = clock_carry
+	if not map_pin.is_empty():   # only once a place is pinned
+		out["map_pin"] = map_pin
 	if not house_titles.is_empty():   # only once earned
 		out["house_titles"] = house_titles
 	if not achievements.is_empty():   # only once reached
@@ -1154,6 +1157,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.world_seconds = GameDay.load_seconds(d.get("world_seconds", 0.0))
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0
+	g.map_pin = GameTravel.clean_pin(d.get("map_pin", {}))
 	g.pending_event = _ints(d.get("pending_event", {}))
 	g.shop_state = _ints(d.get("shop_state", {}))
 	g.auto_battle = bool(d.get("auto_battle", false))

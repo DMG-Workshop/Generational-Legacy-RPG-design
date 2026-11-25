@@ -26,6 +26,9 @@ var fight_foes: Array = []         # the dungeon creatures in the fight now on, 
 var fight_site: Dictionary = {}    # the landmark of the wilds whose guards are the fight now on ({} for none), for after_fight (GameWildsFights)
 var armed: Dictionary = {}         # landmarks whose approach has already set their guards on the heir this visit (id -> their range); runtime only
 var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
+var walk_goal := Vector2i(-1, -1)  # the tile a walk in legs is going to (GameTravel.walk), (-1, -1) for none; never saved
+var walk_place := ""               # the town that walk is for
+var walk_replans := 0              # how many times it has been planned again after being stopped
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
 
 
@@ -173,6 +176,7 @@ func move(dx: int, dz: int) -> Dictionary:
 		return c
 	heir += Vector2i(dx, dz)
 	_arrive()
+	GameTravel.after_step(self)   # a pin the heir has come to comes off
 	refresh()
 	if space != "world":
 		_dungeon_arrive()
@@ -308,6 +312,7 @@ func enter() -> Dictionary:
 	if cells.is_empty():
 		return {"ok": false, "text": _text("no_door")}
 	outside = heir
+	walk_goal = GameTravel.NONE
 	space = id
 	interior = GameDungeons.walk_cells(id, d) if GameDungeons.is_dungeon(id) else cells
 	heir = GameInterior.entry()
@@ -640,6 +645,7 @@ func _guard_fights(e: Dictionary) -> void:
 ## route when found and returns {ok, why, steps}; the heir then walks it one tile at a time with `walk_one`.
 func set_route(target: Vector2i) -> Dictionary:
 	route = []
+	walk_goal = GameTravel.NONE   # a route of its own ends a walk in legs
 	if space != "world":
 		return {"ok": false, "why": _text("indoors"), "steps": 0}
 	if storey() > 0:
@@ -666,9 +672,30 @@ func walk_one() -> bool:
 	var r := move(next.x - heir.x, next.y - heir.y)
 	if not r["ok"]:
 		route = []
+		GameTravel.stalled(self)   # a walk in legs is planned again (a gate has shut), or given up
 		return false
 	route.pop_front()
+	if route.is_empty() and walk_goal != GameTravel.NONE:
+		GameTravel.plan_next(self)   # the next leg of a walk in legs
 	return true
+
+
+## Ends any walk the heir is on: the route and the goal of a walk in legs.
+func cancel_walk() -> void:
+	route = []
+	walk_goal = GameTravel.NONE
+	walk_place = ""
+	walk_replans = 0
+
+
+## Pins a town and walks there (GameTravel.walk): {ok, text}.
+func walk_there(place_id: String) -> Dictionary:
+	return GameTravel.walk(self, place_id)
+
+
+## Books a coach to a town for gold (GameTravel.book): {ok, text}. Draws no dice.
+func book_travel(place_id: String) -> Dictionary:
+	return GameTravel.book(self, place_id)
 
 
 ## Gives a companion an order (`GameCompanions.set_order`): {ok, text}.

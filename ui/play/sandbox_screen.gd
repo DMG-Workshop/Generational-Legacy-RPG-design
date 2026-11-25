@@ -224,7 +224,7 @@ func _process(delta: float) -> void:
 	var stepped := false
 	if step_for(mv) != Vector2i.ZERO:
 		_use_when_there = false
-		sb.route = []
+		sb.cancel_walk()   # any key or stick ends a walk, whole (GameTravel's legs too)
 		if mode == "build":
 			facing_dir = step_for(mv)   # in build mode the stick aims the piece; the heir stays where they are
 		elif _walk_wait <= 0.0:
@@ -556,7 +556,7 @@ func _tap(p: Vector2, area: Vector2) -> void:
 		queue_redraw()
 		return
 	if absi(dx) <= 1 and absi(dz) <= 1 and (dx != 0 or dz != 0):
-		sb.route = []
+		sb.cancel_walk()
 		var r := sb.move(dx, dz)
 		if not r["ok"]:
 			last_line = str(r["why"])
@@ -798,8 +798,13 @@ func _open_merchant(lm: Dictionary) -> void:
 func _open_world_map() -> void:
 	var panel: Control = WorldMapPanel.new()
 	panel.dynasty = app.dynasty
+	panel.sb = sb
 	if sb.space == "world":
 		panel.heir_tile = sb.heir
+	panel.on_line = func(line: String):   # a pin, a walk or a coach: the status line says so, and the view comes to the heir
+		last_line = line
+		cam = Vector2.ZERO
+		_refresh_status()
 	add_child(panel)
 
 
@@ -1209,8 +1214,20 @@ func _refresh_status() -> void:
 	_refresh_slots()
 	if cast_button != null:
 		cast_button.visible = GameDungeons.is_dungeon(sb.space) and not GameCasting.self_castable(d).is_empty()
-	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
+	var pin := _pin_line()
+	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line] if pin == "" else "%s  %s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], pin, line]
 	_refresh_plate()
+
+
+## The status line's word on the map pin: "Pin: Kingshold, 212 tiles NE". Where the status pane is up it says so itself, so the line
+## does not (a desktop window); on a touch screen and a narrow window the line is where it shows.
+func _pin_line() -> String:
+	if sb.space != "world" or not GameTravel.has_pin(app.dynasty):
+		return ""
+	for c in get_children():
+		if c.get_script() == StatusPane and not c.is_queued_for_deletion():
+			return ""
+	return GameTravel.pin_line(app.dynasty, sb.heir)
 
 
 func _draw() -> void:
