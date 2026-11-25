@@ -4,6 +4,8 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const PanelSkin := preload("res://ui/play/panel_skin.gd")
+const FamilyTreeView := preload("res://ui/play/family_tree_view.gd")
 
 var dynasty: GameDynasty
 var on_change: Callable   # called after a title is put on or taken off, or a creature sold or freed (the screen behind redraws)
@@ -26,16 +28,32 @@ func _ready() -> void:
 			sb.content_margin_top = pad
 			sb.content_margin_bottom = pad
 			tabs.add_theme_stylebox_override(st, sb)
+	PanelSkin.tabs(self, tabs)   # wooden tabs, the open one lit in gold (a skinned pane only)
 	v.add_child(tabs)
 
 	var lin := Kit.rich()
 	lin.name = "Lineage"
 	lin.text = _lineage_text()
 	tabs.add_child(lin)
-	var tree := Kit.rich()
-	tree.name = "Family Tree"
-	tree.text = _tree_text()
-	tabs.add_child(tree)
+	if PanelSkin.on(self):   # drawn: parchment cards joined by ink lines
+		var sc := ScrollContainer.new()
+		sc.name = "Family Tree"
+		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		var view: VBoxContainer = FamilyTreeView.new()
+		view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		view.build(GameFamilyTree.tree(dynasty))
+		var pad := MarginContainer.new()
+		pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for side in ["left", "right", "top", "bottom"]:
+			pad.add_theme_constant_override("margin_" + side, 10)
+		pad.add_child(view)
+		sc.add_child(pad)
+		tabs.add_child(sc)
+	else:
+		var tree := Kit.rich()
+		tree.name = "Family Tree"
+		tree.text = _tree_text()
+		tabs.add_child(tree)
 
 
 	tabs.add_child(_titles_tab())

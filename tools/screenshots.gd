@@ -300,6 +300,8 @@ func _screen(what: String) -> void:
 			var fp := ChroniclePanel.new()
 			fp.dynasty = d
 			fp.on_change = func(): pass
+			if _arg("pane", "") == "1":
+				fp.set_meta("pane", "chronicle_panel")
 			app.current.add_child(fp)
 			await _frames(3)
 			for tc in fp.get_children():
@@ -318,7 +320,17 @@ func _screen(what: String) -> void:
 				p.on_change = func(): pass
 			if "on_travel" in p:
 				p.on_travel = func(_to): pass
+			if _arg("gens", "") != "":   # (look-only) a few generations on, so the tree has something to draw
+				for i in int(_arg("gens", "0")):
+					d._die("old age")
+					d.choose_heir(0)
+			if _arg("pane", "") == "1":   # as a pane over the world, where the interface skin is worn (a look-only option)
+				p.set_meta("pane", p.get_script().resource_path.get_file().get_basename())
 			app.current.add_child(p)
+			if _arg("tab", "") != "":
+				for tc in p.get_children():
+					_select_tab(tc, _arg("tab", ""))
+				await _frames(2)
 		_:
 			if what.begins_with("battle:"):
 				d.world.visit(what.get_slice(":", 1))
