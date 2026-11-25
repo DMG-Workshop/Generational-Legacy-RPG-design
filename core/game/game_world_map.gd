@@ -60,19 +60,40 @@ static func grid(d: GameDynasty) -> Array:
 	return rows
 
 
-## A marker for every place on the map: {id, name, type, x, z, cell, visited, here}. An unvisited place has no name here, only the
-## `unknown` line, so the map does not give away what the family has not found.
+## A marker for every place on the map: {id, name, type, kind, x, z, cell, visited, known, here}. A town or a city is known to everyone (named
+## and marked from the start: `kind` "town" or "city"); any other place has no name here, only the `unknown` line, until the family has been
+## there, so the map does not give away what the family has not found (`kind` "dungeon" or "wilds").
 static func markers(d: GameDynasty) -> Array:
 	var out: Array = []
 	for a in GameWorldGen.anchors():
 		var id := str(a["id"])
 		var visited: bool = id in d.world.visited or id == str(d.world.location)
 		var place: Dictionary = GameWorld.place(id)
+		var town := GameTravel.is_town(id)
+		var known := visited or town
+		var kind := ("city" if GameTravel.is_city(id) else "town") if town else ("dungeon" if str(place.get("type", "")) == "dungeon" else "wilds")
 		out.append({
-			"id": id, "name": str(place.get("name", id)) if visited else text("unknown"), "type": str(place.get("type", "")),
-			"x": int(a["x"]), "z": int(a["z"]), "cell": cell_of(int(a["x"]), int(a["z"])), "visited": visited, "here": id == str(d.world.location),
+			"id": id, "name": str(place.get("name", id)) if known else text("unknown"), "type": str(place.get("type", "")), "kind": kind,
+			"x": int(a["x"]), "z": int(a["z"]), "cell": cell_of(int(a["x"]), int(a["z"])), "visited": visited, "known": known, "here": id == str(d.world.location),
 		})
 	return out
+
+
+## The markers of the towns and cities, which can be selected on the map.
+static func town_markers(d: GameDynasty) -> Array:
+	return markers(d).filter(func(m): return str(m["kind"]) in ["town", "city"])
+
+
+## The town marker nearest a point of the picture (in cells), within `reach` cells: {} for none. What a click or a tap selects.
+static func town_near_cell(d: GameDynasty, at: Vector2, reach: float) -> Dictionary:
+	var best := {}
+	var best_d := reach
+	for m in town_markers(d):
+		var dist := ((Vector2(m["cell"]) + Vector2(0.5, 0.5)) - at).length()
+		if dist <= best_d:
+			best_d = dist
+			best = m
+	return best
 
 
 ## A marker for every landmark of the wilds the family has found (and none it has not): {id, name, kind, area, x, z, cell}.
@@ -178,6 +199,7 @@ static func validate() -> Array:
 		return bad
 	if int(dat["settings"]["step"]) > GameWorldGen.size() / 4:
 		bad.append("worldmap.json: a step of %d leaves too few cells to be a map" % int(dat["settings"]["step"]))
+	bad.append_array(GameTravel.validate())
 	for k in ["unknown", "here", "heir", "title", "legend", "trial_title", "trial_none", "trial_line", "trial_more", "trial_passed", "trial_open"]:
 		if str(dat["text"].get(k, "")) == "":
 			bad.append("worldmap.json: text.%s is missing" % k)

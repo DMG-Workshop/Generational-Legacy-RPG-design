@@ -37,6 +37,8 @@ func _run() -> void:
 	test_image()
 	await test_panel()
 	await test_screen()
+	await test_town_card()
+	await test_travel_from_the_map()
 	print("world map tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -194,6 +196,141 @@ func test_panel() -> void:
 	await process_frame
 	ok(bare.find_child("HeirLine", true, false) == null, "with no heir tile (indoors) no heir line")
 	bare.queue_free()
+	await process_frame
+
+
+func test_town_card() -> void:
+	var d := _fresh()
+	d.heir.gold = 3
+	var sb := GameSandbox.start(d)
+	sb.creatures.clear()
+	var panel: Control = WorldMapPanel.new()
+	panel.dynasty = d
+	panel.sb = sb
+	panel.heir_tile = sb.heir
+	root.add_child(panel)
+	await process_frame
+	await process_frame
+	var towns: Array = panel.find_child("Towns", true, false).get_children()
+	ok(towns.size() == 4, "a key for each of the four towns")
+	ok(panel.find_child("CardNone", true, false) != null and panel.find_child("CardTitle", true, false) == null, "no town selected: the card says to select one")
+	ok(panel.find_child("Legend", true, false) != null and (panel.find_child("Legend", true, false) as Label).text.contains("castle"), "the legend explains the house and the castle")
+	# a click on a marker selects it
+	var canvas: Control = panel.canvas
+	canvas.size = Vector2(640, 640)
+	var k: Dictionary = GameWorldMap.markers(d).filter(func(m): return m["id"] == "kingshold")[0]
+	var at: Vector2 = (Vector2(k["cell"]) + Vector2(0.5, 0.5)) * (canvas.size / float(GameWorldMap.cells()))
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = at + Vector2(3, 2)
+	canvas._gui_input(ev)
+	ok(panel.selected == "kingshold", "a click on Kingshold's marker selects it")
+	ok(str(canvas._get_tooltip(at)).contains("Kingshold") and str(canvas._get_tooltip(at)).contains("tiles"), "and the marker's tooltip names it and says how far: %s" % str(canvas._get_tooltip(at)).replace("\n", " / "))
+	ok(canvas._get_tooltip(Vector2(5, 5)) == "", "bare sea says nothing")
+	var wild: Dictionary = GameWorldMap.markers(d).filter(func(m): return m["kind"] == "wilds")[0]
+	var wp: Vector2 = (Vector2(wild["cell"]) + Vector2(0.5, 0.5)) * (canvas.size / float(GameWorldMap.cells()))
+	ev.position = wp
+	canvas._gui_input(ev)
+	ok(panel.selected == "kingshold", "the wilds cannot be selected")
+	var title := panel.find_child("CardTitle", true, false) as Label
+	ok(title != null and title.text == "Kingshold (City)", "the card names it and what it is: %s" % (title.text if title != null else ""))
+	ok((panel.find_child("CardDistance", true, false) as Label).text.contains("tiles") and (panel.find_child("CardFare", true, false) as Label).text.contains("gold"), "with the distance, direction and fare")
+	var pin := panel.find_child("PinButton", true, false) as Button
+	var walk := panel.find_child("WalkButton", true, false) as Button
+	var book := panel.find_child("BookButton", true, false) as Button
+	ok(pin != null and walk != null and book != null and pin.text == "Pin it" and walk.text == "Walk there" and book.text == "Book travel", "three keys: Pin it, Walk there, Book travel")
+	ok(book.disabled and panel.find_child("Reason", true, false) != null and (panel.find_child("Reason", true, false) as Label).text.contains("gold"), "with 3 gold, Book travel is shut and the reason is text under the keys: %s" % (panel.find_child("Reason", true, false) as Label).text)
+	ok(not pin.disabled and not walk.disabled, "pinning and walking cost nothing")
+	pin.pressed.emit()
+	await process_frame
+	ok(GameTravel.pin_place(d) == "kingshold", "Pin it pins the town")
+	ok((panel.find_child("PinButton", true, false) as Button).text == "Unpin", "and the key becomes Unpin")
+	(panel.find_child("PinButton", true, false) as Button).pressed.emit()
+	await process_frame
+	ok(not GameTravel.has_pin(d) and (panel.find_child("PinButton", true, false) as Button).text == "Pin it", "Unpin takes it off again")
+	# a key row button selects too (the keyboard and gamepad reach it)
+	(panel.find_child("Town_ironford", true, false) as Button).pressed.emit()
+	await process_frame
+	ok(panel.selected == "ironford" and (panel.find_child("CardTitle", true, false) as Label).text == "Ironford (Town)", "a town's key selects it")
+	# in the town itself
+	var here: Dictionary = GameWorldMap.markers(d).filter(func(m): return m["here"])[0]
+	panel.select(str(here["id"]))
+	await process_frame
+	ok((panel.find_child("BookButton", true, false) as Button).disabled and (panel.find_child("WalkButton", true, false) as Button).disabled, "the town the heir stands in cannot be walked or booked to")
+	ok((panel.find_child("CardDistance", true, false) as Label).text.contains("stands in"), "and its card says the heir is there")
+	panel.canvas.queue_redraw()
+	await process_frame
+	panel.queue_free()
+	await process_frame
+
+
+func test_travel_from_the_map() -> void:
+	var d := _fresh()
+	d.heir.gold = 1000
+	var app := FakeApp.new()
+	app.dynasty = d
+	root.add_child(app)
+	var scr: Control = load("res://ui/play/sandbox_screen.gd").new()
+	scr.app = app
+	scr.size = Vector2(1280, 720)
+	root.add_child(scr)
+	await process_frame
+	await process_frame
+	scr.sb.creatures.clear()
+	scr._open_world_map()
+	await process_frame
+	var panel: Control = null
+	for c in scr.get_children():
+		if c.get_script() == WorldMapPanel and not c.is_queued_for_deletion():
+			panel = c
+	ok(panel != null and panel.sb == scr.sb, "the screen hands the panel the open world")
+	panel.select("kingshold")
+	await process_frame
+	(panel.find_child("PinButton", true, false) as Button).pressed.emit()
+	await process_frame
+	ok(GameTravel.pin_place(d) == "kingshold", "Pin it in the screen's map pins")
+	ok(is_instance_valid(panel) and not panel.is_queued_for_deletion(), "pinning leaves the map open")
+	scr._refresh_status()
+	await process_frame
+	var has_status_pane := false
+	for c in scr.get_children():
+		if c.get_script() == load("res://ui/play/status_pane.gd") and not c.is_queued_for_deletion():
+			has_status_pane = true
+	ok(scr._pin_line().contains("Pin: Kingshold") != has_status_pane, "the pin is said by the status pane when it is up, else by the bar's line: %s" % scr._pin_line())
+	# book to Ironford from Hearthmere
+	panel.select("ironford")
+	await process_frame
+	var fare := GameTravel.fare(d, scr.sb.heir, "ironford")
+	var gold := d.heir.gold
+	(panel.find_child("BookButton", true, false) as Button).pressed.emit()
+	await process_frame
+	await process_frame
+	ok(d.heir.gold == gold - fare and GameTravel.town_at(scr.sb.heir.x, scr.sb.heir.y) == "ironford", "Book travel takes the fare and puts the heir in Ironford")
+	ok(not scr._modal_open(), "and closes the map (the world goes on)")
+	ok(scr.last_line.contains("Ironford") and scr.last_line.contains(str(fare)), "the status says so: %s" % scr.last_line)
+	ok(GameTravel.pin_place(d) == "kingshold", "the pin on another town stays")
+	# walk to Kingshold: the pin is there, a route starts, and a key press ends it
+	scr._open_world_map()
+	await process_frame
+	for c in scr.get_children():
+		if c.get_script() == WorldMapPanel and not c.is_queued_for_deletion():
+			panel = c
+	panel.select("kingshold")
+	await process_frame
+	(panel.find_child("WalkButton", true, false) as Button).pressed.emit()
+	await process_frame
+	await process_frame
+	ok(not scr._modal_open() and scr.sb.walk_goal == GameTravel.anchor_tile("kingshold") and not scr.sb.route.is_empty(), "Walk there closes the map and starts the walk")
+	var said := false
+	for e in scr.sb.log:
+		if str(e["text"]) == GameWorldMap.text("walk_start", {"heir": d.heir.name, "name": "Kingshold", "tiles": GameTravel.tiles(scr.sb.heir, GameTravel.anchor_tile("kingshold")), "dir": GameTravel.compass(scr.sb.heir, GameTravel.anchor_tile("kingshold"))}):
+			said = true
+	ok(said, "saying so in the log")
+	scr.sb.cancel_walk()
+	ok(scr.sb.route.is_empty() and scr.sb.walk_goal == GameTravel.NONE, "(a key, a stick or a click does the same through cancel_walk)")
+	scr.queue_free()
+	app.queue_free()
 	await process_frame
 
 

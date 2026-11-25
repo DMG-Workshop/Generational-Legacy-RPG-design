@@ -8,6 +8,8 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 var dynasty: GameDynasty
+var sb: GameSandbox = null   # where the heir is, for the pin's distance
+var _pin: Label
 var _who: Label
 var _gold: Label
 var _smoke: Label
@@ -33,6 +35,10 @@ func _ready() -> void:
 	_smoke = Kit.label("", 13, Kit.dim())
 	_smoke.visible = false
 	v.add_child(_smoke)
+	_pin = Kit.label("", 13, Kit.dim())   # the map pin: "Pin: Kingshold, 212 tiles NE" (only when one is set)
+	_pin.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pin.visible = false
+	v.add_child(_pin)
 	refresh()
 
 
@@ -54,6 +60,9 @@ func refresh() -> void:
 	_smoke.visible = GameSmoke.active(dynasty)   # "Smoke 2:10" while a pot's cloud burns
 	if _smoke.visible:
 		_smoke.text = GameSmoke.text("timer", {"time": GameSmoke.clock_text(GameSmoke.left(dynasty))})
+	var pin_text := GameTravel.pin_line(dynasty, sb.heir) if sb != null and sb.space == "world" else ""
+	_pin.text = pin_text
+	_pin.visible = pin_text != ""
 
 
 func _put(key: String, value: float, top: float, text: String) -> void:
