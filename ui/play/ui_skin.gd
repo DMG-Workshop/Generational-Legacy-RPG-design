@@ -166,8 +166,7 @@ static func panel_tex(w: int, h: int) -> ImageTexture:
 	var lw := maxi(_logical(w), 2 * int(p["margin"]) + 2)
 	var lh := maxi(_logical(h), 2 * int(p["margin"]) + 2)
 	var i := _img(lw, lh, pal("parch"))
-	var r := RandomNumberGenerator.new()
-	r.seed = 1337 + lw * 131 + lh
+	var r := CosmeticRng.keyed("skin_panel_%d_%d" % [lw, lh])
 	var rate := float(p["speck"])
 	for y in lh:
 		for x in lw:
@@ -283,8 +282,7 @@ static func header_tex(w: int, h: int) -> ImageTexture:
 	var lw := _logical(w)
 	var lh := maxi(_logical(h), 4)
 	var i := _img(lw, lh, pal("wood"))
-	var r := RandomNumberGenerator.new()
-	r.seed = 7
+	var r := CosmeticRng.keyed("skin_header")
 	var rate := float(p["speck"])
 	for y in lh:
 		for x in lw:
