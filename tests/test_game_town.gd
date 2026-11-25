@@ -247,7 +247,7 @@ func test_art() -> void:
 		for x in img.get_width():
 			if img.get_pixel(x, img.get_height() - 1).a > 0.0 or img.get_pixel(x, 0).a > 0.0:
 				outlined += 1
-		ok(img.get_pixel(0, 16) != Color(0, 0, 0, 0) or kind == "board", "%s is outlined where it meets the edge" % kind)
+		ok(img.get_pixel(0, 8) != Color(0, 0, 0, 0) or kind == "board", "%s is outlined where it meets the edge" % kind)
 		looks[kind] = img.get_data()
 		ok(BuildingArt.image(kind, 0, sz.x, sz.y).get_data() == img.get_data(), "%s paints the same pixels every time" % kind)
 		ok(BuildingArt.texture(kind, 0, sz.x, sz.y) == BuildingArt.texture(kind, 0, sz.x, sz.y), "%s's texture is kept" % kind)
