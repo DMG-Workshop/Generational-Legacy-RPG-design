@@ -21,7 +21,7 @@ const SkinScreen := preload("res://ui/play/skin_screen.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 const COLUMN_W := 300
-const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
+const COLUMN_TEXT_W := 250   # leaves room for the scroll bar and the parchment panel's margins
 const COOL_FONT := 13   # the autopilot buttons: "Auto: 10 gens (5:00)" needs 132 of 130 px at 14, so 13
 const COMPACT_COLUMN_W := 270   # a narrow screen keeps one side column, holding both
 
