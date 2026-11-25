@@ -1,5 +1,6 @@
 ## The minimap (docs/PLAYER_INTERFACE.md, slice 3): the ground round a point of the open world, a tile a cell, as the kind of each
-## tile (the same kinds the tile view and the world map colour: a biome, water, deep water, snow, ford, or the piece built there).
+## tile (the same kinds the tile view and the world map colour: a biome, water, deep water, snow, ford, or the piece built there), and
+## over the ground a town's buildings (`building`), the walls and towers round it (`city_wall`) and the passage of a gate (`gate`).
 ## A pure function of the seed, the built pieces and the point: no dice, nothing saved. Rendering is ui/play/minimap_pane.gd.
 class_name GameMiniMap
 extends RefCounted
@@ -12,7 +13,7 @@ static func kinds(d: GameDynasty, cx: int, cz: int, radius: int) -> Array:
 		var row: Array = []
 		for x in range(cx - radius, cx + radius + 1):
 			var built := GameBuild.kind_at(d, x, GameBuild.SURFACE, z)
-			row.append(GameRelief.kind(GameWorldGen.tile(d, x, z)) if built == "" else built)
+			row.append(built if built != "" else _standing(x, z, GameRelief.kind(GameWorldGen.tile(d, x, z))))
 		rows.append(row)
 	return rows
 
@@ -28,3 +29,16 @@ static func pin_bearing(d: GameDynasty, from_tile: Vector2i, radius: int = -1) -
 	var off := at - from_tile
 	return {"inside": maxi(absi(off.x), absi(off.y)) <= r, "angle": atan2(float(off.y), float(off.x)), "distance": GameTravel.tiles(from_tile, at),
 		"dir": GameTravel.compass(from_tile, at), "place": GameTravel.pin_name(d), "offset": off}
+
+
+## What stands on a tile of the open world that is not the family's: a town's building, a wall or tower of its wall, or a gate's
+## passage; the ground's own kind where there is none.
+static func _standing(x: int, z: int, ground: String) -> String:
+	if GameTown.blocks(x, z):
+		return "building"
+	var w := GameWalls.kind_at(x, z)
+	if w == "gate":
+		return "gate"
+	if w != "":
+		return "city_wall"
+	return ground

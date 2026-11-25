@@ -34,6 +34,7 @@ func _run() -> void:
 	test_night_gates()
 	test_breaks()
 	test_art()
+	test_screen_draws_them()
 	print("walls tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -614,3 +615,16 @@ func _gate_job(dd: Dictionary) -> Dictionary:
 		if str(j["id"]) == str(dd["guards"]["job"]):
 			return j
 	return {}
+
+
+## The screen once collected the walls' pieces and never drew them (a merge dropped the one `"wall"` case of `_paint_standing`'s
+## match, and town walls were invisible for a long while, with the stored `gate` picture made without them). The drawing itself is
+## checked by the screenshot tool, so this only holds that the screen still hands every kind of piece it collects to `_paint_wall`.
+func test_screen_draws_them() -> void:
+	var f := FileAccess.open("res://ui/play/sandbox_screen.gd", FileAccess.READ)
+	var src := f.get_as_text() if f != null else ""
+	ok(src != "", "the sandbox screen's source can be read")
+	ok(src.contains('items.append([float(int(p["z"]) + 1)') and src.contains('"wall", p])'), "the screen collects the wall pieces in view")
+	var re := RegEx.new()
+	re.compile('"wall":\\s*\\n\\s*_paint_wall\\(c, it\\[2\\]')
+	ok(re.search(src) != null, "and draws each one with _paint_wall (the match has a wall case)")

@@ -63,6 +63,21 @@ func test_minimap() -> void:
 	ok(str(out[0][0]) == GameRelief.kind(GameWorldGen.tile(d, -5, -5)), "beyond the world's edge it is whatever the world makes of it (sea)")
 	d.built[GameBuild.key(sb.heir.x + 1, GameBuild.SURFACE, sb.heir.y)] = "wall"
 	ok(str(GameMiniMap.kinds(d, sb.heir.x, sb.heir.y, 2)[2][3]) == "wall", "a piece the family built shows as that piece")
+	# A town shows on it: the buildings, the wall round the town and its gates.
+	var b: Dictionary = GameTown.buildings("hearthmere")[0]
+	ok(GameMiniMap.kinds(d, int(b["x"]), int(b["z"]), 1)[1][1] == "building", "a town's building shows as a building")
+	var g: Dictionary = GameWalls.gates("hearthmere")[0]
+	var gt: Vector2i = g["centre"]
+	ok(GameMiniMap.kinds(d, gt.x, gt.y, 1)[1][1] == "gate", "a gate's passage shows as a gate")
+	var wall_tile := Vector2i(-9999, -9999)
+	for key in GameWalls.tiles("hearthmere").keys():
+		if GameWalls.kind_at(int(str(key).split(",")[0]), int(str(key).split(",")[1])) == "wall":
+			wall_tile = Vector2i(int(str(key).split(",")[0]), int(str(key).split(",")[1]))
+			break
+	ok(wall_tile.x != -9999 and GameMiniMap.kinds(d, wall_tile.x, wall_tile.y, 1)[1][1] == "city_wall", "and the wall round it as city wall")
+	var big := MinimapPane.make_image(d, gt.x, gt.y, 3)
+	var gp := big.get_pixel(3, 3)
+	ok(absf(gp.r - 0.95) < 0.01 and absf(gp.g - 0.82) < 0.01 and absf(gp.b - 0.35) < 0.01, "the picture colours a gate from the minimap colours in the data")
 	var img := MinimapPane.make_image(d, sb.heir.x, sb.heir.y, 5)
 	ok(img.get_width() == 11 and img.get_height() == 11, "and the picture is a pixel a tile")
 
@@ -287,7 +302,10 @@ func test_figure_and_pack() -> void:
 	# a bag that is left behind takes its pane with it
 	GameCarry.drop(d, bag)
 	await _frames(2)
-	bag_pane.refresh()
+	# (the screen refreshes its panes four times a second and a pane whose bag is gone frees itself, so by now it may already be freed:
+	# calling a method on a freed instance of a typed variable can crash the engine, which made this suite fail now and then)
+	if is_instance_valid(bag_pane):
+		bag_pane.refresh()
 	await _frames(2)
 	ok(_pane(map, PackPane, "pack_pane:" + bag) == null, "a bag left behind takes its pane with it")
 	# the Menu has the panes

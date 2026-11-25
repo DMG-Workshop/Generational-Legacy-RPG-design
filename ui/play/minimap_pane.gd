@@ -111,12 +111,14 @@ func _edge() -> void:
 ## The ground as a picture, one pixel a tile, in the tile view's colours.
 static func make_image(d: GameDynasty, cx: int, cz: int, r: int) -> Image:
 	var colors: Dictionary = GameSandbox.data()["tiles"]["colors"]
+	var standing: Dictionary = GameSandbox.data()["minimap"]   # what a town adds over the ground: its buildings, wall and gates
 	var kinds := GameMiniMap.kinds(d, cx, cz, r)
 	var n := r * 2 + 1
 	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
 	for z in n:
 		for x in n:
-			var c: Array = colors.get(str(kinds[z][x]), colors.get("built", [0.5, 0.42, 0.3]))
+			var k := str(kinds[z][x])
+			var c: Array = standing[k] if standing.has(k) else colors.get(k, colors.get("built", [0.5, 0.42, 0.3]))
 			img.set_pixel(x, z, Color(float(c[0]), float(c[1]), float(c[2])))
 	return img
 
