@@ -262,6 +262,36 @@ static func inset_tex(w: int, h: int, lit: bool = false) -> ImageTexture:
 	return _keep(k, _tex(i))
 
 
+## A gold-studded button on parchment: a lit face with an ink outline and a gold stud in each corner. States: "normal", "hover"
+## (a gold frame and lit studs), "pressed" (a shaded face, the bevel turned over) and "disabled" (flat, no studs). (Added with the
+## battle screen's skin; if another branch adds a `button` piece too, the two are the same job: keep one.)
+static func stud_tex(w: int, h: int, state: String = "normal") -> ImageTexture:
+	var k := _key("stud", "%d,%d,%s" % [w, h, state])
+	if _memo.has(k):
+		return _memo[k]
+	var m := int(piece("stud")["margin"])
+	var lw := maxi(_logical(w), 2 * m + 1)
+	var lh := maxi(_logical(h), 2 * m + 1)
+	var face := pal("parch_lo") if state == "pressed" else (pal("parch") if state == "disabled" else pal("parch_hi"))
+	var i := _img(lw, lh, face)
+	var hi := pal("parch_lo") if state == "pressed" else pal("parch_hi")
+	var lo := pal("parch_hi") if state == "pressed" else pal("parch_lo")
+	if state != "disabled":
+		_rect(i, 1, 1, lw - 2, 1, hi)
+		_rect(i, 1, 1, 1, lh - 2, hi)
+		_rect(i, 1, lh - 2, lw - 2, 1, lo)
+		_rect(i, lw - 2, 1, 1, lh - 2, lo)
+	_ring(i, 0, pal("brown") if state == "disabled" else pal("ink"))
+	if state == "hover" or state == "pressed":
+		_ring(i, 1, pal("gold"))
+		_ring(i, 2, pal("gold_dk"))
+	if state != "disabled":
+		var lit := pal("gold_hi") if state == "hover" else pal("gold")
+		for pt in [Vector2i(2, 2), Vector2i(lw - 3, 2), Vector2i(2, lh - 3), Vector2i(lw - 3, lh - 3)]:
+			i.set_pixel(pt.x, pt.y, lit)
+	return _keep(k, _tex(i))
+
+
 ## A segmented bar: an ink frame, a dark track and a fill with a lit top and a shaded bottom, ticked every few pixels.
 ## `colors` is the name of a palette triple (light, mid, shade): "hp", "mp" or "carry".
 static func bar_tex(w: int, h: int, frac: float, colors: String) -> ImageTexture:
@@ -504,6 +534,22 @@ static func tab_box(state: String) -> StyleBoxTexture:
 	return _nine("tab", tab_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
 
 
+static func stud_box(state: String = "normal") -> StyleBoxTexture:
+	var p := piece("stud")
+	var b: Array = p["base"]
+	return _nine("stud", stud_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
+
+
+## The ring a gamepad or the keyboard's focus draws round a skinned button: gold, never only a colour change.
+static func button_focus() -> StyleBoxFlat:
+	var f := StyleBoxFlat.new()
+	f.draw_center = false
+	f.set_border_width_all(2 * pixel())
+	f.border_color = pal("gold_hi")
+	f.set_expand_margin_all(float(pixel()))
+	return f
+
+
 ## The face of a pane: parchment, or wood.
 static func face_box(face: String) -> StyleBoxTexture:
 	return frame_box() if face == "wood" else panel_box()
@@ -537,6 +583,19 @@ static func dress_button(b: Button) -> void:
 	b.add_theme_color_override("font_hover_color", pal("gold_hi"))
 	b.add_theme_color_override("font_pressed_color", pal("gold_hi"))
 	b.add_theme_color_override("font_disabled_color", pal("slot_dim"))   # (quiet but readable on the slot)
+	b.set_meta("skin_done", true)
+
+
+## A button of the battle screen's parchment panels: a gold-studded button, lit gold when pointed at or focused, ink text.
+static func dress_battle_button(b: Button) -> void:
+	for st in ["normal", "hover", "pressed", "disabled"]:
+		b.add_theme_stylebox_override(st, stud_box(st))
+	b.add_theme_stylebox_override("focus", button_focus())
+	b.add_theme_color_override("font_color", pal("ink"))
+	b.add_theme_color_override("font_hover_color", pal("crimson_dk"))
+	b.add_theme_color_override("font_focus_color", pal("crimson_dk"))
+	b.add_theme_color_override("font_pressed_color", pal("ink"))
+	b.add_theme_color_override("font_disabled_color", pal("ink_dim"))
 	b.set_meta("skin_done", true)
 
 
@@ -646,6 +705,20 @@ static func dress_bar(pb: ProgressBar, kind: String) -> void:
 	pb.set_meta("skin_bar", v)
 
 
+## A slim segmented bar for a plate (no picture, no words): the bar keeps its value and range, the skin draws over it at its own size.
+static func dress_thin_bar(pb: ProgressBar, kind: String) -> void:
+	pb.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	pb.add_theme_stylebox_override("fill", StyleBoxEmpty.new())
+	var v: Control = load("res://ui/play/skin_bar.gd").new()
+	v.pb = pb
+	v.kind = kind
+	v.thin = true
+	pb.add_child(v)
+	pb.value_changed.connect(func(_x): v.queue_redraw())
+	pb.changed.connect(func(): v.queue_redraw())
+	pb.set_meta("skin_bar", v)
+
+
 ## Sets the words a skinned bar shows over its fill, and the kind of fill ("load_bad" for a burdened pack).
 static func bar_text(pb: ProgressBar, text: String, kind: String = "") -> void:
 	var v: Variant = pb.get_meta("skin_bar", null)
@@ -703,6 +776,11 @@ static func validate(dat: Dictionary = {}) -> Array:
 				bad.append("skin.json: hud.%s must be a number above 0" % f)
 		if bad.is_empty() and (int(d["hud"]["slot_px"]) % int(d["pixel"]) != 0 or int(d["hud"]["slot_px"]) < 9 * int(d["pixel"])):
 			bad.append("skin.json: hud.slot_px must be a whole multiple of the pixel, wide enough for a slot's frame and its picture")
+	if (d["pieces"] as Dictionary).has("stud"):   # a piece later screens add: checked when it is there
+		var bp: Variant = d["pieces"]["stud"]
+		var bb: Variant = bp.get("base") if typeof(bp) == TYPE_DICTIONARY else null
+		if typeof(bb) != TYPE_ARRAY or (bb as Array).size() != 2 or float(bp.get("margin", 0)) * 2.0 + 1.0 > minf(float(bb[0]), float(bb[1])) or typeof(bp.get("content")) != TYPE_ARRAY:
+			bad.append("skin.json: pieces.stud needs a base [w, h], a margin that leaves a middle, and a content [x, y]")
 	for k in ["bar"]:
 		for f in ["height", "segment_every", "segment_at", "icon_scale", "text_size"]:
 			if not (d["pieces"][k] as Dictionary).has(f) or float(d["pieces"][k][f]) < 1.0:

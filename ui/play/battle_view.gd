@@ -15,6 +15,8 @@ const FigurePose := preload("res://ui/play/figure_pose.gd")
 const BattleFx := preload("res://ui/play/battle_fx.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
 const Sound := preload("res://ui/play/sound.gd")
+const BattleSkin := preload("res://ui/play/battle_skin.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
 
@@ -59,6 +61,8 @@ var bottom: HBoxContainer       # the log and the command panel
 var cmd_panel: PanelContainer
 var cmd_round: GameRound = null # the command round: whose move is asked, what is queued (null while auto-battle fights)
 var active_by: int = -1         # the member whose command is being chosen: -1 the heir, else a companion's index
+var skinned := false            # the interface skin (BattleSkin): parchment, a ribbon, gold-studded buttons; not on a touch screen or a compact window
+var log_lines: Array = []       # the log as said, so the newest line can be lit when the skin is on
 var strip: PartyStrip = null    # one chip per member, only with companions
 var top_bar: HBoxContainer      # the title (or, on a short screen, the strip) and the Auto-battle button
 var title_label: Label
@@ -72,6 +76,9 @@ const AUTO_PACE := 0.4
 func _ready() -> void:
 	d = app.dynasty
 	b = d.battle
+	skinned = BattleSkin.on(self)
+	if skinned:
+		BattleSkin.watch(self)
 	_size_commands()
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -85,6 +92,7 @@ func _ready() -> void:
 
 	top_bar = HBoxContainer.new()
 	top_bar.add_theme_constant_override("separation", 12)
+	top_bar.set_meta(BattleSkin.BUTTONS_META, true)
 	root.add_child(top_bar)
 	title_label = Kit.label("Battle: %s" % _foe_list(), 22, Kit.ACCENT)
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -98,6 +106,7 @@ func _ready() -> void:
 	_show_auto()
 	if _party():
 		strip = PartyStrip.new()
+		strip.skinned = skinned
 		strip.chip_pressed.connect(_on_chip)
 		_place_strip()
 	if not auto:
@@ -108,6 +117,8 @@ func _ready() -> void:
 	var ap := Kit.panel(Color("#191726"))
 	ap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	ap.clip_contents = true
+	if skinned:
+		BattleSkin.frame(ap)
 	root.add_child(ap)
 	arena = Control.new()
 	arena.clip_contents = true
@@ -125,16 +136,26 @@ func _ready() -> void:
 	root.add_child(bottom)
 	var lp := Kit.panel(Color("#1a1828"))
 	lp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if skinned:
+		BattleSkin.parchment(lp)
 	bottom.add_child(lp)
 	log_label = Kit.rich()
+	if skinned:
+		log_label.set_meta("skin_done", true)   # its lines are put on parchment by BattleSkin.log_bb
+		log_label.add_theme_color_override("default_color", UiSkin.pal("ink"))
 	lp.add_child(log_label)
 	cmd_panel = Kit.panel()
+	if skinned:
+		BattleSkin.parchment(cmd_panel)
 	bottom.add_child(cmd_panel)
 	var cv := VBoxContainer.new()
 	cmd_panel.add_child(cv)
 	hint = Kit.label("", 14, Kit.dim())
 	hint.clip_text = true
-	cv.add_child(hint)
+	if skinned and not _short():   # the panel's title: a ribbon with the move being asked
+		cv.add_child(BattleSkin.ribbon(hint))
+	else:
+		cv.add_child(hint)
 	command_box = HBoxContainer.new()
 	command_box.add_theme_constant_override("separation", 8)
 	cv.add_child(command_box)
@@ -181,7 +202,14 @@ func _foe_list() -> String:
 
 
 func _say(text: String) -> void:
-	log_label.append_text(GameText.group_numbers(text) + "\n")
+	var line := GameText.group_numbers(text)
+	if not skinned:
+		log_label.append_text(line + "\n")
+		return
+	log_lines.append(line)   # on parchment the newest line is lit, so the log is written again with it moved
+	log_label.clear()
+	for k in log_lines.size():
+		log_label.append_text(BattleSkin.log_bb(str(log_lines[k]), k == log_lines.size() - 1) + "\n")
 
 
 ## The command panel's width for the room the screen has.
@@ -299,7 +327,7 @@ func _build_actors() -> void:
 	hero_hp = _thin_bar(Kit.good(), d.heir.max_hp(), d.heir.hp, Vector2(124, 9))
 	hero_hp.position = Vector2(0, 184)
 	hero_node.add_child(hero_hp)
-	hero_mp = _thin_bar(Kit.MP_BLUE, maxf(1.0, d.heir.max_mp()), d.heir.mp, Vector2(124, 5))
+	hero_mp = _thin_bar(Kit.MP_BLUE, maxf(1.0, d.heir.max_mp()), d.heir.mp, Vector2(124, 5), "mp")
 	hero_mp.position = Vector2(0, 195)
 	hero_node.add_child(hero_mp)
 	hero_chips = _chips()
@@ -437,7 +465,7 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	var hp := _thin_bar(Kit.good(), a.max_hp(), a.hp, Vector2(110, 8))
 	hp.position = Vector2(0, 139)
 	root.add_child(hp)
-	var mp := _thin_bar(Kit.MP_BLUE, maxf(1.0, a.max_mp()), a.mp, Vector2(110, 5))
+	var mp := _thin_bar(Kit.MP_BLUE, maxf(1.0, a.max_mp()), a.mp, Vector2(110, 5), "mp")
 	mp.position = Vector2(0, 149)
 	root.add_child(mp)
 	var chips := _chips()
@@ -501,10 +529,12 @@ func _level_tag() -> StyleBoxFlat:
 
 
 ## A bar exactly `size` tall (Kit bars pad to the stylebox margins).
-func _thin_bar(color: Color, max_value: float, value: float, size: Vector2) -> ProgressBar:
+func _thin_bar(color: Color, max_value: float, value: float, size: Vector2, kind: String = "hp") -> ProgressBar:
 	var pb := Kit.bar(color, max_value, value, size)
 	for k in ["background", "fill"]:
 		(pb.get_theme_stylebox(k) as StyleBoxFlat).set_content_margin_all(0)
+	if skinned:
+		BattleSkin.thin_bar(pb, kind)
 	return pb
 
 
@@ -1113,7 +1143,7 @@ func _build_confirm() -> void:
 	command_box.add_child(row)
 	var go := Kit.button("Flee!" if fleeing else "Fight!", func(): _commit(), Vector2(float(UiSettings.setting("confirm_button_w")), float(UiSettings.setting("party_chip_h"))))
 	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	go.add_theme_color_override("font_color", Kit.ACCENT)
+	go.add_theme_color_override("font_color", _ink(Kit.ACCENT))
 	go.tooltip_text = "Play the round: the party acts in order, then the foes."
 	row.add_child(go)
 	if v["can_back"]:
@@ -1273,9 +1303,14 @@ func _sync_strip() -> void:
 		strip.refresh(v, int(v["cursor"]))
 
 
+## A kit colour made to read on a skinned button's parchment (the colour itself on the older look).
+func _ink(c: Color) -> Color:
+	return Kit.ink(c) if skinned else c
+
+
 func _show_auto() -> void:
 	auto_button.text = "Auto-battle: %s" % ("ON" if auto else "OFF")
-	auto_button.add_theme_color_override("font_color", Kit.good() if auto else Kit.TEXT)
+	auto_button.add_theme_color_override("font_color", _ink(Kit.good() if auto else Kit.TEXT))
 	auto_button.tooltip_text = ("%s fights on their own, choosing as the autopilot would. " + Kit.click().capitalize() + " to take over." if auto
 		else "Let %s fight on their own, now and in the hunts that follow.") % d.heir.name
 
@@ -1405,6 +1440,8 @@ func _list_panel(title: String, close: Callable) -> Array:
 	root.add_child(dim)
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
+	if skinned:
+		BattleSkin.parchment(p)
 	var room := size if size.x > 0.0 else UiSettings.room(self)
 	p.size = Vector2(minf(980.0, room.x - 24.0), minf(470.0, room.y - 24.0))
 	p.position = Vector2((room.x - p.size.x) * 0.5, clampf(48.0, 12.0, room.y - p.size.y - 12.0))
@@ -1416,7 +1453,7 @@ func _list_panel(title: String, close: Callable) -> Array:
 	v.add_child(top)
 	var t := Kit.label(title, 20, Kit.ACCENT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(t)
+	top.add_child(BattleSkin.ribbon(t, 18, 3) if skinned else t)
 	top.add_child(Kit.button("Close", close, Vector2(100, 34)))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -2308,13 +2345,23 @@ func _show_result() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.add_child(center)
 	var p := Kit.panel(Color("#221f30"))
+	if skinned:
+		BattleSkin.parchment(p)
 	p.custom_minimum_size = Vector2(560, 0)
 	center.add_child(p)
 	var outer := VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 10)
 	p.add_child(outer)
 	var title: String = {"victory": "VICTORY", "defeat": "DEFEAT", "fled": "ESCAPED"}.get(b.result, "")
-	outer.add_child(Kit.label(title, 36, Kit.good() if b.result == "victory" else (Kit.bad() if b.result == "defeat" else Kit.ACCENT)))
+	var head := Kit.label(title, 36, Kit.good() if b.result == "victory" else (Kit.bad() if b.result == "defeat" else Kit.ACCENT))
+	if skinned:   # a ribbon: gold for a win or an escape, the wood-face red for a defeat
+		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		outer.add_child(BattleSkin.ribbon(head, 32, 3))
+		if b.result == "defeat":
+			head.add_theme_color_override("font_color", Kit.on_wood(Kit.bad()))
+	else:
+		outer.add_child(head)
 	# The story scrolls when a long fight (or a sick party) tells more than fits; the choice and
 	# Continue stay below it, always on screen.
 	result_scroll = ScrollContainer.new()
