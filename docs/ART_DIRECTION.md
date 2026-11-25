@@ -54,6 +54,13 @@ outline and accent family):
 - **Ribbon:** a crimson title strip, lit on top, shaded under, ink outline, gold stitching. Pane titles and section heads.
 - **Slot:** an inset square for an item, an action or a stat. Selected or on: a gold frame. Not available: dimmed, not removed.
 - **Bar:** an ink frame, a dark track, a segmented fill with a lit top and a shaded bottom. Red, blue and gold keep their jobs.
+- **Button:** one family with two faces, so a button always matches what it sits on. A key has a lit top and left, a shaded bottom and
+  right, an ink outline and a stud in each corner. On parchment it is a parchment key with ink text and one-pixel gold studs; on wood or
+  the night sky it is a wooden plank with light text and two-pixel studs. States, the same on both: normal; pointed at (a gold frame, the
+  studs lit, the text gold on wood and crimson on parchment); pressed (sunk and shaded); shut (flat and dull, the text quiet but
+  readable); chosen (crimson inside the gold frame, gold text). The keyboard or a pad adds a gold ring outside the button (never only
+  a colour change). A tab is the wooden cousin: ink outline, a lit top edge, the open one lighter with a gold frame. The label colour of
+  every face and state is in `skin.json` with its contrast, checked in both palettes and the high-contrast variant.
 - **Header:** wooden planks, an ink edge and a gold line. It carries the action slots and the status line.
 - **Icons:** action pictures are 8 by 8 and item pictures 12 by 12, each in one colour with a one-pixel ink outline, drawn at whole-number scale.
 
@@ -114,8 +121,7 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
 - **Step 2, big panels:** the house, chronicle, shops, quest board, tavern and the skill tree's side column draw with `PanelSkin`
   (`ui/play/panel_skin.gd`) when they are a skinned pane: each row or card is an inset slot with its text on the slot's brown (palette `slot_dim`,
   `slot_good`, `slot_bad`, the `slot` text map, contrast pairs in `skin.json`), prices carry the gold coin, the chronicle's tabs and the
-  shops' tabs are wood with the open one lit in gold (`tab` piece), action keys are raised parchment (`button` piece: normal, hover, pressed,
-  disabled), the house's levels are segmented bars, a row that cannot be bought keeps its reason line in readable ink, and the family tree
+  shops' tabs are wood with the open one lit in gold (`tab` piece), action keys are parchment keys (the button family, below), the house's levels are segmented bars, a row that cannot be bought keeps its reason line in readable ink, and the family tree
   is drawn as parchment cards with crimson name ribbons joined by ink lines (`family_tree_view.gd`; the old text stays on a compact window or a
   touch screen). Not yet: the workshop, heirlooms, trials and looks panels (they get the pane's face and labels but keep dark inner boxes),
   the skill tree's canvas, and bars in the tavern and quest board.
@@ -123,8 +129,8 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   animation are untouched). The arena has the wooden frame; the log, the command panel, the skill, spell, feat and poison lists and the
   result are parchment panels. The command panel's title (whose move is asked, or the reaction question) is a crimson ribbon, and the
   result's verdict a ribbon of its own (gold for a win or an escape, the red of the wood face for a defeat; the word says it too).
-  Buttons are the new `button` piece: a lit parchment face, an ink outline, a gold stud in each corner, lit gold studs and frame when
-  pointed at, a gold ring for the keyboard or a pad, flat and dim when not available. The rows of a list are inset slots. The log is ink
+  Buttons are parchment keys of the button family (a lit face, an ink outline, a gold stud in each corner, lit gold studs and frame when
+  pointed at, a gold ring for the keyboard or a pad, flat and dim when not available). The rows of a list are inset slots. The log is ink
   on parchment with the newest line on a gold highlight (ink on gold, not gold on parchment, which cannot be read). The bars on the
   plates and the party strip's chips are slim segmented bars, red for health and blue for mana (no picture at this size: the numbers are
   on the plate). A compact window or a touch screen keeps the older dark look, as the panes do. Not done: the party strip's chip faces
@@ -132,8 +138,8 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
 - **Not built yet:** the title and life screens, the action bar and header (the wooden header texture exists but is not drawn), the
 - **Step 2, the full-screen text screens:** the title, the life screen, the succession and ending screens and the menu and controls panels wear the
   skin on every device (`SkinScreen.apply`, `UiSkin.screen_active`, the data's `screens`): a night-sky backdrop (colour bands, a tile of stars, a
-  strip of hills; still, so nothing to turn off for reduced motion), parchment panels with ink text, crimson ribbon titles, wooden buttons with
-  gold studs (a gold frame when pointed at, crimson when chosen, flat and dark when shut, a gold ring for the keyboard or a pad), light text fields,
+  strip of hills; still, so nothing to turn off for reduced motion), parchment panels with ink text, crimson ribbon titles, wooden planks of the
+  button family (a gold frame when pointed at, crimson when chosen, flat and dark when shut, a gold ring for the keyboard or a pad), light text fields,
   segmented bars for health, mana and experience, and a dark well for the journal. A phone gets it as well, with whole-pixel art at 4 screen pixels
   at 125%; the buttons keep their fingertip height. The contrast of headings on the sky, coloured news on the well and the text of planks and
   fields is checked in both palettes by `UiSkin.validate`. The overlay panels opened from the life screen (shops, the chronicle, the house) keep

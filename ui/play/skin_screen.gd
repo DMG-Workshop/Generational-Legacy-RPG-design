@@ -4,7 +4,7 @@
 ## `Kit.panel`, `Kit.label` and `Kit.button` as before:
 ##   - a kit panel (the meta `kit_panel`) becomes parchment, and the labels in it read in ink (`UiSkin.dress`); a panel marked `skin_well`
 ##     becomes the dark well a journal reads in and keeps its light text;
-##   - a button becomes a wooden plank with studs, gold-lit when pointed at; a text box a light field; a rule a brown line;
+##   - a button becomes a wooden plank of the button family, gold-lit when pointed at; a text box a light field; a rule a brown line;
 ##   - labels on the night sky keep their light colours; a title goes in a ribbon (`ribbon`).
 ## What an overlay panel (a node with its own script, added under the screen) holds is left to that panel. Rendering only.
 extends RefCounted

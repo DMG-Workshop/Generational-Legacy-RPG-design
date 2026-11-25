@@ -64,7 +64,7 @@ var bottom: HBoxContainer       # the log and the command panel
 var cmd_panel: PanelContainer
 var cmd_round: GameRound = null # the command round: whose move is asked, what is queued (null while auto-battle fights)
 var active_by: int = -1         # the member whose command is being chosen: -1 the heir, else a companion's index
-var skinned := false            # the interface skin (BattleSkin): parchment, a ribbon, gold-studded buttons; not on a touch screen or a compact window
+var skinned := false            # the interface skin (BattleSkin): parchment, a ribbon, buttons of the one family; not on a touch screen or a compact window
 var log_lines: Array = []       # the log as said, so the newest line can be lit when the skin is on
 var strip: PartyStrip = null    # one chip per member, only with companions
 var top_bar: HBoxContainer      # the title (or, on a short screen, the strip) and the Auto-battle button
