@@ -1,0 +1,898 @@
+{
+ "note": "Waygates, the arches of the Old Roads (roadmap: gates; core/game/game_gates.gd, ui/play/gate_art.gd, ui/play/gate_panel.gd; design in docs/GATES.md; checked by tools/check_data.gd). A gate stands at a fixed place, a pure function of the seed (`anchor`: an offset from a place's anchor, or a realm's nominal tile; the nearest valid ground is taken). It has one rune slot for each rune of `runes` (`sizes` gives the count for its size); each slot is whole, worn, broken or stripped, a pure function of the seed, the gate, the slot and the world year (`whole` slots start whole, the rest are dealt by `start_split`; wear is `wear` a year times the rune's own rate, thieves strip a slot with silver at `theft_chance` a year times the gate's `exposure`). Repairs (`repair`: silver and gold, scaled by `size_cost`, the rune's `cost` and the generation) are the only thing saved. A gate with no broken or stripped slots (`dark_at`) works: lit if every slot is whole, flickering (a charge, `charge`, for each trip) if some are worn. A `networks` list says which gates it links; a realm gate (`realm`) is a door to that realm and sets its `gate_<realm>` flag once repaired.",
+ "settings": {
+  "reach": 2.5,
+  "see_range": 9.0,
+  "search": 14,
+  "flat_max": 1,
+  "min_gap": 8,
+  "front_search": 4,
+  "year_cap": 600,
+  "theft_chance": 0.03,
+  "wear_jitter": 0.4,
+  "dark_at": 1,
+  "start_split": {
+   "worn": 0.2,
+   "broken": 0.35,
+   "stripped": 0.45
+  },
+  "sizes": {
+   "small": 4,
+   "medium": 5,
+   "grand": 6,
+   "great": 7
+  },
+  "size_cost": {
+   "small": 0.8,
+   "medium": 1.0,
+   "grand": 1.3,
+   "great": 1.6
+  },
+  "repair": {
+   "worn": {
+    "silver": 1,
+    "gold": 12
+   },
+   "broken": {
+    "silver": 2,
+    "gold": 35
+   },
+   "stripped": {
+    "silver": 3,
+    "gold": 60
+   }
+  },
+  "silver": "silver",
+  "silver_price": 40,
+  "silver_buy_max": 10,
+  "charge": {
+   "material": "silver",
+   "n": 1,
+   "essences": 1
+  },
+  "travel": {
+   "base_seconds": 3.0,
+   "per_tile": 0.04,
+   "cap_seconds": 30.0
+  },
+  "known_at_start": [
+   "road"
+  ],
+  "scribe": "runescribe",
+  "scribe_fee_mult": 0.5,
+  "scribe_silver_mult": 0.67,
+  "lore": {
+   "ruin": 0.35,
+   "standing_stones": 0.3,
+   "shrine": 0.15,
+   "hermit": 0.25,
+   "battlefield": 0.1
+  },
+  "realm_arrival": {
+   "width": 19,
+   "depth": 13,
+   "pillars": 7,
+   "creatures": 3,
+   "keep": 5
+  }
+ },
+ "networks": {
+  "kings_road": {
+   "name": "the King's Road"
+  },
+  "wild_road": {
+   "name": "the Wild Road"
+  },
+  "realm_verdant": {
+   "name": "the way to verdant"
+  },
+  "realm_hollow": {
+   "name": "the way to hollow"
+  },
+  "realm_dragon_isles": {
+   "name": "the way to dragon isles"
+  },
+  "realm_elemental": {
+   "name": "the way to elemental"
+  },
+  "realm_clockwork": {
+   "name": "the way to clockwork"
+  },
+  "realm_dream": {
+   "name": "the way to dream"
+  },
+  "realm_void": {
+   "name": "the way to void"
+  }
+ },
+ "runes": {
+  "road": {
+   "name": "Road",
+   "wear": 0.025,
+   "cost": 1.0,
+   "lore": "The Old Road remembers the foot that walks it. Cut it first, for every arch begins with a road.",
+   "weight": 3
+  },
+  "door": {
+   "name": "Door",
+   "wear": 0.03,
+   "cost": 1.0,
+   "lore": "A door is a promise that there is another side.",
+   "weight": 3
+  },
+  "bind": {
+   "name": "Bind",
+   "wear": 0.02,
+   "cost": 1.1,
+   "lore": "What the arch joins, the bind holds. Without it the far gate is only a rumour.",
+   "weight": 3
+  },
+  "light": {
+   "name": "Light",
+   "wear": 0.04,
+   "cost": 0.9,
+   "lore": "The lamp-rune. Silver drinks the light of the day and gives it back as the arch wakes.",
+   "weight": 3
+  },
+  "return": {
+   "name": "Return",
+   "wear": 0.03,
+   "cost": 1.1,
+   "lore": "No traveller is let through who has no road home. This rune is that road.",
+   "weight": 3
+  },
+  "ward": {
+   "name": "Ward",
+   "wear": 0.02,
+   "cost": 1.2,
+   "lore": "The ward keeps the arch from taking more than it was given.",
+   "weight": 2
+  },
+  "deep": {
+   "name": "Deep",
+   "wear": 0.02,
+   "cost": 1.3,
+   "lore": "The deep-rune reaches under the world, where the far doors are kept.",
+   "weight": 2
+  },
+  "bough": {
+   "name": "Bough",
+   "wear": 0.035,
+   "cost": 1.5,
+   "realm": "verdant",
+   "lore": "A bent branch, the key of the green court. Sap runs where the silver is thin.",
+   "weight": 1
+  },
+  "barrow": {
+   "name": "Barrow",
+   "wear": 0.035,
+   "cost": 1.5,
+   "realm": "hollow",
+   "lore": "A mound with a door cut in it: the key of the Hollow Below.",
+   "weight": 1
+  },
+  "wing": {
+   "name": "Wing",
+   "wear": 0.035,
+   "cost": 1.5,
+   "realm": "dragon_isles",
+   "lore": "Three strokes and a curl: the key of the isles in the high air.",
+   "weight": 1
+  },
+  "ember": {
+   "name": "Ember",
+   "wear": 0.035,
+   "cost": 1.5,
+   "realm": "elemental",
+   "lore": "A flame that does not climb: the key of the planes of fire, stone, tide and wind.",
+   "weight": 1
+  },
+  "cog": {
+   "name": "Cog",
+   "wear": 0.035,
+   "cost": 1.5,
+   "realm": "clockwork",
+   "lore": "A wheel with one tooth worn: the key of the Expanse that keeps its own hours.",
+   "weight": 1
+  },
+  "dream": {
+   "name": "Dream",
+   "wear": 0.035,
+   "cost": 1.5,
+   "realm": "dream",
+   "lore": "A closed eye, drawn open: the key of the Dreaming.",
+   "weight": 1
+  },
+  "void": {
+   "name": "Void",
+   "wear": 0.035,
+   "cost": 1.5,
+   "realm": "void",
+   "lore": "A ring with nothing in it. The books say to cut it last and to cut it well.",
+   "weight": 1
+  }
+ },
+ "gates": [
+  {
+   "id": "hearthmere_arch",
+   "name": "Hearthmere Arch",
+   "size": "medium",
+   "networks": [
+    "kings_road"
+   ],
+   "anchor": {
+    "place": "hearthmere",
+    "at": [
+     37,
+     -14
+    ]
+   },
+   "whole": 5,
+   "exposure": 1.2,
+   "runes": [
+    "road",
+    "door",
+    "light",
+    "bind",
+    "return"
+   ],
+   "trader": true,
+   "about": "The arch the carters call the Lamplighter, a stone's throw outside the east wall."
+  },
+  {
+   "id": "ironford_arch",
+   "name": "Ironford Arch",
+   "size": "medium",
+   "networks": [
+    "kings_road",
+    "wild_road"
+   ],
+   "anchor": {
+    "place": "ironford",
+    "at": [
+     -37,
+     14
+    ]
+   },
+   "whole": 5,
+   "exposure": 1.2,
+   "runes": [
+    "road",
+    "door",
+    "ward",
+    "light",
+    "bind"
+   ],
+   "trader": true,
+   "about": "Where the king's road and the wild road cross, so the arch is kept up."
+  },
+  {
+   "id": "kingshold_arch",
+   "name": "Kingshold Arch",
+   "size": "grand",
+   "networks": [
+    "kings_road"
+   ],
+   "anchor": {
+    "place": "kingshold",
+    "at": [
+     -14,
+     37
+    ]
+   },
+   "whole": 6,
+   "exposure": 1.4,
+   "runes": [
+    "road",
+    "door",
+    "return",
+    "light",
+    "bind",
+    "ward"
+   ],
+   "trader": true,
+   "about": "The great arch south of the capital. Its silver is the first thing a thief thinks of."
+  },
+  {
+   "id": "brinehaven_arch",
+   "name": "Brinehaven Arch",
+   "size": "small",
+   "networks": [
+    "kings_road"
+   ],
+   "anchor": {
+    "place": "brinehaven",
+    "at": [
+     -37,
+     -14
+    ]
+   },
+   "whole": 1,
+   "exposure": 1.5,
+   "runes": [
+    "road",
+    "door",
+    "light",
+    "return"
+   ],
+   "trader": true,
+   "about": "Salt has eaten what the thieves left."
+  },
+  {
+   "id": "greenvale_arch",
+   "name": "Greenvale Arch",
+   "size": "medium",
+   "networks": [
+    "kings_road"
+   ],
+   "anchor": {
+    "place": "greenvale",
+    "at": [
+     12,
+     -9
+    ]
+   },
+   "whole": 2,
+   "exposure": 0.8,
+   "runes": [
+    "road",
+    "door",
+    "light",
+    "bind",
+    "return"
+   ],
+   "ruins": true,
+   "about": "An arch in a meadow of broken columns."
+  },
+  {
+   "id": "whisperwood_arch",
+   "name": "Whisperwood Arch",
+   "size": "medium",
+   "networks": [
+    "wild_road"
+   ],
+   "anchor": {
+    "place": "whisperwood",
+    "at": [
+     14,
+     10
+    ]
+   },
+   "whole": 2,
+   "exposure": 0.7,
+   "runes": [
+    "road",
+    "door",
+    "bind",
+    "ward",
+    "light"
+   ],
+   "ruins": true,
+   "about": "Roots have lifted the footings; the trees lean away from it."
+  },
+  {
+   "id": "elderglade_arch",
+   "name": "Elderglade Arch",
+   "size": "small",
+   "networks": [
+    "wild_road"
+   ],
+   "anchor": {
+    "place": "elderglade",
+    "at": [
+     8,
+     2
+    ]
+   },
+   "whole": 0,
+   "exposure": 0.6,
+   "runes": [
+    "road",
+    "door",
+    "light",
+    "return"
+   ],
+   "ruins": true,
+   "about": "The smallest arch of the Old Road, in a ring of elder trees."
+  },
+  {
+   "id": "frostreach_arch",
+   "name": "Frostreach Arch",
+   "size": "grand",
+   "networks": [
+    "wild_road"
+   ],
+   "anchor": {
+    "place": "frostreach",
+    "at": [
+     0,
+     12
+    ]
+   },
+   "whole": 1,
+   "exposure": 0.6,
+   "runes": [
+    "road",
+    "door",
+    "bind",
+    "light",
+    "return",
+    "ward"
+   ],
+   "ruins": true,
+   "about": "Rime fills every cut rune, so it is hard to tell the whole from the broken."
+  },
+  {
+   "id": "highcrag_arch",
+   "name": "Highcrag Arch",
+   "size": "great",
+   "networks": [
+    "wild_road",
+    "kings_road"
+   ],
+   "anchor": {
+    "place": "highcrag",
+    "at": [
+     -10,
+     10
+    ]
+   },
+   "whole": 0,
+   "exposure": 0.5,
+   "runes": [
+    "road",
+    "door",
+    "bind",
+    "light",
+    "return",
+    "ward",
+    "deep"
+   ],
+   "ruins": true,
+   "about": "The greatest arch of the Old Road, and the most ruined."
+  },
+  {
+   "id": "stormcoast_arch",
+   "name": "Stormcoast Arch",
+   "size": "medium",
+   "networks": [
+    "kings_road"
+   ],
+   "anchor": {
+    "place": "stormcoast",
+    "at": [
+     -12,
+     0
+    ]
+   },
+   "whole": 3,
+   "exposure": 0.9,
+   "runes": [
+    "road",
+    "door",
+    "light",
+    "bind",
+    "return"
+   ],
+   "ruins": true,
+   "about": "Gulls nest in the lintel."
+  },
+  {
+   "id": "verdant_gate",
+   "name": "Verdant Gate",
+   "size": "medium",
+   "networks": [
+    "realm_verdant"
+   ],
+   "anchor": {
+    "realm": "verdant"
+   },
+   "whole": 0,
+   "exposure": 0.6,
+   "runes": [
+    "bough",
+    "door",
+    "deep",
+    "return",
+    "light"
+   ],
+   "realm": "verdant",
+   "ruins": true,
+   "about": "A door to another world, and its lock."
+  },
+  {
+   "id": "hollow_gate",
+   "name": "Hollow Gate",
+   "size": "grand",
+   "networks": [
+    "realm_hollow"
+   ],
+   "anchor": {
+    "realm": "hollow"
+   },
+   "whole": 0,
+   "exposure": 0.6,
+   "runes": [
+    "barrow",
+    "door",
+    "deep",
+    "return",
+    "light",
+    "ward"
+   ],
+   "realm": "hollow",
+   "ruins": true,
+   "about": "A door to another world, and its lock."
+  },
+  {
+   "id": "dragon_isles_gate",
+   "name": "Isles Gate",
+   "size": "grand",
+   "networks": [
+    "realm_dragon_isles"
+   ],
+   "anchor": {
+    "realm": "dragon_isles"
+   },
+   "whole": 0,
+   "exposure": 0.6,
+   "runes": [
+    "wing",
+    "door",
+    "deep",
+    "return",
+    "light",
+    "ward"
+   ],
+   "realm": "dragon_isles",
+   "ruins": true,
+   "about": "A door to another world, and its lock."
+  },
+  {
+   "id": "elemental_gate",
+   "name": "Gate of the Planes",
+   "size": "great",
+   "networks": [
+    "realm_elemental"
+   ],
+   "anchor": {
+    "realm": "elemental"
+   },
+   "whole": 0,
+   "exposure": 0.6,
+   "runes": [
+    "ember",
+    "door",
+    "deep",
+    "return",
+    "light",
+    "ward",
+    "bind"
+   ],
+   "realm": "elemental",
+   "ruins": true,
+   "about": "A door to another world, and its lock."
+  },
+  {
+   "id": "clockwork_gate",
+   "name": "Clockwork Gate",
+   "size": "grand",
+   "networks": [
+    "realm_clockwork"
+   ],
+   "anchor": {
+    "realm": "clockwork"
+   },
+   "whole": 0,
+   "exposure": 0.6,
+   "runes": [
+    "cog",
+    "door",
+    "deep",
+    "return",
+    "light",
+    "ward"
+   ],
+   "realm": "clockwork",
+   "ruins": true,
+   "about": "A door to another world, and its lock."
+  },
+  {
+   "id": "dream_gate",
+   "name": "Gate of the Dreaming",
+   "size": "medium",
+   "networks": [
+    "realm_dream"
+   ],
+   "anchor": {
+    "realm": "dream"
+   },
+   "whole": 0,
+   "exposure": 0.6,
+   "runes": [
+    "dream",
+    "door",
+    "deep",
+    "return",
+    "light"
+   ],
+   "realm": "dream",
+   "ruins": true,
+   "about": "A door to another world, and its lock."
+  },
+  {
+   "id": "void_gate",
+   "name": "Void Gate",
+   "size": "great",
+   "networks": [
+    "realm_void"
+   ],
+   "anchor": {
+    "realm": "void"
+   },
+   "whole": 0,
+   "exposure": 0.6,
+   "runes": [
+    "void",
+    "door",
+    "deep",
+    "return",
+    "light",
+    "ward",
+    "bind"
+   ],
+   "realm": "void",
+   "ruins": true,
+   "about": "A door to another world, and its lock."
+  }
+ ],
+ "text": {
+  "gate_found": "{heir} comes upon {name}: an arch of old stone with runes cut in its ring.",
+  "state_lit": "Lit",
+  "state_flickering": "Flickering",
+  "state_dark": "Dark",
+  "slot_whole": "whole",
+  "slot_worn": "worn",
+  "slot_broken": "broken",
+  "slot_stripped": "silver stripped",
+  "hint": "{name} stands here ({state}). Use it to read its runes and step through.",
+  "not_here": "There is no gate within reach.",
+  "no_gate": "There is no such gate.",
+  "no_slot": "There is no such rune slot.",
+  "far": "{heir} must stand at the gate for that.",
+  "slot_ok": "That rune is whole already.",
+  "rune_unknown": "{heir} does not know the {rune} rune. It must be learned from the old lore first.",
+  "need_silver": "It needs {n} silver for the inlay; the family's stores hold {have}.",
+  "need_gold": "It needs {n} gold; {heir} has {have}.",
+  "inscribed": "{heir} cuts the {rune} rune again and sets silver in it. {state_line}",
+  "state_line_lit": "{name} wakes: every rune shines.",
+  "state_line_flickering": "{name} flickers, its worn runes unsteady.",
+  "state_line_dark": "{name} is still dark.",
+  "copied": "{heir} takes a rubbing of the {rune} rune while it can still be read.",
+  "copy_known": "{heir} knows the {rune} rune already.",
+  "copy_illegible": "The {rune} rune is too far gone to copy.",
+  "lore_found": "Among the stones {heir} finds the {rune} rune, cut in an old hand: {lore}",
+  "bought_silver": "{heir} buys {n} silver from the road smith for {gold} gold.",
+  "no_trader": "No smith keeps a stall at this gate.",
+  "silver_max": "The smith will sell no more than {n} at a time.",
+  "guard_set": "{name} will hold {gate} against thieves.",
+  "guard_off": "{name} no longer guards {gate}.",
+  "guard_none": "No one guards this gate.",
+  "guard_member": "There is no such companion in the party.",
+  "guard_busy": "{name} already guards {gate}.",
+  "guard_is": "Guarded by {name}.",
+  "refuse_fight": "Not in the middle of a fight.",
+  "refuse_inside": "The gate cannot be used from indoors.",
+  "refuse_up": "The gate cannot be used from up there.",
+  "refuse_dark": "The gate is dark. Its runes must be repaired first.",
+  "refuse_there": "The gate at the other end is dark.",
+  "refuse_link": "Those two gates are not on the same road.",
+  "refuse_charge": "A flickering gate needs a charge: {n} {what}, and there is none.",
+  "refuse_clock": "The world is not moving now.",
+  "stepped": "{heir} steps through {name} and comes out at {dest}, {place}.",
+  "charge_silver": "The arch drinks {n} silver.",
+  "charge_essence": "The arch drinks an essence of {what}.",
+  "realm_in": "{heir} steps through {name} into {realm}.",
+  "realm_out": "{heir} steps back through the return gate.",
+  "realm_flag": "Its lock gives: {line}",
+  "realm_shut": "The realm beyond is shut: the gate is dark.",
+  "dest_realm": "{realm}",
+  "panel_title": "{name}",
+  "panel_intro": "{about} Runes of the old alphabet are cut round its ring and inlaid with silver. Lit, it carries {heir} to any other lit arch of its road.",
+  "map_line": "{name} ({state})",
+  "map_none": "No gate has been found.",
+  "map_more": "and {n} more gates.",
+  "map_title": "Waygates"
+ },
+ "looks": {
+  "verdant": {
+   "floor": [
+    0.22,
+    0.46,
+    0.26
+   ],
+   "floor2": [
+    0.3,
+    0.56,
+    0.3
+   ],
+   "wall": [
+    0.1,
+    0.26,
+    0.16
+   ],
+   "glow": [
+    0.7,
+    0.95,
+    0.55
+   ],
+   "sky": [
+    0.55,
+    0.85,
+    0.6
+   ]
+  },
+  "hollow": {
+   "floor": [
+    0.26,
+    0.3,
+    0.36
+   ],
+   "floor2": [
+    0.32,
+    0.37,
+    0.44
+   ],
+   "wall": [
+    0.12,
+    0.14,
+    0.19
+   ],
+   "glow": [
+    0.55,
+    0.8,
+    0.9
+   ],
+   "sky": [
+    0.35,
+    0.45,
+    0.55
+   ]
+  },
+  "dragon_isles": {
+   "floor": [
+    0.6,
+    0.54,
+    0.4
+   ],
+   "floor2": [
+    0.68,
+    0.62,
+    0.46
+   ],
+   "wall": [
+    0.4,
+    0.36,
+    0.3
+   ],
+   "glow": [
+    0.95,
+    0.8,
+    0.45
+   ],
+   "sky": [
+    0.55,
+    0.75,
+    0.95
+   ]
+  },
+  "elemental": {
+   "floor": [
+    0.46,
+    0.2,
+    0.12
+   ],
+   "floor2": [
+    0.6,
+    0.28,
+    0.12
+   ],
+   "wall": [
+    0.22,
+    0.1,
+    0.08
+   ],
+   "glow": [
+    1.0,
+    0.6,
+    0.25
+   ],
+   "sky": [
+    0.85,
+    0.4,
+    0.2
+   ]
+  },
+  "clockwork": {
+   "floor": [
+    0.52,
+    0.42,
+    0.24
+   ],
+   "floor2": [
+    0.62,
+    0.5,
+    0.28
+   ],
+   "wall": [
+    0.3,
+    0.24,
+    0.14
+   ],
+   "glow": [
+    0.95,
+    0.8,
+    0.4
+   ],
+   "sky": [
+    0.7,
+    0.6,
+    0.35
+   ]
+  },
+  "dream": {
+   "floor": [
+    0.42,
+    0.3,
+    0.56
+   ],
+   "floor2": [
+    0.52,
+    0.38,
+    0.66
+   ],
+   "wall": [
+    0.22,
+    0.16,
+    0.34
+   ],
+   "glow": [
+    0.85,
+    0.7,
+    1.0
+   ],
+   "sky": [
+    0.6,
+    0.5,
+    0.85
+   ]
+  },
+  "void": {
+   "floor": [
+    0.12,
+    0.1,
+    0.18
+   ],
+   "floor2": [
+    0.18,
+    0.14,
+    0.26
+   ],
+   "wall": [
+    0.05,
+    0.04,
+    0.09
+   ],
+   "glow": [
+    0.75,
+    0.45,
+    0.95
+   ],
+   "sky": [
+    0.2,
+    0.12,
+    0.3
+   ]
+  }
+ }
+}

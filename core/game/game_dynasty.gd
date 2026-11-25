@@ -40,6 +40,7 @@ var mine: Dictionary = {}       # the ground dug at each site, its strain and it
 var damage: Dictionary = {}     # damaged built pieces, {"x,y,z": level} (see GameRepair); saved only when not empty
 var built: Dictionary = {}      # the pieces the family has built, {"x,y,z": kind} (see GameBuild); saved only when not empty
 var shop_sold: Dictionary = {}  # what the family has bought off the shelves this season, {"place|shop": {period: "year|season", keys: [..]}} (see GameShops.sold_out); saved only when set
+var gates: Dictionary = {}      # the waygates: runes learned, slots repaired (gate:slot -> world year), gates found, guards posted (see GameGates); saved only when set
 var wilds: Dictionary = {}      # the landmarks of the wilds found and used, {found: [ids], used: {id: {gen, n}}} (see GameWildsSites); saved only when set
 var sandbox_at: Dictionary = {} # where the heir last stood in the open world, {x, z, gen, place} (see GameSandbox); saved only when set
 var gathered: Dictionary = {}   # nodes companions have gathered, {"x,z": world year} (see GameCompanions); saved only when not empty
@@ -1099,6 +1100,8 @@ func to_dict() -> Dictionary:
 		out["casts_used"] = casts_used
 	if not wilds.is_empty():   # and only once a landmark of the wilds is found
 		out["wilds"] = wilds
+	if not gates.is_empty():   # and only once something of the waygates is learned, found or repaired
+		out["gates"] = gates
 	if not dungeon_marks.is_empty():   # and only once something is opened, sprung, used or killed in a dungeon
 		out["dungeon_marks"] = dungeon_marks
 	if not house.is_empty():   # only once something is bought: older saves and fresh ones stay alike
@@ -1169,6 +1172,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.sandbox_at = GameSandbox.load_at(d.get("sandbox_at", {}))
 	g.wilds = GameWildsSites.load_state(d.get("wilds", {}))
+	g.gates = GameGates.load_state(d.get("gates", {}))
 	g.blessing = GameCasting.load_blessing(d.get("blessing", {}))
 	g.casts_used = GameCasting.load_used(d.get("casts_used", {}))
 	g.shop_sold = GameShops.load_sold(d.get("shop_sold", {}))

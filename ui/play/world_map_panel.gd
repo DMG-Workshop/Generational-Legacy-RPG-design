@@ -97,6 +97,15 @@ class MapCanvas extends Control:
 			var tri := PackedVector2Array([tp + Vector2(0, -tq), tp + Vector2(tq, tq * 0.8), tp + Vector2(-tq, tq * 0.8)])
 			draw_colored_polygon(PackedVector2Array([tri[0] + Vector2(0, -1), tri[1] + Vector2(1.5, 1), tri[2] + Vector2(-1.5, 1)]), ink)
 			draw_colored_polygon(tri, tcol)
+		for m in GameGates.markers(d):   # the waygates the family has found or that are awake: an arch, in the colour of its state
+			var gp: Vector2 = (Vector2(m["cell"]) + Vector2(0.5, 0.5)) * cell
+			var gq := maxf(3.0, mpx * 0.5)
+			var arch := PackedVector2Array([gp + Vector2(-gq, gq), gp + Vector2(-gq, -gq * 0.2), gp + Vector2(-gq * 0.5, -gq), gp + Vector2(gq * 0.5, -gq), gp + Vector2(gq, -gq * 0.2), gp + Vector2(gq, gq), gp + Vector2(gq * 0.4, gq), gp + Vector2(gq * 0.4, -gq * 0.2), gp + Vector2(-gq * 0.4, -gq * 0.2), gp + Vector2(-gq * 0.4, gq)])
+			var halo := PackedVector2Array()
+			for v in arch:
+				halo.append(gp + (v - gp) * 1.35)
+			draw_colored_polygon(halo, Color(0.1, 0.08, 0.14))
+			draw_colored_polygon(arch, GateArt.icon_color(str(m["mode"])))
 		if GameTravel.has_pin(d):
 			var pt := GameTravel.pin_tile(d)
 			var pc := GameWorldMap.cell_of(pt.x, pt.y)

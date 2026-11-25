@@ -253,6 +253,9 @@ func _screen(what: String) -> void:
 	if what.begins_with("interior:"):
 		await _interior(what)
 		return
+	if what.begins_with("waygate_"):   # (look-only) a waygate: show=waygate_lit, waygate_ruined, waygate_night, waygate_panel or waygate_realm
+		await _waygate(what)
+		return
 	match what:
 		"worldmap", "worldpin", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
 			await _open_world(what)
@@ -464,6 +467,47 @@ func _open_world(what: String) -> void:
 			if c.has_method("select"):
 				c.select(_arg("town", "ironford"))
 		await _frames(3)
+
+
+## A waygate seen from in front (the heir two tiles from the arch): `waygate_lit` (Hearthmere's, which starts awake), `waygate_ruined` (Highcrag's, cracked and
+## mossy among fallen stones), `waygate_night` (the lit one in the dark, its glow on the ground), `waygate_panel` (the panel open over the lit one) and
+## `waygate_realm` (the Verdant Gate repaired and stepped through, the heir in the realm's arrival ground). Look-only: no stored picture is made from them.
+func _waygate(what: String) -> void:
+	var gid := "highcrag_arch" if what == "waygate_ruined" else ("verdant_gate" if what == "waygate_realm" else "hearthmere_arch")
+	d.gen = 3
+	d.heir.gold = 900
+	d.world.visit("hearthmere")
+	app.show_sandbox()
+	await _frames(3)
+	var scr: Control = app.current
+	scr.set_process(false)
+	d.world_seconds = 0.0
+	d.clock_carry = 0.0
+	if what == "waygate_night":
+		d.world_seconds = float(GameDay.setting("day_seconds")) * fposmod(0.0 - float(GameDay.setting("start_phase")), 1.0)
+	if what == "waygate_realm":
+		var fixed := {}
+		for i in GameGates.slot_count(gid):
+			fixed["%s:%d" % [gid, i]] = 0
+		d.gates["fixed"] = fixed
+	var front := GameGates.front_of(d, gid)
+	scr.sb.heir = front
+	scr.sb.creatures.clear()
+	scr.sb.companions = []
+	scr.zoom = 2.0 if what != "waygate_realm" else 1.4
+	if what == "waygate_realm":
+		var r: Dictionary = scr.sb.step_through(gid, "realm:verdant")
+		print("realm step: ", r["text"])
+		scr._warm_figures()
+	scr.cam = Vector2.ZERO
+	scr._process(0.0)
+	scr.queue_redraw()
+	if what == "waygate_panel":
+		scr._open_gate(gid)
+	await _frames(3)
+	scr.overlay.queue_redraw()
+	scr.glow_layer.queue_redraw()
+	await _frames(3)
 
 
 ## The inside of a town building (`interior:<town>/<service>`): the heir at the way out, the person who works there across the floor, both as

@@ -21,6 +21,7 @@ const BoardPanel := preload("res://ui/play/board_panel.gd")
 const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
+const GatePanel := preload("res://ui/play/gate_panel.gd")
 const TalkPanel := preload("res://ui/play/talk_panel.gd")
 const PaneKit := preload("res://ui/play/pane_kit.gd")
 const StatusPane := preload("res://ui/play/status_pane.gd")
@@ -262,7 +263,7 @@ func _process(delta: float) -> void:
 	while _tick_wait <= 0.0:
 		sb.step(1)
 		_tick_wait += float(GameSandbox.setting("tick_seconds"))
-	var lines := GameClock.feed(d, delta)
+	var lines := GameClock.feed(d, delta * sb.time_flow())
 	for e in lines:
 		last_line = str(e.get("text", e)) if e is Dictionary else str(e)
 	_save_wait -= delta
@@ -809,6 +810,23 @@ func _open_trials() -> void:
 	_add_pane(panel)
 
 
+## A waygate's panel over the map (GameGates): the world waits while it is open. A trip through it puts the heir in another place, so the view
+## is centred on them again afterwards.
+func _open_gate(id: String) -> void:
+	var panel: Control = GatePanel.new()
+	panel.dynasty = app.dynasty
+	panel.sandbox = sb
+	panel.gate = id
+	panel.on_change = func():
+		cam = Vector2.ZERO
+		if sb.space != "world":
+			_warm_figures()
+		_refresh_status()
+		queue_redraw()
+	panel.set_meta("modal", true)
+	_add_pane(panel)
+
+
 ## A wilds trader's panel over the map (GameWildsTrade): the world waits while it is open.
 func _open_merchant(lm: Dictionary) -> void:
 	var panel: Control = MerchantPanel.new()
@@ -1018,6 +1036,8 @@ func _use() -> void:
 		_open_merchant(r["landmark"])
 	elif str(r.get("open", "")) == "trials":
 		_open_trials()
+	elif str(r.get("open", "")) == "gate":
+		_open_gate(str(r["gate"]))
 	elif r.has("who") and not (r["who"] as Dictionary).is_empty():
 		_say(str(r["who"]["id"]), str(r.get("bare", "")))   # a villager answered: their words show over their head
 		if not (r["choices"] as Array).is_empty():
@@ -1286,6 +1306,8 @@ func _sync_tiles() -> void:
 	tile_view.show_view(centre, area * 0.5 / cell + Vector2(1, 1))
 	tile_view.set_heir(float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5)   # the lids of the family's houses lift as they come near
 	tile_view.place(Vector2.ZERO, area, centre, cell, light)
+	var half := area / (2.0 * cell) + Vector2(4, 4)
+	GateArt.warm(d, Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0)), sb.realm_here())   # the arches' pictures are made here, not while drawing
 
 
 ## What is drawn over the tiles: the night's tint, the route, creatures, companions, the build ghost, the heir and the touch stick.
@@ -1376,6 +1398,9 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	for e in GameDungeonArt.entrances_in(view):
 		items.append([float(e["rect"].end.y) - 0.1, "entrance", e])
 	if sb.storey() == 0:
+		for g in GateArt.in_view(d, view):   # the waygates: arches of old stone with a ring of runes
+			items.append([float((g["rect"] as Rect2i).end.y) - 0.5, "gate", g])
+	if sb.storey() == 0:
 		for t in GameTrials.sites(d):
 			if view.has_point(Vector2i(int(t["x"]), int(t["z"]))):
 				items.append([float(int(t["z"])) + 0.5, "site", t])
@@ -1402,6 +1427,11 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_texture_rect(inside, box, false, dim)
 					_paint_residents(c, b, at, cell, dim)
 				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"]), GameVillagers.door_scale(b)), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
+			"gate":
+				var g: Dictionary = it[2]
+				var gr: Rect2i = g["rect"]
+				var gat := origin + (Vector2(gr.position) - centre) * cell + area * 0.5
+				c.draw_texture_rect(GateArt.texture_of(d, str(g["id"])), Rect2(gat, Vector2(gr.size) * cell), false, dim)
 			"entrance":
 				var e: Dictionary = it[2]
 				var er: Rect2i = e["rect"]
@@ -1672,6 +1702,8 @@ func _paint_interior(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	items.append([float(sb.heir.y) + 1.0, "heir", null])
 	items.sort_custom(func(p, q): return p[0] < q[0])
 	var service: Dictionary = GameVillagers.data()["service"].get(str(GameSpaces.space(sb.space).get("layout", "")), {})
+	if sb.realm_here() != "":   # a realm's arrival ground: its own colours over the plain floor, the return gate over the way in
+		GateArt.paint_arrival(c, sb.realm_here(), sb.interior, origin, area, centre, cell)
 	for it in items:
 		if str(it[1]) == "person":
 			var t := GamePeople.cell_of(it[2])
