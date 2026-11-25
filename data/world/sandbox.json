@@ -3,6 +3,10 @@
   "settings": {
     "radius": 10,
     "keep": 4,
+    "spawn_share": 0.1,
+    "spawn_safe": 6,
+    "max_creatures": 12,
+    "spawn_burst": 2,
     "threat_near": 10.0,
     "contact_range": 1.5,
     "reach_step": 0.25,

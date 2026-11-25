@@ -207,6 +207,25 @@ func _arrive() -> void:
 var arrived := ""
 
 
+## The crowd settings must make sense: a share above 0 and up to 1, a safe distance of 0 or more, at least one creature at a time and one
+## appearing at a time.
+static func validate() -> Array:
+	var bad: Array = []
+	var s: Dictionary = data()["settings"]
+	for k in ["spawn_share", "spawn_safe", "max_creatures", "spawn_burst"]:
+		if not s.has(k):
+			bad.append("sandbox.json: settings.%s is missing" % k)
+	if not bad.is_empty():
+		return bad
+	if float(s["spawn_share"]) <= 0.0 or float(s["spawn_share"]) > 1.0:
+		bad.append("sandbox.json: spawn_share must be above 0 and at most 1")
+	if float(s["spawn_safe"]) < 0.0 or float(s["spawn_safe"]) > float(s["radius"]):
+		bad.append("sandbox.json: spawn_safe must be 0 up to the spawn radius")
+	if int(s["max_creatures"]) < 1 or int(s["spawn_burst"]) < 1:
+		bad.append("sandbox.json: max_creatures and spawn_burst must be at least 1")
+	return bad
+
+
 ## Spawns the creatures the world has in the square round the heir and lets go of those far behind.
 func refresh() -> void:
 	if space != "world":
@@ -224,6 +243,15 @@ func refresh() -> void:
 	_occupied.clear()
 	for a in creatures:
 		_occupied[_key(int(floor(float(a["x"]))), int(floor(float(a["z"]))))] = true
+	# What the ground would spawn is thinned out: only `spawn_share` of the tiles that roll a creature keep it (a roll keyed on the tile,
+	# so the same ground always holds the same few), none starts within `spawn_safe` of the heir, no more than `max_creatures`
+	# live at once, and no more than `spawn_burst` appear at a time (the rest come in as the heir walks on), the ones the tile rolls favour first. Nothing here draws the dynasty's dice.
+	var share := float(setting("spawn_share"))
+	var safe := float(setting("spawn_safe"))
+	var room := int(setting("max_creatures")) - creatures.size()
+	if room <= 0:
+		return
+	var found: Array = []   # [roll, x, z, id]
 	for dz in range(-radius, radius + 1):
 		for dx in range(-radius, radius + 1):
 			var x := heir.x + dx
@@ -231,12 +259,23 @@ func refresh() -> void:
 			var k := _key(x, z)
 			if _occupied.has(k) or not GameWorldGen.in_bounds(x, z):
 				continue
+			if Vector2(dx, dz).length() < safe:
+				continue
 			var id := GameSpawn.spawn_at(d, x, -1, z, 0, night)
 			if id == "":
 				continue
-			creatures.append(GameBehaviour.new_agent(next_uid, id, float(x) + 0.5, float(z) + 0.5))
-			next_uid += 1
-			_occupied[k] = true
+			var keep_roll := RandomNumberGenerator.new()
+			keep_roll.seed = hash([d.seed_value, "spawn_share", x, z])
+			var r := keep_roll.randf()
+			if r >= share:
+				continue
+			found.append([r, x, z, id])
+	found.sort_custom(func(p, q): return p[0] < q[0])
+	for i in mini(mini(room, int(setting("spawn_burst"))), found.size()):
+		var f: Array = found[i]
+		creatures.append(GameBehaviour.new_agent(next_uid, str(f[3]), float(f[1]) + 0.5, float(f[2]) + 0.5))
+		next_uid += 1
+		_occupied[_key(int(f[1]), int(f[2]))] = true
 
 
 ## The interior whose door is on the tile the heir stands on ("" when there is none): a dungeon's door on the open world, a
