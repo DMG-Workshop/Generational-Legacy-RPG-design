@@ -8,7 +8,7 @@
     "gold_per_tile": 0.25,
     "seconds_per_tile": 0.12,
     "arrive_in_tiles": 3,
-    "leg_tiles": 56,
+    "leg_tiles": 32,
     "leg_tries": 7,
     "leg_turn_deg": 20,
     "leg_min_gain": 6,
