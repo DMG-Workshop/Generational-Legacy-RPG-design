@@ -528,11 +528,11 @@ static func night(key: String) -> Color:
 
 ## One button picture: "normal", "hover", "pressed", "disabled" or "on" (chosen). Wood with a lit top and left, an ink outline and a
 ## gold stud in each corner; pointed at, a gold frame; chosen, crimson inside the gold frame; shut, flat and dark with dull studs.
-static func button_tex(state: String, w: int, h: int) -> ImageTexture:
-	var k := _key("button", "%s,%d,%d" % [state, w, h])
+static func plank_tex(state: String, w: int, h: int) -> ImageTexture:
+	var k := _key("plank", "%s,%d,%d" % [state, w, h])
 	if _memo.has(k):
 		return _memo[k]
-	var p: Dictionary = screens()["button"]
+	var p: Dictionary = screens()["plank"]
 	var m := int(p["margin"])
 	var lw := maxi(_logical(w), 2 * m + 2)
 	var lh := maxi(_logical(h), 2 * m + 2)
@@ -676,10 +676,10 @@ static func hills_tex() -> ImageTexture:
 	return _keep(k, _tex(i))
 
 
-static func button_box(state: String) -> StyleBoxTexture:
-	var p: Dictionary = screens()["button"]
+static func plank_box(state: String) -> StyleBoxTexture:
+	var p: Dictionary = screens()["plank"]
 	var b: Array = p["base"]
-	return _nine("sbutton", button_tex(state, int(b[0]) * pixel(), int(b[1]) * pixel()), int(p["margin"]), p["content"], state)
+	return _nine("splank", plank_tex(state, int(b[0]) * pixel(), int(b[1]) * pixel()), int(p["margin"]), p["content"], state)
 
 
 static func focus_box() -> StyleBoxTexture:
@@ -718,10 +718,10 @@ static func rule_box() -> StyleBoxLine:
 ## A text colour the button already carries is read as the kit's light-on-dark one and put on wood; a shut button's text stays readable.
 static func dress_screen_button(b: Button) -> void:
 	var on := bool(b.get_meta("skin_on", false))
-	b.add_theme_stylebox_override("normal", button_box("on" if on else "normal"))
-	b.add_theme_stylebox_override("hover", button_box("on" if on else "hover"))
-	b.add_theme_stylebox_override("pressed", button_box("pressed"))
-	b.add_theme_stylebox_override("disabled", button_box("disabled"))
+	b.add_theme_stylebox_override("normal", plank_box("on" if on else "normal"))
+	b.add_theme_stylebox_override("hover", plank_box("on" if on else "hover"))
+	b.add_theme_stylebox_override("pressed", plank_box("pressed"))
+	b.add_theme_stylebox_override("disabled", plank_box("disabled"))
 	b.add_theme_stylebox_override("focus", focus_box())
 	var base := pal("gold_hi") if on else pal("wood_text")
 	if not on and not b.has_meta("skin_font") and b.has_theme_color_override("font_color"):
@@ -856,7 +856,7 @@ static func _validate_screens(d: Dictionary) -> Array:
 	var s: Variant = d.get("screens")
 	if typeof(s) != TYPE_DICTIONARY:
 		return ["skin.json: screens is missing"]
-	for name in ["button", "field", "focus"]:
+	for name in ["plank", "field", "focus"]:
 		var pc: Variant = (s as Dictionary).get(name)
 		var b: Variant = pc.get("base") if typeof(pc) == TYPE_DICTIONARY else null
 		if typeof(b) != TYPE_ARRAY or (b as Array).size() != 2 or float(b[0]) != floorf(float(b[0])) or float(b[1]) != floorf(float(b[1])):
