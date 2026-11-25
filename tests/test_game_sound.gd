@@ -555,7 +555,7 @@ func _marked(heading: String) -> String:
 	var out := ""
 	for which in ["Off", "Low", "Medium", "High"]:
 		var b := _row_button(_menu(), heading, which)
-		if b != null and b.has_theme_color_override("font_color"):
+		if b != null and (bool(b.get_meta("skin_on", false)) if b.has_meta("skin_screen_done") else b.has_theme_color_override("font_color")):   # the skin marks the chosen one crimson (meta skin_on)
 			out += which
 	return out
 

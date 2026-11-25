@@ -519,7 +519,7 @@ static func screens() -> Dictionary:
 ## Whether a full-screen text screen (title, life, succession, ending, menu, controls) wears the skin: on every device and window size
 ## (it was made to fit a phone), unless the data switches it off. `host` only says there is a screen.
 static func screen_active(host: Node) -> bool:
-	return host != null and not data().is_empty() and bool(screens().get("enabled", false))
+	return host != null and not data().is_empty() and not GameData.mobile.is_empty() and bool(screens().get("enabled", false))   # (the text scale reads the mobile data)
 
 
 static func night(key: String) -> Color:

@@ -221,7 +221,7 @@ func test_screens() -> void:
 	ok(slot1 != null and slot2 != null and slot1.get_theme_stylebox("normal") == UiSkin.button_box("on") and slot2.get_theme_stylebox("normal") == UiSkin.button_box("normal"), "the slot in use is crimson and the others wood")
 	var fields := _all(t, []).filter(func(n): return n is LineEdit)
 	ok(fields.size() == 2 and fields.all(func(e): return e.get_theme_stylebox("normal") == UiSkin.field_box() and e.get_theme_color("font_color") == UiSkin.pal("ink")), "the name and seed boxes are light fields with ink text")
-	ok(_all(t, []).filter(func(n): return n is OptionButton and n.get_theme_stylebox("normal") == UiSkin.button_box("normal")).size() == 4, "the four pickers are planks")
+	ok(_all(t, []).filter(func(n): return n is OptionButton and n.get_theme_stylebox("normal") == UiSkin.button_box("normal")).size() == 5, "the five pickers are planks")
 	ok(_all(t, []).all(func(n): return not (n is Button) or (n as Button).custom_minimum_size.y >= UiSettings.tap_h(0) - 0.5 or (n as Button).custom_minimum_size.y == 0.0 or true), "(buttons keep their heights)")
 	var again_children := t.get_child_count()
 	SkinScreen.apply(t)
@@ -282,8 +282,7 @@ func test_screens() -> void:
 	var size100 := _find(m, "100%")
 	var size125 := _find(m, "125%")
 	ok(size100.get_theme_stylebox("normal") == UiSkin.button_box("on") and size125.get_theme_stylebox("normal") == UiSkin.button_box("normal"), "the text size in use is crimson")
-	var on_b := _find(m, "On")
-	ok(on_b != null and on_b.get_theme_color("font_color") == UiSkin.pal("gold_hi"), "chosen options have gold text")
+	ok(size100.get_theme_color("font_color") == UiSkin.pal("gold_hi"), "chosen options have gold text")
 	m.queue_free()
 	await _frames(2)
 	var cp: Control = app.open_controls()
@@ -325,7 +324,7 @@ func test_variants() -> void:
 	await _frames(3)
 	var t: Control = app.current
 	ok(UiSkin.variant() == "high_contrast" and UiSkin.night("top") == Color("#000000"), "high contrast picks the black night")
-	var p := _boxes(t, "kit_panel")[0]
+	var p: Control = _boxes(t, "kit_panel")[0]
 	ok(p.get_theme_stylebox("panel") == UiSkin.panel_box() and UiSkin.pal("parch") == Color("#ffffff"), "white panels")
 	ok(_labels_read(t), "every label reads on the white panels")
 	var settings := _find(t, "Settings")

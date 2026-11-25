@@ -34,7 +34,7 @@
     "focus": { "base": [16, 16], "margin": 3, "expand": 2 },
     "sky": { "bands": 24, "stars": 14, "tile": [96, 96], "hill_tile": 64, "hill_height": 22 },
     "night": {
-      "standard": { "top": "#10142a", "bottom": "#2a2340", "star": "#f4d37a", "star_dim": "#8f7650", "hill": "#1b1626", "hill_hi": "#2d2238", "well": "#1e1710" },
+      "standard": { "top": "#10142a", "bottom": "#1c1730", "star": "#f4d37a", "star_dim": "#8f7650", "hill": "#1b1626", "hill_hi": "#2d2238", "well": "#1e1710" },
       "high_contrast": { "top": "#000000", "bottom": "#000000", "star": "#ffff80", "star_dim": "#d0d0d0", "hill": "#000000", "hill_hi": "#4a4a4a", "well": "#000000" }
     },
     "contrast": [
