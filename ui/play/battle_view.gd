@@ -92,6 +92,7 @@ func _ready() -> void:
 
 	top_bar = HBoxContainer.new()
 	top_bar.add_theme_constant_override("separation", 12)
+	top_bar.set_meta(BattleSkin.BUTTONS_META, true)
 	root.add_child(top_bar)
 	title_label = Kit.label("Battle: %s" % _foe_list(), 22, Kit.ACCENT)
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

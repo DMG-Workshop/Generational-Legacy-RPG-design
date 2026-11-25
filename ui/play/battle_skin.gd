@@ -10,6 +10,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
 
 const FACE_META := "battle_face"
+const BUTTONS_META := "battle_buttons"   # a row (the top bar) whose kit buttons are dressed though it is not a parchment panel
 
 
 ## Whether the battle screen `host` is drawn in the skin: a window that is wide and has a mouse.
@@ -59,7 +60,7 @@ static func face_of(n: Node) -> Control:
 	return null
 
 
-## Dresses what is added under `host` from now on: a kit button anywhere becomes a gold-studded button (but not a chip of the party
+## Dresses what is added under `host` from now on: a kit button in the top bar or on a parchment panel (not a menu opened over the screen) becomes a gold-studded button (but not a chip of the party
 ## strip, which has its own looks), and the labels and the rows of a parchment panel read on parchment. Stops when `host` leaves.
 static func watch(host: Control) -> void:
 	var tree := host.get_tree()
@@ -78,7 +79,7 @@ static func dress(n: Node) -> void:
 	if not (n is Control) or n.has_meta("skin_done"):
 		return
 	if n is Button:
-		if n.has_meta("tap_base") and not n.has_meta("skin_keep") and not _in_strip(n):
+		if n.has_meta("tap_base") and not n.has_meta("skin_keep") and not _in_strip(n) and (face_of(n) != null or _under_meta(n, BUTTONS_META)):
 			UiSkin.dress_battle_button(n)
 		return
 	var face := face_of(n)
@@ -91,6 +92,15 @@ static func dress(n: Node) -> void:
 			n.set_meta("skin_done", true)
 			return
 	UiSkin.dress(n, face, "parch")
+
+
+static func _under_meta(n: Node, key: String) -> bool:
+	var p := n.get_parent()
+	while p != null:
+		if p.has_meta(key):
+			return true
+		p = p.get_parent()
+	return false
 
 
 static func _in_strip(n: Node) -> bool:

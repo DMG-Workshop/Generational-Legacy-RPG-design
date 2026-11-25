@@ -99,6 +99,16 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   the ground, the character and pack panes inset slots (`item_slot.gd`). Panel code is unchanged: labels and kit buttons added under a
   pane are dressed as they are added (`UiSkin.watch`), with light-on-dark colours turned to inks, so every panel that opens as a pane
   reads on parchment. A compact window, a touch screen and the full-screen overlays keep the old dark look.
+- **The battle screen's frame:** `ui/play/battle_skin.gd` puts the skin on what is round the battle view (the figures, effects and
+  animation are untouched). The arena has the wooden frame; the log, the command panel, the skill, spell, feat and poison lists and the
+  result are parchment panels. The command panel's title (whose move is asked, or the reaction question) is a crimson ribbon, and the
+  result's verdict a ribbon of its own (gold for a win or an escape, the red of the wood face for a defeat; the word says it too).
+  Buttons are the new `button` piece: a lit parchment face, an ink outline, a gold stud in each corner, lit gold studs and frame when
+  pointed at, a gold ring for the keyboard or a pad, flat and dim when not available. The rows of a list are inset slots. The log is ink
+  on parchment with the newest line on a gold highlight (ink on gold, not gold on parchment, which cannot be read). The bars on the
+  plates and the party strip's chips are slim segmented bars, red for health and blue for mana (no picture at this size: the numbers are
+  on the plate). A compact window or a touch screen keeps the older dark look, as the panes do. Not done: the party strip's chip faces
+  (they keep their state colours as edges on a slot-coloured face), the top bar's title and Auto-battle row, the foe name plates.
 - **Not built yet:** the title and life screens, the action bar and header (the wooden header texture exists but is not drawn), the
   ring and thing menu, icon outlines, panels' own inner boxes (a `Kit.panel` inside a pane stays dark), a touch version of the skin,
   and the pixel font (the engine's font is used; the bar words and the ribbon titles are where it would show most).
