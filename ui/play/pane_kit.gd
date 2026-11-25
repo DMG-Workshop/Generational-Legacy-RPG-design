@@ -7,6 +7,7 @@ extends RefCounted
 
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 const PATH := "res://data/ui/pane.json"
 
 static var _cache: Dictionary = {}
@@ -127,8 +128,14 @@ static func build(host: Control, title: String) -> VBoxContainer:
 				close(host)   # a click of the walk button (the right one, unless the player moved it) on a pane's face closes it
 			else:
 				host.move_to_front())   # a click anywhere on it raises it
+	var skinned := UiSkin.active(host)   # parchment, ribbon and studs (data/ui/skin.json); the older dark look otherwise
+	var face_kind := UiSkin.face_for(key)
+	if skinned:
+		host.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		host.add_child(UiSkin.shadow(host))
 	var face := PanelContainer.new()
-	face.add_theme_stylebox_override("panel", _box(color("face"), color("border"), 2))
+	face.add_theme_stylebox_override("panel", UiSkin.face_box(face_kind) if skinned else _box(color("face"), color("border"), 2))
+	face.set_meta("skin_face", true)
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	face.mouse_filter = Control.MOUSE_FILTER_PASS
 	host.add_child(face)
@@ -142,7 +149,7 @@ static func build(host: Control, title: String) -> VBoxContainer:
 	pad.add_child(v)
 	# the title bar: the handle the pane is dragged by
 	var bar := PanelContainer.new()
-	bar.add_theme_stylebox_override("panel", _box(color("title_bar")))
+	bar.add_theme_stylebox_override("panel", UiSkin.ribbon_box() if skinned else _box(color("title_bar")))
 	bar.custom_minimum_size = Vector2(0, float(setting("title_height")))
 	bar.mouse_filter = Control.MOUSE_FILTER_STOP
 	bar.mouse_default_cursor_shape = Control.CURSOR_DRAG
@@ -153,6 +160,8 @@ static func build(host: Control, title: String) -> VBoxContainer:
 	t.text = title
 	t.add_theme_font_size_override("font_size", 20)
 	t.add_theme_color_override("font_color", color("title_text"))
+	if skinned:
+		UiSkin.dress_title(t)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(t)
@@ -162,6 +171,8 @@ static func build(host: Control, title: String) -> VBoxContainer:
 	x_button.custom_minimum_size = Vector2(36, 0)
 	x_button.add_theme_color_override("font_color", color("close_text"))
 	x_button.pressed.connect(func(): close(host))
+	if skinned:
+		UiSkin.dress_button(x_button)
 	row.add_child(x_button)
 	var drag := {"on": false}
 	bar.gui_input.connect(func(ev: InputEvent):
@@ -174,6 +185,8 @@ static func build(host: Control, title: String) -> VBoxContainer:
 			host.position = clamp_to(host.position + (ev as InputEventMouseMotion).relative, host.size, UiSettings.room(host)))
 	host.set_meta("back_close", func(): close(host))
 	v.set_meta("overlay", host)
+	if skinned:
+		UiSkin.watch(host, face_kind)   # what the panel adds from here on reads on the face
 	return v
 
 

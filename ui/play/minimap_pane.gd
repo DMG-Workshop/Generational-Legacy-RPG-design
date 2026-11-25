@@ -4,6 +4,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 var dynasty: GameDynasty
 var sb: GameSandbox
@@ -52,6 +53,8 @@ func _ready() -> void:
 	_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	v.add_child(_image)
+	if UiSkin.in_skin(self):   # the picture is set in an ink and gold edge, inside the wooden frame
+		_image.draw.connect(_edge)
 	_dots = Dots.new()
 	_dots.pane = self
 	_dots.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -60,6 +63,15 @@ func _ready() -> void:
 	_note = Kit.label("", 13, Kit.dim())
 	v.add_child(_note)
 	refresh()
+
+
+## The edge round the picture the ground is drawn in (the square the image is centred as).
+func _edge() -> void:
+	var side := minf(_image.size.x, _image.size.y)
+	var r := Rect2((_image.size - Vector2(side, side)) * 0.5, Vector2(side, side))
+	var w := float(UiSkin.pixel())
+	_image.draw_rect(r.grow(w * 0.5), UiSkin.pal("gold_dk"), false, w)
+	_image.draw_rect(r.grow(w * 1.5), UiSkin.pal("ink"), false, w)
 
 
 ## The ground as a picture, one pixel a tile, in the tile view's colours.

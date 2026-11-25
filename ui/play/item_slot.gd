@@ -4,6 +4,7 @@
 extends Button
 
 const ItemIcon := preload("res://ui/play/item_icon.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 var item := ""                     # the item id shown here ("" for an empty square)
 var tag := ""                      # what the square is, for the pane's callables: "pack", "bag" or a slot name
@@ -27,6 +28,20 @@ func setup(id: String, size_px: float, shown_name: String = "") -> void:
 		text = shown_name
 		add_theme_font_size_override("font_size", 11)
 		modulate = Color(1, 1, 1, 0.55)
+
+
+func _ready() -> void:
+	if UiSkin.in_skin(self):   # an inset square, gold when pointed at
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		for state in ["normal", "disabled"]:
+			add_theme_stylebox_override(state, UiSkin.inset_box(false))
+		for state in ["hover", "pressed"]:
+			add_theme_stylebox_override(state, UiSkin.inset_box(true))
+		add_theme_color_override("font_color", UiSkin.pal("parch_hi"))
+		if item == "":   # an empty square is the same inset, its name quiet inside it (not faded into the parchment)
+			modulate = Color(1, 1, 1, 1)
+			add_theme_color_override("font_color", UiSkin.pal("slot_lo"))
+		set_meta("skin_done", true)
 
 
 func _gui_input(event: InputEvent) -> void:
