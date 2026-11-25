@@ -9,12 +9,14 @@ extends HBoxContainer
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 signal chip_pressed(by: int)
 
 const FONT := 13
 const MIN_FONT := 11   # as small as a chip's text goes before the name is cut
 
+var skinned := false          # the interface skin (BattleSkin): slots of the skin's palette and its segmented bars
 var chips: Dictionary = {}    # by -> {btn, hp, mp, name, lines}
 
 
@@ -63,13 +65,13 @@ func _rebuild(members: Array) -> void:
 		btn.add_theme_color_override("font_disabled_color", Kit.dim())
 		btn.add_theme_constant_override("line_spacing", -2)
 		add_child(btn)
-		var hp := _bar(btn, Kit.good(), -9.0, -5.0)
-		var mp := _bar(btn, Kit.MP_BLUE, -5.0, -2.0)
+		var hp := _bar(btn, Kit.good(), -9.0, -5.0, "hp")
+		var mp := _bar(btn, Kit.MP_BLUE, -5.0, -2.0, "mp")
 		chips[by] = {"btn": btn, "hp": hp, "mp": mp, "name": "", "lines": ["", "", ""]}
 
 
 ## A thin bar along the foot of a chip; it takes no clicks, so the whole chip is the button.
-func _bar(chip: Button, color: Color, top: float, bottom: float) -> ProgressBar:
+func _bar(chip: Button, color: Color, top: float, bottom: float, kind: String = "hp") -> ProgressBar:
 	var pb := Kit.bar(color, 1.0, 0.0, Vector2.ZERO)
 	for k in ["background", "fill"]:
 		(pb.get_theme_stylebox(k) as StyleBoxFlat).set_content_margin_all(0)
@@ -82,6 +84,8 @@ func _bar(chip: Button, color: Color, top: float, bottom: float) -> ProgressBar:
 	pb.offset_right = -6.0
 	pb.offset_top = top
 	pb.offset_bottom = bottom
+	if skinned:
+		UiSkin.dress_thin_bar(pb, kind)
 	chip.add_child(pb)
 	return pb
 
@@ -109,8 +113,12 @@ func _look(btn: Button, decision: String, active: bool) -> void:
 	if active:
 		edge = Kit.ACCENT
 		fill = fill.lightened(0.06)
+	if skinned:   # a slot of the skin: its dark face, square, with the state's colour as the edge and the active member's gold
+		fill = UiSkin.pal("slot_bg")
+		if active:
+			edge = UiSkin.pal("gold")
 	for state in ["normal", "hover", "pressed", "disabled"]:
-		var s := Kit.style(fill.lightened(0.07) if state in ["hover", "pressed"] else fill, 6, edge)
+		var s := Kit.style(fill.lightened(0.07) if state in ["hover", "pressed"] else fill, 0 if skinned else 6, edge)
 		s.set_border_width_all(3 if active else 2)
 		s.content_margin_left = 6
 		s.content_margin_right = 6

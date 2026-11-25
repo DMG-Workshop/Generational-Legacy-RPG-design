@@ -10,6 +10,7 @@
     "ribbon": { "base": [24, 15], "margin": 5, "stitch_at": 3, "stitch_every": 2, "content": [4, 1] },
     "inset": { "base": [16, 16], "margin": 3, "content": 2 },
     "bar": { "height": 11, "segment_every": 6, "segment_at": 7, "icon_scale": 1, "text_size": 13 },
+    "button": { "base": [14, 14], "margin": 4, "content": [3, 2] },
     "header": { "plank": 36, "speck": 0.07, "height": 28 }
   },
   "icons": {
@@ -73,6 +74,11 @@
     { "fg": "ink_blue", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "blue text on parchment" },
     { "fg": "ink_good_cb", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "good news on parchment, colour-blind" },
     { "fg": "ink_bad_cb", "bg": "parch", "min": 4.5, "min_hc": 7.0, "why": "bad news on parchment, colour-blind" },
+    { "fg": "crimson_dk", "bg": "parch_hi", "min": 7.0, "min_hc": 15.0, "why": "a lit button's text on its parchment" },
+    { "fg": "ink", "bg": "gold", "min": 8.0, "min_hc": 12.0, "why": "the newest log line on its gold highlight" },
+    { "fg": "ink_dim", "bg": "parch_hi", "min": 4.5, "min_hc": 10.0, "why": "a disabled button's text" },
+    { "fg": "wood_bad", "bg": "crimson", "min": 4.5, "min_hc": 7.0, "why": "DEFEAT in a ribbon" },
+    { "fg": "wood_bad_cb", "bg": "crimson", "min": 4.5, "min_hc": 7.0, "why": "DEFEAT in a ribbon, colour-blind" },
     { "fg": "gold_hi", "bg": "crimson", "min": 5.0, "min_hc": 10.0, "why": "a ribbon's title" },
     { "fg": "bar_text", "bg": "ink", "min": 15.0, "min_hc": 15.0, "why": "light text on a bar or a slot, over its ink outline" },
     { "fg": "parch_hi", "bg": "slot_bg", "min": 7.0, "min_hc": 10.0, "why": "text in a slot" },
