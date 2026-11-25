@@ -16,13 +16,43 @@
     "heart": [".##.##..", "########", "########", "########", ".######.", "..####..", "...##...", "........"],
     "gem": ["...##...", "..####..", ".######.", "########", ".######.", "..####..", "...##...", "........"],
     "pouch": ["..####..", "...##...", ".######.", "########", "########", "########", ".######.", "........"],
+    "star": ["...##...", "...##...", "########", ".######.", "..####..", ".##..##.", ".#....#.", "........"],
     "coin": ["..####..", ".######.", "###..###", "##.##.##", "##.##.##", "###..###", ".######.", "..####.."]
   },
   "bars": {
     "hp": { "icon": "heart", "colors": "hp" },
     "mp": { "icon": "gem", "colors": "mp" },
+    "xp": { "icon": "star", "colors": "carry" },
     "load": { "icon": "pouch", "colors": "carry" },
     "load_bad": { "icon": "pouch", "colors": "hp" }
+  },
+  "screens": {
+    "note": "The full-screen text screens (title, life, succession, ending) and the menu and controls panels wear the skin on every device (ui/play/skin_screen.gd; UiSkin.screen_active): a night-sky backdrop (sky bands, stars, hills), parchment panels, ribbon titles, wooden buttons with gold studs (lit gold on hover, crimson when chosen), light text fields. Pieces are in logical pixels like the others. `night` is each variant's backdrop colours and `well` the dark inset a journal reads in; `contrast` lists the pairs they must keep.",
+    "enabled": true,
+    "button": { "base": [24, 16], "margin": 5, "content": [4, 2], "stud": 2, "stud_at": 2 },
+    "field": { "base": [16, 16], "margin": 3, "content": [3, 2] },
+    "focus": { "base": [16, 16], "margin": 3, "expand": 2 },
+    "sky": { "bands": 24, "stars": 14, "tile": [96, 96], "hill_tile": 64, "hill_height": 22 },
+    "night": {
+      "standard": { "top": "#10142a", "bottom": "#2a2340", "star": "#f4d37a", "star_dim": "#8f7650", "hill": "#1b1626", "hill_hi": "#2d2238", "well": "#1e1710" },
+      "high_contrast": { "top": "#000000", "bottom": "#000000", "star": "#ffff80", "star_dim": "#d0d0d0", "hill": "#000000", "hill_hi": "#4a4a4a", "well": "#000000" }
+    },
+    "contrast": [
+      { "fg": "gold_hi", "night": "top", "min": 7.0, "min_hc": 15.0, "why": "a heading on the night sky" },
+      { "fg": "gold_hi", "night": "bottom", "min": 7.0, "min_hc": 15.0, "why": "a heading on the night sky, lower down" },
+      { "fg": "parch_hi", "night": "bottom", "min": 9.0, "min_hc": 15.0, "why": "text on the night sky" },
+      { "fg": "parch_hi", "night": "well", "min": 9.0, "min_hc": 15.0, "why": "text in the journal's well" },
+      { "fg": "wood_good", "night": "well", "min": 4.5, "min_hc": 7.0, "why": "good news in the well" },
+      { "fg": "wood_bad", "night": "well", "min": 4.5, "min_hc": 7.0, "why": "bad news in the well" }
+    ],
+    "pairs": [
+      { "fg": "wood_accent", "bg": "wood_hi", "min": 4.5, "min_hc": 7.0, "why": "a button's text when pointed at" },
+      { "fg": "wood_text", "bg": "wood_lo", "min": 6.0, "min_hc": 10.0, "why": "a button's text when pressed" },
+      { "fg": "wood_dim", "bg": "wood_lo", "min": 4.5, "min_hc": 10.0, "why": "a shut button's text" },
+      { "fg": "gold_hi", "bg": "crimson", "min": 5.0, "min_hc": 10.0, "why": "a chosen button's text" },
+      { "fg": "ink", "bg": "parch_hi", "min": 9.0, "min_hc": 15.0, "why": "typing in a text field" },
+      { "fg": "ink_dim", "bg": "parch_hi", "min": 4.5, "min_hc": 10.0, "why": "a text field's hint" }
+    ]
   },
   "variants": {
     "standard": {

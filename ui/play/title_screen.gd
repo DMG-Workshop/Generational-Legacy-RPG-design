@@ -5,6 +5,8 @@ const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Clipboard := preload("res://ui/play/clipboard.gd")
 const FilePicker := preload("res://ui/play/file_picker.gd")
 const HardModePanel := preload("res://ui/play/hard_mode_panel.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
+const SkinScreen := preload("res://ui/play/skin_screen.gd")
 
 var app: Node
 var name_edit: LineEdit
@@ -32,6 +34,7 @@ var hard_button: Button
 
 
 func _ready() -> void:
+	SkinScreen.apply(self)
 	var room := UiSettings.room(self)
 	var narrow := room.x < 1140.0
 	var scroll := ScrollContainer.new()   # large text on a short screen scrolls the form
@@ -49,7 +52,8 @@ func _ready() -> void:
 
 	var title := Kit.label("GENERATIONAL LEGACY", 44 if not narrow else 34, Kit.ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(title)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(SkinScreen.ribbon(title, 44 if not narrow else 30))
 	var sub := Kit.label("Found a dynasty. Every heir inherits your blood, your curses and your legend.", 16, Kit.dim())
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -162,6 +166,7 @@ func _ready() -> void:
 	buttons.add_theme_constant_override("separation", 10)
 	box.add_child(buttons)
 	var begin := Kit.button("Begin Dynasty", _start, Vector2(0, 48))
+	begin.set_meta("skin_on", UiSkin.screen_active(begin))   # the crimson plank: the one to press
 	begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons.add_child(begin)
 	cont = Kit.button("Continue" if narrow else "Continue Saved Dynasty", func(): app.continue_game(UiSettings.open_world_first()), Vector2(300 if not narrow else 160, 48))
@@ -222,6 +227,7 @@ func _build_slots() -> void:
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.clip_text = true
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.set_meta("skin_on", UiSkin.screen_active(b) and n == app.slot)
 		slot_box.add_child(b)
 	var acts := HBoxContainer.new()
 	acts.add_theme_constant_override("separation", 8)

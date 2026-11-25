@@ -17,6 +17,8 @@ const LooksPanel := preload("res://ui/play/looks_panel.gd")
 const LootPanel := preload("res://ui/play/loot_panel.gd")
 const Cooldown := preload("res://ui/play/autopilot_cooldown.gd")
 const TutorialTip := preload("res://ui/play/tutorial_tip.gd")
+const SkinScreen := preload("res://ui/play/skin_screen.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 const COLUMN_W := 300
 const COLUMN_TEXT_W := 256   # leaves room for the scroll bar
@@ -43,6 +45,7 @@ var cool_timer: Timer     # ticks the countdown text once a second while a coold
 
 func _ready() -> void:
 	d = app.dynasty
+	SkinScreen.apply(self)
 	compact = UiSettings.compact(self)
 	if compact:
 		column_w = COMPACT_COLUMN_W
@@ -58,7 +61,7 @@ func _ready() -> void:
 	header = Kit.label("", 22, Kit.ACCENT)
 	header.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	header.mouse_filter = Control.MOUSE_FILTER_PASS
-	root.add_child(header)
+	root.add_child(SkinScreen.ribbon(header))
 	where = Kit.label("", 15, Kit.dim())
 	where.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	where.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -76,6 +79,7 @@ func _ready() -> void:
 	mid.add_theme_constant_override("separation", 8)
 	cols.add_child(mid)
 	var jp := Kit.panel(Color("#1a1828"))
+	SkinScreen.well(jp)
 	jp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mid.add_child(jp)
 	journal = Kit.rich()
@@ -178,12 +182,9 @@ func _build_left() -> void:
 	left.add_child(Kit.label("Level %s %s %s%s%s" % [GameText.num(h.level), h.race()["name"], h.cls()["name"], (" (%s)" % GameSubclass.name_of(h.subclass)) if h.subclass != "" else "", arch], 15, Kit.dim()))
 	left.add_child(Kit.label("Age %d / ~%d%s" % [int(h.age), int(h.lifespan), "  (living on borrowed time)" if h.age > h.lifespan else ""], 15))
 	left.add_child(Kit.label("Fate Value: %d%%" % int(round(h.fate_value * 100.0)), 15, Kit.bad() if h.fate_value > 0.2 else Kit.TEXT))
-	left.add_child(Kit.label("HP %s / %s" % [GameText.num(h.hp), GameText.num(h.max_hp())], 14))
-	left.add_child(Kit.bar(Kit.good(), h.max_hp(), h.hp))
-	left.add_child(Kit.label("MP %s / %s" % [GameText.num(h.mp), GameText.num(h.max_mp())], 14))
-	left.add_child(Kit.bar(Kit.MP_BLUE, maxf(1.0, h.max_mp()), h.mp))
-	left.add_child(Kit.label("XP %s / %s" % [GameText.num(h.xp), GameText.num(h.xp_to_next())], 14))
-	left.add_child(Kit.bar(Kit.ACCENT, h.xp_to_next(), h.xp, Vector2(200, 10)))
+	_stat("hp", "HP %s / %s" % [GameText.num(h.hp), GameText.num(h.max_hp())], Kit.good(), h.max_hp(), h.hp, Vector2(200, 16))
+	_stat("mp", "MP %s / %s" % [GameText.num(h.mp), GameText.num(h.max_mp())], Kit.MP_BLUE, maxf(1.0, h.max_mp()), h.mp, Vector2(200, 16))
+	_stat("xp", "XP %s / %s" % [GameText.num(h.xp), GameText.num(h.xp_to_next())], Kit.ACCENT, h.xp_to_next(), h.xp, Vector2(200, 10))
 	left.add_child(Kit.label("STR\u00a0%s   MAG\u00a0%s   AGI\u00a0%s   VIT\u00a0%s" % [GameText.num(int(h.stat("str"))), GameText.num(int(h.stat("mag"))), GameText.num(int(h.stat("agi"))), GameText.num(int(h.stat("vit")))], 15))
 	left.add_child(Kit.label("Gold %s    Potions %d" % [GameText.num(h.gold), h.potions], 16, Kit.ACCENT))
 	_afflictions(h)
@@ -204,6 +205,20 @@ func _build_left() -> void:
 			l.mouse_filter = Control.MOUSE_FILTER_STOP
 			left.add_child(l)
 	_fit_column(left)
+
+
+## A stat with its bar: in the skin one segmented bar with its picture and its words over it (the label stays, hidden, as in the
+## status pane); otherwise the words above a plain bar.
+func _stat(kind: String, text: String, color: Color, top: float, value: float, size: Vector2) -> void:
+	var l := Kit.label(text, 14)
+	left.add_child(l)
+	var b := Kit.bar(color, top, value, size)
+	if UiSkin.screen_active(b):
+		b.set_meta("skin_bar_kind", kind)
+	left.add_child(b)
+	if b.has_meta("skin_bar"):
+		l.visible = false
+		UiSkin.bar_text(b, text)
 
 
 ## Sicknesses: the stage, what it takes away and how long until it worsens.
@@ -284,7 +299,10 @@ func _build_actions() -> void:
 	var hard := _act("Hard hunt", func(): _hunt("hunt_hard"))
 	hard.tooltip_text = "Tougher monsters and more Elites, for double XP and gold.\nRisky: a defeat can cost %s their life (about %d%% of defeats)." % [h.name, int(round(float(GameData.bal("death_chance_on_defeat")) * 100.0))]
 	var auto := _act("Auto-battle: %s" % ("ON" if d.auto_battle else "OFF"), func(): d.auto_battle = not d.auto_battle; app.autosave(); _refresh())
-	auto.add_theme_color_override("font_color", Kit.good() if d.auto_battle else Kit.TEXT)
+	if UiSkin.screen_active(auto):
+		UiSkin.mark_on(auto, d.auto_battle)   # crimson while on
+	else:
+		auto.add_theme_color_override("font_color", Kit.good() if d.auto_battle else Kit.TEXT)
 	auto.tooltip_text = "Hunts fight themselves, choosing as the autopilot would, and keep hunting until you press Stop or health runs low. Switch it off in battle to take over."
 	var legend := _act("Fight %s" % boss.get("short", boss["name"]) if not boss.is_empty() else "No legend here", func(): _legend())
 	legend.disabled = boss.is_empty()
@@ -427,7 +445,8 @@ func _legend() -> void:
 func _auto_button(id: String, text: String, what: String, generations: int) -> void:
 	var b := _act(text, func(): _autopilot(id, generations))
 	b.add_theme_font_size_override("font_size", COOL_FONT)   # the same size ready and counting down
-	b.add_theme_color_override("font_disabled_color", Kit.dim())   # the shared grey is too faint to read a countdown
+	if not UiSkin.screen_active(b):
+		b.add_theme_color_override("font_disabled_color", Kit.dim())   # the shared grey is too faint to read a countdown
 	b.set_meta("cool_text", text)
 	b.set_meta("cool_tip", what)
 	cool_buttons[id] = b
