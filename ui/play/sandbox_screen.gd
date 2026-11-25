@@ -1330,6 +1330,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	items.sort_custom(func(p, q): return p[0] < q[0])
 	for it in items:
 		match str(it[1]):
+			"wall":
+				_paint_wall(c, it[2], origin, area, centre, cell, dim)
 			"building":
 				var b: Dictionary = it[2]
 				var at := origin + (Vector2(float(b["x"]), float(b["z"])) - centre) * cell + area * 0.5

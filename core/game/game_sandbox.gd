@@ -223,6 +223,14 @@ static func validate() -> Array:
 		bad.append("sandbox.json: spawn_safe must be 0 up to the spawn radius")
 	if int(s["max_creatures"]) < 1 or int(s["spawn_burst"]) < 1:
 		bad.append("sandbox.json: max_creatures and spawn_burst must be at least 1")
+	var mm: Variant = data().get("minimap")
+	if typeof(mm) != TYPE_DICTIONARY:
+		bad.append("sandbox.json: minimap (the colours of a town's buildings, wall and gates) is missing")
+	else:
+		for k in ["building", "city_wall", "gate"]:
+			var col: Variant = (mm as Dictionary).get(k)
+			if typeof(col) != TYPE_ARRAY or (col as Array).size() != 3:
+				bad.append("sandbox.json: minimap.%s needs a colour [r, g, b]" % k)
 	return bad
 
 
