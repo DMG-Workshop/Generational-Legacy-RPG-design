@@ -20,6 +20,9 @@ const UiSkin := preload("res://ui/play/ui_skin.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
 
+## Pixels of room kept above a figure for its breathing (FigurePose lifts the sprite one art pixel).
+const BREATH_ROOM := 4.0
+
 var app: Node
 var d: GameDynasty
 var b: GameBattle
@@ -561,7 +564,10 @@ func _spot(node: Control, center: Vector2, anchor_y: float) -> Vector2:
 	var sz := node.size * node.scale
 	var pos := center - Vector2(sz.x * 0.5, anchor_y * node.scale.y)
 	pos.x = clampf(pos.x, 0.0, maxf(0.0, arena.size.x - sz.x))
-	pos.y = clampf(pos.y, 0.0, maxf(0.0, arena.size.y - sz.y))
+	# A standing figure's breath lifts its sprite a few pixels, so none is placed flush with the arena's top: the lift
+	# would be cut off by the arena's clip at the top of each breath.
+	var top := minf(BREATH_ROOM * node.scale.y, maxf(0.0, arena.size.y - sz.y))
+	pos.y = clampf(pos.y, top, maxf(top, arena.size.y - sz.y))
 	return pos
 
 
