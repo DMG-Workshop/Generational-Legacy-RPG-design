@@ -821,6 +821,111 @@ static func pay_charge(d: GameDynasty, ch: Dictionary) -> String:
 	return ""
 
 
+# ---------------------------------------------------------------- the realms' arrival grounds
+
+const REALM_SPACE := "realm/"
+
+
+## The space id of a realm's arrival ground.
+static func realm_space(realm: String) -> String:
+	return REALM_SPACE + realm
+
+
+## The realm a space id is the arrival ground of ("" for any other space).
+static func realm_of_space(space: String) -> String:
+	if space.begins_with(REALM_SPACE) and GameRealms.gateable(space.substr(REALM_SPACE.length())):
+		return space.substr(REALM_SPACE.length())
+	return ""
+
+
+## The look of a realm's arrival ground: {floor, floor2, wall, glow, sky} as colours (the palette of the realm's mark).
+static func look(realm: String) -> Dictionary:
+	var out := {}
+	var l: Dictionary = data()["looks"].get(realm, {})
+	for k in l:
+		out[k] = Color(float(l[k][0]), float(l[k][1]), float(l[k][2]))
+	return out
+
+
+## The cells of a realm's arrival ground, as an interior's (GameInterior: floor, exit, wall): a rounded clearing `width` by `depth` north of the
+## tile the heir comes in on, which is the `exit` (the return gate stands over it), with a few pillars of the realm's own stone and a wall all
+## round. Pure and the same for every seed; every floor tile can be walked to from the exit.
+static func arrival_cells(realm: String) -> Dictionary:
+	var s: Dictionary = setting("realm_arrival")
+	var w := int(s["width"])
+	var dep := int(s["depth"])
+	var out := {}
+	var half := w / 2
+	for z in range(-(dep - 1), 1):
+		for x in range(-half, half + 1):
+			var cx := float(x) / float(half)
+			var cz := float(z + (dep - 1) / 2) / float((dep - 1) / 2)   # -1 to 1 over the depth
+			var corner := absf(cx) > 0.55 and absf(cz) > 0.55 and (absf(cx) - 0.55) + (absf(cz) - 0.55) > 0.5
+			if not corner:
+				out[GameInterior.key(x, z)] = "floor"
+	out[GameInterior.key(0, 0)] = "exit"
+	# pillars: single tiles, never beside each other, never within two tiles of the way in
+	var r := RandomNumberGenerator.new()
+	r.seed = hash(["gate_arrival", realm])
+	var placed := 0
+	var tries := 0
+	var pillars: Array = []
+	while placed < int(s["pillars"]) and tries < 200:
+		tries += 1
+		var px := r.randi_range(-half + 2, half - 2)
+		var pz := r.randi_range(-(dep - 3), -3)
+		var k := GameInterior.key(px, pz)
+		if out.get(k, "") != "floor" or Vector2(px, pz).length() < 4.0:
+			continue
+		var apart := true
+		for p in pillars:
+			if maxi(absi(px - int(p.x)), absi(pz - int(p.y))) < 3:
+				apart = false
+		if apart:
+			pillars.append(Vector2i(px, pz))
+			placed += 1
+	var walls := {}
+	for k in out:
+		var c := GameInterior._parse(k)
+		for a in GameInterior.AROUND:
+			var n: Vector2i = c + a
+			if not out.has(GameInterior.key(n.x, n.y)):
+				walls[GameInterior.key(n.x, n.y)] = "wall"
+	for k in walls:
+		out[k] = "wall"
+	for p in pillars:
+		out[GameInterior.key(p.x, p.y)] = "wall"
+	return out
+
+
+## The creatures of a realm that stand in its arrival ground: [{id, x, z}], a few of the creatures `realms.json` puts in that realm, on floor tiles
+## `keep` or more from the way in, picked by a hash of the seed and the realm (never the dynasty's dice). The seam for the realm's wildlife: the
+## ground lists them and tests check them; the sandbox does not yet set them on the floor.
+static func arrival_creatures(d: GameDynasty, realm: String) -> Array:
+	var pool: Array = []
+	var of: Dictionary = GameRealms.data()["of"]
+	for c in of:
+		if str(of[c]) == realm:
+			pool.append(str(c))
+	pool.sort()
+	var cells := arrival_cells(realm)
+	var floors: Array = []
+	for k in cells:
+		if cells[k] == "floor":
+			var c := GameInterior._parse(k)
+			if Vector2(c).length() >= float(setting("realm_arrival")["keep"]):
+				floors.append(c)
+	floors.sort_custom(func(a, b): return a.y < b.y or (a.y == b.y and a.x < b.x))
+	var out: Array = []
+	if pool.is_empty() or floors.is_empty():
+		return out
+	var r := _rng(d, "arrival", realm)
+	for i in mini(int(setting("realm_arrival")["creatures"]), floors.size()):
+		var at: Vector2i = floors.pop_at(r.randi() % floors.size())
+		out.append({"id": str(pool[r.randi() % pool.size()]), "x": at.x, "z": at.y})
+	return out
+
+
 # ---------------------------------------------------------------- what is saved
 
 ## The state as it loads: only well-formed ids and whole numbers; {} for anything else (a corrupt part is dropped on its own).
@@ -970,6 +1075,18 @@ static func validate() -> Array:
 	for r in GameRealms.ids():
 		if GameRealms.gateable(str(r)) and not realms_done.has(str(r)):
 			bad.append("gates.json: the realm '%s' has no gate" % r)
+	for r in GameRealms.ids():
+		if GameRealms.gateable(str(r)):
+			var lk: Dictionary = dat.get("looks", {}).get(str(r), {})
+			for f in ["floor", "floor2", "wall", "glow", "sky"]:
+				if typeof(lk.get(f)) != TYPE_ARRAY or (lk[f] as Array).size() != 3:
+					bad.append("gates.json: the look of '%s' has no [r, g, b] for %s" % [r, f])
+	var ra: Dictionary = s.get("realm_arrival", {})
+	for k in ["width", "depth", "pillars", "creatures", "keep"]:
+		if int(ra.get(k, -1)) < 0:
+			bad.append("gates.json: realm_arrival.%s is missing" % k)
+	if int(ra.get("width", 0)) < 9 or int(ra.get("depth", 0)) < 7:
+		bad.append("gates.json: an arrival ground needs at least 9 by 7 tiles")
 	for k in dat["text"]:
 		if typeof(dat["text"][k]) != TYPE_STRING:
 			bad.append("gates.json: text.%s is not a line" % k)

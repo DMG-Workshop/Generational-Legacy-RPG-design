@@ -26,6 +26,12 @@ class Dots extends Control:
 		var cell := size / n
 		var c: Dictionary = GameSandbox.data()["colors"]
 		var centre := Vector2(sb.heir) + Vector2(0.5, 0.5)
+		for g in GameMiniMap.gates(pane.dynasty, sb.heir.x, sb.heir.y, pane.radius):   # a waygate the family knows: a diamond in its state's colour
+			var go := (Vector2(float(g["x"]) + 0.5, float(g["z"]) + 0.5) - centre) * cell + size * 0.5
+			var gq := 4.0
+			var gc := GateArt.icon_color(str(g["mode"]))
+			draw_colored_polygon(PackedVector2Array([go + Vector2(0, -gq - 1), go + Vector2(gq + 1, 0), go + Vector2(0, gq + 1), go + Vector2(-gq - 1, 0)]), Color(0.05, 0.04, 0.08))
+			draw_colored_polygon(PackedVector2Array([go + Vector2(0, -gq), go + Vector2(gq, 0), go + Vector2(0, gq), go + Vector2(-gq, 0)]), gc)
 		for a in sb.creatures:
 			_dot(Vector2(float(a["x"]), float(a["z"])), centre, cell, n, _rgb(c["creature"]), 2.0)
 		for a in sb.companions:

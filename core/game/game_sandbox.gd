@@ -345,6 +345,96 @@ func leave() -> Dictionary:
 	return {"ok": true, "text": line}
 
 
+## The refusal for using a gate from where the heir is, or "": a fight, indoors, upstairs.
+func gate_block() -> String:
+	if d.battle != null or not d.pending_event.is_empty():
+		return GameGates.text("refuse_fight")
+	if space != "world":
+		return GameGates.text("refuse_inside")
+	if storey() > 0 or heir_y != GameBuild.SURFACE:
+		return GameGates.text("refuse_up")
+	return ""
+
+
+## Stands at a gate and steps through it to another gate of its road (`dest` a gate id) or into the realm it is the door of (`dest` "realm:<id>"):
+## the charge of a flickering arch is paid, the trip takes world-clock seconds by distance (GameClock.feed, so the years run as they always do),
+## and the heir comes out on the open tile in front of the far gate with the companions who follow beside them, the creatures of the old place
+## left behind and the new place arrived at (`_arrive`). No dice of the dynasty's are drawn. {ok, text, lines?}.
+func step_through(gate: String, dest: String) -> Dictionary:
+	if not GameGates.has(gate):
+		return {"ok": false, "text": GameGates.text("no_gate")}
+	var block := gate_block()
+	if block != "":
+		return {"ok": false, "text": block}
+	if GameGates.near(d, heir.x, heir.y) != gate:
+		return {"ok": false, "text": GameGates.text("far", {"heir": d.heir.name})}
+	var plan := GameGates.travel_plan(d, gate, dest)
+	if not bool(plan["ok"]):
+		return {"ok": false, "text": str(plan["why"])}
+	var paid := GameGates.pay_charge(d, plan["charge"])
+	var lines: Array = GameClock.feed(d, float(plan["seconds"]))
+	if d.state != "life":   # the years of the trip ended the heir's life: the screen shows the succession
+		return {"ok": true, "text": paid, "lines": lines, "ended": true}
+	var line := ""
+	if dest.begins_with("realm:"):
+		line = _enter_realm(gate, dest.substr(6))
+	else:
+		var f := GameGates.front_of(d, dest)
+		creatures = []
+		_occupied.clear()
+		route = []
+		heir = f
+		heir_y = GameBuild.SURFACE
+		_seat_followers()
+		refresh()
+		_arrive()
+		line = GameGates.text("stepped", {"heir": d.heir.name, "name": GameGates.name_of(gate), "dest": GameGates.name_of(dest), "place": GameGates.place_name(d, dest)})
+	if paid != "":
+		line += " " + paid
+	log.append({"kind": "site", "text": line})
+	d._say(line)
+	return {"ok": true, "text": line, "lines": lines}
+
+
+## The companions who follow come with the heir and stand beside them; one who holds a post (stay, guard, gather) keeps it.
+func _seat_followers() -> void:
+	var fresh := GameCompanions.agents_for(d, float(heir.x) + 0.5, float(heir.y) + 0.5)
+	var out: Array = []
+	for a in fresh:
+		var id := str(a["id"])
+		var kept: Dictionary = {}
+		for old in companions:
+			if str(old["id"]) == id and GameCompanions.order_of(d, id) != GameCompanions.FOLLOW:
+				kept = old
+		out.append(kept if not kept.is_empty() else a)
+	companions = out
+
+
+## Through a realm's gate into its arrival ground (GameGates.arrival_cells): a small walled clearing of the realm with the return gate on the
+## tile the heir comes in on. The way back is the interior's usual way out, `leave()`, and it always works.
+func _enter_realm(gate: String, realm: String) -> String:
+	outside = GameGates.front_of(d, gate)
+	space = GameGates.realm_space(realm)
+	interior = GameGates.arrival_cells(realm)
+	heir = GameInterior.entry()
+	route = []
+	denizens = []
+	fight_foes = []
+	return GameGates.text("realm_in", {"heir": d.heir.name, "name": GameGates.name_of(gate), "realm": GameRealms.name_of(realm)})
+
+
+## The realm the heir is in ("" on the open world or in an ordinary interior).
+func realm_here() -> String:
+	return GameGates.realm_of_space(space)
+
+
+## How fast the clock the heir lives by runs: the realm's flow while they are in a realm's arrival ground, else 1 (the screen scales what it feeds
+## GameClock by this, so the time goes through pass_time as ever).
+func time_flow() -> float:
+	var r := realm_here()
+	return 1.0 if r == "" else float(GameRealms.flow({"in_realm": r}))
+
+
 ## Casts one of the heir's spells on a dungeon's floor (GameCasting.self_cast): {ok, text, kind}. Only in a dungeon and out of a fight.
 func cast(id: String) -> Dictionary:
 	if space == "world" or not GameDungeons.is_dungeon(space) or d.battle != null:

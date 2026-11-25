@@ -42,7 +42,7 @@ static func problems() -> Array:
 	for pair in [["walls", GameWalls.validate()], ["reach", GameReach.validate()], ["talk", GameTalk.validate()], ["wall art", WallArt.validate()]]:
 		for p in pair[1]:
 			out.append("%s: %s" % [pair[0], p])
-	for pair in [["dungeons", GameDungeons.validate()], ["dungeon looks", GameDungeonArt.validate()], ["dungeon loot", GameDungeonLoot.validate()], ["dungeon entrances", DungeonEntranceArt.validate()]]:
+	for pair in [["dungeons", GameDungeons.validate()], ["dungeon looks", GameDungeonArt.validate()], ["dungeon loot", GameDungeonLoot.validate()], ["dungeon entrances", DungeonEntranceArt.validate()], ["gate art", GateArt.validate()]]:
 		for p in pair[1]:
 			out.append("%s: %s" % [pair[0], p])
 	for p in GameShops.validate():

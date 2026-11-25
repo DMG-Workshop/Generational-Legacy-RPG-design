@@ -1,0 +1,37 @@
+{
+	"note": "The look of a waygate (ui/play/gate_art.gd, rendering only; docs/GATES.md; checked by GateArt.validate). An arch is 3 tiles wide and 4 tall (48 by 64 pixels) with the passage tile at the bottom middle: two legs on plinths under a ring of old stone, a rune cut for each slot along the ring (silver when whole, dim when worn, a chipped groove when broken, an empty groove when the silver is stripped). Dark, flickering and lit differ in the runes' light and the shimmer in the opening; a ruined gate is cracked and mossy, and a gate that stands in the wilds beside ruins has fallen stones at its feet. Painted once for each state and kept; nothing is random (the cracks follow a hash of the gate's id).",
+	"w": 3,
+	"h": 4,
+	"colors": {
+		"outline": "#1b1626",
+		"stone_hi": "#9b958c",
+		"stone": "#7a746d",
+		"stone_lo": "#575250",
+		"stone_dk": "#3d3a3c",
+		"mortar": "#46424a",
+		"moss": "#5f8a3c",
+		"moss_dk": "#46692c",
+		"groove": "#2a2630",
+		"silver": "#e3ecf4",
+		"silver_dim": "#9aa8b6",
+		"rune_lit": "#ffe9a8",
+		"rune_flick": "#f2c46c",
+		"shimmer": "#bfe6ff"
+	},
+	"shimmer_alpha": {"lit": 0.42, "flickering": 0.2, "dark": 0.0},
+	"glow": {
+		"lit": {"color": [1.0, 0.88, 0.55], "radius": 3.6, "strength": 0.85, "at": [0.5, 0.5]},
+		"flickering": {"color": [0.95, 0.72, 0.4], "radius": 2.6, "strength": 0.45, "at": [0.5, 0.5]}
+	},
+	"glyphs": [
+		["010", "111", "010", "111", "010"],
+		["101", "101", "111", "100", "100"],
+		["110", "011", "110", "011", "110"],
+		["111", "001", "010", "100", "111"],
+		["010", "101", "111", "101", "101"],
+		["111", "101", "101", "101", "111"],
+		["100", "110", "111", "011", "001"],
+		["101", "010", "111", "010", "101"]
+	],
+	"icon": {"lit": [1.0, 0.88, 0.5], "flickering": [0.95, 0.65, 0.3], "dark": [0.5, 0.5, 0.56]}
+}

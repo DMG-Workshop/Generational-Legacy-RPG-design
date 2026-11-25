@@ -6,6 +6,15 @@ class_name GameMiniMap
 extends RefCounted
 
 
+## The waygates the family knows within `radius` tiles of (cx, cz): [{id, x, z, mode}], for the pane to mark.
+static func gates(d: GameDynasty, cx: int, cz: int, radius: int) -> Array:
+	var out: Array = []
+	for m in GameGates.markers(d):
+		if absi(int(m["x"]) - cx) <= radius and absi(int(m["z"]) - cz) <= radius:
+			out.append({"id": m["id"], "x": m["x"], "z": m["z"], "mode": m["mode"]})
+	return out
+
+
 ## Rows (z, north first) of columns (x) of kinds, `radius` tiles each way from (cx, cz): (2 * radius + 1) squared in all.
 static func kinds(d: GameDynasty, cx: int, cz: int, radius: int) -> Array:
 	var rows: Array = []

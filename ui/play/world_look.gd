@@ -114,6 +114,7 @@ static func glow_sources(d: GameDynasty, tile_view: TileView, view: Rect2i) -> A
 			for cell in tile_view.glows[chunk]:
 				if view.has_point(cell):
 					out.append({"pos": Vector2(float(cell.x) + 0.5, float(cell.y) + 0.5), "spec": gl["glyphs"][tile_view.glows[chunk][cell]]})
+	out.append_array(GateArt.glow_sources(d, view))   # a lit waygate shines, a flickering one a little
 	for b in GameTown.in_rect(view):
 		var spec: Dictionary = gl["buildings"].get(str(b["kind"]), gl["buildings"]["default"])
 		out.append({"pos": Vector2(float(b["x"]) + float(spec["at"][0]) * float(b["w"]), float(b["z"]) + float(spec["at"][1]) * float(b["h"])), "spec": spec})
