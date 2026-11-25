@@ -8,6 +8,8 @@
 class_name TileView
 extends Node2D
 
+const UiSettings := preload("res://ui/play/ui_settings.gd")
+
 var d: GameDynasty
 var layers := {}          # Vector2i chunk -> TileMapLayer
 var tile_set: TileSet
@@ -21,6 +23,11 @@ var decor := {}           # Vector2i chunk -> TileMapLayer of what lies on the g
 var things := {}          # Vector2i chunk -> TileMapLayer of what stands on the ground: nodes (trees, herbs, bones, rock) and dug shafts
 var roofs := {}           # Vector2i chunk -> TileMapLayer of the roofs seen from outside (a doll house's lid): shown on the ground floor only
 var roof_steps := {}      # "x,z" -> how far a roof has lifted (GameReveal: 1 to steps; a roof not listed is whole)
+var edges := {}           # Vector2i chunk -> TileMapLayer of the soft edges between kinds of ground and the foam along a shore (GroundArt), under the decor
+var shadows := {}         # Vector2i chunk -> TileMapLayer of the soft shadows under what stands on the ground (light from the north-west)
+var glows := {}           # Vector2i chunk -> {Vector2i tile: glyph} of the standing things that shine at night (light.json glow.glyphs), for WorldLook
+var _all: Array = []      # kinds(), made once
+var _still := false       # whether the water holds its first frame (reduced motion)
 var _heir_tile := Vector2i(-100000, -100000)
 var _roofs_dirty := true
 
@@ -138,6 +145,7 @@ static func make_tileset() -> TileSet:
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(px, px)
 	ts.add_source(src, 0)
+	ts.add_source(GroundArt.ground_source(all, UiSettings.reduced_motion()), 1)   # the ground in its variants, and water that moves
 	return ts
 
 
@@ -172,9 +180,15 @@ static func join_mask(dyn: GameDynasty, x: int, y: int, z: int) -> int:
 	return m
 
 
+func _all_kinds() -> Array:
+	if _all.is_empty():
+		_all = kinds()
+	return _all
+
+
 ## The atlas cell of a kind at a place: a wall joined to its neighbours, anything else its own tile.
 func _coords(kind: String, x: int, y: int, z: int) -> Vector2i:
-	var all := kinds()
+	var all := _all_kinds()
 	if kind == "wall" and interior_id == "":
 		return Vector2i(all.size() + join_mask(d, x, y, z), 0)
 	return Vector2i(all.find(kind), 0)
@@ -208,6 +222,7 @@ static func _paint_glyph(img: Image, x0: int, px: int, glyph: Dictionary) -> voi
 func setup(dyn: GameDynasty) -> void:
 	d = dyn
 	tile_set = make_tileset()
+	_still = UiSettings.reduced_motion()
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
@@ -215,6 +230,9 @@ func setup(dyn: GameDynasty) -> void:
 func show_view(centre: Vector2, half: Vector2) -> void:
 	if dungeon != null:
 		return   # a dungeon is drawn whole
+	if _still != UiSettings.reduced_motion():
+		_still = UiSettings.reduced_motion()   # the option changed: the water plays or holds
+		GroundArt.set_still(tile_set.get_source(1), kinds(), _still)
 	var want := wanted(centre, half, int(settings()["keep"]))
 	for c in want:
 		if not layers.has(c):
@@ -235,6 +253,13 @@ func show_view(centre: Vector2, half: Vector2) -> void:
 			if roofs.has(c):
 				(roofs[c] as TileMapLayer).queue_free()
 				roofs.erase(c)
+			if edges.has(c):
+				(edges[c] as TileMapLayer).queue_free()
+				edges.erase(c)
+			if shadows.has(c):
+				(shadows[c] as TileMapLayer).queue_free()
+				shadows.erase(c)
+			glows.erase(c)
 
 
 ## Shows a storey (0 is the ground). Above the ground, the ground tiles are dimmed by `below_shade` and the pieces built at that
@@ -254,9 +279,13 @@ func set_level(n: int) -> void:
 		(decor[c] as TileMapLayer).visible = level == 0
 	for c in roofs:
 		(roofs[c] as TileMapLayer).visible = level == 0   # a storey is looked at from inside: no lid
+	for c in shadows:
+		(shadows[c] as TileMapLayer).visible = level == 0
 	var shade := float(settings()["below_shade"]) if level > 0 else 1.0
 	for c in layers:
 		(layers[c] as TileMapLayer).modulate = Color(shade, shade, shade)
+	for c in edges:
+		(edges[c] as TileMapLayer).modulate = Color(shade, shade, shade)
 	for c in layers:
 		if level > 0:
 			_fill_upper(c)
@@ -284,6 +313,13 @@ func set_interior(id: String, cells: Dictionary) -> void:
 	for c in roofs.keys():
 		(roofs[c] as TileMapLayer).queue_free()
 	roofs.clear()
+	for c in edges.keys():
+		(edges[c] as TileMapLayer).queue_free()
+	edges.clear()
+	for c in shadows.keys():
+		(shadows[c] as TileMapLayer).queue_free()
+	shadows.clear()
+	glows.clear()
 	roof_steps.clear()
 	level = 0   # an interior has one floor
 	if dungeon != null:
@@ -309,10 +345,25 @@ func _fill(c: Vector2i) -> void:
 	layer.tile_set = tile_set
 	layer.position = Vector2(c.x * n, c.y * n) * float(int(settings()["px"]))
 	add_child(layer)
-	var all := kinds()
+	var all := _all_kinds()
 	var over: TileMapLayer = null
 	var under: TileMapLayer = null
+	var rim: TileMapLayer = null
+	var cast: TileMapLayer = null
+	var shining := {}
+	var w := n + 2
+	var grid := PackedStringArray()   # the ground kind of each tile of the chunk and the ring of tiles round it, for the soft edges
+	var alts := PackedInt32Array()
+	var covered_tiles := PackedByteArray()
 	if interior_id == "":
+		rim = _overlay_layer(layer.position, true)   # between the ground and what lies on it
+		edges[c] = rim
+		cast = _overlay_layer(layer.position, level == 0)
+		shadows[c] = cast
+		glows[c] = shining
+		grid.resize(w * w)
+		alts.resize(n * n)
+		covered_tiles.resize(n * n)
 		under = TileMapLayer.new()
 		under.tile_set = tile_set
 		under.position = layer.position
@@ -342,21 +393,99 @@ func _fill(c: Vector2i) -> void:
 				continue
 			var tile := GameWorldGen.tile(d, x, z)   # once for the ground and what stands on it
 			var built := GameBuild.kind_at(d, x, GameBuild.SURFACE, z)
-			layer.set_cell(Vector2i(dx, dz), 0, _coords(kind_for(tile, built), x, GameBuild.SURFACE, z), _alt_at(x, z, built, bool(tile["water"])))
+			var alt := _alt_at(x, z, built, bool(tile["water"]))
+			_set_ground(layer, Vector2i(dx, dz), kind_for(tile, built), x, z, alt)
+			grid[(dz + 1) * w + dx + 1] = GameRelief.kind(tile)
+			alts[dz * n + dx] = alt
+			covered_tiles[dz * n + dx] = 1 if built != "" else 0
 			var ground := _decor_from(tile, built, x, z)
 			if ground != "":
 				under.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(ground), 0))
 			var thing := _thing_from(tile, built, x, z)
 			if thing != "":
 				over.set_cell(Vector2i(dx, dz), 0, Vector2i(all.find(thing), 0))
+			var shape := _shadow_shape(thing, ground)
+			if shape != "":
+				cast.set_cell(Vector2i(dx, dz), 0, GroundArt.shadow_cell(shape))
+			var shine := _shining(thing, ground)
+			if shine != "":
+				shining[Vector2i(x, z)] = shine
 			if not d.built.is_empty() and GameReveal.roofed(d, x, z):
 				_set_roof(Vector2i(x, z), c)
+	if interior_id == "":
+		for i in n + 2:   # the tiles round the chunk, so an edge across a chunk's border is drawn from both sides
+			for pos in [Vector2i(i - 1, -1), Vector2i(i - 1, n), Vector2i(-1, i - 1), Vector2i(n, i - 1)]:
+				grid[(pos.y + 1) * w + pos.x + 1] = _ground_kind(c.x * n + pos.x, c.y * n + pos.y)
+		for dz in n:
+			for dx in n:
+				if covered_tiles[dz * n + dx] == 0:
+					var i := (dz + 1) * w + dx + 1
+					_set_edge(rim, Vector2i(dx, dz), grid[i], [grid[i - w], grid[i - w + 1], grid[i + 1], grid[i + w + 1], grid[i + w], grid[i + w - 1], grid[i - 1], grid[i - w - 1]], alts[dz * n + dx])
 	layers[c] = layer
 	fills += 1
 	if level > 0:
 		var shade := float(settings()["below_shade"])
 		layer.modulate = Color(shade, shade, shade)
+		if rim != null:
+			rim.modulate = Color(shade, shade, shade)
 		_fill_upper(c)
+
+
+## A layer over the chunk's ground for the soft edges or the shadows (the overlay tile set).
+func _overlay_layer(at: Vector2, shown: bool) -> TileMapLayer:
+	var l := TileMapLayer.new()
+	l.tile_set = GroundArt.overlay_set()
+	l.position = at
+	l.visible = shown
+	add_child(l)
+	return l
+
+
+## Sets a ground tile: in the variants atlas (source 1) when the kind has a look in ground.json, else the flat one.
+func _set_ground(layer: TileMapLayer, local: Vector2i, kind: String, x: int, z: int, alt: int) -> void:
+	if interior_id == "" and GroundArt.has_kind(kind):
+		layer.set_cell(local, 1, GroundArt.cell_for(_all_kinds(), kind, x, z), alt)
+	else:
+		layer.set_cell(local, 0, _coords(kind, x, GameBuild.SURFACE, z), alt)
+
+
+## The ground kind of a tile whatever is built on it.
+func _ground_kind(x: int, z: int) -> String:
+	return GameRelief.kind(GameWorldGen.tile(d, x, z))
+
+
+## Sets (or clears) a tile's soft edge from the ground kinds round it, clockwise from the north: n, ne, e, se, s, sw, w, nw.
+func _set_edge(rim: TileMapLayer, local: Vector2i, kind: String, ring: Array, alt: int) -> void:
+	var same := true
+	for k in ring:
+		if k != kind:
+			same = false
+			break
+	var e := Vector2i(-1, -1)
+	if not same:
+		e = GroundArt.edge_for(kind, {"n": ring[0], "ne": ring[1], "e": ring[2], "se": ring[3], "s": ring[4], "sw": ring[5], "w": ring[6], "nw": ring[7]})
+	if e.x < 0:
+		rim.erase_cell(local)
+	else:
+		rim.set_cell(local, 0, e, alt)
+
+
+## The shadow shape of what stands on a tile (its node, else what lies on the ground), "" for none.
+static func _shadow_shape(thing: String, ground: String) -> String:
+	var s := GroundArt.shadow_of(thing) if thing != "" else ""
+	if s == "" and ground != "":
+		s = GroundArt.shadow_of(ground)
+	return s
+
+
+## The glyph on a tile that shines at night, "" for none.
+static func _shining(thing: String, ground: String) -> String:
+	var glow: Dictionary = GroundArt.light_data()["glow"]["glyphs"]
+	if thing != "" and glow.has(thing):
+		return thing
+	if ground != "" and glow.has(ground):
+		return ground
+	return ""
 
 
 ## Draws (or clears) the roof over a column in its chunk's lid layer, lifted as far as `roof_steps` says.
@@ -477,7 +606,18 @@ func refresh_cell(x: int, z: int, spread: bool = true) -> void:
 	else:
 		var wet := interior_id == "" and bool(GameWorldGen.tile(d, x, z)["water"])
 		var built_here := GameBuild.kind_at(d, x, GameBuild.SURFACE, z) if interior_id == "" else "interior"
-		(layers[c] as TileMapLayer).set_cell(local, 0, _coords(here, x, GameBuild.SURFACE, z), _alt_at(x, z, built_here, wet))
+		var alt_here := _alt_at(x, z, built_here, wet)
+		_set_ground(layers[c], local, here, x, z, alt_here)
+		if edges.has(c) and interior_id == "":
+			if built_here != "":
+				(edges[c] as TileMapLayer).erase_cell(local)   # a built piece covers the ground, edges and all
+			else:
+				var ring: Array = []
+				for off in [Vector2i(0, -1), Vector2i(1, -1), Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(-1, -1)]:
+					ring.append(_ground_kind(x + off.x, z + off.y))
+				_set_edge(edges[c], local, _ground_kind(x, z), ring, alt_here)
+	if edges.has(c) and here == "":
+		(edges[c] as TileMapLayer).erase_cell(local)
 	if decor.has(c):
 		var ground := "" if interior_id != "" else _decor_from(GameWorldGen.tile(d, x, z), GameBuild.kind_at(d, x, GameBuild.SURFACE, z), x, z)
 		if ground == "":
@@ -490,6 +630,20 @@ func refresh_cell(x: int, z: int, spread: bool = true) -> void:
 			(things[c] as TileMapLayer).erase_cell(local)
 		else:
 			(things[c] as TileMapLayer).set_cell(local, 0, Vector2i(kinds().find(thing), 0))
+	if shadows.has(c):
+		var cast: TileMapLayer = shadows[c]
+		var ground_now := "" if interior_id != "" else _decor_from(GameWorldGen.tile(d, x, z), GameBuild.kind_at(d, x, GameBuild.SURFACE, z), x, z)
+		var thing_now := _thing_at(x, z)
+		var shape := _shadow_shape(thing_now, ground_now)
+		if shape == "":
+			cast.erase_cell(local)
+		else:
+			cast.set_cell(local, 0, GroundArt.shadow_cell(shape))
+		var shine := _shining(thing_now, ground_now)
+		if shine == "":
+			(glows[c] as Dictionary).erase(Vector2i(x, z))
+		else:
+			(glows[c] as Dictionary)[Vector2i(x, z)] = shine
 	if roofs.has(c) and interior_id == "":
 		_set_roof(Vector2i(x, z), c)
 		_roofs_dirty = true

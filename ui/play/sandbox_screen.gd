@@ -54,6 +54,8 @@ var actions: VBoxContainer           # Dig and Place under the thumb, shown only
 var status: Label
 var map: Control          # clips the tile view to the map area, under the bar and the overlay
 var tile_view: TileView   # the ground, as tile chunks
+var glow_layer: Control   # over the map: the glow of hearths, forges and lit windows at night (WorldLook)
+var sky_layer: Control    # over that: fog, rain, snow and the vignette (WorldLook)
 var overlay: Control      # the route, buildings, creatures, heir, ghost and stick, over the tiles
 var _figures := {}        # companion id and level -> their figure's texture (SpriteArt)
 var _last_x := {}         # creature or companion -> where it was drawn last (the look only)
@@ -119,6 +121,10 @@ func _ready() -> void:
 	overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST   # pixel art stays crisp
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
+	glow_layer = WorldLook.make_layer(_paint_glow, true)   # the night's lights, added to the picture
+	add_child(glow_layer)
+	sky_layer = WorldLook.make_layer(_paint_sky, false)   # fog, rain, snow and the soft dark at the edge
+	add_child(sky_layer)
 	var bar := HBoxContainer.new()
 	bar.position = Vector2(8, 4)
 	bar.size = Vector2(maxf(0.0, size.x - 16.0), BAR - 8.0)
@@ -258,6 +264,8 @@ func _process(delta: float) -> void:
 	_refresh_status()
 	_sync_tiles()
 	overlay.queue_redraw()
+	glow_layer.queue_redraw()
+	sky_layer.queue_redraw()
 	queue_redraw()
 
 
@@ -1190,6 +1198,9 @@ func _sync_tiles() -> void:
 
 ## What is drawn over the tiles: the night's tint, the route, creatures, companions, the build ghost, the heir and the touch stick.
 func _paint(c: Control) -> void:
+	if glow_layer != null:
+		glow_layer.queue_redraw()   # the lights and the sky are drawn with the overlay (also when the screen is held still)
+		sky_layer.queue_redraw()
 	var d: GameDynasty = app.dynasty
 	var area := Vector2(size.x, size.y - BAR)
 	var origin := Vector2(0, BAR)
@@ -1197,12 +1208,8 @@ func _paint(c: Control) -> void:
 	var colors: Dictionary = GameSandbox.data()["colors"]
 	var look := GameDay.look(d)
 	var centre := Vector2(sb.heir) + cam
-	var tint: Array = look["tint"]
-	var night_alpha := (1.0 - float(look["light"])) * 0.5
-	if sb.space != "world":
-		night_alpha = 0.0   # indoors: no night, and none of the open world's route, creatures or companions to draw
-	if night_alpha > 0.0:
-		c.draw_rect(Rect2(origin, area), Color(float(tint[0]), float(tint[1]), float(tint[2]), night_alpha))
+	if sb.space == "world":
+		WorldLook.paint_grade(c, Rect2(origin, area), look)   # the sun's warmth by day, the night's tint as the light fails (indoors: no night, and none of the open world's route, creatures or companions to draw)
 	var outdoors := sb.space == "world"   # indoors none of the open world's route, creatures or companions is on this floor
 	for i in range(sb.route.size() if outdoors else 0):
 		var rp := origin + (Vector2(sb.route[i]) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
@@ -1229,6 +1236,34 @@ func _paint(c: Control) -> void:
 		var radius := WorldInput.setting("touch_stick_radius_px")
 		c.draw_arc(origin + fingers.origin, radius, 0.0, TAU, 40, Color(base, 0.5), 3.0)
 		c.draw_circle(origin + fingers.knob(), radius * 0.35, Color(_rgb(colors["stick_knob"]), 0.7))
+
+
+## The night's lights, drawn added to the picture: hearths and anvils the family built, camp fires and other glyphs that shine, and the
+## lit windows of the town's buildings (WorldLook). Only the open world has any.
+func _paint_glow(c: Control) -> void:
+	if sb == null or sb.space != "world":
+		return
+	var look := GameDay.look(app.dynasty)
+	if WorldLook.night_glow(look) <= 0.0:
+		return
+	var area := Vector2(size.x, size.y - BAR)
+	var cell := _cell()
+	var centre := Vector2(sb.heir) + cam
+	var half := area / (2.0 * cell) + Vector2(4, 4)
+	var view := Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0))
+	WorldLook.paint_glow(c, WorldLook.glow_sources(app.dynasty, tile_view, view), look, cell, Vector2(0, BAR), area, centre)
+
+
+## Fog, then rain or snow, then the vignette over the map (the weather only in the open world, and not with reduced motion).
+func _paint_sky(c: Control) -> void:
+	if sb == null:
+		return
+	var look := GameDay.look(app.dynasty)
+	var rect := Rect2(Vector2(0, BAR), Vector2(size.x, size.y - BAR))
+	if sb.space == "world":
+		WorldLook.paint_fog(c, rect, look)
+		WorldLook.paint_weather(c, rect, look)
+	WorldLook.paint_vignette(c, rect, look)
 
 
 ## What stands on the open world's ground, drawn back to front (the ones further north first, so the ones in front cover them): the
@@ -1267,6 +1302,7 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				var at := origin + (Vector2(float(b["x"]), float(b["z"])) - centre) * cell + area * 0.5
 				var box := Rect2(at, Vector2(float(b["w"]), float(b["h"])) * cell)
 				var lid := GameReveal.alpha(GameReveal.distance_to(Rect2i(int(b["x"]), int(b["z"]), int(b["w"]), int(b["h"])), float(sb.heir.x) + 0.5, float(sb.heir.y) + 0.5))
+				WorldLook.paint_building_shadow(c, box, cell)
 				var inside: Texture2D = BuildingArt.inside(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"])) if lid < 1.0 else null
 				if inside != null:   # the roof thins and the rooms show, with the people who live there
 					c.draw_texture_rect(inside, box, false, dim)
