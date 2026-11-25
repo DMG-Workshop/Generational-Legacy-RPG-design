@@ -263,6 +263,27 @@ static func _act(a: Dictionary, p: Dictionary, threat: Dictionary, herd_centre: 
 	return next
 
 
+## A creature put to flight by something that is not a target (a smoke cloud, GameSmoke): it takes the flee mode and goes straight away
+## from `from` at `speed_mult` times its own speed, held off ground it cannot walk. Pure: no dice (a creature on the very spot goes the
+## way its uid says). The agent is not changed; the moved copy comes back.
+static func drive_from(a: Dictionary, from: Vector2, view: Dictionary, speed_mult: float) -> Dictionary:
+	var next: Dictionary = a.duplicate(true)
+	if float(a["hp"]) <= 0.0:
+		return next
+	var p := params(str(a["id"]))
+	var pos := _pos(a)
+	var away := pos - from
+	if away.length() < 0.001:
+		away = Vector2.from_angle(float(int(a["uid"]) % 8) * PI * 0.25)
+	var moved := _move(pos, away.normalized(), float(p["speed"]) * speed_mult, bool(p["flier"]), view.get("walkable", Callable()))
+	next["x"] = moved.x
+	next["z"] = moved.y
+	next["mode"] = "flee"
+	next["target"] = {}
+	next["burst"] = 0
+	return next
+
+
 ## Where to head to get to `aim`: itself, or, when the caller gives a `router` (see GamePath.router), the next waypoint on a
 ## route that goes round what is in the way. A flier never needs one.
 static func _route(view: Dictionary, pos: Vector2, aim: Vector2) -> Vector2:

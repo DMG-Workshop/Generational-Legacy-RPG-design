@@ -5,6 +5,7 @@
 		"hit_ward": "{who} hits {whom} for {n} ({absorbed} absorbed){tail}.",
 		"hit_ward_all": "{who} hits {whom}, and the ward absorbs all {absorbed}.",
 		"foe_defeated": "{name} is defeated.",
+		"foe_flees": "{name} loses heart and runs off.",
 		"foe_steps_up": "{name} steps up to the front.",
 		"back_rank_steps_up": "The back rank steps up to the front.",
 		"ally_knocked_out": "{name} is knocked senseless and out of the fight.",

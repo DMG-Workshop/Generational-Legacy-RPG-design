@@ -22,6 +22,8 @@ var achievements: Dictionary = {}   # milestones the house has reached, id -> {g
 var hard: Dictionary = {}       # hard-mode options chosen at the founding (see GameHardMode); saved only when one is on
 var world_event: Dictionary = {}    # the war, famine or golden age running now, or the rest after one (see GameWorldEvents); saved only when not empty
 var trials: Dictionary = {}     # the family's trial state: quest steps done, legacy gains, the trial under way, tries and waits (see GameTrials); saved only when not empty
+var smoke: Dictionary = {}      # the smoke pot's cloud now burning on the open world: {x, z, until (world_seconds)} (see GameSmoke); saved only while it burns
+var last_xp_line := ""          # the line a won fight of the open world left about its xp and band (runtime only; the sandbox's journal takes it)
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
@@ -626,11 +628,12 @@ func start_hunt(kind: String) -> GameBattle:
 ## Starts a fight with particular wild creatures that have caught the heir in the open world (GameSandbox): the hunt's
 ## rules (levels round the heir's, the hunt's scale and reward) for exactly these creatures, by id. Returns null when
 ## nothing known was given. Draws from the dynasty's dice like any hunt; the autopilot never calls it.
-func start_encounter(ids: Array, place_id: String = "", level_mult: float = 1.0) -> GameBattle:
+func start_encounter(ids: Array, place_id: String = "", level_mult: float = 1.0, levels: Array = []) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")["hunt"]
 	var danger := float((GameWorld.place(place_id) if place_id != "" else world.here()).get("danger", 1.0))
 	var foes: Array = []
-	for id in ids:
+	for n in ids.size():
+		var id = ids[n]
 		var kin: Dictionary = {}
 		for c in GameData.creatures:
 			if c["id"] == id:
@@ -638,7 +641,14 @@ func start_encounter(ids: Array, place_id: String = "", level_mult: float = 1.0)
 		if kin.is_empty():
 			continue
 		var lv_mult := rng.randf_range(float(cfg["level_min"]), float(cfg["level_max"])) * danger * level_mult
-		foes.append(_make_enemy(kin, float(cfg["scale"]), float(cfg["reward"]), maxi(1, int(round(float(heir.level) * lv_mult)))))
+		var level := maxi(1, int(round(float(heir.level) * lv_mult)))
+		var own := n < levels.size() and int(levels[n]) > 0   # the open world's creature has a level of its own (GameLevels)
+		if own:
+			level = int(levels[n])
+		var foe := _make_enemy(kin, float(cfg["scale"]), float(cfg["reward"]), level)
+		if own:
+			GameLevels.dress(foe, heir.level)
+		foes.append(foe)
 	if foes.is_empty():
 		return null
 	return _begin_battle(foes, "hunt")
@@ -728,6 +738,8 @@ func finish_battle() -> Array:
 			var heirloom_gold := GameHeirlooms.effect(self, "hunt_gold")   # what the house held before this fight: a legend's own heirloom helps from the next
 			var heirloom_xp := GameHeirlooms.effect(self, "hunt_xp")
 			for e in b.enemies:
+				if bool(e.get("fled", false)):
+					continue   # a foe that ran off is no kill and pays nothing
 				xp += int(e["xp"])
 				gold += int(e["gold"])
 				heir.kills[e["id"]] = int(heir.kills.get(e["id"], 0)) + 1
@@ -756,6 +768,14 @@ func finish_battle() -> Array:
 				heir.clean_streak = 0
 			total_hunts += 1
 			msgs.append(GameMessages.text("life", "victory", {"xp": GameText.num(xp), "gold": GameText.num(gold)}))
+			last_xp_line = ""
+			var cons: Array = []   # the bands of the foes a fight of the open world beat (explicit levels only: hunts have none)
+			for e in b.enemies:
+				if e.has("con") and not bool(e.get("fled", false)) and GameLevels.band_name(str(e["con"])) not in cons:
+					cons.append(GameLevels.band_name(str(e["con"])))
+			if not cons.is_empty():
+				last_xp_line = GameMessages.text("life", "xp_con", {"xp": GameText.num(xp), "band": GameMessages.text("life", "list_comma").join(cons)})
+				msgs.append(last_xp_line)
 			if heir.gain_xp(xp) > 0:
 				msgs.append(GameMessages.text("life", "level_up_named", {"name": heir.name, "level": GameText.num(heir.level)}))
 			msgs.append_array(quest_msgs)
@@ -1086,6 +1106,8 @@ func to_dict() -> Dictionary:
 		out["trials"] = trials
 	if world_seconds > 0.0:   # likewise: only once the clock has run
 		out["world_seconds"] = world_seconds
+	if GameSmoke.active(self):   # only while a smoke pot's cloud burns
+		out["smoke"] = smoke
 	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
 		out["clock_carry"] = clock_carry
 	if not house_titles.is_empty():   # only once earned
@@ -1152,6 +1174,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.achievements = GameAchievements.load_state(d.get("achievements", {}))
 	g.world_event = GameWorldEvents.load_state(d.get("world_event", {}))
 	g.world_seconds = GameDay.load_seconds(d.get("world_seconds", 0.0))
+	g.smoke = GameSmoke.load_state(d.get("smoke", {}), g.world_seconds)
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0
 	g.pending_event = _ints(d.get("pending_event", {}))

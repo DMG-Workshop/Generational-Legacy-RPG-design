@@ -94,8 +94,8 @@ static func offer(_d: GameDynasty, b: GameBattle) -> Dictionary:
 	var foes: Array = []
 	var gold := 0
 	for e in b.enemies:
-		if e.get("boss", false):
-			continue
+		if e.get("boss", false) or e.get("fled", false):
+			continue   # a legend's hoard is its heirloom, and a foe that ran off left nothing
 		gold += int(e["gold"])
 		foes.append({"id": str(e["id"]), "name": str(e["name"]), "carries": carried(e)})
 	if foes.is_empty():
