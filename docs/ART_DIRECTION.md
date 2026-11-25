@@ -65,8 +65,8 @@ outline and accent family):
 - **Icons:** action pictures are 8 by 8 and item pictures 12 by 12, each in one colour with a one-pixel ink outline, drawn at whole-number scale.
 
 **Text.** Ink on parchment (9.7 to 1). Light text on a bar or a slot has an ink outline. Labels in dark crimson (7.6 to 1). Gold
-on crimson is only 4.1 to 1, so ribbon text is the lighter gold `#f4d37a` (5.6 to 1) or at least 18 pixels. A pixel font is
-needed (see the open questions); until then the engine's font is used.
+on crimson is only 4.1 to 1, so ribbon text is the lighter gold `#f4d37a` (5.6 to 1) or at least 18 pixels. Text is set in **Silkscreen** (see Pixel font
+below) where it is crisp, in the engine's font elsewhere.
 
 **Light.** One warm key light from the top left, as in the sprites. Night is a cool tint (the day clock already gives it). Fires,
 forges and lit windows glow. A soft vignette lowers the corners a little. These are overlays, so they cost nothing in the art.
@@ -87,7 +87,7 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
 2. **Panes and panels.** The pane kit and the panels draw with the skin: status, nearby, journal, character, pack, house, shops.
    The title and life screens follow.
 3. **The header, slots and icons.** The action bar, the ring, the thing menu and the item icons get their outlines and frames.
-4. **A pixel font.** Needs a font file under a licence we can ship.
+4. **A pixel font.** Done: Silkscreen, as data (`font` in `skin.json`), with a Plain font accessibility option.
 5. **The world.** Ground tiles with texture and soft edges between kinds, moving water, soft shadows, weather and glow. Sprites
    keep the rules in `docs/ART_STYLE.md`.
 6. **Animation.** Walk and idle frames for figures and creatures, and an animation and effect for each battle action.
@@ -117,7 +117,8 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   The `hud` block of `skin.json` holds the sizes and `UiSkin.validate` checks it, with more contrast pairs for the keys and the gold.
 - **Not built yet:** the title and life screens, icon outlines for items and creatures, panels' own inner boxes (a `Kit.panel` inside a pane
   stays dark), a touch version of the skin, panel buttons in the header (the ring and the Menu slot open the panels), and the pixel font
-  (the engine's font is used; the bar words and the ribbon titles are where it would show most).
+  (done afterwards: see Pixel font).
+- **Pixel font:** Silkscreen (`assets/fonts`, OFL) for ribbon titles, bar words, plate and badge text, buttons, tabs and headings, through `UiSkin.font_for`, `font_size_for`, `dress_font` and `pick`; sizes snap to whole multiples of the font's pixel at the player's text size and fall back to the engine's font where none is near; `body` text never uses it; high contrast takes the bold face; the Plain font option turns it off. `tests/test_game_skin_font.gd`.
 - **Step 2, big panels:** the house, chronicle, shops, quest board, tavern and the skill tree's side column draw with `PanelSkin`
   (`ui/play/panel_skin.gd`) when they are a skinned pane: each row or card is an inset slot with its text on the slot's brown (palette `slot_dim`,
   `slot_good`, `slot_bad`, the `slot` text map, contrast pairs in `skin.json`), prices carry the gold coin, the chronicle's tabs and the
@@ -166,14 +167,17 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   their own look until they are done.
 - **Not built yet:** the action bar and header (the wooden header texture exists but is not drawn), the
   ring and thing menu, icon outlines, panels' own inner boxes (a `Kit.panel` inside a pane stays dark), a touch version of the skin,
-  and the pixel font (the engine's font is used; the bar words and the ribbon titles are where it would show most).
+  and the pixel font (done afterwards: see Pixel font).
 
 The touch layout keeps its current interface until a touch version of the skin is designed (`docs/MOBILE.md`).
 
 ## Open questions
 
-- **Which font?** The game has no font file of its own. A pixel font under the SIL Open Font Licence would do; someone has to pick
-  one that reads well at 13 to 18 pixels and has the accented letters the pseudo-language needs.
+- **Which font?** Decided: **Silkscreen** (Jason Kottke, SIL Open Font License 1.1, from the Google Fonts repository; licence text and
+  README in `assets/fonts/`). A capitals-style 8-pixel font, so it is for short text only: ribbon titles, bar words, plates, badges,
+  buttons, tabs and headings. Paragraphs, the log, tips and tooltips stay in the engine's font (readability). It is crisp at 8, 16 and 24
+  at 100% text size, 16 and 32 at 150% and 32 at 125%; where no crisp size is near the text keeps the engine's font. Still open: a
+  second, lower-case pixel font for longer text (Pixelify Sans or m6x11 are candidates), and sizes for 125%, where phones start.
 - **Where does the art come from?** Code can make the interface and clean generated sprites, as now. A real step up in the
   world's look wants hand-drawn or licensed tiles and figures, which the game can take in place of the generated ones without
   other changes. Generative tools are also a choice, with a licence and a consistency cost; The Shattered Isles' page says it

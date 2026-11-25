@@ -604,6 +604,7 @@ static func dress_title(l: Label) -> void:
 	l.add_theme_color_override("font_color", pal(str(t["text"])))
 	l.add_theme_color_override("font_outline_color", pal(str(t["outline"])))
 	l.add_theme_constant_override("outline_size", int(t["outline_size"]))
+	dress_font(l, "title", int(t["size"]))
 	l.set_meta("skin_done", true)
 
 
@@ -622,6 +623,7 @@ static func dress_button(b: Button, face: String = "slot") -> void:
 		b.add_theme_color_override("font_hover_color", pal("gold_hi"))
 		b.add_theme_color_override("font_pressed_color", pal("gold_hi"))
 		b.add_theme_color_override("font_disabled_color", pal("slot_dim"))   # (quiet but readable on the slot)
+		dress_font(b, "button")
 		b.set_meta("skin_done", true)
 		return
 	var on := bool(b.get_meta("skin_on", false))
@@ -643,6 +645,7 @@ static func dress_button(b: Button, face: String = "slot") -> void:
 	b.add_theme_color_override("font_pressed_color", button_text(face, "pressed"))
 	b.add_theme_color_override("font_hover_pressed_color", button_text(face, "pressed"))
 	b.add_theme_color_override("font_disabled_color", button_text(face, "disabled"))
+	dress_font(b, "button")
 	b.set_meta("skin_done", true)
 	b.set_meta("skin_screen_done", true)
 
@@ -696,6 +699,8 @@ static func dress(n: Node, host: Control, face: String) -> void:
 		n.add_theme_color_override(key, c)
 		if face == "wood" and n is Label:
 			outline(n)
+		if n is Label:
+			dress_heading(n)
 		if n is RichTextLabel:   # BBCode colours in its text are made to read too, whenever the text is set
 			(n as RichTextLabel).draw.connect(func(): _retint_bb.call_deferred(n, face))
 	elif n is Button and n.has_meta("tap_base") and not n.has_meta("skin_keep"):
@@ -924,6 +929,173 @@ static func dress_field(e: LineEdit) -> void:
 	e.set_meta("skin_screen_done", true)
 
 
+# ---------------------------------------------------------------- the pixel font (data "font")
+
+const FONT_ROLES := ["title", "bar", "plate", "badge", "button", "tab", "heading", "body"]
+const FONT_FACES := ["regular", "bold"]
+
+static var _font_memo := {}
+
+
+## The "font" block of the data (empty without one).
+static func font_block() -> Dictionary:
+	var f: Variant = data().get("font", {})
+	return f if typeof(f) == TYPE_DICTIONARY else {}
+
+
+## Whether the pixel font is in use at all: switched on in the data, and not turned off by the Plain font option.
+static func font_on() -> bool:
+	return bool(font_block().get("enabled", false)) and not UiSettings.plain_font()
+
+
+## One of the font files ("regular" or "bold"), loaded once; null when the data names none or the file is missing.
+static func font_file(face: String) -> Font:
+	if _font_memo.has(face):
+		return _font_memo[face]
+	var path := str(font_block().get(face, ""))
+	var f: Font = null
+	if path != "" and ResourceLoader.exists(path):
+		var r: Variant = load(path)
+		if r is FontFile:
+			f = r
+			# square pixels whatever the import settings (the .import files are not kept in the repository)
+			(f as FontFile).antialiasing = TextServer.FONT_ANTIALIASING_NONE
+			(f as FontFile).hinting = TextServer.HINTING_NONE
+			(f as FontFile).subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
+		elif r is Font:
+			f = r
+	_font_memo[face] = f
+	return f
+
+
+static func font_role(role: String) -> Dictionary:
+	var r: Variant = font_block().get("roles", {}).get(role, {})
+	return r if typeof(r) == TYPE_DICTIONARY else {}
+
+
+## The face a role is drawn in: its own, or the high-contrast one when that palette is on.
+static func font_face(role: String) -> String:
+	var face := str(font_role(role).get("face", "regular"))
+	if UiSettings.high_contrast() and str(font_block().get("high_contrast_face", "")) in FONT_FACES:
+		face = str(font_block()["high_contrast_face"])
+	return face
+
+
+## Whether a logical size is crisp at a text size (`scale`, the player's by default): one pixel of the font is then a whole number of
+## screen pixels.
+static func font_crisp(logical: int, scale: float = -1.0) -> bool:
+	var sc := UiSettings.get_scale() if scale <= 0.0 else scale
+	var n := float(logical) * sc / float(maxi(1, int(font_block().get("native", 8))))
+	return logical > 0 and roundf(n) >= 1.0 and absf(n - roundf(n)) < 0.001
+
+
+## The size the pixel font is drawn at for text that asks for `want` in `role`: the crisp size nearest the want, or 0 where the font is
+## not to be used (the Plain font option, a role that keeps the engine's font, a missing file, or no crisp size near enough).
+static func font_size_for(role: String, want: int, scale: float = -1.0) -> int:
+	var spec := font_role(role)
+	if want <= 0 or not font_on() or not bool(spec.get("use", false)) or font_file(font_face(role)) == null:
+		return 0
+	var sc := UiSettings.get_scale() if scale <= 0.0 else scale
+	var fb := font_block()
+	var best := 0
+	for l in range(maxi(1, ceili(float(want) * float(fb.get("min_ratio", 0.7)))), floori(float(want) * float(fb.get("max_ratio", 1.4))) + 1):
+		if not font_crisp(l, sc) or float(l) * sc < float(spec.get("min_px", 0)):
+			continue
+		var d := absi(l - want)
+		var bd := absi(best - want)
+		if best == 0 or d < bd or (d == bd and bool(spec.get("round_up", false))):
+			best = l
+	return best
+
+
+## The pixel font for a role, or null where the engine's stays (see font_size_for for the size to go with it).
+static func font_for(role: String) -> Font:
+	return font_file(font_face(role)) if font_on() and bool(font_role(role).get("use", false)) else null
+
+
+## Font and size for text drawn by hand (draw_string): the pixel font at its crisp size, or `fallback` at `want`.
+static func pick(role: String, want: int, fallback: Font) -> Array:
+	var s := font_size_for(role, want)
+	return [font_for(role), s] if s > 0 else [fallback, want]
+
+
+## Puts a control's text in the pixel font at the crisp size nearest the one it asks for (`want`; its own font size by default), or
+## leaves it in the engine's font (and takes back a pixel font it was given before) where there is none. A button or label whose room
+## turns out too narrow for the words in the pixel font (wider than the engine's) goes back to the engine's font (`_refit`). Returns
+## whether it is pixel text.
+static func dress_font(c: Control, role: String, want: int = 0) -> bool:
+	if want <= 0:
+		want = c.get_theme_font_size("font_size")
+	var text: String = c.get("text") if (c is Button or c is Label) else ""
+	var s := font_size_for(role, want)
+	if s <= 0 or (c.has_meta("skin_unfit") and str(c.get_meta("skin_unfit")) == text):
+		_take_back(c)
+		return false
+	if not c.has_meta("skin_pixel_font"):
+		c.set_meta("skin_orig_size", c.get_theme_font_size("font_size") if c.has_theme_font_size_override("font_size") else -1)
+	c.add_theme_font_override("font", font_for(role))
+	c.add_theme_font_size_override("font_size", s)
+	c.set_meta("skin_set_size", s)
+	var spec := font_role(role)
+	if spec.has("outline") and (c is Label or c is Button or c is TabContainer):
+		c.add_theme_constant_override("outline_size", int(spec["outline"]))
+	c.set_meta("skin_pixel_font", true)
+	c.set_meta("skin_role", role)
+	if not c.has_meta("skin_refit"):
+		c.set_meta("skin_refit", true)
+		if c is Button:
+			c.resized.connect(func(): _refit.call_deferred(c))
+		c.draw.connect(func(): _refit.call_deferred(c))   # (a size or a text set after the layout is looked at when it is first drawn)
+	return true
+
+
+## Gives a control back the engine's font and the size it had.
+static func _take_back(c: Control) -> void:
+	if not c.has_meta("skin_pixel_font"):
+		return
+	c.remove_theme_font_override("font")
+	var o := int(c.get_meta("skin_orig_size", -1))
+	if c.get_theme_font_size("font_size") == int(c.get_meta("skin_set_size", -1)):   # (a size the caller set since stays)
+		if o > 0:
+			c.add_theme_font_size_override("font_size", o)
+		else:
+			c.remove_theme_font_size_override("font_size")
+	c.remove_meta("skin_pixel_font")
+
+
+## A control that is clipped in the pixel font (its words are wider than its room) is put back in the engine's font, which is
+## narrower. It stays so while its text is the same.
+static func _refit(c: Control) -> void:
+	if not is_instance_valid(c) or not c.has_meta("skin_pixel_font") or c.size.x <= 1.0:
+		return
+	if c.get_theme_font_size("font_size") != int(c.get_meta("skin_set_size", -1)):   # a size set since: crisp again
+		c.set_meta("skin_orig_size", c.get_theme_font_size("font_size"))   # (the caller's size is what a fallback goes back to)
+		dress_font(c, str(c.get_meta("skin_role")))
+		return
+	if not (c is Button or c is Label):
+		return
+	if c is Label and (c as Label).get_line_count() > 1:   # it wraps: a paragraph, not a heading
+		c.set_meta("skin_unfit", str(c.get("text")))
+		_take_back(c)
+		return
+	var text := str(c.get("text"))
+	var room := c.size.x
+	if c is Button:
+		room -= c.get_theme_stylebox("normal").get_minimum_size().x
+		if (c as Button).icon != null:
+			room -= (c as Button).icon.get_width() + 4.0
+	var f: Font = c.get_theme_font("font")
+	if f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, c.get_theme_font_size("font_size")).x > room + 0.5:
+		c.set_meta("skin_unfit", text)
+		_take_back(c)
+
+
+## A label that is a heading (large and on one line) in the heading face; body text stays as it is.
+static func dress_heading(l: Label) -> void:
+	if l.autowrap_mode == TextServer.AUTOWRAP_OFF and l.get_theme_font_size("font_size") >= int(font_block().get("heading_min", 99)):
+		dress_font(l, "heading")
+
+
 # ---------------------------------------------------------------- the check
 
 static func _color_ok(v: Variant) -> bool:
@@ -937,7 +1109,7 @@ static func validate(dat: Dictionary = {}) -> Array:
 	var bad: Array = []
 	if d.is_empty():
 		return ["skin.json: missing or not an object"]
-	for k in ["pixel", "shadow", "faces", "title", "pieces", "hud", "icons", "bars", "variants", "text_maps", "contrast"]:
+	for k in ["pixel", "shadow", "faces", "title", "pieces", "hud", "icons", "bars", "variants", "text_maps", "contrast", "font"]:
 		if not d.has(k):
 			bad.append("skin.json: %s is missing" % k)
 	if not bad.is_empty():
@@ -1024,6 +1196,7 @@ static func validate(dat: Dictionary = {}) -> Array:
 				bad.append("skin.json: %s on %s (%s) is %.1f to 1 in %s, needs %.1f" % [pair["fg"], pair["bg"], pair.get("why", ""), got, vn, need])
 	bad.append_array(_validate_screens(d))
 	bad.append_array(_validate_tree(d))
+	bad.append_array(_validate_font(d))
 	return bad
 
 
@@ -1113,6 +1286,62 @@ static func _validate_buttons(d: Dictionary) -> Array:
 				var got := contrast(Color(str(v[str(e[0])])), Color(str(v[str(e[1])])))
 				if got < need:
 					bad.append("skin.json: the text of a %s (%s), %s on %s, is %.1f to 1 in %s, needs %.1f" % [t[0], st, e[0], e[1], got, vn, need])
+	return bad
+
+
+## What is wrong with the pixel font's part of the data ("font"): the files, the size rules, the roles, and the contrast of text in
+## the font (a pixel font's strokes are thin, so these figures are asked for on their own, in both palettes).
+static func _validate_font(d: Dictionary) -> Array:
+	var bad: Array = []
+	var f: Variant = d.get("font")
+	if typeof(f) != TYPE_DICTIONARY:
+		return ["skin.json: font must be an object"]
+	if typeof(f.get("enabled")) != TYPE_BOOL:
+		bad.append("skin.json: font.enabled must be true or false")
+	for k in ["regular", "bold", "licence"]:
+		var path := str(f.get(k, ""))
+		if path == "" or not path.begins_with("res://") or not (ResourceLoader.exists(path) if k != "licence" else FileAccess.file_exists(path)):
+			bad.append("skin.json: font.%s must name a file that exists" % k)
+	if str(f.get("regular", "")).get_extension().to_lower() not in ["ttf", "otf"] or str(f.get("bold", "")).get_extension().to_lower() not in ["ttf", "otf"]:
+		bad.append("skin.json: font.regular and font.bold must be .ttf or .otf files")
+	if typeof(f.get("licence")) == TYPE_STRING and FileAccess.file_exists(str(f["licence"])) and FileAccess.get_file_as_string(str(f["licence"])).length() < 200:
+		bad.append("skin.json: font.licence is not a licence text")
+	var nat: Variant = f.get("native")
+	if typeof(nat) not in [TYPE_INT, TYPE_FLOAT] or float(nat) < 1.0 or float(nat) != floorf(float(nat)):
+		bad.append("skin.json: font.native must be a whole number, at least 1 (the font's pixels to the em)")
+	var lo: Variant = f.get("min_ratio")
+	var hi: Variant = f.get("max_ratio")
+	if typeof(lo) not in [TYPE_INT, TYPE_FLOAT] or typeof(hi) not in [TYPE_INT, TYPE_FLOAT] or not (float(lo) > 0.0 and float(lo) <= 1.0 and float(hi) >= 1.0 and float(hi) <= 2.0):
+		bad.append("skin.json: font.min_ratio must be above 0 and at most 1, and font.max_ratio from 1 to 2")
+	if typeof(f.get("heading_min")) not in [TYPE_INT, TYPE_FLOAT] or float(f.get("heading_min", 0)) < 1.0:
+		bad.append("skin.json: font.heading_min must be a size, at least 1")
+	if str(f.get("high_contrast_face", "")) not in FONT_FACES:
+		bad.append("skin.json: font.high_contrast_face must be regular or bold")
+	var roles: Variant = f.get("roles")
+	if typeof(roles) != TYPE_DICTIONARY:
+		bad.append("skin.json: font.roles must be an object")
+	else:
+		for r in FONT_ROLES:
+			var spec: Variant = (roles as Dictionary).get(r)
+			if typeof(spec) != TYPE_DICTIONARY or typeof(spec.get("use")) != TYPE_BOOL or str(spec.get("face", "")) not in FONT_FACES or typeof(spec.get("min_px")) not in [TYPE_INT, TYPE_FLOAT] or float(spec.get("min_px", -1)) < 1.0:
+				bad.append("skin.json: font.roles.%s needs use (true or false), face (regular or bold) and min_px (at least 1)" % r)
+		if typeof((roles as Dictionary).get("body")) == TYPE_DICTIONARY and bool(roles["body"].get("use", false)):
+			bad.append("skin.json: font.roles.body must stay off: long text is read in the engine's font")
+	for pair in f.get("contrast", []):
+		if typeof(pair) != TYPE_DICTIONARY or not pair.has("fg") or not pair.has("bg") or not pair.has("min") or not pair.has("min_hc"):
+			bad.append("skin.json: a font contrast pair needs fg, bg, min and min_hc")
+			continue
+		for vn in d["variants"]:
+			var v: Dictionary = d["variants"][vn]
+			if not v.has(str(pair["fg"])) or not v.has(str(pair["bg"])):
+				bad.append("skin.json: font contrast pair %s on %s names a colour %s lacks" % [pair["fg"], pair["bg"], vn])
+				continue
+			var need := float(pair["min_hc"] if vn == "high_contrast" else pair["min"])
+			var got := contrast(Color(str(v[str(pair["fg"])])), Color(str(v[str(pair["bg"])])))
+			if got < need:
+				bad.append("skin.json: font text %s on %s (%s) is %.1f to 1 in %s, needs %.1f" % [pair["fg"], pair["bg"], pair.get("why", ""), got, vn, need])
+	if not (f.get("contrast", []) as Array).size() >= 1:
+		bad.append("skin.json: font.contrast must list the pairs its text is held to")
 	return bad
 
 

@@ -130,7 +130,7 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(TMP)
 	GameDynasty.save_path = TMP + "save.json"
 	UiSettings.path = TMP + "settings.cfg"
-	UiSettings.scale = 1.0
+	UiSettings.scale = float(OS.get_environment("SHOT_SCALE")) if OS.get_environment("SHOT_SCALE") != "" else 1.0
 	TouchHint.finger = false
 	UiSettings.set_access("reduced_motion", true)
 	var made: Array = []
