@@ -52,17 +52,7 @@ static func button(host: Control, text: String, callback: Callable, min_size: Ve
 
 
 static func dress_button(b: Button) -> void:
-	b.add_theme_stylebox_override("normal", UiSkin.button_box("normal"))
-	b.add_theme_stylebox_override("hover", UiSkin.button_box("hover"))
-	b.add_theme_stylebox_override("hover_pressed", UiSkin.button_box("pressed"))
-	b.add_theme_stylebox_override("pressed", UiSkin.button_box("pressed"))
-	b.add_theme_stylebox_override("disabled", UiSkin.button_box("disabled"))
-	b.add_theme_color_override("font_color", UiSkin.pal("ink"))
-	b.add_theme_color_override("font_hover_color", UiSkin.pal("crimson_dk"))
-	b.add_theme_color_override("font_pressed_color", UiSkin.pal("ink"))
-	b.add_theme_color_override("font_hover_pressed_color", UiSkin.pal("ink"))
-	b.add_theme_color_override("font_disabled_color", UiSkin.pal("ink_dim"))
-	b.set_meta("skin_done", true)
+	UiSkin.dress_button(b, "parch")
 
 
 ## A price: a gold coin and the number (the words "gold" are left to the label round it). Unskinned: just the number in gold.
@@ -115,16 +105,16 @@ static func retint(host: Control, n: Node) -> void:
 static func tabs(host: Control, tc: TabContainer) -> void:
 	if not on(host):
 		return
-	tc.add_theme_stylebox_override("tab_unselected", UiSkin.tab_box("off"))
+	tc.add_theme_stylebox_override("tab_unselected", UiSkin.tab_box("normal"))
 	tc.add_theme_stylebox_override("tab_hovered", UiSkin.tab_box("hover"))
 	tc.add_theme_stylebox_override("tab_selected", UiSkin.tab_box("on"))
-	tc.add_theme_stylebox_override("tab_disabled", UiSkin.tab_box("off"))
+	tc.add_theme_stylebox_override("tab_disabled", UiSkin.tab_box("normal"))
 	tc.add_theme_stylebox_override("tab_focus", StyleBoxEmpty.new())
 	tc.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	tc.add_theme_color_override("font_unselected_color", UiSkin.pal("wood_text"))
-	tc.add_theme_color_override("font_hovered_color", UiSkin.pal("wood_text"))
-	tc.add_theme_color_override("font_selected_color", UiSkin.pal("gold_hi"))
-	tc.add_theme_color_override("font_disabled_color", UiSkin.pal("wood_dim"))
+	tc.add_theme_color_override("font_unselected_color", UiSkin.tab_text("normal"))
+	tc.add_theme_color_override("font_hovered_color", UiSkin.tab_text("hover"))
+	tc.add_theme_color_override("font_selected_color", UiSkin.tab_text("on"))
+	tc.add_theme_color_override("font_disabled_color", UiSkin.tab_text("disabled"))
 	tc.add_theme_color_override("font_outline_color", UiSkin.pal("ink"))
 	tc.add_theme_constant_override("outline_size", 2)
 	tc.add_theme_constant_override("side_margin", 0)
@@ -134,16 +124,16 @@ static func tabs(host: Control, tc: TabContainer) -> void:
 static func tab_button(host: Control, b: Button) -> void:
 	if not on(host):
 		return
-	b.add_theme_stylebox_override("normal", UiSkin.tab_box("off"))
+	b.add_theme_stylebox_override("normal", UiSkin.tab_box("normal"))
 	b.add_theme_stylebox_override("hover", UiSkin.tab_box("hover"))
 	b.add_theme_stylebox_override("pressed", UiSkin.tab_box("on"))
 	b.add_theme_stylebox_override("hover_pressed", UiSkin.tab_box("on"))
-	b.add_theme_stylebox_override("disabled", UiSkin.tab_box("off"))
-	b.add_theme_color_override("font_color", UiSkin.pal("wood_text"))
-	b.add_theme_color_override("font_hover_color", UiSkin.pal("wood_text"))
-	b.add_theme_color_override("font_pressed_color", UiSkin.pal("gold_hi"))
-	b.add_theme_color_override("font_hover_pressed_color", UiSkin.pal("gold_hi"))
-	b.add_theme_color_override("font_disabled_color", UiSkin.pal("wood_dim"))
+	b.add_theme_stylebox_override("disabled", UiSkin.tab_box("normal"))
+	b.add_theme_color_override("font_color", UiSkin.tab_text("normal"))
+	b.add_theme_color_override("font_hover_color", UiSkin.tab_text("hover"))
+	b.add_theme_color_override("font_pressed_color", UiSkin.tab_text("on"))
+	b.add_theme_color_override("font_hover_pressed_color", UiSkin.tab_text("on"))
+	b.add_theme_color_override("font_disabled_color", UiSkin.tab_text("disabled"))
 	b.add_theme_color_override("font_outline_color", UiSkin.pal("ink"))
 	b.add_theme_constant_override("outline_size", 2)
 	b.set_meta("skin_done", true)

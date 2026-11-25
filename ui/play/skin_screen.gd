@@ -103,7 +103,7 @@ static func _dress(n: Node, host: Control) -> void:
 	elif n is LineEdit:
 		UiSkin.dress_field(n)
 	elif n is Button and not (n is CheckBox) and not n.has_meta("skin_keep"):
-		UiSkin.dress_screen_button(n)
+		UiSkin.dress_button(n, "wood")
 	elif n is HSeparator and face_of(n, host) == "parch":
 		n.add_theme_stylebox_override("separator", UiSkin.rule_box())
 	elif n is ProgressBar and n.has_meta("skin_bar_kind") and not n.has_meta("skin_bar"):

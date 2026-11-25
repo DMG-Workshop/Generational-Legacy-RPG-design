@@ -80,7 +80,7 @@ static func dress(n: Node) -> void:
 		return
 	if n is Button:
 		if n.has_meta("tap_base") and not n.has_meta("skin_keep") and not _in_strip(n) and (face_of(n) != null or _under_meta(n, BUTTONS_META)):
-			UiSkin.dress_battle_button(n)
+			UiSkin.dress_button(n, "parch")
 		return
 	var face := face_of(n)
 	if face == null:

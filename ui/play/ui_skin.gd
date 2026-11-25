@@ -14,6 +14,9 @@ const PALETTE_KEYS := ["ink", "brown", "parch", "parch_hi", "parch_lo", "wood", 
 		"ink_good_cb", "ink_bad_cb", "wood_text", "wood_dim", "wood_good", "wood_bad", "wood_blue", "wood_accent", "wood_good_cb",
 		"wood_bad_cb", "slot_dim", "slot_good", "slot_bad"]
 const TRIPLES := ["hp", "mp", "carry"]
+const BUTTON_FACES := ["parch", "wood"]
+const BUTTON_STATES := ["normal", "hover", "pressed", "disabled", "on"]
+const TAB_STATES := ["normal", "hover", "on", "disabled"]
 
 static var _cache: Dictionary = {}
 static var _memo := {}   # every texture and box made, kept alive
@@ -262,36 +265,6 @@ static func inset_tex(w: int, h: int, lit: bool = false) -> ImageTexture:
 	return _keep(k, _tex(i))
 
 
-## A gold-studded button on parchment: a lit face with an ink outline and a gold stud in each corner. States: "normal", "hover"
-## (a gold frame and lit studs), "pressed" (a shaded face, the bevel turned over) and "disabled" (flat, no studs). (Added with the
-## battle screen's skin; if another branch adds a `button` piece too, the two are the same job: keep one.)
-static func stud_tex(w: int, h: int, state: String = "normal") -> ImageTexture:
-	var k := _key("stud", "%d,%d,%s" % [w, h, state])
-	if _memo.has(k):
-		return _memo[k]
-	var m := int(piece("stud")["margin"])
-	var lw := maxi(_logical(w), 2 * m + 1)
-	var lh := maxi(_logical(h), 2 * m + 1)
-	var face := pal("parch_lo") if state == "pressed" else (pal("parch") if state == "disabled" else pal("parch_hi"))
-	var i := _img(lw, lh, face)
-	var hi := pal("parch_lo") if state == "pressed" else pal("parch_hi")
-	var lo := pal("parch_hi") if state == "pressed" else pal("parch_lo")
-	if state != "disabled":
-		_rect(i, 1, 1, lw - 2, 1, hi)
-		_rect(i, 1, 1, 1, lh - 2, hi)
-		_rect(i, 1, lh - 2, lw - 2, 1, lo)
-		_rect(i, lw - 2, 1, 1, lh - 2, lo)
-	_ring(i, 0, pal("brown") if state == "disabled" else pal("ink"))
-	if state == "hover" or state == "pressed":
-		_ring(i, 1, pal("gold"))
-		_ring(i, 2, pal("gold_dk"))
-	if state != "disabled":
-		var lit := pal("gold_hi") if state == "hover" else pal("gold")
-		for pt in [Vector2i(2, 2), Vector2i(lw - 3, 2), Vector2i(2, lh - 3), Vector2i(lw - 3, lh - 3)]:
-			i.set_pixel(pt.x, pt.y, lit)
-	return _keep(k, _tex(i))
-
-
 ## A segmented bar: an ink frame, a dark track and a fill with a lit top and a shaded bottom, ticked every few pixels.
 ## `colors` is the name of a palette triple (light, mid, shade): "hp", "mp" or "carry".
 static func bar_tex(w: int, h: int, frac: float, colors: String) -> ImageTexture:
@@ -378,45 +351,100 @@ static func badge_tex(w: int, h: int, lit: bool = false) -> ImageTexture:
 	return _keep(k, _tex(i))
 
 
-## A raised key, as on a parchment page: lit top and left, shaded bottom and right, an ink outline. `state`: "normal", "hover" (a gold
-## line inside the outline), "pressed" (sunk, shaded) or "disabled" (flat, a brown outline). (If the screens' own button set lands first,
-## the integrator keeps one of the two.)
-static func button_tex(w: int, h: int, state: String) -> ImageTexture:
-	var k := _key("button", "%d,%d,%s" % [w, h, state])
+## The button family (one piece, `button`, in two faces; docs/ART_DIRECTION.md): a key with a lit top and left, a shaded bottom and
+## right, an ink outline and a stud in each corner. `face` "parch" is a parchment key for a button on parchment; "wood" is a wooden
+## plank for a button on wood or the night sky. `state`: "normal"; "hover" (a gold frame); "pressed" (sunk and shaded, in the gold
+## frame); "disabled" (flat and dull, no studs on parchment); "on" (chosen: crimson inside the gold frame).
+static func button_tex(w: int, h: int, state: String, face: String = "parch") -> ImageTexture:
+	var k := _key("button", "%s,%s,%d,%d" % [face, state, w, h])
 	if _memo.has(k):
 		return _memo[k]
-	var m := int(piece("button")["margin"])
-	var lw := maxi(_logical(w), 2 * m + 1)
-	var lh := maxi(_logical(h), 2 * m + 1)
-	var fill := pal("parch_hi") if state == "hover" else (pal("parch_lo") if state == "pressed" else pal("parch"))
+	var p := piece("button")
+	var m := int(p["margin"])
+	var lw := maxi(_logical(w), 2 * m + 2)
+	var lh := maxi(_logical(h), 2 * m + 2)
+	var wood := face == "wood"
+	var fill := pal("wood") if wood else pal("parch_hi")
+	var lit := pal("wood_hi") if wood else pal("parch_hi")
+	var shade := pal("wood_lo") if wood else pal("parch_lo")
+	var stud := pal("gold")
+	var stud_lo := pal("gold_dk")
+	var outline := pal("ink")
+	var frame := false
+	match state:
+		"hover":
+			frame = true
+			if wood:
+				fill = pal("wood_hi")
+				lit = pal("wood_hi").lightened(0.15)
+			stud = pal("gold_hi")
+		"pressed":
+			frame = true
+			fill = pal("wood_lo") if wood else pal("parch_lo")
+			lit = fill if wood else pal("parch_lo")
+			shade = pal("wood_lo").darkened(0.3) if wood else pal("parch_hi")
+		"disabled":
+			fill = pal("wood_lo") if wood else pal("parch")
+			lit = fill
+			shade = fill
+			stud = pal("wood_hi")
+			stud_lo = pal("wood_hi")
+			if not wood:
+				outline = pal("brown")
+		"on":
+			frame = true
+			fill = pal("crimson")
+			lit = pal("crimson_hi")
+			shade = pal("crimson_dk")
 	var i := _img(lw, lh, fill)
-	if state == "normal" or state == "hover":
-		_rect(i, 1, 1, lw - 2, 1, pal("parch_hi"))
-		_rect(i, 1, 1, 1, lh - 2, pal("parch_hi"))
-		_rect(i, 1, lh - 2, lw - 2, 1, pal("parch_lo"))
-		_rect(i, lw - 2, 1, 1, lh - 2, pal("parch_lo"))
-	elif state == "pressed":
-		_rect(i, 1, 1, lw - 2, 1, pal("brown"))
-		_rect(i, 1, 1, 1, lh - 2, pal("brown"))
-	if state == "hover":
+	_rect(i, 1, 1, lw - 2, 1, lit)
+	_rect(i, 1, 1, 1, lh - 2, lit)
+	_rect(i, 1, lh - 2, lw - 2, 1, shade)
+	_rect(i, lw - 2, 1, 1, lh - 2, shade)
+	_ring(i, 0, outline)
+	if frame:
 		_ring(i, 1, pal("gold"))
-		_ring(i, 2, pal("gold_hi"))
-	_ring(i, 0, pal("brown") if state == "disabled" else pal("ink"))
+		_ring(i, 2, pal("gold_dk"))
+	if not (state == "disabled" and not wood):
+		var fs: Dictionary = p["faces"][face if p["faces"].has(face) else "parch"]
+		var st := int(fs["stud"])
+		var at := int(fs["stud_at"])
+		for pt in [Vector2i(at, at), Vector2i(lw - at - st, at), Vector2i(at, lh - at - st), Vector2i(lw - at - st, lh - at - st)]:
+			_rect(i, pt.x, pt.y, st, st, stud)
+			if st > 1:
+				i.set_pixel(pt.x + st - 1, pt.y + st - 1, stud_lo)
 	return _keep(k, _tex(i))
 
 
-## A wooden tab: ink outline, planks, a lit top edge. `state`: "off", "hover" or "on" (the open one: lighter wood, a gold frame).
+## The ring a button shows while the keyboard or a pad is on it: gold, two pixels thick, nothing inside, over an ink line.
+static func button_focus_tex(w: int, h: int) -> ImageTexture:
+	var k := _key("focus", "%d,%d" % [w, h])
+	if _memo.has(k):
+		return _memo[k]
+	var m := int(piece("button")["focus"]["margin"])
+	var lw := maxi(_logical(w), 2 * m + 1)
+	var lh := maxi(_logical(h), 2 * m + 1)
+	var i := _img(lw, lh, Color(0, 0, 0, 0))
+	_ring(i, 0, pal("ink"))
+	_ring(i, 1, pal("gold_hi"))
+	_ring(i, 2, pal("gold_hi"))
+	return _keep(k, _tex(i))
+
+
+## A wooden tab: ink outline, planks, a lit top edge. `state`: "normal", "hover" or "on" (the open one: lighter wood, a gold frame);
+## "disabled" looks as "normal". ("off" is an older name for "normal".)
 static func tab_tex(w: int, h: int, state: String) -> ImageTexture:
-	var k := _key("tab", "%d,%d,%s" % [w, h, state])
+	var st := "normal" if state in ["off", "disabled"] else state
+	var k := _key("tab", "%d,%d,%s" % [w, h, st])
 	if _memo.has(k):
 		return _memo[k]
 	var m := int(piece("tab")["margin"])
 	var lw := maxi(_logical(w), 2 * m + 1)
 	var lh := maxi(_logical(h), 2 * m + 1)
-	var i := _img(lw, lh, pal("wood") if state == "off" else pal("wood_hi"))
-	_rect(i, 1, 1, lw - 2, 1, pal("wood_hi") if state == "off" else pal("gold_hi"))
+	var i := _img(lw, lh, pal("wood") if st == "normal" else pal("wood_hi"))
+	_rect(i, 1, 1, lw - 2, 1, pal("wood_hi") if st == "normal" else pal("gold_hi"))
 	_rect(i, 1, lh - 2, lw - 2, 1, pal("wood_lo"))
-	if state == "on":
+	if st == "on":
 		_ring(i, 1, pal("gold"))
 		_rect(i, 2, 2, lw - 4, 1, pal("gold_hi"))
 	_ring(i, 0, pal("ink"))
@@ -522,32 +550,38 @@ static func dress_popup(m: PopupMenu) -> void:
 	m.add_theme_constant_override("outline_size", 0)
 
 
-static func button_box(state: String) -> StyleBoxTexture:
+## A button's picture as a nine patch: `state` as in `button_tex`, `face` "parch" (the default) or "wood".
+static func button_box(state: String, face: String = "parch") -> StyleBoxTexture:
 	var p := piece("button")
 	var b: Array = p["base"]
-	return _nine("button", button_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
+	return _nine("button", button_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state, face), int(p["margin"]), p["content"], face + "," + state)
 
 
 static func tab_box(state: String) -> StyleBoxTexture:
 	var p := piece("tab")
 	var b: Array = p["base"]
-	return _nine("tab", tab_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
+	var st := "normal" if state in ["off", "disabled"] else state
+	return _nine("tab", tab_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), st), int(p["margin"]), p["content"], st)
 
 
-static func stud_box(state: String = "normal") -> StyleBoxTexture:
-	var p := piece("stud")
+## The ring the keyboard's or a pad's focus draws round a button of either face: gold over ink, never only a colour change.
+static func button_focus() -> StyleBoxTexture:
+	var p: Dictionary = piece("button")["focus"]
 	var b: Array = p["base"]
-	return _nine("stud", stud_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
+	var sb := _nine("focus", button_focus_tex(int(b[0]) * pixel(), int(b[1]) * pixel()), int(p["margin"]), [0, 0])
+	sb.draw_center = false
+	sb.set_expand_margin_all(float(int(p["expand"]) * pixel()))
+	return sb
 
 
-## The ring a gamepad or the keyboard's focus draws round a skinned button: gold, never only a colour change.
-static func button_focus() -> StyleBoxFlat:
-	var f := StyleBoxFlat.new()
-	f.draw_center = false
-	f.set_border_width_all(2 * pixel())
-	f.border_color = pal("gold_hi")
-	f.set_expand_margin_all(float(pixel()))
-	return f
+## The colour of a button's text: `face` "parch" or "wood", `state` as in `button_tex` (from the data's `button.text`).
+static func button_text(face: String, state: String) -> Color:
+	return pal(str(piece("button")["text"][face][state][0]))
+
+
+## The colour of a tab's text: "normal", "hover", "on" or "disabled".
+static func tab_text(state: String) -> Color:
+	return pal(str(piece("tab")["text"]["normal" if state == "off" else state][0]))
 
 
 ## The face of a pane: parchment, or wood.
@@ -573,30 +607,44 @@ static func dress_title(l: Label) -> void:
 	l.set_meta("skin_done", true)
 
 
-## A button as a slot: dark inside, gold when pointed at.
-static func dress_button(b: Button) -> void:
-	b.add_theme_stylebox_override("normal", inset_box(false))
-	b.add_theme_stylebox_override("hover", inset_box(true))
-	b.add_theme_stylebox_override("pressed", inset_box(true))
-	b.add_theme_stylebox_override("disabled", inset_box(false))
-	b.add_theme_color_override("font_color", pal("parch_hi"))
-	b.add_theme_color_override("font_hover_color", pal("gold_hi"))
-	b.add_theme_color_override("font_pressed_color", pal("gold_hi"))
-	b.add_theme_color_override("font_disabled_color", pal("slot_dim"))   # (quiet but readable on the slot)
-	b.set_meta("skin_done", true)
-
-
-## A button of the battle screen's parchment panels: a gold-studded button, lit gold when pointed at or focused, ink text.
-static func dress_battle_button(b: Button) -> void:
-	for st in ["normal", "hover", "pressed", "disabled"]:
-		b.add_theme_stylebox_override(st, stud_box(st))
+## A button as a slot: dark inside, gold when pointed at (`face` "slot", the default: what a kit button under a pane becomes), or
+## a key of the button family: `face` "parch" (a parchment key, ink text) or "wood" (a wooden plank, light text). The family's keys
+## show gold when pointed at, crimson when chosen (the meta `skin_on`; see `mark_on`), and a gold ring while focused. A text colour a
+## wood button already carries is read as the kit's light-on-dark one and put on wood. The tests and `ui/play/skin_screen.gd`,
+## `battle_skin.gd` and `panel_skin.gd` call this.
+static func dress_button(b: Button, face: String = "slot") -> void:
+	if face != "parch" and face != "wood":
+		b.add_theme_stylebox_override("normal", inset_box(false))
+		b.add_theme_stylebox_override("hover", inset_box(true))
+		b.add_theme_stylebox_override("pressed", inset_box(true))
+		b.add_theme_stylebox_override("disabled", inset_box(false))
+		b.add_theme_color_override("font_color", pal("parch_hi"))
+		b.add_theme_color_override("font_hover_color", pal("gold_hi"))
+		b.add_theme_color_override("font_pressed_color", pal("gold_hi"))
+		b.add_theme_color_override("font_disabled_color", pal("slot_dim"))   # (quiet but readable on the slot)
+		b.set_meta("skin_done", true)
+		return
+	var on := bool(b.get_meta("skin_on", false))
+	b.set_meta("skin_button_face", face)
+	b.add_theme_stylebox_override("normal", button_box("on" if on else "normal", face))
+	b.add_theme_stylebox_override("hover", button_box("on" if on else "hover", face))
+	b.add_theme_stylebox_override("pressed", button_box("pressed", face))
+	b.add_theme_stylebox_override("hover_pressed", button_box("pressed", face))
+	b.add_theme_stylebox_override("disabled", button_box("disabled", face))
 	b.add_theme_stylebox_override("focus", button_focus())
-	b.add_theme_color_override("font_color", pal("ink"))
-	b.add_theme_color_override("font_hover_color", pal("crimson_dk"))
-	b.add_theme_color_override("font_focus_color", pal("crimson_dk"))
-	b.add_theme_color_override("font_pressed_color", pal("ink"))
-	b.add_theme_color_override("font_disabled_color", pal("ink_dim"))
+	var base := button_text(face, "on" if on else "normal")
+	if face == "wood" and not on and not b.has_meta("skin_font") and b.has_theme_color_override("font_color"):
+		base = on_face(b.get_theme_color("font_color"), "wood")
+	b.set_meta("skin_font", true)
+	var hover := button_text(face, "on" if on else "hover")
+	b.add_theme_color_override("font_color", base)
+	b.add_theme_color_override("font_hover_color", hover)
+	b.add_theme_color_override("font_focus_color", hover)
+	b.add_theme_color_override("font_pressed_color", button_text(face, "pressed"))
+	b.add_theme_color_override("font_hover_pressed_color", button_text(face, "pressed"))
+	b.add_theme_color_override("font_disabled_color", button_text(face, "disabled"))
 	b.set_meta("skin_done", true)
+	b.set_meta("skin_screen_done", true)
 
 
 ## The shadow that falls down and to the right of a pane, behind its face.
@@ -746,71 +794,6 @@ static func night(key: String) -> Color:
 	return Color(str(screens()["night"][variant()][key]))
 
 
-## One button picture: "normal", "hover", "pressed", "disabled" or "on" (chosen). Wood with a lit top and left, an ink outline and a
-## gold stud in each corner; pointed at, a gold frame; chosen, crimson inside the gold frame; shut, flat and dark with dull studs.
-static func plank_tex(state: String, w: int, h: int) -> ImageTexture:
-	var k := _key("plank", "%s,%d,%d" % [state, w, h])
-	if _memo.has(k):
-		return _memo[k]
-	var p: Dictionary = screens()["plank"]
-	var m := int(p["margin"])
-	var lw := maxi(_logical(w), 2 * m + 2)
-	var lh := maxi(_logical(h), 2 * m + 2)
-	var face := pal("wood")
-	var lit := pal("wood_hi")
-	var shade := pal("wood_lo")
-	var stud := pal("gold")
-	var stud_lo := pal("gold_dk")
-	match state:
-		"hover":
-			face = pal("wood_hi")
-			lit = pal("wood_hi").lightened(0.15)
-		"pressed":
-			face = pal("wood_lo")
-			lit = pal("wood_lo")
-			shade = pal("wood_lo").darkened(0.3)
-		"disabled":
-			face = pal("wood_lo")
-			lit = pal("wood_lo")
-			shade = pal("wood_lo")
-			stud = pal("wood_hi")
-			stud_lo = pal("wood_hi")
-		"on":
-			face = pal("crimson")
-			lit = pal("crimson_hi")
-			shade = pal("crimson_dk")
-	var i := _img(lw, lh, face)
-	_rect(i, 1, 1, lw - 2, 1, lit)
-	_rect(i, 1, 1, 1, lh - 2, lit)
-	_rect(i, 1, lh - 2, lw - 2, 1, shade)
-	_rect(i, lw - 2, 1, 1, lh - 2, shade)
-	var st := int(p["stud"])
-	var at := int(p["stud_at"])
-	for pt in [Vector2i(at, at), Vector2i(lw - at - st, at), Vector2i(at, lh - at - st), Vector2i(lw - at - st, lh - at - st)]:
-		_rect(i, pt.x, pt.y, st, st, stud)
-		i.set_pixel(pt.x + st - 1, pt.y + st - 1, stud_lo)
-	_ring(i, 0, pal("ink"))
-	if state == "hover" or state == "pressed" or state == "on":
-		_ring(i, 0, pal("gold_dk"))
-		_ring(i, 1, pal("gold"))
-	return _keep(k, _tex(i))
-
-
-## The ring a button shows while the keyboard or a pad is on it: gold, two pixels thick, nothing inside.
-static func focus_tex(w: int, h: int) -> ImageTexture:
-	var k := _key("focus", "%d,%d" % [w, h])
-	if _memo.has(k):
-		return _memo[k]
-	var m := int(screens()["focus"]["margin"])
-	var lw := maxi(_logical(w), 2 * m + 1)
-	var lh := maxi(_logical(h), 2 * m + 1)
-	var i := _img(lw, lh, Color(0, 0, 0, 0))
-	_ring(i, 0, pal("ink"))
-	_ring(i, 1, pal("gold_hi"))
-	_ring(i, 2, pal("gold_hi"))
-	return _keep(k, _tex(i))
-
-
 ## A text field: light parchment inside, a dark edge top and left, a shaded one bottom and right.
 static func field_tex(w: int, h: int) -> ImageTexture:
 	var k := _key("field", "%d,%d" % [w, h])
@@ -896,21 +879,6 @@ static func hills_tex() -> ImageTexture:
 	return _keep(k, _tex(i))
 
 
-static func plank_box(state: String) -> StyleBoxTexture:
-	var p: Dictionary = screens()["plank"]
-	var b: Array = p["base"]
-	return _nine("splank", plank_tex(state, int(b[0]) * pixel(), int(b[1]) * pixel()), int(p["margin"]), p["content"], state)
-
-
-static func focus_box() -> StyleBoxTexture:
-	var p: Dictionary = screens()["focus"]
-	var b: Array = p["base"]
-	var sb := _nine("sfocus", focus_tex(int(b[0]) * pixel(), int(b[1]) * pixel()), int(p["margin"]), [0, 0])
-	sb.draw_center = false
-	sb.set_expand_margin_all(float(int(p["expand"]) * pixel()))
-	return sb
-
-
 static func field_box() -> StyleBoxTexture:
 	var p: Dictionary = screens()["field"]
 	var b: Array = p["base"]
@@ -934,34 +902,13 @@ static func rule_box() -> StyleBoxLine:
 	return _keep(k, l)
 
 
-## A button of a full-screen screen: a wooden plank with studs, lit gold when pointed at, crimson when chosen (the meta `skin_on`).
-## A text colour the button already carries is read as the kit's light-on-dark one and put on wood; a shut button's text stays readable.
-static func dress_screen_button(b: Button) -> void:
-	var on := bool(b.get_meta("skin_on", false))
-	b.add_theme_stylebox_override("normal", plank_box("on" if on else "normal"))
-	b.add_theme_stylebox_override("hover", plank_box("on" if on else "hover"))
-	b.add_theme_stylebox_override("pressed", plank_box("pressed"))
-	b.add_theme_stylebox_override("disabled", plank_box("disabled"))
-	b.add_theme_stylebox_override("focus", focus_box())
-	var base := pal("gold_hi") if on else pal("wood_text")
-	if not on and not b.has_meta("skin_font") and b.has_theme_color_override("font_color"):
-		base = on_face(b.get_theme_color("font_color"), "wood")
-	b.set_meta("skin_font", true)
-	b.add_theme_color_override("font_color", base)
-	b.add_theme_color_override("font_hover_color", pal("gold_hi") if on else pal("wood_accent"))
-	b.add_theme_color_override("font_pressed_color", pal("gold_hi"))
-	b.add_theme_color_override("font_focus_color", pal("gold_hi") if on else pal("wood_accent"))
-	b.add_theme_color_override("font_disabled_color", pal("wood_dim"))
-	b.set_meta("skin_done", true)
-	b.set_meta("skin_screen_done", true)
-
-
-## Marks a button of a full-screen screen as chosen (crimson, gold text) or not. Does nothing where the screens are not skinned.
+## Marks a button of the family as chosen (crimson, gold text) or not, on the face it wears (wood if it has none yet). Does nothing
+## where the screens are not skinned.
 static func mark_on(b: Button, on: bool) -> void:
 	if not screen_active(b):
 		return
 	b.set_meta("skin_on", on)
-	dress_screen_button(b)
+	dress_button(b, str(b.get_meta("skin_button_face", "wood")))
 
 
 ## A text box of a full-screen screen: light parchment, ink text.
@@ -1023,11 +970,7 @@ static func validate(dat: Dictionary = {}) -> Array:
 				bad.append("skin.json: hud.%s must be a number above 0" % f)
 		if bad.is_empty() and (int(d["hud"]["slot_px"]) % int(d["pixel"]) != 0 or int(d["hud"]["slot_px"]) < 9 * int(d["pixel"])):
 			bad.append("skin.json: hud.slot_px must be a whole multiple of the pixel, wide enough for a slot's frame and its picture")
-	if (d["pieces"] as Dictionary).has("stud"):   # a piece later screens add: checked when it is there
-		var bp: Variant = d["pieces"]["stud"]
-		var bb: Variant = bp.get("base") if typeof(bp) == TYPE_DICTIONARY else null
-		if typeof(bb) != TYPE_ARRAY or (bb as Array).size() != 2 or float(bp.get("margin", 0)) * 2.0 + 1.0 > minf(float(bb[0]), float(bb[1])) or typeof(bp.get("content")) != TYPE_ARRAY:
-			bad.append("skin.json: pieces.stud needs a base [w, h], a margin that leaves a middle, and a content [x, y]")
+	bad.append_array(_validate_buttons(d))
 	for k in ["bar"]:
 		for f in ["height", "segment_every", "segment_at", "icon_scale", "text_size"]:
 			if not (d["pieces"][k] as Dictionary).has(f) or float(d["pieces"][k][f]) < 1.0:
@@ -1083,13 +1026,72 @@ static func validate(dat: Dictionary = {}) -> Array:
 	return bad
 
 
+## What is wrong with the button family's data: the `button` and `tab` pieces (a size that leaves a middle, a stud for each face, the
+## focus ring) and the colour of the text of every state on each face, which must keep its contrast in both palettes.
+static func _validate_buttons(d: Dictionary) -> Array:
+	var bad: Array = []
+	var pcs: Dictionary = d["pieces"]
+	for name in ["button", "tab"]:
+		var pc: Dictionary = pcs[name]
+		var b: Variant = pc.get("base")
+		if typeof(b) != TYPE_ARRAY or (b as Array).size() != 2 or float(b[0]) != floorf(float(b[0])) or float(b[1]) != floorf(float(b[1])):
+			bad.append("skin.json: pieces.%s.base must be [width, height] in whole pixels" % name)
+		elif float(pc.get("margin", 0)) * 2.0 + 2.0 > minf(float(b[0]), float(b[1])):
+			bad.append("skin.json: pieces.%s.margin leaves no middle in its base" % name)
+		if typeof(pc.get("content")) != TYPE_ARRAY or (pc["content"] as Array).size() != 2:
+			bad.append("skin.json: pieces.%s.content must be [x, y]" % name)
+	var btn: Dictionary = pcs["button"]
+	var faces: Variant = btn.get("faces")
+	if typeof(faces) != TYPE_DICTIONARY:
+		return bad + ["skin.json: pieces.button.faces is missing"]
+	for f in BUTTON_FACES:
+		var fs: Variant = (faces as Dictionary).get(f)
+		if typeof(fs) != TYPE_DICTIONARY or float(fs.get("stud", 0)) < 1.0 or float(fs.get("stud_at", 0)) < 1.0:
+			bad.append("skin.json: pieces.button.faces.%s needs a stud and a stud_at of at least 1" % f)
+		elif float(fs["stud_at"]) + float(fs["stud"]) > float(btn.get("margin", 0)):
+			bad.append("skin.json: pieces.button.faces.%s puts its studs outside the margin" % f)
+	var fc: Variant = btn.get("focus")
+	var fb: Variant = fc.get("base") if typeof(fc) == TYPE_DICTIONARY else null
+	if typeof(fb) != TYPE_ARRAY or (fb as Array).size() != 2 or float(fc.get("margin", 0)) * 2.0 + 1.0 > minf(float(fb[0]), float(fb[1])) or float(fc.get("expand", -1)) < 0.0:
+		bad.append("skin.json: pieces.button.focus needs a base [w, h], a margin that leaves a middle and an expand")
+	var texts: Array = []   # [label, text table, states]
+	var bt: Variant = btn.get("text")
+	for f in BUTTON_FACES:
+		var tf: Variant = (bt as Dictionary).get(f) if typeof(bt) == TYPE_DICTIONARY else null
+		if typeof(tf) != TYPE_DICTIONARY:
+			bad.append("skin.json: pieces.button.text.%s is missing" % f)
+		else:
+			texts.append(["button " + f, tf, BUTTON_STATES])
+	var tt: Variant = pcs["tab"].get("text")
+	if typeof(tt) != TYPE_DICTIONARY:
+		bad.append("skin.json: pieces.tab.text is missing")
+	else:
+		texts.append(["tab", tt, TAB_STATES])
+	for t in texts:
+		for st in t[2]:
+			var e: Variant = (t[1] as Dictionary).get(st)
+			if typeof(e) != TYPE_ARRAY or (e as Array).size() != 4:
+				bad.append("skin.json: the text of a %s in state %s needs [fg, bg, min, min_hc]" % [t[0], st])
+				continue
+			for vn in d["variants"]:
+				var v: Dictionary = d["variants"][vn]
+				if not v.has(str(e[0])) or not v.has(str(e[1])):
+					bad.append("skin.json: the text of a %s (%s) names a colour %s lacks" % [t[0], st, vn])
+					continue
+				var need := float(e[3] if vn == "high_contrast" else e[2])
+				var got := contrast(Color(str(v[str(e[0])])), Color(str(v[str(e[1])])))
+				if got < need:
+					bad.append("skin.json: the text of a %s (%s), %s on %s, is %.1f to 1 in %s, needs %.1f" % [t[0], st, e[0], e[1], got, vn, need])
+	return bad
+
+
 ## What is wrong with the full-screen screens' part of the data ("screens").
 static func _validate_screens(d: Dictionary) -> Array:
 	var bad: Array = []
 	var s: Variant = d.get("screens")
 	if typeof(s) != TYPE_DICTIONARY:
 		return ["skin.json: screens is missing"]
-	for name in ["plank", "field", "focus"]:
+	for name in ["field"]:
 		var pc: Variant = (s as Dictionary).get(name)
 		var b: Variant = pc.get("base") if typeof(pc) == TYPE_DICTIONARY else null
 		if typeof(b) != TYPE_ARRAY or (b as Array).size() != 2 or float(b[0]) != floorf(float(b[0])) or float(b[1]) != floorf(float(b[1])):

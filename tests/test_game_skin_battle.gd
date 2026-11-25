@@ -113,22 +113,23 @@ func _button(n: Node, text: String) -> Button:
 func test_piece() -> void:
 	ok(UiSkin.validate().is_empty(), "the skin's data is sound with the button piece: %s" % str(UiSkin.validate()))
 	var bad: Dictionary = UiSkin.data().duplicate(true)
-	bad["pieces"]["stud"] = {"base": [4, 4], "margin": 4, "content": [1, 1]}
+	bad["pieces"]["button"]["base"] = [4, 4]
 	ok(not UiSkin.validate(bad).is_empty(), "a button piece with no middle is found")
 	var bad2: Dictionary = UiSkin.data().duplicate(true)
-	bad2["pieces"]["stud"] = "x"
+	bad2["pieces"]["button"] = "x"
 	ok(not UiSkin.validate(bad2).is_empty(), "a button piece that is not an object is found")
 	var p := UiSkin.pixel()
+	var base: Array = UiSkin.piece("button")["base"]
 	var seen := {}
 	for st in ["normal", "hover", "pressed", "disabled"]:
-		var t := UiSkin.stud_tex(14 * p, 14 * p, st)
+		var t := UiSkin.button_tex(int(base[0]) * p, int(base[1]) * p, st, "parch")
 		ok(t.get_width() % p == 0 and t.get_height() % p == 0, "the %s button is a whole multiple of the pixel" % st)
-		ok(UiSkin.stud_tex(14 * p, 14 * p, st) == t, "and is made once")
+		ok(UiSkin.button_tex(int(base[0]) * p, int(base[1]) * p, st, "parch") == t, "and is made once")
 		seen[t.get_image().get_data().hex_encode().sha1_text()] = true
 	ok(seen.size() == 4, "the four states look different")
-	var sb := UiSkin.stud_box("hover")
-	ok(sb.texture_margin_left == float(int(UiSkin.piece("stud")["margin"]) * p), "the button's border is not stretched")
-	var lit := UiSkin.stud_tex(14 * p, 14 * p, "hover").get_image().get_pixel(2 * p, 2 * p)
+	var sb := UiSkin.button_box("hover", "parch")
+	ok(sb.texture_margin_left == float(int(UiSkin.piece("button")["margin"]) * p), "the button's border is not stretched")
+	var lit := UiSkin.button_tex(int(base[0]) * p, int(base[1]) * p, "hover", "parch").get_image().get_pixel(2 * p, 2 * p)
 	ok(lit == UiSkin.pal("gold_hi"), "a pointed-at button has lit gold studs")
 	ok(UiSkin.contrast(UiSkin.pal("crimson_dk"), UiSkin.pal("parch_hi")) >= 7.0, "a lit button's text reads")
 
@@ -142,7 +143,7 @@ func test_frame() -> void:
 	var atk := _button(bv.command_box, "Attack")
 	ok(atk != null and atk.get_theme_stylebox("normal") is StyleBoxTexture and atk.get_theme_stylebox("hover") is StyleBoxTexture, "Attack is a gold-studded button")
 	ok(atk.get_theme_stylebox("hover") != atk.get_theme_stylebox("normal"), "that lights when pointed at")
-	ok(atk.get_theme_stylebox("focus") is StyleBoxFlat and (atk.get_theme_stylebox("focus") as StyleBoxFlat).border_color == UiSkin.pal("gold_hi"), "and has a gold focus ring")
+	ok(atk.get_theme_stylebox("focus") == UiSkin.button_focus(), "and has a gold focus ring")
 	ok(atk.custom_minimum_size.y >= 38.0, "it keeps its height")
 	var touch_h := float(UiSettings.setting("touch_target_px"))
 	ok(float(atk.get_meta("tap_base")) >= 1.0 and touch_h > 0.0, "its touch height still comes from the kit")

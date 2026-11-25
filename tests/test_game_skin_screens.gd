@@ -78,8 +78,8 @@ func _broken(edit: Callable) -> Array:
 
 func test_breaks() -> void:
 	ok(_broken(func(d): d.erase("screens")).size() > 0, "missing screens data is found")
-	ok(_broken(func(d): d["screens"]["plank"]["base"] = [24.5, 16]).size() > 0, "a button that is not whole pixels is found")
-	ok(_broken(func(d): d["screens"]["plank"]["margin"] = 20).size() > 0, "a button margin with no middle is found")
+	ok(_broken(func(d): d["pieces"]["button"]["base"] = [24.5, 16]).size() > 0, "a button that is not whole pixels is found")
+	ok(_broken(func(d): d["pieces"]["button"]["margin"] = 20).size() > 0, "a button margin with no middle is found")
 	ok(_broken(func(d): d["screens"]["field"].erase("base")).size() > 0, "a field with no base is found")
 	ok(_broken(func(d): d["screens"]["sky"]["bands"] = 0).size() > 0, "a sky with no bands is found")
 	ok(_broken(func(d): d["screens"]["sky"]["tile"] = [2, 2]).size() > 0, "a star tile that is too small is found")
@@ -97,13 +97,13 @@ func test_textures() -> void:
 	var s := UiSkin.pixel()
 	var made := {}
 	for st in ["normal", "hover", "pressed", "disabled", "on"]:
-		made["button " + st] = UiSkin.plank_tex(st, 151, 41)
-	made["focus"] = UiSkin.focus_tex(101, 41)
+		made["button " + st] = UiSkin.button_tex(151, 41, st, "wood")
+	made["focus"] = UiSkin.button_focus_tex(101, 41)
 	made["field"] = UiSkin.field_tex(201, 41)
 	made["well"] = UiSkin.well_tex(201, 101)
 	for k in made:
 		ok(made[k] != null and made[k].get_width() > 0 and made[k].get_width() % s == 0 and made[k].get_height() % s == 0, "%s is made, a whole multiple of the pixel (%d): %dx%d" % [k, s, made[k].get_width(), made[k].get_height()])
-	ok(UiSkin.plank_tex("normal", 151, 41) == made["button normal"], "the same texture is handed back for the same size")
+	ok(UiSkin.button_tex(151, 41, "normal", "wood") == made["button normal"], "the same texture is handed back for the same size")
 	var states := {}
 	for st in ["normal", "hover", "pressed", "disabled", "on"]:
 		states[(made["button " + st] as ImageTexture).get_image().get_pixel(20, 10).to_html()] = true
@@ -132,10 +132,10 @@ func test_textures() -> void:
 			edge_ok = false
 	ok(edge_ok or true, "(the hills' ends are close: they tile)")
 	ok(UiSkin.hills_tex().get_height() > 0 and UiSkin.hills_tex() == UiSkin.hills_tex(), "the hills are kept")
-	for box in [UiSkin.plank_box("normal"), UiSkin.plank_box("on"), UiSkin.field_box(), UiSkin.well_box(), UiSkin.focus_box()]:
+	for box in [UiSkin.button_box("normal", "wood"), UiSkin.button_box("on", "wood"), UiSkin.field_box(), UiSkin.well_box(), UiSkin.button_focus()]:
 		ok(box is StyleBoxTexture and int(box.texture_margin_left) % s == 0 and box.axis_stretch_horizontal == StyleBoxTexture.AXIS_STRETCH_MODE_TILE, "a nine patch in whole pixels, tiled")
-	ok(not UiSkin.focus_box().draw_center, "the focus box draws no middle")
-	ok(UiSkin.plank_box("hover") == UiSkin.plank_box("hover") and UiSkin.plank_box("hover") != UiSkin.plank_box("normal"), "boxes are kept, one for each state")
+	ok(not UiSkin.button_focus().draw_center, "the focus box draws no middle")
+	ok(UiSkin.button_box("hover", "wood") == UiSkin.button_box("hover", "wood") and UiSkin.button_box("hover", "wood") != UiSkin.button_box("normal", "wood"), "boxes are kept, one for each state")
 	var rid: RID = (made["button normal"] as ImageTexture).get_rid()
 	await _frames(5)   # a texture made and not kept is freed before the frame shows: these are kept
 	ok((made["button normal"] as ImageTexture).get_rid() == rid and rid.is_valid() and UiSkin.sky_tex().get_image().get_pixel(0, 0) == top, "the textures are still alive some frames later")
@@ -212,16 +212,16 @@ func test_screens() -> void:
 	var title_l: Label = ribbons[0].get_child(0)
 	ok(title_l.get_theme_color("font_color") == UiSkin.pal("gold_hi") and title_l.text == "GENERATIONAL LEGACY", "in the ribbon's gold")
 	var begin := _find(t, "Begin Dynasty")
-	ok(begin != null and begin.get_theme_stylebox("normal") == UiSkin.plank_box("on") and begin.get_theme_stylebox("hover") == UiSkin.plank_box("on"), "Begin Dynasty is the crimson plank")
+	ok(begin != null and begin.get_theme_stylebox("normal") == UiSkin.button_box("on", "wood") and begin.get_theme_stylebox("hover") == UiSkin.button_box("on", "wood"), "Begin Dynasty is the crimson plank")
 	var quit_or_settings := _find(t, "Settings")
-	ok(quit_or_settings != null and quit_or_settings.get_theme_stylebox("normal") == UiSkin.plank_box("normal") and quit_or_settings.get_theme_stylebox("hover") == UiSkin.plank_box("hover") and quit_or_settings.get_theme_stylebox("focus") == UiSkin.focus_box(), "other buttons are wooden planks, lit gold when pointed at, with a gold focus ring")
+	ok(quit_or_settings != null and quit_or_settings.get_theme_stylebox("normal") == UiSkin.button_box("normal", "wood") and quit_or_settings.get_theme_stylebox("hover") == UiSkin.button_box("hover", "wood") and quit_or_settings.get_theme_stylebox("focus") == UiSkin.button_focus(), "other buttons are wooden planks, lit gold when pointed at, with a gold focus ring")
 	ok(quit_or_settings.get_theme_color("font_hover_color") == UiSkin.pal("wood_accent"), "and their text turns gold")
 	var slot1 := _find(t, "> Slot 1")
 	var slot2 := _find(t, "Slot 2")
-	ok(slot1 != null and slot2 != null and slot1.get_theme_stylebox("normal") == UiSkin.plank_box("on") and slot2.get_theme_stylebox("normal") == UiSkin.plank_box("normal"), "the slot in use is crimson and the others wood")
+	ok(slot1 != null and slot2 != null and slot1.get_theme_stylebox("normal") == UiSkin.button_box("on", "wood") and slot2.get_theme_stylebox("normal") == UiSkin.button_box("normal", "wood"), "the slot in use is crimson and the others wood")
 	var fields := _all(t, []).filter(func(n): return n is LineEdit)
 	ok(fields.size() == 2 and fields.all(func(e): return e.get_theme_stylebox("normal") == UiSkin.field_box() and e.get_theme_color("font_color") == UiSkin.pal("ink")), "the name and seed boxes are light fields with ink text")
-	ok(_all(t, []).filter(func(n): return n is OptionButton and n.get_theme_stylebox("normal") == UiSkin.plank_box("normal")).size() == 5, "the five pickers are planks")
+	ok(_all(t, []).filter(func(n): return n is OptionButton and n.get_theme_stylebox("normal") == UiSkin.button_box("normal", "wood")).size() == 5, "the five pickers are planks")
 	ok(_all(t, []).all(func(n): return not (n is Button) or (n as Button).custom_minimum_size.y >= UiSettings.tap_h(0) - 0.5 or (n as Button).custom_minimum_size.y == 0.0 or true), "(buttons keep their heights)")
 	var again_children := t.get_child_count()
 	SkinScreen.apply(t)
@@ -250,14 +250,14 @@ func test_screens() -> void:
 	ok(bars.size() == 3 and (bars[0].get_meta("skin_bar").kind == "hp" and bars[1].get_meta("skin_bar").kind == "mp" and bars[2].get_meta("skin_bar").kind == "xp"), "each its own kind")
 	ok(bars.size() == 3 and str(bars[0].get_meta("skin_bar").text).begins_with("HP "), "with its words over it")
 	var hunt := _find(life.actions, "Hunt")
-	ok(hunt != null and hunt.get_theme_stylebox("hover") != null and (hunt.get_theme_stylebox("hover") == UiSkin.plank_box("hover") or hunt.get_theme_stylebox("hover") == UiSkin.plank_box("on")), "the actions are planks")
+	ok(hunt != null and hunt.get_theme_stylebox("hover") != null and (hunt.get_theme_stylebox("hover") == UiSkin.button_box("hover", "wood") or hunt.get_theme_stylebox("hover") == UiSkin.button_box("on", "wood")), "the actions are planks")
 	var auto := _find(life.actions, "Auto-battle")
-	ok(auto.get_theme_stylebox("normal") == UiSkin.plank_box("normal"), "auto-battle off is a plain plank")
+	ok(auto.get_theme_stylebox("normal") == UiSkin.button_box("normal", "wood"), "auto-battle off is a plain plank")
 	d.auto_battle = true
 	life._refresh()
 	await _frames(2)
 	auto = _find(life.actions, "Auto-battle")
-	ok(auto.get_theme_stylebox("normal") == UiSkin.plank_box("on"), "and crimson when on")
+	ok(auto.get_theme_stylebox("normal") == UiSkin.button_box("on", "wood"), "and crimson when on")
 	d.auto_battle = false
 	life._refresh()
 	await _frames(2)
@@ -281,14 +281,14 @@ func test_screens() -> void:
 	ok(_labels_read(m), "its labels read in ink")
 	var size100 := _find(m, "100%")
 	var size125 := _find(m, "125%")
-	ok(size100.get_theme_stylebox("normal") == UiSkin.plank_box("on") and size125.get_theme_stylebox("normal") == UiSkin.plank_box("normal"), "the text size in use is crimson")
+	ok(size100.get_theme_stylebox("normal") == UiSkin.button_box("on", "wood") and size125.get_theme_stylebox("normal") == UiSkin.button_box("normal", "wood"), "the text size in use is crimson")
 	ok(size100.get_theme_color("font_color") == UiSkin.pal("gold_hi"), "chosen options have gold text")
 	m.queue_free()
 	await _frames(2)
 	var cp: Control = app.open_controls()
 	await _frames(3)
 	ok(cp is ControlsPanel and _boxes(cp, "kit_panel").size() == 1 and _boxes(cp, "kit_panel")[0].get_theme_stylebox("panel") == UiSkin.panel_box(), "the controls panel is parchment")
-	ok(_labels_read(cp) and _find(cp, "Change") != null and _find(cp, "Change").get_theme_stylebox("normal") == UiSkin.plank_box("normal"), "its text reads and its buttons are planks")
+	ok(_labels_read(cp) and _find(cp, "Change") != null and _find(cp, "Change").get_theme_stylebox("normal") == UiSkin.button_box("normal", "wood"), "its text reads and its buttons are planks")
 	cp.queue_free()
 	await _frames(2)
 	# succession
@@ -305,7 +305,7 @@ func test_screens() -> void:
 	ok(cards.size() == d.candidates.size() and cards.all(func(p): return p.get_theme_stylebox("panel") == UiSkin.panel_box()), "each heir is a parchment card")
 	ok(_labels_read(sc), "the cards read in ink, trait colours included")
 	var picks := _all(sc, []).filter(func(n): return n is Button and n.text.begins_with("Choose "))
-	ok(picks.size() == d.candidates.size() and picks.all(func(b): return b.get_theme_stylebox("normal") == UiSkin.plank_box("normal")), "and each Choose is a plank")
+	ok(picks.size() == d.candidates.size() and picks.all(func(b): return b.get_theme_stylebox("normal") == UiSkin.button_box("normal", "wood")), "and each Choose is a plank")
 	# the ending
 	d.state = "ended"
 	app.show_state()
@@ -329,7 +329,7 @@ func test_variants() -> void:
 	ok(_labels_read(t), "every label reads on the white panels")
 	var settings := _find(t, "Settings")
 	ok(settings.get_theme_color("font_color") == UiSkin.pal("wood_text") and UiSkin.contrast(settings.get_theme_color("font_color"), UiSkin.pal("wood")) >= 10.0, "button text is strong")
-	ok(UiSkin.plank_tex("normal", 100, 40) != null and UiSkin.sky_tex().get_image().get_pixel(0, 0) == Color("#000000"), "the sky is made black")
+	ok(UiSkin.button_tex(100, 40, "normal", "wood") != null and UiSkin.sky_tex().get_image().get_pixel(0, 0) == Color("#000000"), "the sky is made black")
 	UiSettings.set_access("colour_blind", true)
 	app.show_title()
 	await _frames(3)
@@ -356,7 +356,7 @@ func test_touch() -> void:
 		if b is Button and (b as Button).is_visible_in_tree() and (b as Button).get_global_rect().size.y < float(UiSettings.setting("touch_target_px")) - 0.5:
 			small += 1
 	ok(small == 0, "every button is a fingertip tall on a phone (%d short)" % small)
-	ok(UiSkin.pixel() == 4 and UiSkin.plank_box("normal").texture_margin_left == 20.0, "at 125% the pixel is 4, so the plank's margin is 5 pixels of 4")
+	ok(UiSkin.pixel() == 4 and UiSkin.button_box("normal", "wood").texture_margin_left == 20.0, "at 125% the pixel is 4, so the plank's margin is 5 pixels of 4")
 	app.new_game("Tess", "warrior", "faetouched", 7)
 	await _frames(3)
 	app.show_state()
