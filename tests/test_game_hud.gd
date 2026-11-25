@@ -256,7 +256,10 @@ func test_figure_and_pack() -> void:
 	# a bag that is left behind takes its pane with it
 	GameCarry.drop(d, bag)
 	await _frames(2)
-	bag_pane.refresh()
+	# (the screen refreshes its panes four times a second and a pane whose bag is gone frees itself, so by now it may already be freed:
+	# calling a method on a freed instance of a typed variable can crash the engine, which made this suite fail now and then)
+	if is_instance_valid(bag_pane):
+		bag_pane.refresh()
 	await _frames(2)
 	ok(_pane(map, PackPane, "pack_pane:" + bag) == null, "a bag left behind takes its pane with it")
 	# the Menu has the panes
