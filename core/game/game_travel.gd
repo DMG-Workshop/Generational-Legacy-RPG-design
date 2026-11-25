@@ -329,7 +329,8 @@ static func pin_tile(d: GameDynasty) -> Vector2i:
 static func pin_name(d: GameDynasty) -> String:
 	if d.map_pin.has("place"):
 		return name_of(str(d.map_pin["place"]))
-	return str(d.map_pin.get("name", ""))
+	var nm := str(d.map_pin.get("name", ""))
+	return nm if nm != "" else "%d, %d" % [int(d.map_pin.get("x", 0)), int(d.map_pin.get("z", 0))]
 
 
 ## Pins a place of the map: false (and nothing changes) for one that is not on it.
@@ -360,8 +361,6 @@ static func pin_line(d: GameDynasty, from: Vector2i) -> String:
 	var at := pin_tile(d)
 	var n := tiles(from, at)
 	var nm := pin_name(d)
-	if nm == "":
-		nm = "%d, %d" % [at.x, at.y]
 	if n <= 0:
 		return text("pin_here", {"name": nm})
 	return text("pin_line", {"name": nm, "tiles": n, "dir": compass(from, at)})
@@ -420,7 +419,7 @@ static func validate() -> Array:
 			continue
 		if arrival_tile(Vector2i(0, 0), place) == NONE:
 			bad.append("worldmap.json: no arrival tile for %s" % place)
-	for k in ["unknown", "kind_town", "kind_city", "card_title", "card_distance", "card_here", "card_fare", "card_none", "btn_pin", "btn_unpin", "btn_walk", "btn_book",
+	for k in ["unknown", "town_key", "kind_town", "kind_city", "card_title", "card_distance", "card_here", "card_fare", "card_none", "btn_pin", "btn_unpin", "btn_walk", "btn_book",
 			"pin_line", "pin_here", "pin_under", "pin_set", "pin_removed", "pin_cleared", "pin_bad", "walk_start", "walk_pinned_only", "walk_shut", "walk_arrived",
 			"walk_stalled", "book_no_town", "book_not_town", "book_indoors", "book_upstairs", "book_fight", "book_busy", "book_same", "book_poor", "booked"]:
 		if str(dat["text"].get(k, "")) == "":

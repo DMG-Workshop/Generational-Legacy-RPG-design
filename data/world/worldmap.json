@@ -31,6 +31,7 @@
     "kind_city": "City",
     "kind_dungeon": "Dungeon",
     "kind_wilds": "The wilds",
+    "town_key": "{name} ({tiles} {dir})",
     "card_title": "{name} ({kind})",
     "card_distance": "{tiles} tiles {dir} of {heir}",
     "card_here": "{heir} stands in {name}.",
