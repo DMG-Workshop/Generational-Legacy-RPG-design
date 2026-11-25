@@ -9,6 +9,8 @@ const Clipboard := preload("res://ui/play/clipboard.gd")
 const FilePicker := preload("res://ui/play/file_picker.gd")
 const GraphicsSettings := preload("res://ui/play/graphics_settings.gd")
 const Sound := preload("res://ui/play/sound.gd")
+const SkinScreen := preload("res://ui/play/skin_screen.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 
 var app: Node
 var note: Label
@@ -18,6 +20,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	set_meta("back_close", func(): queue_free())
 	z_index = 20   # above a fight's lists and result, which draw raised
+	SkinScreen.apply(self, false)   # parchment and wooden buttons over the dimmed screen it was opened on
 	var mode: String = app.menu_mode()
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
@@ -33,6 +36,7 @@ func _ready() -> void:
 	scroll.add_child(center)
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
+	p.set_meta("kit_panel", true)
 	p.custom_minimum_size = Vector2(minf(520.0, UiSettings.room(self).x - 24.0), 0)
 	center.add_child(p)
 	var v := VBoxContainer.new()
@@ -41,8 +45,9 @@ func _ready() -> void:
 	var top := HBoxContainer.new()
 	v.add_child(top)
 	var t := Kit.label("Settings" if mode == "title" else "Menu", 22, Kit.ACCENT)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(t)
+	var rb := SkinScreen.ribbon(t)
+	rb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(rb)
 	top.add_child(Kit.button("Close", func(): queue_free(), Vector2(100, 34)))
 
 	v.add_child(Kit.label("Text size", 17, Kit.ACCENT))
@@ -211,7 +216,9 @@ func _ready() -> void:
 func _choice(row: HBoxContainer, text: String, on: bool, cb: Callable) -> void:
 	var b := Kit.button(text, cb, Vector2(100, 40))
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if on:
+	if on and UiSkin.screen_active(b):
+		b.set_meta("skin_on", true)   # the crimson plank
+	elif on:
 		b.add_theme_stylebox_override("normal", Kit.style(Color("#3d3860"), 6, Kit.ACCENT))
 		b.add_theme_color_override("font_color", Kit.ACCENT)
 	row.add_child(b)

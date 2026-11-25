@@ -6,6 +6,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 const PATH := "res://data/ui/radial.json"
 
 signal chosen(id: String)   # an item's id, or "" when the ring was closed with nothing chosen
@@ -88,6 +89,9 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if UiSkin.hud_active(self):
+		_draw_skinned()
+		return
 	draw_circle(centre, setting("radius") + setting("slot_h") * 0.5 + 6.0, Color(0, 0, 0, 0.35))
 	draw_circle(centre, setting("dead_radius"), Color(0.1, 0.09, 0.16, 0.9))
 	var font := ThemeDB.fallback_font
@@ -103,6 +107,32 @@ func _draw() -> void:
 			draw_string(font, box.position + Vector2(0, h - 6.0), str(items[i]["key"]), HORIZONTAL_ALIGNMENT_CENTER, w, 11, Kit.dim())
 	var hint := text("sticky_hint") if sticky else text("hint")
 	draw_string(font, centre + Vector2(-120, setting("radius") + h + 18.0), hint, HORIZONTAL_ALIGNMENT_CENTER, 240, 13, Kit.dim())
+
+
+## The ring in the skin: a wooden hub with an ink rim, a parchment plate for each panel (a gold frame on the one pointed at), the key of
+## each in a quiet ink on it, the hint in an ink badge.
+func _draw_skinned() -> void:
+	var px := float(UiSkin.pixel())
+	draw_circle(centre, setting("radius") + setting("slot_h") * 0.5 + 6.0, Color(0, 0, 0, 0.35))
+	draw_circle(centre, setting("dead_radius") + px, UiSkin.pal("ink"))
+	draw_circle(centre, setting("dead_radius") - px, UiSkin.pal("wood"))
+	draw_arc(centre, setting("dead_radius") - px * 2.0, 0.0, TAU, 32, UiSkin.pal("wood_hi"), px)
+	var font := ThemeDB.fallback_font
+	var w := setting("slot_w")
+	var h := setting("slot_h")
+	for i in items.size():
+		var at := slot_at(centre, i, items.size(), setting("radius"))
+		var box := Rect2((at - Vector2(w, h) * 0.5).round(), Vector2(w, h))
+		var on := i == hover
+		draw_style_box(UiSkin.plate_box(on), box)
+		draw_string(font, box.position + Vector2(0, h * 0.5 - 2.0), str(items[i]["label"]), HORIZONTAL_ALIGNMENT_CENTER, w, 15, UiSkin.pal("crimson_dk") if on else UiSkin.pal("ink"))
+		if str(items[i]["key"]) != "":
+			draw_string(font, box.position + Vector2(0, h - 8.0), str(items[i]["key"]), HORIZONTAL_ALIGNMENT_CENTER, w, 11, UiSkin.pal("ink_dim"))
+	var hint := text("sticky_hint") if sticky else text("hint")
+	var hs := font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 13)
+	var hbox := Rect2(centre + Vector2(-hs.x * 0.5 - px * 3.0, setting("radius") + h + 4.0), hs + Vector2(px * 6.0, px * 2.0))
+	draw_style_box(UiSkin.badge_box(false), hbox)
+	draw_string(font, hbox.position + Vector2(px * 3.0, px + font.get_ascent(13)), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiSkin.pal("parch_hi"))
 
 
 static func validate() -> Array:

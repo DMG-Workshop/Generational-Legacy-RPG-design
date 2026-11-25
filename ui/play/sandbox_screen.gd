@@ -11,6 +11,8 @@ const WorldInput := preload("res://ui/play/world_input.gd")
 const RadialMenu := preload("res://ui/play/radial_menu.gd")
 const ActionSlot := preload("res://ui/play/action_slot.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
+const HeaderPlate := preload("res://ui/play/header_plate.gd")
 const TouchControls := preload("res://ui/play/touch_controls.gd")
 const CraftPanel := preload("res://ui/play/craft_panel.gd")
 const ShopPanel := preload("res://ui/play/shop_panel.gd")
@@ -53,6 +55,8 @@ var orders_panel: VBoxContainer
 var fingers := TouchControls.new()   # the stick and the pinch of a touch screen
 var actions: VBoxContainer           # Dig and Place under the thumb, shown only with a touch layout
 var status: Label
+var skinned := false        # the header, the action bar and the ring wear the skin (a wide window with a mouse)
+var header_plate: Control   # the heir's name and gold in the header (skinned only)
 var map: Control          # clips the tile view to the map area, under the bar and the overlay
 var tile_view: TileView   # the ground, as tile chunks
 var glow_layer: Control   # over the map: the glow of hearths, forges and lit windows at night (WorldLook)
@@ -128,9 +132,12 @@ func _ready() -> void:
 	add_child(glow_layer)
 	sky_layer = WorldLook.make_layer(_paint_sky, false)   # fog, rain, snow and the soft dark at the edge
 	add_child(sky_layer)
+	skinned = UiSkin.hud_active(self)
+	if skinned:
+		add_child(UiSkin.header_strip(BAR))   # the wooden strip the bar sits on
 	var bar := HBoxContainer.new()
-	bar.position = Vector2(8, 4)
-	bar.size = Vector2(maxf(0.0, size.x - 16.0), BAR - 8.0)
+	bar.position = Vector2(8, UiSkin.hud("bar_y") if skinned else 4.0)
+	bar.size = Vector2(maxf(0.0, size.x - 16.0), UiSkin.hud("slot_px") if skinned else BAR - 8.0)
 	bar.add_theme_constant_override("separation", 6)
 	add_child(bar)
 	if UiSettings.touch():
@@ -140,7 +147,17 @@ func _ready() -> void:
 	status = Kit.label("", 14, Kit.dim())
 	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status.clip_text = true
+	if skinned:
+		status.add_theme_color_override("font_color", UiSkin.pal("wood_text"))
+		UiSkin.outline(status)
+		status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		status.set_meta("skin_done", true)
 	bar.add_child(status)
+	if skinned:
+		header_plate = HeaderPlate.new()
+		header_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		header_plate.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		bar.add_child(header_plate)
 	# The build bar: the pieces the family may build, placing and taking down. Shown only in build mode.
 	build_bar = HBoxContainer.new()
 	build_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -345,7 +362,7 @@ func _make_slots(bar: HBoxContainer) -> void:
 	slot_ids.clear()
 	for def in ActionSlot.data()["extras"]:
 		var xid := str(def["id"])
-		var extra: Control = ActionSlot.make(def, "", func(): _slot_do(xid))
+		var extra: Control = ActionSlot.make(def, "", func(): _slot_do(xid), skinned)
 		slots[xid] = extra
 		bar.add_child(extra)
 	var gap := Control.new()
@@ -355,7 +372,7 @@ func _make_slots(bar: HBoxContainer) -> void:
 	for def in ActionSlot.data()["slots"]:
 		n += 1
 		var sid := str(def["id"])
-		var slot: Control = ActionSlot.make(def, str(n), func(): _slot_do(sid))
+		var slot: Control = ActionSlot.make(def, str(n), func(): _slot_do(sid), skinned)
 		slots[sid] = slot
 		slot_ids.append(sid)
 		bar.add_child(slot)
@@ -429,6 +446,8 @@ func _thing_menu(p: Vector2, area: Vector2, at: Vector2) -> void:
 	var tile := tile_at(p, area, sb.heir, cam, _cell())
 	var menu := PopupMenu.new()
 	menu.set_meta("modal", true)
+	if skinned:
+		UiSkin.dress_popup(menu)
 	menu.add_item(str(named["name"]), 1000)
 	menu.set_item_disabled(0, true)
 	menu.add_separator()
@@ -922,7 +941,13 @@ func _open_pack(bag: String) -> void:
 
 
 ## What the panes that show the heir (and the world) draw is brought up to date a few times a second.
+func _refresh_plate() -> void:
+	if header_plate != null:
+		header_plate.show_for(app.dynasty.heir.name, app.dynasty.heir.gold)
+
+
 func _refresh_panes() -> void:
+	_refresh_plate()
 	for c in get_children():
 		if c.has_meta("pane") and not c.is_queued_for_deletion() and c.has_method("refresh"):
 			c.refresh()
@@ -1180,6 +1205,7 @@ func _refresh_status() -> void:
 	if cast_button != null:
 		cast_button.visible = GameDungeons.is_dungeon(sb.space) and not GameCasting.self_castable(d).is_empty()
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line]
+	_refresh_plate()
 
 
 func _draw() -> void:
@@ -1396,8 +1422,12 @@ func _paint_name(c: Control, origin: Vector2, area: Vector2, centre: Vector2, ce
 	var at: Vector2 = origin + (Vector2(_name_tag["point"]) - Vector2(0.5, 0.5) - centre) * cell + area * 0.5 - Vector2(0, cell * 0.9)
 	var sz := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
 	var box := Rect2(at + Vector2(-sz.x * 0.5 - 6.0, -sz.y - 4.0), sz + Vector2(12.0, 6.0))
-	c.draw_style_box(Kit.style(Color(0.1, 0.09, 0.14, 0.9), 5, Color(0.88, 0.7, 0.25)), box)
-	c.draw_string(font, box.position + Vector2(6.0, sz.y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.9, 0.88, 0.94))
+	if skinned:
+		c.draw_style_box(UiSkin.plate_box(true), box.grow(5.0))
+		c.draw_string(font, box.position + Vector2(6.0, sz.y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiSkin.pal("ink"))
+	else:
+		c.draw_style_box(Kit.style(Color(0.1, 0.09, 0.14, 0.9), 5, Color(0.88, 0.7, 0.25)), box)
+		c.draw_string(font, box.position + Vector2(6.0, sz.y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.9, 0.88, 0.94))
 	queue_redraw()
 
 
@@ -1447,9 +1477,16 @@ func _paint_bubbles(c: Control) -> void:
 		var width := 200.0
 		var sz := font.get_multiline_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, width, 13)
 		var box := Rect2(head + Vector2(-sz.x * 0.5 - 6.0, -sz.y - 16.0), sz + Vector2(12.0, 8.0))
-		c.draw_style_box(Kit.style(Color(0.96, 0.94, 0.86, 0.95), 6, Color(0.1, 0.09, 0.14)), box)
-		c.draw_colored_polygon(PackedVector2Array([head + Vector2(-4, -8), head + Vector2(4, -8), head + Vector2(0, -2)]), Color(0.96, 0.94, 0.86, 0.95))
-		c.draw_multiline_string(font, box.position + Vector2(6.0, 4.0 + 13.0), line, HORIZONTAL_ALIGNMENT_LEFT, width, 13, -1, Color(0.1, 0.09, 0.14))
+		var paper := Color(0.96, 0.94, 0.86, 0.95)
+		var ink := Color(0.1, 0.09, 0.14)
+		if skinned:
+			paper = UiSkin.pal("parch")
+			ink = UiSkin.pal("ink")
+			c.draw_style_box(UiSkin.plate_box(false), box.grow(5.0))
+		else:
+			c.draw_style_box(Kit.style(paper, 6, ink), box)
+		c.draw_colored_polygon(PackedVector2Array([head + Vector2(-4, -8), head + Vector2(4, -8), head + Vector2(0, -2)]), paper)
+		c.draw_multiline_string(font, box.position + Vector2(6.0, 4.0 + 13.0), line, HORIZONTAL_ALIGNMENT_LEFT, width, 13, -1, ink)
 
 
 ## A dungeon's floor seen by the heir: its creatures and the heir as sprites (a circle where there is none), then the dark over

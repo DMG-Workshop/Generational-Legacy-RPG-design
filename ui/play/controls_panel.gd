@@ -6,6 +6,8 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const WorldInput := preload("res://ui/play/world_input.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
+const SkinScreen := preload("res://ui/play/skin_screen.gd")
 
 var waiting := ""     # the action whose next key is awaited ("" when none)
 var said: Label
@@ -16,6 +18,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	set_meta("back_close", func(): _back())
 	z_index = 21   # above the menu it was opened from
+	SkinScreen.apply(self, false)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.7)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -30,6 +33,7 @@ func _ready() -> void:
 	scroll.add_child(center)
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", Kit.style(Color("#1a1828"), 8, Kit.ACCENT))
+	p.set_meta("kit_panel", true)
 	p.custom_minimum_size = Vector2(minf(560.0, UiSettings.room(self).x - 24.0), 0)
 	center.add_child(p)
 	var v := VBoxContainer.new()
@@ -38,8 +42,9 @@ func _ready() -> void:
 	var top := HBoxContainer.new()
 	v.add_child(top)
 	var t := Kit.label("Controls", 22, Kit.ACCENT)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(t)
+	var rb := SkinScreen.ribbon(t)
+	rb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(rb)
 	top.add_child(Kit.button("Close", func(): queue_free(), Vector2(100, 34)))
 	var how := Kit.label("Choose Change, then press a key. Escape cancels. For the mouse, pick the button for each job; a button another job has changes places. The gamepad's buttons are fixed.", 14, Kit.dim())
 	how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -83,6 +88,7 @@ func _rebuild() -> void:
 		row.add_child(Kit.label(", ".join(WorldInput.keys_of(a)), 15, Kit.dim()))
 		var change := Kit.button("Press a key..." if waiting == a else "Change", func(): _wait(a), Vector2(96, 34))
 		change.name = "Change_" + a
+		change.set_meta("skin_on", waiting == a and UiSkin.screen_active(change))   # the plank that waits for a key is crimson
 		row.add_child(change)
 		var reset := Kit.button("Reset", func(): _reset(a), Vector2(72, 34))
 		reset.name = "Reset_" + a

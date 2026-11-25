@@ -83,6 +83,7 @@ static func style(color: Color, radius: int = 6, border: Color = Color(0, 0, 0, 
 static func panel(color: Color = PANEL) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", style(color))
+	p.set_meta("kit_panel", true)   # a full-screen screen in the skin makes it parchment (SkinScreen)
 	return p
 
 

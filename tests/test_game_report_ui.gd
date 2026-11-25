@@ -127,7 +127,7 @@ func _row_button(n: Node, row_label: String, which: String) -> Button:
 
 
 func _is_marked(b: Button) -> bool:
-	return b != null and b.has_theme_color_override("font_color")
+	return b != null and (bool(b.get_meta("skin_on", false)) if b.has_meta("skin_screen_done") else b.has_theme_color_override("font_color"))   # the skin marks the chosen one crimson
 
 
 func test_off_by_default() -> void:

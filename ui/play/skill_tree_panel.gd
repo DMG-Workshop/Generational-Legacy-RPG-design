@@ -8,6 +8,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const PanelSkin := preload("res://ui/play/panel_skin.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const NODE_SIZE := Vector2(134, 44)
@@ -293,7 +294,7 @@ var side_box: VBoxContainer
 
 ## The side column; `head` (the points, buttons and tree tabs of a short screen) above the box.
 func _side(u: GameHeir, head: Array = []) -> Control:
-	var p := Kit.panel(Kit.PANEL)
+	var p := PanelSkin.row(self)
 	p.custom_minimum_size = Vector2(SIDE_W if not UiSettings.compact(self) else 250, 0)
 	var sc := ScrollContainer.new()
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
