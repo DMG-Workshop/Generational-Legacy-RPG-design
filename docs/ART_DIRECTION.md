@@ -111,6 +111,17 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
 - **Not built yet:** the title and life screens, icon outlines for items and creatures, panels' own inner boxes (a `Kit.panel` inside a pane
   stays dark), a touch version of the skin, panel buttons in the header (the ring and the Menu slot open the panels), and the pixel font
   (the engine's font is used; the bar words and the ribbon titles are where it would show most).
+- **Step 2, big panels:** the house, chronicle, shops, quest board, tavern and the skill tree's side column draw with `PanelSkin`
+  (`ui/play/panel_skin.gd`) when they are a skinned pane: each row or card is an inset slot with its text on the slot's brown (palette `slot_dim`,
+  `slot_good`, `slot_bad`, the `slot` text map, contrast pairs in `skin.json`), prices carry the gold coin, the chronicle's tabs and the
+  shops' tabs are wood with the open one lit in gold (`tab` piece), action keys are raised parchment (`button` piece: normal, hover, pressed,
+  disabled), the house's levels are segmented bars, a row that cannot be bought keeps its reason line in readable ink, and the family tree
+  is drawn as parchment cards with crimson name ribbons joined by ink lines (`family_tree_view.gd`; the old text stays on a compact window or a
+  touch screen). Not yet: the workshop, heirlooms, trials and looks panels (they get the pane's face and labels but keep dark inner boxes),
+  the skill tree's canvas, and bars in the tavern and quest board.
+- **Not built yet:** the title and life screens, the action bar and header (the wooden header texture exists but is not drawn), the
+  ring and thing menu, icon outlines, panels' own inner boxes (a `Kit.panel` inside a pane stays dark), a touch version of the skin,
+  and the pixel font (the engine's font is used; the bar words and the ribbon titles are where it would show most).
 
 The touch layout keeps its current interface until a touch version of the skin is designed (`docs/MOBILE.md`).
 

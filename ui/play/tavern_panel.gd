@@ -2,6 +2,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const PanelSkin := preload("res://ui/play/panel_skin.gd")
 const OLD := Color("#e8a05a")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 
@@ -121,7 +122,7 @@ func _wrap(text: String, size: int, color: Color = Kit.TEXT) -> Label:
 
 func _card_shell(id: String) -> Array:
 	var c := GameParty.def(id)
-	var card := Kit.panel(Kit.PANEL_LIGHT)
+	var card := PanelSkin.row(self, Kit.PANEL_LIGHT)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	card.add_child(row)

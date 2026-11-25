@@ -12,7 +12,10 @@
     "bar": { "height": 11, "segment_every": 6, "segment_at": 7, "icon_scale": 1, "text_size": 13 },
     "header": { "plank": 36, "speck": 0.07, "height": 28 },
     "plate": { "base": [16, 16], "margin": 3, "content": [3, 2] },
-    "badge": { "base": [8, 8], "margin": 2, "content": [2, 1] }
+    "badge": { "base": [8, 8], "margin": 2, "content": [2, 1] },
+    "button": { "base": [16, 12], "margin": 3, "content": [4, 2] },
+    "tab": { "base": [16, 12], "margin": 3, "content": [4, 2] },
+    "row": { "content": [4, 3] }
   },
   "hud": {
     "note": "The pieces over the open world on a desktop window (the action bar, the header, the panel ring, the thing menu, name tags and speech bubbles; ui/play/action_slot.gd, radial_menu.gd, header_plate.gd, sandbox_screen.gd). slot_px is a multiple of the pixel; glyph_pixels is how many pixels of the skin one pixel of an 8 by 8 action picture takes; dim_alpha is how much of a picture shows when its slot does not apply, and wash how much gold lies over a slot that is on; header_tile is how many planks one tile of the header holds.",
@@ -28,6 +31,7 @@
     "hp": { "icon": "heart", "colors": "hp" },
     "mp": { "icon": "gem", "colors": "mp" },
     "load": { "icon": "pouch", "colors": "carry" },
+    "level": { "icon": "coin", "colors": "carry" },
     "load_bad": { "icon": "pouch", "colors": "hp" }
   },
   "variants": {
@@ -38,6 +42,7 @@
       "gold": "#e0b341", "gold_dk": "#9a6f1c", "gold_hi": "#f4d37a",
       "crimson": "#8e2f2f", "crimson_hi": "#b04545", "crimson_dk": "#5c1c1c",
       "slot_bg": "#4b3b2b", "slot_lo": "#8f7650", "track": "#4a3a2c",
+      "slot_dim": "#cdb994", "slot_good": "#8fe08a", "slot_bad": "#ff9f96",
       "bar_text": "#ffffff",
       "ink_dim": "#6b4a2b", "ink_good": "#1f5f2a", "ink_bad": "#8a1c1c", "ink_blue": "#1d4a8f",
       "ink_good_cb": "#0d4f80", "ink_bad_cb": "#7a4300",
@@ -54,6 +59,7 @@
       "gold": "#ffd75e", "gold_dk": "#c79a00", "gold_hi": "#ffff80",
       "crimson": "#7a0000", "crimson_hi": "#a00000", "crimson_dk": "#3a0000",
       "slot_bg": "#1a1a1a", "slot_lo": "#d0d0d0", "track": "#000000",
+      "slot_dim": "#d0d0d0", "slot_good": "#a0ffa0", "slot_bad": "#ffb0a8",
       "bar_text": "#ffffff",
       "ink_dim": "#333333", "ink_good": "#004d12", "ink_bad": "#7a0000", "ink_blue": "#002a80",
       "ink_good_cb": "#003a66", "ink_bad_cb": "#5c3000",
@@ -65,10 +71,20 @@
     }
   },
   "text_maps": {
+    "slot": { "#e8e4f0": "parch_hi", "#8d88a0": "slot_dim", "#c4bfd6": "slot_dim", "#e0b341": "gold_hi", "#6fcf6f": "slot_good", "#e0605a": "slot_bad", "#ffd75e": "gold_hi", "#6a8f6a": "slot_good" },
     "parch": { "#e8e4f0": "ink", "#8d88a0": "ink_dim", "#c4bfd6": "ink_dim", "#e0b341": "crimson_dk", "#6fcf6f": "ink_good", "#e0605a": "ink_bad", "#5a8fe0": "ink_blue", "#56b4e9": "ink_good_cb", "#e69f00": "ink_bad_cb", "#6a8f6a": "ink_good", "#ffd75e": "crimson_dk" },
     "wood": { "#e8e4f0": "wood_text", "#8d88a0": "wood_dim", "#c4bfd6": "wood_dim", "#e0b341": "wood_accent", "#6fcf6f": "wood_good", "#e0605a": "wood_bad", "#5a8fe0": "wood_blue", "#56b4e9": "wood_good_cb", "#e69f00": "wood_bad_cb", "#6a8f6a": "wood_good", "#ffd75e": "wood_accent" }
   },
   "contrast": [
+    { "fg": "slot_dim", "bg": "slot_bg", "min": 4.5, "min_hc": 7.0, "why": "quiet text and a row's reason line in a slot" },
+    { "fg": "slot_good", "bg": "slot_bg", "min": 4.5, "min_hc": 7.0, "why": "good news in a slot" },
+    { "fg": "slot_bad", "bg": "slot_bg", "min": 4.5, "min_hc": 7.0, "why": "bad news in a slot" },
+    { "fg": "gold_hi", "bg": "slot_bg", "min": 4.5, "min_hc": 7.0, "why": "a price in a slot" },
+    { "fg": "gold", "bg": "slot_bg", "min": 4.5, "min_hc": 7.0, "why": "gold text in a slot" },
+    { "fg": "ink", "bg": "parch_lo", "min": 6.0, "min_hc": 10.0, "why": "a pressed button's label" },
+    { "fg": "ink_dim", "bg": "parch_hi", "min": 4.5, "min_hc": 10.0, "why": "a disabled button's label" },
+    { "fg": "wood_text", "bg": "wood_hi", "min": 4.5, "min_hc": 7.0, "why": "a tab pointed at" },
+    { "fg": "gold_hi", "bg": "wood_hi", "min": 4.5, "min_hc": 7.0, "why": "the open tab's label" },
     { "fg": "ink", "bg": "parch", "min": 9.0, "min_hc": 15.0, "why": "text on parchment" },
     { "fg": "ink", "bg": "parch_hi", "min": 9.0, "min_hc": 15.0, "why": "text on the lit parchment" },
     { "fg": "ink", "bg": "parch_lo", "min": 6.0, "min_hc": 10.0, "why": "text on the shaded parchment" },

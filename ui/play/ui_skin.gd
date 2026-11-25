@@ -7,12 +7,12 @@ extends RefCounted
 
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const PATH := "res://data/ui/skin.json"
-const PIECES := ["panel", "frame", "ribbon", "inset", "bar", "header", "plate", "badge"]
+const PIECES := ["panel", "frame", "ribbon", "inset", "bar", "header", "plate", "badge", "button", "tab"]
 const HUD_KEYS := ["slot_px", "glyph_pixels", "gap", "badge_size", "dim_alpha", "wash", "header_tile", "bar_y", "plate_text"]
 const PALETTE_KEYS := ["ink", "brown", "parch", "parch_hi", "parch_lo", "wood", "wood_hi", "wood_lo", "gold", "gold_dk", "gold_hi",
 		"crimson", "crimson_hi", "crimson_dk", "slot_bg", "slot_lo", "track", "bar_text", "ink_dim", "ink_good", "ink_bad", "ink_blue",
 		"ink_good_cb", "ink_bad_cb", "wood_text", "wood_dim", "wood_good", "wood_bad", "wood_blue", "wood_accent", "wood_good_cb",
-		"wood_bad_cb"]
+		"wood_bad_cb", "slot_dim", "slot_good", "slot_bad"]
 const TRIPLES := ["hp", "mp", "carry"]
 
 static var _cache: Dictionary = {}
@@ -348,6 +348,51 @@ static func badge_tex(w: int, h: int, lit: bool = false) -> ImageTexture:
 	return _keep(k, _tex(i))
 
 
+## A raised key, as on a parchment page: lit top and left, shaded bottom and right, an ink outline. `state`: "normal", "hover" (a gold
+## line inside the outline), "pressed" (sunk, shaded) or "disabled" (flat, a brown outline). (If the screens' own button set lands first,
+## the integrator keeps one of the two.)
+static func button_tex(w: int, h: int, state: String) -> ImageTexture:
+	var k := _key("button", "%d,%d,%s" % [w, h, state])
+	if _memo.has(k):
+		return _memo[k]
+	var m := int(piece("button")["margin"])
+	var lw := maxi(_logical(w), 2 * m + 1)
+	var lh := maxi(_logical(h), 2 * m + 1)
+	var fill := pal("parch_hi") if state == "hover" else (pal("parch_lo") if state == "pressed" else pal("parch"))
+	var i := _img(lw, lh, fill)
+	if state == "normal" or state == "hover":
+		_rect(i, 1, 1, lw - 2, 1, pal("parch_hi"))
+		_rect(i, 1, 1, 1, lh - 2, pal("parch_hi"))
+		_rect(i, 1, lh - 2, lw - 2, 1, pal("parch_lo"))
+		_rect(i, lw - 2, 1, 1, lh - 2, pal("parch_lo"))
+	elif state == "pressed":
+		_rect(i, 1, 1, lw - 2, 1, pal("brown"))
+		_rect(i, 1, 1, 1, lh - 2, pal("brown"))
+	if state == "hover":
+		_ring(i, 1, pal("gold"))
+		_ring(i, 2, pal("gold_hi"))
+	_ring(i, 0, pal("brown") if state == "disabled" else pal("ink"))
+	return _keep(k, _tex(i))
+
+
+## A wooden tab: ink outline, planks, a lit top edge. `state`: "off", "hover" or "on" (the open one: lighter wood, a gold frame).
+static func tab_tex(w: int, h: int, state: String) -> ImageTexture:
+	var k := _key("tab", "%d,%d,%s" % [w, h, state])
+	if _memo.has(k):
+		return _memo[k]
+	var m := int(piece("tab")["margin"])
+	var lw := maxi(_logical(w), 2 * m + 1)
+	var lh := maxi(_logical(h), 2 * m + 1)
+	var i := _img(lw, lh, pal("wood") if state == "off" else pal("wood_hi"))
+	_rect(i, 1, 1, lw - 2, 1, pal("wood_hi") if state == "off" else pal("gold_hi"))
+	_rect(i, 1, lh - 2, lw - 2, 1, pal("wood_lo"))
+	if state == "on":
+		_ring(i, 1, pal("gold"))
+		_rect(i, 2, 2, lw - 4, 1, pal("gold_hi"))
+	_ring(i, 0, pal("ink"))
+	return _keep(k, _tex(i))
+
+
 ## A one-colour 8 by 8 picture from rows of "#" and ".", white so it can be tinted when drawn.
 static func icon_tex(name: String) -> ImageTexture:
 	var k := "icon|" + name
@@ -447,6 +492,18 @@ static func dress_popup(m: PopupMenu) -> void:
 	m.add_theme_constant_override("outline_size", 0)
 
 
+static func button_box(state: String) -> StyleBoxTexture:
+	var p := piece("button")
+	var b: Array = p["base"]
+	return _nine("button", button_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
+
+
+static func tab_box(state: String) -> StyleBoxTexture:
+	var p := piece("tab")
+	var b: Array = p["base"]
+	return _nine("tab", tab_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
+
+
 ## The face of a pane: parchment, or wood.
 static func face_box(face: String) -> StyleBoxTexture:
 	return frame_box() if face == "wood" else panel_box()
@@ -479,7 +536,7 @@ static func dress_button(b: Button) -> void:
 	b.add_theme_color_override("font_color", pal("parch_hi"))
 	b.add_theme_color_override("font_hover_color", pal("gold_hi"))
 	b.add_theme_color_override("font_pressed_color", pal("gold_hi"))
-	b.add_theme_color_override("font_disabled_color", pal("slot_lo"))
+	b.add_theme_color_override("font_disabled_color", pal("slot_dim"))   # (quiet but readable on the slot)
 	b.set_meta("skin_done", true)
 
 

@@ -2,6 +2,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const PanelSkin := preload("res://ui/play/panel_skin.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 
 const TAB_NAMES := {"forge": "Forge", "store": "Store", "temple": "Temple", "black_market": "Black Market", "gear": "Gear"}
@@ -99,7 +100,7 @@ func _ready() -> void:
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override("separation", 6)
 	scroll.add_child(rows)
-	var sp := Kit.panel()
+	var sp := PanelSkin.row(self)
 	sp.custom_minimum_size = Vector2(300, 0)
 	sp.visible = not compact
 	body.add_child(sp)
@@ -153,6 +154,7 @@ func _rebuild() -> void:
 		var b := Kit.button(_tab_name(tt), func(): _show(tt), Vector2(110 if not compact else 92, 34))
 		b.toggle_mode = true
 		b.button_pressed = tt == tab
+		PanelSkin.tab_button(self, b)
 		tabs.add_child(b)
 	tab_note.text = _tab_note(tab)
 	tab_scroll.custom_minimum_size.y = 42.0 if tabs.get_child_count() <= 5 else 88.0
@@ -555,6 +557,7 @@ func _build_side() -> void:
 		side.add_child(_wrap(Kit.label("Sick: %s" % GameDisease.status_text(h), 14, Kit.bad())))
 	side.add_child(HSeparator.new())
 	side.add_child(_wrap(Kit.label("Bought gear goes on at once if that slot is empty; otherwise it waits in the pack. Merchants buy back at a fraction of the price.", 12, Kit.dim())))
+	PanelSkin.retint(self, side)
 
 
 ## Lines for the life screen's right-hand panel: what is worn, and how full the pack is.
@@ -613,7 +616,7 @@ func _afford(cost: int) -> Color:
 
 
 func _row(title: String, color: Color, sub: String, middle: Control, price_text: String, buttons: Array, tip: String, price_color: Color = Kit.ACCENT) -> PanelContainer:
-	var p := Kit.panel(Kit.PANEL)
+	var p := PanelSkin.row(self, Kit.PANEL)
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
 	p.add_child(hb)
@@ -635,14 +638,22 @@ func _row(title: String, color: Color, sub: String, middle: Control, price_text:
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	middle.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hb.add_child(middle)
-	var pr := Kit.label(price_text, 15, price_color)
+	var pr: Control
+	if PanelSkin.on(self) and price_text != "":
+		pr = PanelSkin.coin_text(self, price_text, price_color, 15)   # a gold coin beside the price
+	else:
+		var pl := Kit.label(price_text, 15, price_color)
+		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		pr = pl
 	pr.custom_minimum_size = Vector2(84, 0)
-	pr.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	pr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hb.add_child(pr)
 	for b in buttons:
 		(b as Control).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		if PanelSkin.on(self) and b is Button:
+			PanelSkin.dress_button(b)
 		hb.add_child(b)
+	PanelSkin.retint(self, p)
 	return p
 
 

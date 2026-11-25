@@ -4,6 +4,7 @@
 extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
+const PanelSkin := preload("res://ui/play/panel_skin.gd")
 const CraftPanel := preload("res://ui/play/craft_panel.gd")
 const HeirloomPanel := preload("res://ui/play/heirloom_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
@@ -76,32 +77,53 @@ func _workshop() -> void:
 
 
 func _row(track: String, column: float) -> Control:
+	var skinned := PanelSkin.on(self)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	var lv := GameHouse.level(dynasty, track)
-	var title := Kit.label("%s: level %d of %d" % [GameHouse.track_name(track), lv, GameHouse.max_level()], 18, Kit.TEXT)
+	var title := PanelSkin.label(self, "%s: level %d of %d" % [GameHouse.track_name(track), lv, GameHouse.max_level()], 18, Kit.TEXT)
 	box.add_child(title)
-	var now := Kit.label(_effect(track, lv), 15, Kit.dim())
+	if skinned:   # the level as a segmented bar
+		var pb := PanelSkin.progress(self, float(lv), float(GameHouse.max_level()), "level")
+		pb.custom_minimum_size.x = 180.0
+		pb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		box.add_child(pb)
+	var now := PanelSkin.label(self, _effect(track, lv), 15, Kit.dim())
 	now.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(now)
 	var price := GameHouse.cost(dynasty, track)
 	var text := "Fully built."
 	if price >= 0:
 		text = "Next level: %s. Costs %s gold." % [_effect(track, lv + 1), GameText.num(price)]
-	var next := Kit.label(text, 15, Kit.dim())
+	var next := PanelSkin.label(self, text, 15, Kit.dim())
 	next.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(next)
 	var why := GameHouse.buy_error(dynasty, track)
 	var label := "Build (%s gold)" % GameText.num(price) if price >= 0 else "Fully built"
-	var b := Kit.button(label, func(): _buy(track, column), Vector2(column, 48))
+	var b := PanelSkin.button(self, label, func(): _buy(track, column), Vector2(column, 48))
 	b.disabled = why != ""
-	box.add_child(b)
+	if skinned:   # a coin and the price beside the key, so the cost reads at a glance
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 10)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size.x = 0.0
+		if price >= 0:
+			line.add_child(PanelSkin.cost(self, price, dynasty.heir.gold >= price, 17))
+		line.add_child(b)
+		box.add_child(line)
+	else:
+		box.add_child(b)
 	# The reason is shown as text, not a tooltip: a touch player sees it without holding the button.
 	if why != "":
-		var reason := Kit.label(why, 14, Kit.dim())
+		var reason := PanelSkin.label(self, why, 14, Kit.dim())
+		reason.name = "Reason"
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(reason)
-	return box
+	if not skinned:
+		return box
+	var slot := PanelSkin.row(self)
+	slot.add_child(box)
+	return slot
 
 
 ## What a track does at a level: the Hall's companion places, or the Yard's training XP.
