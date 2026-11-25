@@ -27,6 +27,19 @@ static func kinds(d: GameDynasty, cx: int, cz: int, radius: int) -> Array:
 	return rows
 
 
+## Where the map pin is from a tile, for the minimap (`radius` tiles each way is its picture; the sandbox's `minimap_radius` when -1): {} for no pin,
+## else {inside (the pin is within the picture), angle (radians, 0 east, turning toward south as the screen does: the way an arrow points),
+## distance (whole tiles), dir (the compass point), place (its name), offset (the pin's tile less `from_tile`)}. No dice, nothing saved.
+static func pin_bearing(d: GameDynasty, from_tile: Vector2i, radius: int = -1) -> Dictionary:
+	if d.map_pin.is_empty():
+		return {}
+	var r := int(GameSandbox.data()["view"].get("minimap_radius", 20)) if radius < 0 else radius
+	var at := GameTravel.pin_tile(d)
+	var off := at - from_tile
+	return {"inside": maxi(absi(off.x), absi(off.y)) <= r, "angle": atan2(float(off.y), float(off.x)), "distance": GameTravel.tiles(from_tile, at),
+		"dir": GameTravel.compass(from_tile, at), "place": GameTravel.pin_name(d), "offset": off}
+
+
 ## What stands on a tile of the open world that is not the family's: a town's building, a wall or tower of its wall, or a gate's
 ## passage; the ground's own kind where there is none.
 static func _standing(x: int, z: int, ground: String) -> String:

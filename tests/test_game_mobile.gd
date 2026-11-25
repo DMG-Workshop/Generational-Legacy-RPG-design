@@ -31,6 +31,7 @@ const LifeScreen := preload("res://ui/play/life_screen.gd")
 const Cooldown := preload("res://ui/play/autopilot_cooldown.gd")
 const ChroniclePanel := preload("res://ui/play/chronicle_panel.gd")
 const EndingScreen := preload("res://ui/play/ending_screen.gd")
+const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
 const DIR := "user://test_mobile/"
 
 var checks := 0
@@ -82,6 +83,7 @@ func _run() -> void:
 	await test_safe_area()
 	await test_scale_layouts()
 	await test_pseudo_layouts()
+	await test_world_map_card()
 	await test_command_text_fits()
 	test_cooldown_logic()
 	await test_cooldown_buttons()
@@ -785,6 +787,12 @@ func test_every_tooltip_reachable() -> void:
 	await _frames(3)
 	await _probe(m, "map_panel.gd")
 	m.queue_free()
+	var wm: Control = WorldMapPanel.new()   # the world map's town keys: a hold shows how far, which way
+	wm.dynasty = d
+	app.current.add_child(wm)
+	await _frames(3)
+	await _probe(wm, "world_map_panel.gd")
+	wm.queue_free()
 	GameEvents.begin(d, "elven_wardens")
 	app.show_state()
 	await _frames(4)
@@ -1063,6 +1071,56 @@ func test_scale_layouts() -> void:
 	await _frames(2)
 	ok(is_equal_approx(root.content_scale_factor, 1.0), "back to 100%")
 	ok(app.frame.get_global_rect().is_equal_approx(Rect2(0, 0, 1280, 720)), "and to the plain window")
+
+
+## The world map's card (a town selected: its name, distance, fare, Pin it, Walk there and Book travel, and the reason a key is shut) at
+## every window shape and text size, touch-sized and with the mouse: nothing off the screen, every key a fingertip tall on touch, and what
+## does not fit sits in the scroll.
+func test_world_map_card() -> void:
+	for touch in [1, 0]:
+		UiSettings.force_touch = touch
+		for wsize in LAYOUT_SIZES:
+			root.size = wsize
+			var notch: bool = float(wsize.x) / float(wsize.y) > 2.0
+			app.safe_override = Rect2i(int(wsize.x * 0.04), 0, wsize.x - int(wsize.x * 0.04) - int(wsize.x * 0.02), wsize.y - int(wsize.y * 0.03)) if notch else Rect2i()
+			for s in UiSettings.scales():
+				app.set_ui_scale(s)
+				await _frames(3)
+				_game()
+				var sb := GameSandbox.start(d)
+				sb.creatures.clear()
+				for case in ["hearthmere_poor", "kingshold", "wilds"]:
+					if case == "hearthmere_poor":
+						d.heir.gold = 3   # the fare is out of reach: the reason is said under the keys
+					elif case == "kingshold":
+						d.heir.gold = 5000
+					else:
+						sb.heir = Vector2i(40, 40)
+					var p: Control = WorldMapPanel.new()
+					p.dynasty = d
+					p.sb = sb
+					p.heir_tile = sb.heir
+					app.frame.add_child(p)
+					await _frames(2)
+					p.select("kingshold" if case != "hearthmere_poor" else "ironford")
+					await _frames(3)
+					var tag := "%dx%d %d%% %s %s" % [wsize.x, wsize.y, int(round(s * 100.0)), "touch" if touch == 1 else "mouse", case]
+					_check_inside(p, Rect2(UiSettings.insets.position, UiSettings.room(app)), "world map " + tag)
+					ok(p.find_child("PinButton", true, false) != null and p.find_child("WalkButton", true, false) != null and p.find_child("BookButton", true, false) != null, "%s: the card has its three keys" % tag)
+					if case == "hearthmere_poor":
+						ok((p.find_child("BookButton", true, false) as Button).disabled and p.find_child("Reason", true, false) != null and (p.find_child("Reason", true, false) as Label).text.contains("gold"), "%s: Book travel is shut and says why, as text" % tag)
+					var wide_keys: Array = []
+					for b in p.find_children("*", "Button", true, false):
+						if (b as Button).is_visible_in_tree() and (b as Button).size.x < 40.0:
+							wide_keys.append((b as Button).text)
+					ok(wide_keys.is_empty(), "%s: no key is squeezed to nothing %s" % [tag, str(wide_keys)])
+					p.queue_free()
+					await _frames(2)
+	app.safe_override = Rect2i()
+	root.size = Vector2i(1280, 720)
+	UiSettings.force_touch = 0
+	app.set_ui_scale(1.0)
+	await _frames(2)
 
 
 ## The same layouts in the pseudo-language (GameLocale: every catalogued line accented and a third longer), on the
