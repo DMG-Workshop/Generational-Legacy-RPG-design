@@ -7,6 +7,8 @@
 extends SceneTree
 
 const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
+const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
 
 var fails := 0
 var checks := 0
@@ -31,6 +33,7 @@ func _run() -> void:
 	test_routes()
 	test_day()
 	test_build_and_orders()
+	test_levels_ui()
 	print("sandbox screen tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -168,3 +171,36 @@ func test_day() -> void:
 	var screen := SandboxScreen.new()
 	ok(is_equal_approx(float(SandboxScreen.setting("cell_px")), 16.0), "the screen can be made without a window")
 	screen.free()
+
+
+## The creatures' level tags and the smoke cloud's look: a colour and a mark for each band (so colour is never the only cue), the name a
+## click shows, and the cloud's puffs a hash of their number, inside the cloud, and still with reduced motion.
+func test_levels_ui() -> void:
+	var colours := {}
+	var marks := {}
+	for b in GameLevels.bands():
+		colours[SandboxScreen.band_color(str(b["id"])).to_html()] = true
+		marks[GameLevels.mark(str(b["id"]))] = true
+	ok(colours.size() == 5 and marks.size() == 5, "five bands, five colours and five marks")
+	ok(SandboxScreen.band_color("trivial") == Kit.dim() and SandboxScreen.band_color("easy") == Kit.good() and SandboxScreen.band_color("deadly") == Kit.bad(), "the colours come from the Kit's tokens (grey, green, red)")
+	UiSettings.set_access("colour_blind", true)
+	ok(SandboxScreen.band_color("easy") == Kit.good() and SandboxScreen.band_color("easy") != Color("#6fcf6f"), "and follow the colour-blind setting")
+	UiSettings.set_access("colour_blind", false)
+	var scr := SandboxScreen.new()
+	ok(scr._named_text({"name": "Wolf", "level": 12, "con": "easy"}) == "Wolf  Lv 12 %s" % GameLevels.mark("easy"), "a click names a creature with its level and mark")
+	ok(scr._named_text({"name": "Tess"}) == "Tess", "and anything else as before")
+	scr.free()
+	UiSettings.set_access("reduced_motion", false)
+	var a := WorldLook.smoke_puff(3, 28, 14.0, 5.0)
+	ok(a == WorldLook.smoke_puff(3, 28, 14.0, 5.0), "a puff is a hash of its number and the time")
+	var inside := true
+	var moved := false
+	for i in 28:
+		var p := WorldLook.smoke_puff(i, 28, 14.0, 7.0)
+		inside = inside and Vector2(p["pos"]).length() <= 14.0 and float(p["alpha"]) > 0.0 and float(p["r"]) > 0.0
+		moved = moved or Vector2(p["pos"]) != Vector2(WorldLook.smoke_puff(i, 28, 14.0, 70.0)["pos"])
+	ok(inside, "every puff is over the zone")
+	ok(moved, "and they drift with the time")
+	UiSettings.set_access("reduced_motion", true)
+	ok(WorldLook.clock() == 0.0, "with reduced motion the clock the cloud reads is still")
+	UiSettings.set_access("reduced_motion", false)

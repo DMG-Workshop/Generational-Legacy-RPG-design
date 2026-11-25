@@ -238,6 +238,29 @@ func test_figure_and_pack() -> void:
 	ok(pack != null, "the pack opens")
 	var squares := _slots(pack)
 	ok(squares.size() >= 24 and squares[0].item == "iron_sword", "as a grid of squares with the sword in the first (%d)" % squares.size())
+	# a smoke pot: Use in the pack (and a double click) breaks it where the heir stands
+	d.heir.inventory.append("smoke_pot")
+	d.heir.inventory.append("smoke_pot")
+	pack.refresh()
+	await _frames(2)
+	pack._pick("smoke_pot")
+	await _frames(2)
+	var use_btn: Button = null
+	for b in pack.find_children("*", "Button", true, false):
+		if (b as Button).text == "Use":
+			use_btn = b
+	ok(use_btn != null, "a smoke pot picked in the pack has a Use button")
+	if use_btn != null:
+		use_btn.pressed.emit()
+		await _frames(2)
+	ok(GameSmoke.active(d) and d.heir.inventory.count("smoke_pot") == 1, "Use breaks one and lights the cloud")
+	d.smoke = {}
+	pack._open("smoke_pot")
+	await _frames(2)
+	ok(GameSmoke.active(d) and d.heir.inventory.count("smoke_pot") == 0, "a double click does the same")
+	d.smoke = {}
+	pack._open("smoke_pot")
+	ok(not GameSmoke.active(d), "with none left nothing is lit")
 	# a bag: put the sword in, take it out
 	d.heir.inventory.append("satchel")
 	pack.refresh()
