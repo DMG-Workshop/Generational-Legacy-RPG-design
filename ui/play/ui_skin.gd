@@ -1097,6 +1097,8 @@ static func dress_font(c: Control, role: String, want: int = 0) -> bool:
 	c.set_meta("skin_role", role)
 	if not c.has_meta("skin_refit"):
 		c.set_meta("skin_refit", true)
+		if c is Button:
+			c.resized.connect(func(): _refit.call_deferred(c))
 		c.draw.connect(func(): _refit.call_deferred(c))   # (a size or a text set after the layout is looked at when it is first drawn)
 	return true
 
@@ -1121,9 +1123,14 @@ static func _refit(c: Control) -> void:
 	if not is_instance_valid(c) or not c.has_meta("skin_pixel_font") or c.size.x <= 1.0:
 		return
 	if c.get_theme_font_size("font_size") != int(c.get_meta("skin_set_size", -1)):   # a size set since: crisp again
+		c.set_meta("skin_orig_size", c.get_theme_font_size("font_size"))   # (the caller's size is what a fallback goes back to)
 		dress_font(c, str(c.get_meta("skin_role")))
 		return
 	if not (c is Button or c is Label):
+		return
+	if c is Label and (c as Label).get_line_count() > 1:   # it wraps: a paragraph, not a heading
+		c.set_meta("skin_unfit", str(c.get("text")))
+		_take_back(c)
 		return
 	var text := str(c.get("text"))
 	var room := c.size.x
