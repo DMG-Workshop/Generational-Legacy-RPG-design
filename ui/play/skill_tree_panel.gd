@@ -11,6 +11,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const PanelSkin := preload("res://ui/play/panel_skin.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 const NODE_SIZE := Vector2(134, 44)
 const GAP := Vector2(16, 20)
 const PAD := 10.0
@@ -92,14 +93,14 @@ func _build() -> void:
 	var fill := Control.new()
 	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(fill)
-	var auto_btn := Kit.button("Spend along the path", func(): _act(GameSkillTree.auto(d, who)), Vector2(190, 32))
+	var auto_btn := PanelSkin.button(self, "Spend along the path", func(): _act(GameSkillTree.auto(d, who)), Vector2(190, 32))
 	auto_btn.add_theme_font_size_override("font_size", 14)
 	auto_btn.disabled = pts <= 0 or GameSkillTree.spend_block(d) != ""
 	auto_btn.tooltip_text = "Spend every point the way the autopilot would for a %s." % u.cls()["name"]
 	top.add_child(auto_btn)
 	var why := GameSkillTree.respec_block(d, who)
 	var fee := GameSkillTree.respec_fee(d, u)
-	var re := Kit.button("Unlearn all (%s gold)" % GameText.num(fee), func(): _act(GameSkillTree.respec(d, who)), Vector2(200, 32))
+	var re := PanelSkin.button(self, "Unlearn all (%s gold)" % GameText.num(fee), func(): _act(GameSkillTree.respec(d, who)), Vector2(200, 32))
 	re.add_theme_font_size_override("font_size", 14)
 	re.disabled = why != ""
 	re.tooltip_text = why if why != "" else "Refund every bought rank. What the blood carries stays."
@@ -127,6 +128,9 @@ func _build() -> void:
 	row.add_theme_constant_override("separation", 10)
 	body.add_child(row)
 	var frame := Kit.panel(Color("#16141f"))
+	if PanelSkin.on(self):   # a bed of shaded parchment under ink-lined links and parchment node cards
+		frame.add_theme_stylebox_override("panel", _bed())
+		frame.set_meta("skin_done", true)
 	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(frame)
 	scroll = ScrollContainer.new()
@@ -167,7 +171,12 @@ func _restore(keep: Vector2) -> void:
 func _tab(parent: Control, text: String, on: bool, cb: Callable) -> void:
 	var b := Kit.button(text, cb, Vector2(0, 30))
 	b.add_theme_font_size_override("font_size", 14)
-	if on:
+	if PanelSkin.on(self):   # wooden tabs, the open one lit in gold
+		PanelSkin.tab_button(self, b)
+		if on:
+			b.add_theme_stylebox_override("normal", UiSkin.tab_box("on"))
+			b.add_theme_color_override("font_color", UiSkin.pal("gold_hi"))
+	elif on:
 		b.add_theme_stylebox_override("normal", Kit.style(Color("#3d3860"), 6, Kit.ACCENT))
 		b.add_theme_color_override("font_color", Kit.ACCENT)
 	parent.add_child(b)
@@ -234,16 +243,19 @@ func _draw_tree(u: GameHeir) -> void:
 				edge = KEY.darkened(0.35)
 		if nid == selected:
 			fill = fill.lightened(0.15)
-		var st := Kit.style(fill, 7 if not keyst else 14, edge)
-		st.content_margin_top = 4
-		st.content_margin_bottom = 4
-		for s in ["normal", "hover", "pressed", "focus"]:
-			b.add_theme_stylebox_override(s, st if s != "hover" else Kit.style(fill.lightened(0.1), 7 if not keyst else 14, edge.lightened(0.2)))
-		b.add_theme_color_override("font_color", ink)
-		b.add_theme_color_override("font_hover_color", Kit.TEXT)
-		b.add_theme_color_override("font_pressed_color", Kit.TEXT)
-		if int(u.tree_free.get(id, 0)) > 0:
-			b.add_theme_color_override("font_color", Color("#e8a05a"))
+		if PanelSkin.on(self):
+			_dress_node(b, lk, keyst, r, nid == selected, int(u.tree_free.get(id, 0)) > 0)
+		else:
+			var st := Kit.style(fill, 7 if not keyst else 14, edge)
+			st.content_margin_top = 4
+			st.content_margin_bottom = 4
+			for s in ["normal", "hover", "pressed", "focus"]:
+				b.add_theme_stylebox_override(s, st if s != "hover" else Kit.style(fill.lightened(0.1), 7 if not keyst else 14, edge.lightened(0.2)))
+			b.add_theme_color_override("font_color", ink)
+			b.add_theme_color_override("font_hover_color", Kit.TEXT)
+			b.add_theme_color_override("font_pressed_color", Kit.TEXT)
+			if int(u.tree_free.get(id, 0)) > 0:
+				b.add_theme_color_override("font_color", Color("#e8a05a"))
 		b.tooltip_text = GameSkillTree.node_text(u, id)
 		b.set_meta("look", lk)
 		b.pressed.connect(func(): _select(nid))
@@ -266,7 +278,59 @@ static func look(d: GameDynasty, u: GameHeir, id: String) -> String:
 	return "open" if GameSkillTree.spend_block(d) == "" and GameSkillTree.take_block(u, id) == "" else "waiting"
 
 
+## The shaded parchment the tree is drawn on (skinned): an ink outline round a darker sheet.
+func _bed() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = UiSkin.pal("parch_lo")
+	sb.set_border_width_all(2 * UiSkin.pixel())
+	sb.border_color = UiSkin.pal("ink")
+	sb.set_content_margin_all(4.0)
+	return sb
+
+
+## A node as a card of the skin (skinned only; `look` is the node's state, as in `look`): a lit gold-edged plate when learned or
+## open to buy (tinted gold once learned), a plain plate when the way is open but the purse or the moment is not, a dimmed one when
+## locked, a crimson ribbon with light words for a keystone. The words stay ink (or light on crimson) whatever the state, so they read.
+static func _tint(a: Array) -> Color:
+	return Color(float(a[0]), float(a[1]), float(a[2]))
+
+
+func _dress_node(b: Button, lk: String, keyst: bool, rank: int, chosen: bool, free: bool) -> void:
+	var lit := lk in ["mastered", "taken", "open"] or chosen
+	var tint := Color.WHITE
+	var tints: Dictionary = UiSkin.data()["tree"]
+	if lk in ["mastered", "taken", "locked"]:
+		tint = _tint(tints[lk])
+	if chosen:
+		tint = tint.lerp(Color.WHITE, 0.5)
+	var base: StyleBoxTexture = UiSkin.ribbon_box() if keyst else UiSkin.plate_box(lit)
+	var st: StyleBoxTexture = base.duplicate()
+	st.modulate_color = tint if not keyst else (_tint(tints["keystone_locked"]) if lk == "locked" and not chosen else Color.WHITE)
+	st.content_margin_left = 4.0
+	st.content_margin_right = 4.0
+	st.content_margin_top = 3.0
+	st.content_margin_bottom = 3.0
+	var hov: StyleBoxTexture = st.duplicate()
+	hov.modulate_color = Color.WHITE
+	for sn in ["normal", "pressed", "focus"]:
+		b.add_theme_stylebox_override(sn, st)
+	b.add_theme_stylebox_override("hover", hov)
+	var ink := UiSkin.pal("ink")
+	if keyst:
+		ink = UiSkin.pal("gold_hi") if rank > 0 else UiSkin.pal("parch_hi")
+	elif free:
+		ink = UiSkin.pal("crimson_dk")
+	for cn in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(cn, ink)
+	if keyst:
+		b.add_theme_color_override("font_outline_color", UiSkin.pal("ink"))
+		b.add_theme_constant_override("outline_size", 2)
+	b.set_meta("skin_done", true)
+
+
 func _draw_edges(u: GameHeir) -> void:
+	var skinned := PanelSkin.on(self)
+	var w := float(UiSkin.pixel())
 	for id in boxes:
 		var n := GameSkillTree.node(id)
 		var to := _spot(n) + Vector2(node_size.x * 0.5, 0.0)
@@ -274,6 +338,14 @@ func _draw_edges(u: GameHeir) -> void:
 			var p := GameSkillTree.node(str(r))
 			var from := _spot(p) + Vector2(node_size.x * 0.5, node_size.y)
 			var lit := GameSkillTree.rank(u, str(r)) > 0
+			if skinned:   # ink lines at right angles: heavy and crimson where learned, plain ink where the way is open, faint brown where not
+				var took := lit and GameSkillTree.rank(u, id) > 0
+				var line := UiSkin.pal("crimson_dk") if took else (UiSkin.pal("ink") if lit else UiSkin.pal("brown"))
+				var wd := w * (2.0 if took else 1.0)
+				var mid := (from.y + to.y) * 0.5
+				var pts := PackedVector2Array([from, Vector2(from.x, mid), Vector2(to.x, mid), to])
+				canvas.draw_polyline(pts, line if lit else Color(line, 0.55), wd, false)
+				continue
 			var col := Kit.ACCENT if lit and GameSkillTree.rank(u, id) > 0 else (Kit.good_muted() if lit else Color("#3a3650"))
 			canvas.draw_line(from, to, col, 2.0 if lit else 1.5, true)
 
@@ -330,7 +402,11 @@ func _show(id: String) -> void:
 		var t := GameSkillTree.tree(tree_id)
 		side_box.add_child(_wrap(str(t["name"]), 17, Kit.ACCENT))
 		side_box.add_child(_wrap(str(t.get("description", "")), 13, Kit.dim()))
-		side_box.add_child(_wrap("Gold: taken (choose it to see whether its next rank can be bought now). Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % (" *: part of it passes to the next heir. A child of another race takes it in that race's shape." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""), 12, Kit.dim()))
+		var star := " *: part of it passes to the next heir. A child of another race takes it in that race's shape." if GameSkillTree.nodes_of(tree_id).any(func(x): return GameSkillTree.inheritable(x)) else ""
+		if PanelSkin.on(self):   # the skin's own key to the cards
+			side_box.add_child(_wrap("Gold-lit card: open to buy, or taken (a gold tint once taken; choose it to see whether its next rank can be bought now). Plain card: open, but not to be bought now (too few points, or mid-fight). Dim card: locked. Crimson card: a keystone, which bends a rule of battle and has a price. Crimson words: carried in the blood.%s" % star, 12, Kit.dim()))
+		else:
+			side_box.add_child(_wrap("Gold: taken (choose it to see whether its next rank can be bought now). Green: open to buy. Green outline on a dark fill: open, but not to be bought now (too few points, or mid-fight). Dim: locked. Violet text: a keystone, which bends a rule of battle and has a price. Orange text: carried in the blood.%s" % star, 12, Kit.dim()))
 		for line in _held(u):
 			side_box.add_child(_wrap(line, 13, Kit.TEXT))
 		for line in GameSkillTree.plan_lines(dynasty, who):
