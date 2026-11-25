@@ -138,7 +138,7 @@ func test_roll() -> void:
 		if not GameFinding.after_search(d, foes(["wolf"])).is_empty():
 			hits += 1
 	var rate := float(hits) / 2000.0
-	ok(absf(rate - float(GameFinding.setting("base_chance"))) < 0.03, "the find rate matches the chance (%.3f)" % rate)
+	ok(absf(rate - GameFinding.chance(dyn(1).heir, "wolf")) < 0.03, "the find rate matches the chance (%.3f)" % rate)
 	# not in a life
 	_with(func(x): x["base_chance"] = 1.0; x["max_chance"] = 1.0, func():
 		var d := dyn()
