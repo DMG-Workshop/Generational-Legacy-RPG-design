@@ -291,21 +291,21 @@ func _bed() -> StyleBoxFlat:
 ## A node as a card of the skin (skinned only; `look` is the node's state, as in `look`): a lit gold-edged plate when learned or
 ## open to buy (tinted gold once learned), a plain plate when the way is open but the purse or the moment is not, a dimmed one when
 ## locked, a crimson ribbon with light words for a keystone. The words stay ink (or light on crimson) whatever the state, so they read.
+static func _tint(a: Array) -> Color:
+	return Color(float(a[0]), float(a[1]), float(a[2]))
+
+
 func _dress_node(b: Button, lk: String, keyst: bool, rank: int, chosen: bool, free: bool) -> void:
 	var lit := lk in ["mastered", "taken", "open"] or chosen
 	var tint := Color.WHITE
-	match lk:
-		"mastered":
-			tint = Color(1.0, 0.9, 0.62)
-		"taken":
-			tint = Color(1.0, 0.95, 0.78)
-		"locked":
-			tint = Color(0.78, 0.76, 0.72)
+	var tints: Dictionary = UiSkin.data()["tree"]
+	if lk in ["mastered", "taken", "locked"]:
+		tint = _tint(tints[lk])
 	if chosen:
 		tint = tint.lerp(Color.WHITE, 0.5)
 	var base: StyleBoxTexture = UiSkin.ribbon_box() if keyst else UiSkin.plate_box(lit)
 	var st: StyleBoxTexture = base.duplicate()
-	st.modulate_color = tint if not keyst else (Color(0.72, 0.68, 0.68) if lk == "locked" and not chosen else Color.WHITE)
+	st.modulate_color = tint if not keyst else (_tint(tints["keystone_locked"]) if lk == "locked" and not chosen else Color.WHITE)
 	st.content_margin_left = 4.0
 	st.content_margin_right = 4.0
 	st.content_margin_top = 3.0

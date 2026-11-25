@@ -1,6 +1,13 @@
 {
   "note": "The interface skin (docs/ART_DIRECTION.md; ui/play/ui_skin.gd, checked by UiSkin.validate in tools/check_data.gd): the palette, the sizes of the pieces and the contrast figures. It skins what is drawn as a pane over the open world on a desktop-sized window; a touch screen or a compact window keeps the older look. `pixel` is the size of one pixel of the skin's art in UI units (the world's pixel at the default zoom); the pieces are made at that size and drawn at whole multiples, never smoothed. Each `variants` entry is a full palette; `high_contrast` is the one the accessibility option picks. `contrast` lists pairs of palette names with the least contrast ratio each must keep in every variant (`min_hc` for the high-contrast variant, which may ask for more). `text_maps` says which palette colour stands in for the colours the dark overlay look uses (by hex) where a label sits on a parchment or a wood face.",
   "pixel": 2,
+  "tree": {
+    "note": "The skill tree's node cards (ui/play/skill_tree_panel.gd _dress_node): the tint each state multiplies into a parchment plate (a lit plate when taken or open to buy), and the tint of a locked keystone's crimson ribbon. UiSkin.validate checks that ink still reads on the tinted parchment and the light words on the tinted ribbon.",
+    "mastered": [1.0, 0.9, 0.62],
+    "taken": [1.0, 0.95, 0.78],
+    "locked": [0.78, 0.76, 0.72],
+    "keystone_locked": [0.72, 0.68, 0.68]
+  },
   "shadow": { "offset": [5, 6], "alpha": 0.35 },
   "faces": { "default": "parch", "minimap_pane": "wood" },
   "title": { "text": "gold_hi", "outline": "crimson_dk", "outline_size": 3, "size": 20 },

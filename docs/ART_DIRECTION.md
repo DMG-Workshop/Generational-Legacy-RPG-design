@@ -117,8 +117,17 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   shops' tabs are wood with the open one lit in gold (`tab` piece), action keys are raised parchment (`button` piece: normal, hover, pressed,
   disabled), the house's levels are segmented bars, a row that cannot be bought keeps its reason line in readable ink, and the family tree
   is drawn as parchment cards with crimson name ribbons joined by ink lines (`family_tree_view.gd`; the old text stays on a compact window or a
-  touch screen). Not yet: the workshop, heirlooms, trials and looks panels (they get the pane's face and labels but keep dark inner boxes),
-  the skill tree's canvas, and bars in the tavern and quest board.
+  touch screen). Not yet: the workshop, heirlooms, trials and looks panels (they get the pane's face and labels but keep dark inner boxes).
+- **Step 2, overlays part B:** the chronicle's Statistics and Ages tabs are stacks of parchment cards, each with a small crimson ribbon heading
+  and inset rows (name at the left, numbers right-aligned in a column, a segmented bar for causes of death and gold); the Creatures tab has an
+  inset slot per creature and raised keys (and the market's); the tavern's Hire, Skill tree and Dismiss keys are raised and a member's health and
+  mana are slim segmented bars; the quest board's kill progress is a segmented bar. The skill tree canvas is a shaded-parchment bed with plate
+  node cards (a lit gold-edged plate for a node open to buy or taken, tinted gold once taken; a plain plate when open but not affordable; a dimmed
+  one when locked; a crimson ribbon with light words for a keystone) and ink right-angled links (heavy crimson where learned); the wooden tabs
+  and keys match the other panels, and the side column's key to the cards is reworded for the new colours. Node tints are in `skin.json` `tree`
+  and checked by `UiSkin.validate` (ink on the tinted card 4.5 to 1, 7 to 1 in high contrast). Compact windows and touch keep the old look.
+  Not done: the smithy, ranch pens, hatchery and nursery screens named in the brief do not exist as panels in this tree (shops and the chronicle's
+  creature tab were already slot rows); the night-sky option for the tree.
 - **The battle screen's frame:** `ui/play/battle_skin.gd` puts the skin on what is round the battle view (the figures, effects and
   animation are untouched). The arena has the wooden frame; the log, the command panel, the skill, spell, feat and poison lists and the
   result are parchment panels. The command panel's title (whose move is asked, or the reaction question) is a crimson ribbon, and the

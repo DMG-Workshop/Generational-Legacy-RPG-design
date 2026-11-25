@@ -340,6 +340,8 @@ func _screen(what: String) -> void:
 				for i in int(_arg("gens", "0")):
 					d._die("old age")
 					d.choose_heir(0)
+			if what == "shop" and _arg("shoptab", "") != "":   # (look-only) open on another of the town's shops
+				p.start_tab = _arg("shoptab", "")
 			if _arg("pane", "") == "1":   # as a pane over the world, where the interface skin is worn (a look-only option)
 				p.set_meta("pane", p.get_script().resource_path.get_file().get_basename())
 			app.current.add_child(p)

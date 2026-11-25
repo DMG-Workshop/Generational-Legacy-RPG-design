@@ -1080,6 +1080,37 @@ static func validate(dat: Dictionary = {}) -> Array:
 			if got < need:
 				bad.append("skin.json: %s on %s (%s) is %.1f to 1 in %s, needs %.1f" % [pair["fg"], pair["bg"], pair.get("why", ""), got, vn, need])
 	bad.append_array(_validate_screens(d))
+	bad.append_array(_validate_tree(d))
+	return bad
+
+
+## The skill tree's node tints (`tree`): whole colour triples, and ink and the ribbon's light words still readable on the tinted cards.
+static func _validate_tree(d: Dictionary) -> Array:
+	var bad: Array = []
+	var t: Variant = d.get("tree")
+	if typeof(t) != TYPE_DICTIONARY:
+		return ["skin.json: tree is missing"]
+	for k in ["mastered", "taken", "locked", "keystone_locked"]:
+		var c: Variant = (t as Dictionary).get(k)
+		if typeof(c) != TYPE_ARRAY or (c as Array).size() != 3 or not (c as Array).all(func(x): return typeof(x) in [TYPE_INT, TYPE_FLOAT] and float(x) >= 0.0 and float(x) <= 1.0):
+			bad.append("skin.json: tree.%s must be three numbers from 0 to 1" % k)
+	if not bad.is_empty():
+		return bad
+	for vn in d["variants"]:
+		var v: Dictionary = d["variants"][vn]
+		var hc: bool = vn == "high_contrast"
+		for k in ["mastered", "taken", "locked"]:
+			var tint := Color(float(t[k][0]), float(t[k][1]), float(t[k][2]))
+			var face := Color(str(v["parch"])) * tint
+			var got := contrast(Color(str(v["ink"])), face)
+			if got < (7.0 if hc else 4.5):
+				bad.append("skin.json: ink on a %s skill card is %.1f to 1 in %s" % [k, got, vn])
+		var kt := Color(float(t["keystone_locked"][0]), float(t["keystone_locked"][1]), float(t["keystone_locked"][2]))
+		var rib := Color(str(v["crimson"])) * kt
+		for fg in ["parch_hi", "gold_hi"]:
+			var got2 := contrast(Color(str(v[fg])), rib)
+			if got2 < (7.0 if hc else 4.5):
+				bad.append("skin.json: %s on a locked keystone card is %.1f to 1 in %s" % [fg, got2, vn])
 	return bad
 
 
