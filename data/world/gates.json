@@ -221,8 +221,8 @@
    "anchor": {
     "place": "hearthmere",
     "at": [
-     38,
-     0
+     37,
+     -14
     ]
    },
    "whole": 5,
@@ -248,8 +248,8 @@
    "anchor": {
     "place": "ironford",
     "at": [
-     -38,
-     0
+     -37,
+     14
     ]
    },
    "whole": 5,
@@ -274,8 +274,8 @@
    "anchor": {
     "place": "kingshold",
     "at": [
-     0,
-     38
+     -14,
+     37
     ]
    },
    "whole": 6,
@@ -301,8 +301,8 @@
    "anchor": {
     "place": "brinehaven",
     "at": [
-     -38,
-     0
+     -37,
+     -14
     ]
    },
    "whole": 1,

@@ -322,7 +322,8 @@ static func thefts(d: GameDynasty, id: String, upto: int) -> Array:
 	return (e["list"] as Array).filter(func(t): return int(t[0]) <= upto)
 
 
-## The guard posted at a gate: {id, since, seen} or {}.
+## The guard record of a gate: {id (the one serving or posted last, "" once relieved), since, seen, past: [[from, to]]} or {}. `past` keeps the years
+## earlier guards served, so a thief's year they kept off stays kept.
 static func guard_record(d: GameDynasty, id: String) -> Dictionary:
 	var g: Variant = d.gates.get("guard", {})
 	return (g as Dictionary).get(id, {}) if typeof(g) == TYPE_DICTIONARY else {}
@@ -331,9 +332,9 @@ static func guard_record(d: GameDynasty, id: String) -> Dictionary:
 ## Whether the guard of a gate is serving now: still in the party and still under the `guard` order.
 static func guard_serving(d: GameDynasty, id: String) -> bool:
 	var r := guard_record(d, id)
-	if r.is_empty():
+	if r.is_empty() or str(r.get("id", "")) == "":
 		return false
-	var m := str(r.get("id", ""))
+	var m := str(r["id"])
 	return d.party.has_member(m) and GameCompanions.order_of(d, m) == "guard"
 
 
@@ -342,12 +343,16 @@ static func guard_of(d: GameDynasty, id: String) -> String:
 	return str(guard_record(d, id).get("id", "")) if guard_serving(d, id) else ""
 
 
-## Whether thieves in a year are kept off a gate: a guard has stood there since before it and serves now, or served up to the year the family last looked.
+## Whether thieves in a year are kept off a gate: a guard stood there that year (since the year after they were posted, up to the year they were relieved or
+## the family last looked, or for as long as they serve).
 static func guarded_in(d: GameDynasty, id: String, y: int) -> bool:
 	var r := guard_record(d, id)
 	if r.is_empty():
 		return false
-	if y <= int(r.get("since", 0)):
+	for p in r.get("past", []):
+		if y > int(p[0]) and y <= int(p[1]):
+			return true
+	if str(r.get("id", "")) == "" or y <= int(r.get("since", 0)):
 		return false
 	return guard_serving(d, id) or y <= int(r.get("seen", 0))
 
@@ -680,6 +685,22 @@ static func tend(d: GameDynasty) -> void:
 			g[id]["seen"] = year(d)
 
 
+## Closes the guard's current stretch into `past` (the record is left with no one on duty).
+static func _close_guard(d: GameDynasty, id: String) -> void:
+	var g: Dictionary = d.gates.get("guard", {})
+	if not g.has(id):
+		return
+	var r: Dictionary = g[id]
+	if str(r.get("id", "")) != "":
+		var past: Array = (r.get("past", []) as Array).duplicate()
+		if int(r["seen"]) > int(r["since"]) and past.size() < 20:
+			past.append([int(r["since"]), int(r["seen"])])
+		r["past"] = past
+		r["id"] = ""
+	g[id] = r
+	d.gates["guard"] = g
+
+
 ## Posts a party member at a gate: it takes the `guard` order, and no thief strips the gate from then on while they serve. {ok, text}.
 static func assign_guard(d: GameDynasty, id: String, member: String, at: Vector2i = Vector2i(-1, -1)) -> Dictionary:
 	if not has(id):
@@ -691,35 +712,36 @@ static func assign_guard(d: GameDynasty, id: String, member: String, at: Vector2
 	var nm := str(d.party.member(member)["name"])
 	if guard_of(d, id) == member:
 		return {"ok": false, "text": text("guard_busy", {"name": nm, "gate": name_of(id)})}
-	release_guard(d, id, true)
-	GameCompanions.set_order(d, member, "guard")
+	tend(d)
+	if guard_of(d, id) != "":
+		release_guard(d, id, true)
 	var g: Dictionary = d.gates.get("guard", {})
 	for other in g.keys():   # one post a companion
 		if str(g[other].get("id", "")) == member:
-			g.erase(other)
-	g[id] = {"id": member, "since": year(d), "seen": year(d)}
+			if guard_serving(d, str(other)):
+				GameCompanions.set_order(d, member, "follow")
+			_close_guard(d, str(other))
+	g = d.gates.get("guard", {})
+	GameCompanions.set_order(d, member, "guard")
+	var rec: Dictionary = g.get(id, {})
+	g[id] = {"id": member, "since": year(d), "seen": year(d), "past": rec.get("past", [])}
 	d.gates["guard"] = g
 	var line := text("guard_set", {"name": nm, "gate": name_of(id)})
 	d._say(line)
 	return {"ok": true, "text": line}
 
 
-## Takes the guard off a gate (they return to following). {ok, text}.
+## Takes the guard off a gate (they return to following). The years they served stay kept. {ok, text}.
 static func release_guard(d: GameDynasty, id: String, quiet: bool = false) -> Dictionary:
 	var r := guard_record(d, id)
-	if r.is_empty():
+	if r.is_empty() or str(r.get("id", "")) == "":
 		return {"ok": false, "text": text("guard_none")}
-	var member := str(r.get("id", ""))
+	var member := str(r["id"])
 	tend(d)
-	var g: Dictionary = d.gates.get("guard", {})
 	if d.party.has_member(member) and GameCompanions.order_of(d, member) == "guard":
 		GameCompanions.set_order(d, member, "follow")
-	g.erase(id)
-	if g.is_empty():
-		d.gates.erase("guard")
-	else:
-		d.gates["guard"] = g
 	var nm := d.party.display_name(member)
+	_close_guard(d, id)
 	var line := text("guard_off", {"name": nm, "gate": name_of(id)})
 	if not quiet:
 		d._say(line)
@@ -928,6 +950,10 @@ static func arrival_creatures(d: GameDynasty, realm: String) -> Array:
 
 # ---------------------------------------------------------------- what is saved
 
+static func _year_ok(v: Variant) -> bool:
+	return typeof(v) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(v)) and float(v) >= 0.0 and float(v) < 100000.0
+
+
 ## The state as it loads: only well-formed ids and whole numbers; {} for anything else (a corrupt part is dropped on its own).
 static func load_state(v: Variant) -> Dictionary:
 	var out := {}
@@ -963,9 +989,13 @@ static func load_state(v: Variant) -> Dictionary:
 		for k in v["guard"]:
 			var r: Variant = v["guard"][k]
 			if typeof(k) == TYPE_STRING and has(k) and typeof(r) == TYPE_DICTIONARY and typeof(r.get("id")) == TYPE_STRING \
-					and typeof(r.get("since")) in [TYPE_INT, TYPE_FLOAT] and typeof(r.get("seen")) in [TYPE_INT, TYPE_FLOAT] \
-					and is_finite(float(r["since"])) and is_finite(float(r["seen"])) and float(r["since"]) >= 0.0 and float(r["seen"]) >= 0.0 and float(r["seen"]) < 100000.0 and float(r["since"]) < 100000.0:
-				g[k] = {"id": str(r["id"]), "since": int(r["since"]), "seen": int(r["seen"])}
+					and _year_ok(r.get("since")) and _year_ok(r.get("seen")):
+				var past: Array = []
+				if typeof(r.get("past")) == TYPE_ARRAY:
+					for p in r["past"]:
+						if typeof(p) == TYPE_ARRAY and (p as Array).size() == 2 and _year_ok(p[0]) and _year_ok(p[1]) and past.size() < 20:
+							past.append([int(p[0]), int(p[1])])
+				g[k] = {"id": str(r["id"]), "since": int(r["since"]), "seen": int(r["seen"]), "past": past}
 		if not g.is_empty():
 			out["guard"] = g
 	return out
