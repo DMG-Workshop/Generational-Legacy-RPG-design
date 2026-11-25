@@ -61,6 +61,7 @@ func test_lines() -> void:
 		["hit_ward", {"who": "A", "whom": "B", "n": 32, "absorbed": 18, "tail": ""}, "A hits B for 32 (18 absorbed)."],
 		["hit_ward_all", {"who": "A", "whom": "B", "absorbed": 7}, "A hits B, and the ward absorbs all 7."],
 		["foe_defeated", {"name": "Wolf"}, "Wolf is defeated."],
+		["foe_flees", {"name": "Wolf"}, "Wolf loses heart and runs off."],
 		["foe_steps_up", {"name": "Wolf"}, "Wolf steps up to the front."],
 		["back_rank_steps_up", {}, "The back rank steps up to the front."],
 		["ally_knocked_out", {"name": "Bren"}, "Bren is knocked senseless and out of the fight."],

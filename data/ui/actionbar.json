@@ -1,5 +1,5 @@
 {
- "note": "The open world's action bar on a desktop window with a mouse (ui/play/action_slot.gd, checked by tools/check_data.gd): eight numbered slots that stay where they are (a slot that does not apply is dimmed, not removed), each answering to its number key (the action world_slot_<n> in input.json) as well as a click, and two small buttons for the Menu and the world map. `action` is the key action whose first key the tooltip also names. A touch screen keeps its own text buttons (docs/MOBILE.md).",
+ "note": "The open world's action bar on a desktop window with a mouse (ui/play/action_slot.gd, checked by tools/check_data.gd): nine numbered slots that stay where they are (a slot that does not apply is dimmed, not removed), each answering to its number key (the action world_slot_<n> in input.json) as well as a click, and two small buttons for the Menu and the world map. `action` is the key action whose first key the tooltip also names. A touch screen keeps its own text buttons (docs/MOBILE.md).",
  "settings": {
   "slot_px": 44,
   "gap": 4,
@@ -90,6 +90,16 @@
     0.8,
     0.85
    ]
+  },
+  {
+   "id": "smoke",
+   "label": "Smoke pot",
+   "glyph": "smoke",
+   "color": [
+    0.78,
+    0.78,
+    0.8
+   ]
   }
  ],
  "extras": [
@@ -118,6 +128,8 @@
  ],
  "text": {
   "cast_none": "There is no spell to cast here.",
+  "tip_count": "{tip}: {n} left",
+  "tip_none": "{tip}: none",
   "tip": "{label}  ({keys})",
   "tip_plain": "{label}"
  }

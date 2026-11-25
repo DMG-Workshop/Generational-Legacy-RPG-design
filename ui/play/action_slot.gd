@@ -89,6 +89,12 @@ static func make(def: Dictionary, number: String, on_press: Callable, skinned_lo
 	return slot
 
 
+## A slot for a thing the heir carries says how many in its tooltip ("Smoke pot  (9): 2 left", or "none").
+func set_count(def: Dictionary, number: String, n: int) -> void:
+	var tip := tip_for(def, number)
+	tooltip_text = text("tip_count", {"tip": tip, "n": n}) if n > 0 else text("tip_none", {"tip": tip})
+
+
 func set_state(p_dim: bool, p_active: bool) -> void:
 	if p_dim != dim or p_active != active:
 		dim = p_dim

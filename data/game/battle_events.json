@@ -14,6 +14,7 @@
 		"skip": {"about": "A status takes a unit's turn.", "fields": {"ref": "string", "id": "string"}},
 		"tick": {"about": "A status's damage or healing at the start of a turn.", "fields": {"ref": "string", "id": "string", "amount": "int"}, "optional": {"absorbed": "int", "heal": "bool"}},
 		"death": {"about": "A foe is slain.", "fields": {"side": "string", "index": "int"}},
+		"foe_flee": {"about": "A fearful foe (a weak creature of the open world) loses heart and runs off: it is out of the fight, with no reward.", "fields": {"index": "int", "name": "string"}},
 		"advance": {"about": "Foes step up to the front rank.", "fields": {"indices": "ints"}},
 		"ko": {"about": "A companion is knocked out for the rest of the fight; foe_scale is the factor the foes' health was rescaled by.", "fields": {"side": "string", "ally": "int", "foe_scale": "number"}},
 		"cover": {"about": "A covering member takes a foe's blow meant for another, just before the hit.", "fields": {"by": "int", "for": "int", "index": "int"}},

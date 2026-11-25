@@ -14,6 +14,7 @@
 		"child_event": "{name}: {event}",
 		"level_up_named": "Level up! {name} is now level {level}.",
 		"victory": "Victory! +{xp} XP, +{gold} gold.",
+		"xp_con": "+{xp} XP from the fight ({band}).",
 		"heirloom_claimed": "Heirloom claimed: {heirloom}! (+{pct}% power for all descendants)",
 		"echo_slew": "{name} slew {foe}",
 		"legend_slain": "Legend: {name} has slain {foe}.",

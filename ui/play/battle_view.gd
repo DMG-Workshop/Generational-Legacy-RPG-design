@@ -420,6 +420,8 @@ func _build_actors() -> void:
 		chips.z_index = 1
 		root.add_child(chips)
 		arena.add_child(root)
+		if bool(e.get("fled", false)):
+			root.visible = false   # a fight reopened after a foe ran off: it is not on the field
 		enemy_nodes.append({"root": root, "body": body, "pose": pose, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h})
 
 
@@ -2009,6 +2011,8 @@ func _play_one(ev: Dictionary) -> void:
 				en2["pose"].fall()
 			var t := create_tween()
 			t.tween_property(en2["root"], "modulate:a", 0.0, UiSettings.motion_time(0.4))
+		"foe_flee":   # a weak foe loses heart: a puff of dust and it runs off the field (with reduced motion it is just gone)
+			_flee_foe(int(ev["index"]))
 		"advance":   # the back rank steps up into the fallen front rank's place
 			for k in ev["indices"]:
 				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), UiSettings.motion_time(0.3))
@@ -2031,6 +2035,27 @@ func _play_one(ev: Dictionary) -> void:
 			_float_text(hero_node.position + Vector2(30, 70), "blade coated", GamePlague.toxin_color(), 18)
 		"coat_end":
 			_float_text(hero_node.position + Vector2(30, 0), "coating spent", Kit.dim(), 16)
+
+
+## A fled foe leaves the field: it runs off to the right and fades, then is out of sight and out of the taps. Look only.
+func _flee_foe(i: int) -> void:
+	if i < 0 or i >= enemy_nodes.size():
+		return
+	var en: Dictionary = enemy_nodes[i]
+	en["mark"].visible = false
+	en["sel"].visible = false
+	_float_text(en["root"].position + Vector2(en["w"] * 0.2, 6), "runs off", Kit.dim(), 16)
+	en["hp"].value = 0
+	var root: Control = en["root"]
+	if UiSettings.reduced_motion():
+		root.visible = false
+		return
+	_fx("flee", "", _body("enemy", i), _body("enemy", i))
+	var t := create_tween()
+	t.set_parallel(true)
+	t.tween_property(root, "position:x", root.position.x + 260.0, 0.55)
+	t.tween_property(root, "modulate:a", 0.0, 0.55)
+	t.chain().tween_callback(func(): root.visible = false)
 
 
 func _hurt_text(ev: Dictionary) -> String:

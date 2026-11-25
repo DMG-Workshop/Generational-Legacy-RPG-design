@@ -252,7 +252,7 @@ func test_panes() -> void:
 	for n in _all(status, []):
 		if n is ProgressBar and n.has_meta("skin_bar"):
 			bars += 1
-	ok(bars == 3, "health, mana and carrying are segmented bars: %d" % bars)
+	ok(bars == 4, "health, mana, experience and carrying are segmented bars: %d" % bars)
 	ok(_inks_read(status, UiSkin.pal("parch")), "every label on the status pane reads on parchment")
 	ok(_inks_read(mini, UiSkin.pal("wood")), "and on the minimap's wood")
 	# a panel that is not one of the kit's own: its labels and buttons are dressed as they are added

@@ -541,11 +541,12 @@
      "tags": [],
      "ids": [
       "comfrey_salve",
-      "restorative_cordial"
+      "restorative_cordial",
+      "smoke_pot"
      ],
      "count": [
-      2,
-      2
+      3,
+      3
      ],
      "tier_max": 9
     },
@@ -2980,11 +2981,12 @@
      "ids": [
       "trail_rations",
       "hemp_rope",
-      "tinderbox"
+      "tinderbox",
+      "smoke_pot"
      ],
      "count": [
-      3,
-      3
+      4,
+      4
      ],
      "tier_max": 9
     },

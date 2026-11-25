@@ -61,6 +61,7 @@
     "world_slot_6": {"name": "Action bar slot 6", "keys": ["6"], "pointer_only": true},
     "world_slot_7": {"name": "Action bar slot 7", "keys": ["7"], "pointer_only": true},
     "world_slot_8": {"name": "Action bar slot 8", "keys": ["8"], "pointer_only": true},
+    "world_slot_9": {"name": "Action bar slot 9", "keys": ["9"], "pointer_only": true},
     "world_order_follow": {"name": "Order: follow me", "keys": ["T"], "pointer_only": true},
     "world_order_stay": {"name": "Order: stay", "keys": ["Y"], "pointer_only": true},
     "world_order_gather": {"name": "Order: gather", "keys": ["U"], "pointer_only": true},
