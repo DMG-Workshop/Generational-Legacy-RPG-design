@@ -228,6 +228,14 @@ static func validate() -> Array:
 			bad.append("sandbox.json: settings.%s must be a number of 0 or more" % k)
 	bad.append_array(GameLevels.validate())
 	bad.append_array(GameSmoke.validate())
+	var mm: Variant = data().get("minimap")
+	if typeof(mm) != TYPE_DICTIONARY:
+		bad.append("sandbox.json: minimap (the colours of a town's buildings, wall and gates) is missing")
+	else:
+		for k in ["building", "city_wall", "gate"]:
+			var col: Variant = (mm as Dictionary).get(k)
+			if typeof(col) != TYPE_ARRAY or (col as Array).size() != 3:
+				bad.append("sandbox.json: minimap.%s needs a colour [r, g, b]" % k)
 	return bad
 
 

@@ -178,6 +178,7 @@ static func update(d: GameDynasty) -> Array:
 
 ## Awards what is due and tells each new title in the journal. Returns the ids newly earned.
 static func announce(d: GameDynasty) -> Array:
+	GameSkillTree.announce_companions(d)   # the skill points a companion has earned since the last screen
 	GameAchievements.announce(d)   # milestones first: one may be what a title waits for
 	var fresh := update(d)
 	for id in fresh:

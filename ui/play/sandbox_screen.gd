@@ -1171,6 +1171,9 @@ func _refresh_orders() -> void:
 	for m in d.party.members:
 		var id: String = str(m["id"])
 		var label := "%s: %s" % [str(m["name"]), GameCompanions.order_name(GameCompanions.order_of(d, id))]
+		var pts := GameSkillTree.points(d.party.unit(d, m))
+		if pts > 0:   # skill points the player has yet to spend on this companion
+			label += "  (%s skill point%s)" % [GameText.num(pts), "" if pts == 1 else "s"]
 		orders_panel.add_child(Kit.button(label, func(): _cycle(id), Vector2(272, 44)))
 
 
@@ -1214,6 +1217,8 @@ func _cell() -> float:
 
 
 func _refresh_status() -> void:
+	if not app.dynasty.party.tree_news.is_empty():   # a companion has earned skill points: the journal tells it (the pane shows it next refresh)
+		GameSkillTree.announce_companions(app.dynasty)
 	var d: GameDynasty = app.dynasty
 	var line := last_line
 	if mode == "build":
@@ -1367,6 +1372,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	items.sort_custom(func(p, q): return p[0] < q[0])
 	for it in items:
 		match str(it[1]):
+			"wall":
+				_paint_wall(c, it[2], origin, area, centre, cell, dim)
 			"building":
 				var b: Dictionary = it[2]
 				var at := origin + (Vector2(float(b["x"]), float(b["z"])) - centre) * cell + area * 0.5
