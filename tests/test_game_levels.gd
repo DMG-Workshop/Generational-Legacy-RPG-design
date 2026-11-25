@@ -101,6 +101,17 @@ func test_con() -> void:
 	ok(s.con(5) == "trivial" and s.con(40) == "deadly", "GameSandbox.con reads the heir's level")
 	ok(GameLevels.con_xp("trivial") < GameLevels.con_xp("easy") and GameLevels.con_xp("easy") < GameLevels.con_xp("even") and GameLevels.con_xp("even") < GameLevels.con_xp("hard") and GameLevels.con_xp("hard") < GameLevels.con_xp("deadly"), "xp rises with the band")
 	ok(GameLevels.con_xp("even") == 1.0, "an even foe pays its xp as it was")
+	ok(GameLevels.con_gold("trivial") < GameLevels.con_gold("easy") and GameLevels.con_gold("easy") < GameLevels.con_gold("even") and GameLevels.con_gold("even") < GameLevels.con_gold("hard") and GameLevels.con_gold("hard") < GameLevels.con_gold("deadly"), "gold rises with the band")
+	ok(GameLevels.con_gold("even") == 1.0, "an even foe carries its gold as it was")
+	var dull := {"level": 5, "xp": 10, "gold": 20}
+	GameLevels.dress(dull, 20)
+	ok(dull["con"] == "trivial" and int(dull["gold"]) == 5, "a trivial foe carries a quarter of its gold: %s" % str(dull["gold"]))
+	var rich := {"level": 40, "xp": 10, "gold": 20}
+	GameLevels.dress(rich, 20)
+	ok(rich["con"] == "deadly" and int(rich["gold"]) == 40, "a deadly foe carries double: %s" % str(rich["gold"]))
+	var none := {"level": 20, "xp": 10, "gold": 0}
+	GameLevels.dress(none, 20)
+	ok(int(none["gold"]) == 0, "a foe with no gold still has none")
 	ok(GameLevels.fearful_band("trivial") and GameLevels.fearful_band("easy") and not GameLevels.fearful_band("even") and not GameLevels.fearful_band("deadly"), "only the weak are fearful")
 
 

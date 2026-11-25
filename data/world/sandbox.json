@@ -22,13 +22,13 @@
     "name_reach": 0.9
   },
   "levels": {
-    "note": "Creature levels in the open world (core/game/game_levels.gd). A creature's level is max(1, round(heir level * ratio * the place's danger)), the ratio drawn from `bands` (weight, then a range) on a hash of the dynasty seed and the spawn tile, never the dynasty's dice. `con_below` is where a creature's level / the heir's level puts it on the scale (the first band it is below; the last band takes the rest). `con_xp` is the share of a foe's xp it gives. `flee_bands` are the bands whose foes are fearful: below `flee_hp_share` of their health each of their turns they run with chance `flee_chance` and give no reward. `mark` is a character shown beside the level so colour is never the only cue; `color` is a Kit colour token (dim, good, text, accent, bad). Only fights begun from the open world's contact use any of this.",
+    "note": "Creature levels in the open world (core/game/game_levels.gd). A creature's level is max(1, round(heir level * ratio * the place's danger)), the ratio drawn from `bands` (weight, then a range) on a hash of the dynasty seed and the spawn tile, never the dynasty's dice. `con_below` is where a creature's level / the heir's level puts it on the scale (the first band it is below; the last band takes the rest). `con_xp` is the share of a foe's xp it gives and `con_gold` the share of its gold it carries. `flee_bands` are the bands whose foes are fearful: below `flee_hp_share` of their health each of their turns they run with chance `flee_chance` and give no reward. `mark` is a character shown beside the level so colour is never the only cue; `color` is a Kit colour token (dim, good, text, accent, bad). Only fights begun from the open world's contact use any of this.",
     "bands": [
-      {"id": "trivial", "name": "trivial", "lo": 0.25, "hi": 0.6, "weight": 2, "con_below": 0.6, "con_xp": 0.1, "mark": "-", "color": "dim"},
-      {"id": "easy", "name": "easy", "lo": 0.6, "hi": 0.9, "weight": 3, "con_below": 0.9, "con_xp": 0.5, "mark": "v", "color": "good"},
-      {"id": "even", "name": "even", "lo": 0.9, "hi": 1.15, "weight": 4, "con_below": 1.15, "con_xp": 1.0, "mark": "=", "color": "text"},
-      {"id": "hard", "name": "hard", "lo": 1.15, "hi": 1.5, "weight": 2, "con_below": 1.5, "con_xp": 1.6, "mark": "^", "color": "accent"},
-      {"id": "deadly", "name": "deadly", "lo": 1.5, "hi": 2.2, "weight": 1, "con_below": 0.0, "con_xp": 2.5, "mark": "!", "color": "bad"}
+      {"id": "trivial", "name": "trivial", "lo": 0.25, "hi": 0.6, "weight": 2, "con_below": 0.6, "con_xp": 0.1, "con_gold": 0.25, "mark": "-", "color": "dim"},
+      {"id": "easy", "name": "easy", "lo": 0.6, "hi": 0.9, "weight": 3, "con_below": 0.9, "con_xp": 0.5, "con_gold": 0.6, "mark": "v", "color": "good"},
+      {"id": "even", "name": "even", "lo": 0.9, "hi": 1.15, "weight": 4, "con_below": 1.15, "con_xp": 1.0, "con_gold": 1.0, "mark": "=", "color": "text"},
+      {"id": "hard", "name": "hard", "lo": 1.15, "hi": 1.5, "weight": 2, "con_below": 1.5, "con_xp": 1.6, "con_gold": 1.4, "mark": "^", "color": "accent"},
+      {"id": "deadly", "name": "deadly", "lo": 1.5, "hi": 2.2, "weight": 1, "con_below": 0.0, "con_xp": 2.5, "con_gold": 2.0, "mark": "!", "color": "bad"}
     ],
     "flee_bands": ["trivial", "easy"],
     "flee_hp_share": 0.35,
