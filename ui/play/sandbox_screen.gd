@@ -31,6 +31,7 @@ const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
+const SpriteMotion := preload("res://ui/play/sprite_motion.gd")
 const BAR := 56.0
 
 var app: Node
@@ -58,6 +59,8 @@ var overlay: Control      # the route, buildings, creatures, heir, ghost and sti
 var _figures := {}        # companion id and level -> their figure's texture (SpriteArt)
 var _last_x := {}         # creature or companion -> where it was drawn last (the look only)
 var _east := {}           # creature or companion -> whether it last moved east
+var _last_pos := {}       # key -> where it was drawn last, to tell whether it moves (the walk frames; the look only)
+var _moved_at := {}       # key -> the second it last moved
 var _fight: Control = null   # the battle screen, hosted over the map while a creature's fight is on
 var piece_button: Button
 var level_button: Button
@@ -257,6 +260,9 @@ func _process(delta: float) -> void:
 		_build()
 	_refresh_status()
 	_sync_tiles()
+	SpriteArt.begin_batch()
+	_warm_frames()   # a creature that has just come into the world: its frames are made before the draw, never in it
+	SpriteArt.end_batch()
 	overlay.queue_redraw()
 	queue_redraw()
 
@@ -1283,7 +1289,7 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				var tex := _villager_tex(w)
 				if tex != null:
 					var fs := _figure_size(tex, cell) * float(w["scale"])
-					_stand(c, tex, p + Vector2(0, cell * 0.3), fs, _villager_flip(w, int(w["dx"]) < 0), dim, cell)
+					_stand(c, _shown(_villager_frames(w), tex, "v%s" % w["id"], Vector2(float(w["x"]), float(w["z"]))), p + Vector2(0, cell * 0.3), fs, _villager_flip(w, int(w["dx"]) < 0), dim, cell)
 					_bubble_pos[str(w["id"])] = p + Vector2(0, cell * 0.3 - fs.y)
 			"site":
 				var t: Dictionary = it[2]
@@ -1314,7 +1320,7 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					var s := cell / 16.0 * float(setting("creature_pixel"))
 					var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
 					var h := w * float(tex.get_height()) / float(tex.get_width())
-					_stand(c, tex, p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell)   # the art faces left
+					_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell)   # the art faces left
 			"companion":
 				var a: Dictionary = it[2]
 				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
@@ -1329,14 +1335,14 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				if tex == null:
 					c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 				else:
-					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell)   # the art faces right
+					_stand(c, _shown(_party_frames(str(a["id"])), tex, "p%s" % a["id"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell)   # the art faces right
 			"heir":
 				var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 				var tex: Texture2D = SpriteArt.figure(d.heir)
 				if tex == null:
 					c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 				else:
-					_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
+					_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
 	_paint_bubbles(c)
 	_paint_name(c, origin, area, centre, cell)
 
@@ -1430,7 +1436,7 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 			if tex == null:
 				c.draw_circle(p, maxf(3.0, cell * 0.35), Color.html(str(pr["color"])))
 			else:
-				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(pr["race"])), false, Color.WHITE, cell)
+				_stand(c, _shown(SpriteArt.hero_frames(str(pr["race"]), str(pr["class"]), Color.html(str(pr["color"]))), tex, "d%s" % pr.get("id", "%s,%s" % [pr["x"], pr["z"]]), Vector2(float(pr["x"]), float(pr["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(pr["race"])), false, Color.WHITE, cell)
 		elif str(it[1]) == "companion":
 			var a: Dictionary = it[2]
 			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
@@ -1438,7 +1444,7 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 			if tex == null:
 				c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 			else:
-				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), Color.WHITE, cell)
+				_stand(c, _shown(_party_frames(str(a["id"])), tex, "p%s" % a["id"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), Color.WHITE, cell)
 		elif str(it[1]) == "foe":
 			var a: Dictionary = it[2]
 			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
@@ -1449,14 +1455,14 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 				var s := cell / 16.0 * float(setting("creature_pixel"))
 				var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
 				var h := w * float(tex.get_height()) / float(tex.get_width())
-				_stand(c, tex, p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), Color.WHITE, cell)
+				_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), Color.WHITE, cell)
 		else:
 			var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 			var tex: Texture2D = SpriteArt.figure(d.heir)
 			if tex == null:
 				c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 			else:
-				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell)
+				_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell)
 	var th := GameDungeonArt.theme(sb.space)
 	if th.is_empty():
 		return
@@ -1485,10 +1491,60 @@ func _warm_figures() -> void:
 	for b in GameTown.all():
 		for r in GameVillagers.residents(b):
 			_villager_tex(r)
+			_villager_frames(r)
 	for g in GameWalls.all_gates():
 		for r in GameVillagers.guards(g):
 			_villager_tex(r)
+			_villager_frames(r)
+	_warm_frames()
 	SpriteArt.end_batch()
+
+
+## Makes the walk and idle frames of everyone who may be drawn: the heir, the companions, the dungeon's people, the
+## villagers and the creatures about (with the figures, in a batch: see _warm_figures). Frames made while drawing would
+## blank the sprites drawn before them, so this runs before each frame is drawn, and costs a lookup once they are made.
+func _warm_frames() -> void:
+	var d: GameDynasty = app.dynasty
+	SpriteArt.figure_frames(d.heir)
+	for m in d.party.members:
+		_party_frames(str(m["id"]))
+	for pr in GameDungeons.layout(sb.space).get("people", []):
+		SpriteArt.hero_frames(str(pr["race"]), str(pr["class"]), Color.html(str(pr["color"])))
+	for a in sb.creatures:
+		SpriteArt.creature_frames(str(a["id"]))
+	for a in sb.denizens:
+		SpriteArt.creature_frames(str(a["id"]))
+	for a in sb.landmark_dwellers():
+		SpriteArt.creature_frames(str(a["id"]))
+
+
+## The frame to draw for something at `pos`: its walk frames while it has moved in the last moment, its idle ones
+## otherwise, and the plain `tex` when it has no frames. Cosmetic state only, kept per `key`, like _faces_right.
+func _shown(frames: Dictionary, tex: Texture2D, key: String, pos: Vector2) -> Texture2D:
+	if frames.is_empty():
+		return tex
+	var now := float(Time.get_ticks_msec()) / 1000.0
+	var before: Variant = _last_pos.get(key)
+	if before != null and (before as Vector2).distance_to(pos) > 0.001:
+		_moved_at[key] = now
+	_last_pos[key] = pos
+	return SpriteMotion.pick(frames, key, SpriteMotion.still_moving(float(_moved_at.get(key, -1000.0)), now), now)
+
+
+## A villager's frames, as _villager_tex is their picture.
+func _villager_frames(r: Dictionary) -> Dictionary:
+	if str(r.get("creature", "")) != "":
+		return SpriteArt.creature_frames(str(r["creature"]))
+	return SpriteArt.hero_frames(str(r["race"]), str(r["class"]), Color.html(str(r["color"])))
+
+
+## A companion's frames, kept for as long as they stay the same level (like _party_figure).
+func _party_frames(id: String) -> Dictionary:
+	var d: GameDynasty = app.dynasty
+	var m: Dictionary = d.party.member(id)
+	if m.is_empty():
+		return {}
+	return SpriteArt.figure_frames(d.party.unit(d, m))
 
 
 ## A villager's picture: a person's figure in their race's colours, or a monster's own art.
@@ -1526,7 +1582,7 @@ func _paint_residents(c: Control, b: Dictionary, at: Vector2, cell: float, dim: 
 		else:
 			var rs := _figure_size(tex, cell) * float(r["scale"])
 			var feet := at + (Vector2(cellv) + Vector2(0.5, 0.85)) * cell
-			_stand(c, tex, feet, rs, _villager_flip(r, false), dim, cell)
+			_stand(c, _shown(_villager_frames(r), tex, "v%s" % r["id"], Vector2(b["x"], b["z"]) + Vector2(cellv)), feet, rs, _villager_flip(r, false), dim, cell)
 			_bubble_pos[str(r["id"])] = feet - Vector2(0, rs.y)
 
 

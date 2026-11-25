@@ -12,6 +12,7 @@ const CREATURES := "res://data/art/creatures.json"
 const MASTERS := "res://data/art/masters.json"
 const SHIRTS := "res://data/art/shirts.json"
 const GEAR := "res://data/art/gear.json"
+const SpriteMotion := preload("res://ui/play/sprite_motion.gd")
 const STYLE := "res://data/art/style.json"
 const FIGURE := Vector2i(24, 40)   # every class figure and race layer
 const UPSCALE := 4
@@ -64,6 +65,7 @@ static func reset() -> void:
 	_style = {}
 	_cache = {}
 	_atlas = null
+	SpriteMotion.reset()
 
 
 static func has_creature(id: String) -> bool:
@@ -145,27 +147,83 @@ static func hero(race_id: String, class_id: String, class_color: Color, gear: Di
 	_load()
 	if not _classes.has(class_id):
 		return null
-	var key := "hero:%s:%s:%s:%s:%s" % [race_id, class_id, class_color.to_html(false), gear.get("weapon", ""), gear.get("armor", "")]
+	var key := _hero_key(race_id, class_id, class_color, gear)
 	if not _cache.has(key):
-		var r: Dictionary = _races.get(race_id, {})
-		var fill := {"C": class_color, "c": class_color.darkened(0.32)}
-		for k in RACE_KEYS:
-			fill[k] = Color.html(str(r.get(RACE_KEYS[k], DEFAULTS[k])))
-		var look := _look(class_id, gear)
-		var img := Image.create_empty(FIGURE.x, FIGURE.y, false, Image.FORMAT_RGBA8)
-		if look.has("cape"):   # behind everything, the race's tail included
-			var cape: Color = look["cape"]
-			_blend(img, _paint(_gear.get("cape", {}), {"a": cape.lightened(0.18), "b": cape, "d": cape.darkened(0.35)}))
-		var rp: Dictionary = r.get("palette", {})
-		if r.has("under"):
-			_blend(img, _paint({"size": [FIGURE.x, FIGURE.y], "palette": rp, "rows": r["under"]}, fill))
-		_blend(img, _paint(_classes[class_id], fill, look))
-		if r.has("over"):
-			_blend(img, _paint({"size": [FIGURE.x, FIGURE.y], "palette": rp, "rows": r["over"]}, fill))
-		if look.has("glow"):
-			_glow(img, look["box"], look["glow"])
-		_cache[key] = _texture(img)
+		_cache[key] = _texture(hero_image(race_id, class_id, class_color, gear))
 	return _cache[key]
+
+
+static func _hero_key(race_id: String, class_id: String, class_color: Color, gear: Dictionary) -> String:
+	return "hero:%s:%s:%s:%s:%s" % [race_id, class_id, class_color.to_html(false), gear.get("weapon", ""), gear.get("armor", "")]
+
+
+## The picture of a figure, before it is scaled up: see `hero`.
+static func hero_image(race_id: String, class_id: String, class_color: Color, gear: Dictionary = {}) -> Image:
+	_load()
+	var r: Dictionary = _races.get(race_id, {})
+	var fill := {"C": class_color, "c": class_color.darkened(0.32)}
+	for k in RACE_KEYS:
+		fill[k] = Color.html(str(r.get(RACE_KEYS[k], DEFAULTS[k])))
+	var look := _look(class_id, gear)
+	var img := Image.create_empty(FIGURE.x, FIGURE.y, false, Image.FORMAT_RGBA8)
+	if look.has("cape"):   # behind everything, the race's tail included
+		var cape: Color = look["cape"]
+		_blend(img, _paint(_gear.get("cape", {}), {"a": cape.lightened(0.18), "b": cape, "d": cape.darkened(0.35)}))
+	var rp: Dictionary = r.get("palette", {})
+	if r.has("under"):
+		_blend(img, _paint({"size": [FIGURE.x, FIGURE.y], "palette": rp, "rows": r["under"]}, fill))
+	_blend(img, _paint(_classes[class_id], fill, look))
+	if r.has("over"):
+		_blend(img, _paint({"size": [FIGURE.x, FIGURE.y], "palette": rp, "rows": r["over"]}, fill))
+	if look.has("glow"):
+		_glow(img, look["box"], look["glow"])
+	return img
+
+
+## A figure's walk and idle frames (see ui/play/sprite_motion.gd): name -> texture, for every frame name
+## there. The base frame is the figure `hero` gives. Make them with the other figures, before drawing: a
+## figure first made mid-draw blanks the sprites drawn before it. {} when the class has no figure.
+static func hero_frames(race_id: String, class_id: String, class_color: Color, gear: Dictionary = {}) -> Dictionary:
+	_load()
+	if not _classes.has(class_id):
+		return {}
+	var key := "frames:" + _hero_key(race_id, class_id, class_color, gear)
+	if not _cache.has(key):
+		_cache[key] = _frame_textures(hero(race_id, class_id, class_color, gear), hero_image(race_id, class_id, class_color, gear), "figure", class_id)
+	return _cache[key]
+
+
+## A creature's walk and idle frames, like hero_frames. {} when it has no art.
+static func creature_frames(id: String) -> Dictionary:
+	_load()
+	if not _creatures.has(id):
+		return {}
+	var key := "frames:creature:" + id
+	if not _cache.has(key):
+		_cache[key] = _frame_textures(creature(id), _paint(_creatures[id], {}), "creature", id)
+	return _cache[key]
+
+
+## A hero's or companion's frames: their figure's, as `figure` makes it.
+static func figure_frames(u: GameHeir) -> Dictionary:
+	return hero_frames(u.race_id, u.class_id, shirt_color(u), gear_of(u))
+
+
+## Name -> texture of the frames of `img`; the base is `base_tex`, and a frame that equals another shares it.
+static func _frame_textures(base_tex: Texture2D, img: Image, kind: String, id: String) -> Dictionary:
+	var out := {}
+	var made := {}
+	var set := SpriteMotion.images(img, kind, id)
+	for name in set:
+		var f: Image = set[name]
+		if name == "base" or f == img:
+			out[name] = base_tex
+			continue
+		var sig := f.get_data()
+		if not made.has(sig):
+			made[sig] = _texture(f)
+		out[name] = made[sig]
+	return out
 
 
 ## What a figure's gear changes: the weapon's finish on the class's blade and wood keys inside the weapon's
@@ -561,7 +619,49 @@ static func style_problems() -> Array:
 		if has_master(str(id)):
 			var base_boss: bool = bosses.get(str(_masters[id].get("base", "")), false)
 			out.append_array(check_sprite("master " + id, master_image(str(id)), "boss" if base_boss else "creature"))
+	out.append_array(frame_problems(bosses))
 	return out
+
+
+## Every walk and idle frame of every class figure (in every race's colours and layers) and creature held to
+## the same style rules as the sprite it comes from.
+static func frame_problems(bosses: Dictionary = {}) -> Array:
+	_load()
+	var out: Array = []
+	var races: Array = _races.keys()
+	races.append("")   # a race with no entry: the class figure's own colours
+	for id in _classes:
+		for race in races:
+			var img := hero_image(str(race), str(id), Color.html(CHECK_FILL["C"]))
+			out.append_array(_frame_set_problems("class %s (%s)" % [id, race if race != "" else "plain"], img, "figure", str(id), "figure"))
+	for id in _creatures:
+		var img := _paint(_creatures[id], {})
+		out.append_array(_frame_set_problems("creature " + str(id), img, "creature", str(id), "boss" if bosses.get(str(id), false) else "creature"))
+	return out
+
+
+## The problems of the frames of one sprite that the sprite itself does not have (a figure with a race's layers
+## may already be over the colour cap; its frames never add colours, so only what they add is theirs).
+static func _frame_set_problems(name: String, img: Image, motion_kind: String, id: String, rules_kind: String) -> Array:
+	var out: Array = []
+	var own := {}
+	for m in check_sprite("x", img, rules_kind):
+		own[_plain_problem(m)] = true
+	var set := SpriteMotion.images(img, motion_kind, id)
+	for f in set:
+		if f == "base":
+			continue
+		for m in check_sprite(name + " frame " + str(f), set[f], rules_kind):
+			if not own.has(_plain_problem(m)):
+				out.append(m)
+	return out
+
+
+## A problem's wording without its name and its numbers, to tell whether a frame has one the sprite has.
+static func _plain_problem(m: String) -> String:
+	var r := RegEx.new()
+	r.compile("[0-9]+")
+	return r.sub(m.substr(m.find(":")), "#", true)
 
 
 ## One painted sprite held to the rules of its `kind` ("figure", "creature" or "boss"): its size, a silhouette
