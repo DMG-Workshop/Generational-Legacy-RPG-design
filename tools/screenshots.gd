@@ -58,10 +58,12 @@ const SHOTS := [
 	["wilds_swamp", DESKTOP, false, "wilds_swamp"],
 	["wilds_fae", DESKTOP, false, "wilds_fae"],
 	["wilds_tundra", DESKTOP, false, "wilds_tundra"],
+	["wilds_farm", DESKTOP, false, "wilds_farm"],
 	["dungeon_barrow", DESKTOP, false, "dungeon:hollow_barrow:0,3"],
 	["dungeon_ember", DESKTOP, false, "dungeon:emberpeak:4,0"],
 	["dungeon_warren", DESKTOP, false, "dungeon:goblin_warrens:5,-1"],
 	["dungeon_entrance", DESKTOP, false, "entrance:the_rift"],
+	["forge_inside", DESKTOP, false, "interior:hearthmere/forge"],
 	["phone_life", PHONE, true, "life"],
 	["phone_battle", PHONE, true, "battle:kingshold"],
 ]
@@ -234,8 +236,11 @@ func _screen(what: String) -> void:
 	if what.begins_with("dungeon:") or what.begins_with("entrance:"):
 		await _dungeon(what)
 		return
+	if what.begins_with("interior:"):
+		await _interior(what)
+		return
 	match what:
-		"town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra":
+		"town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
 			await _open_world(what)
 		"life":
 			pass
@@ -341,6 +346,17 @@ func _open_world(what: String) -> void:
 	if WILDS_SPOTS.has(what):
 		var wa := GameWorldGen.anchor(str(WILDS_SPOTS[what][0]))
 		spot = Vector2i(int(wa["x"]) + int(WILDS_SPOTS[what][1]), int(wa["z"]) + int(WILDS_SPOTS[what][2]))   # the town: the street between the store and the tavern
+	if what == "wilds_farm":   # the nearest abandoned farm to Greenvale's anchor: a cottage with a door a person can walk through, a haystack and wheat
+		var ga := GameWorldGen.anchor("greenvale")
+		var best := 1000000.0
+		for r in range(0, 160, 8):
+			for ang in 24:
+				var px := int(ga["x"]) + int(round(cos(float(ang) / 24.0 * TAU) * r))
+				var pz := int(ga["z"]) + int(round(sin(float(ang) / 24.0 * TAU) * r))
+				for lm in GameWildsSites.within(d, px, pz, 10.0):
+					if str(lm["kind"]) == "farm" and Vector2(float(lm["x"]) - float(ga["x"]), float(lm["z"]) - float(ga["z"])).length() < best:
+						best = Vector2(float(lm["x"]) - float(ga["x"]), float(lm["z"]) - float(ga["z"])).length()
+						spot = Vector2i(int(lm["x"]) + 2, int(lm["z"]) + 1)
 	if what == "gate":
 		var gate: Dictionary = GameWalls.gates("hearthmere")[0]   # the north gate, seen from inside the wall, its two guards at their posts
 		spot = (gate["inner"] as Vector2i) + Vector2i(0, 5)
@@ -371,11 +387,37 @@ func _open_world(what: String) -> void:
 		scr.sb.creatures.clear()
 	if what == "turned":   # the heir faces left (the art faces right): a turned figure must stand on its shadow, as an unturned one does
 		scr.facing_dir = Vector2i(-1, 0)
-	scr.zoom = 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town else (1.5 if what == "gate" else 0.75))
+	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town else (1.5 if what == "gate" else 0.75))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
 	await _frames(2)   # (the world is held still, so the map is drawn again by hand once everything is made: a figure made while drawing blanks those drawn before it in that frame)
+	scr.overlay.queue_redraw()
+	await _frames(2)
+
+
+## The inside of a town building (`interior:<town>/<service>`): the heir at the way out, the person who works there across the floor, both as
+## figures (they were once a circle and a coloured block).
+func _interior(what: String) -> void:
+	var space := what.trim_prefix("interior:")
+	d.world.visit(space.get_slice("/", 0))
+	app.show_sandbox()
+	await _frames(3)
+	var scr: Control = app.current
+	scr.set_process(false)
+	d.world_seconds = 0.0
+	d.clock_carry = 0.0
+	var door: Dictionary = GameSpaces.space("world/" + space)["door"]
+	scr.sb.creatures.clear()
+	scr.sb.companions = []
+	scr.sb.heir = Vector2i(int(door["x"]), int(door["z"]))
+	scr.sb.use()
+	scr.zoom = 2.5
+	scr._warm_figures()
+	scr.cam = Vector2.ZERO
+	scr._process(0.0)
+	scr.queue_redraw()
+	await _frames(2)
 	scr.overlay.queue_redraw()
 	await _frames(2)
 
