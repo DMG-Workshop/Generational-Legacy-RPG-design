@@ -253,11 +253,11 @@ static func inset_tex(w: int, h: int, lit: bool = false) -> ImageTexture:
 ## A gold-studded button on parchment: a lit face with an ink outline and a gold stud in each corner. States: "normal", "hover"
 ## (a gold frame and lit studs), "pressed" (a shaded face, the bevel turned over) and "disabled" (flat, no studs). (Added with the
 ## battle screen's skin; if another branch adds a `button` piece too, the two are the same job: keep one.)
-static func button_tex(w: int, h: int, state: String = "normal") -> ImageTexture:
-	var k := _key("button", "%d,%d,%s" % [w, h, state])
+static func stud_tex(w: int, h: int, state: String = "normal") -> ImageTexture:
+	var k := _key("stud", "%d,%d,%s" % [w, h, state])
 	if _memo.has(k):
 		return _memo[k]
-	var m := int(piece("button")["margin"])
+	var m := int(piece("stud")["margin"])
 	var lw := maxi(_logical(w), 2 * m + 1)
 	var lh := maxi(_logical(h), 2 * m + 1)
 	var face := pal("parch_lo") if state == "pressed" else (pal("parch") if state == "disabled" else pal("parch_hi"))
@@ -387,10 +387,10 @@ static func inset_box(lit: bool = false) -> StyleBoxTexture:
 	return _nine("inset", inset_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), lit), int(p["margin"]), [p["content"], p["content"]], str(lit))
 
 
-static func button_box(state: String = "normal") -> StyleBoxTexture:
-	var p := piece("button")
+static func stud_box(state: String = "normal") -> StyleBoxTexture:
+	var p := piece("stud")
 	var b: Array = p["base"]
-	return _nine("button", button_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
+	return _nine("stud", stud_tex(int(b[0]) * pixel(), int(b[1]) * pixel(), state), int(p["margin"]), p["content"], state)
 
 
 ## The ring a gamepad or the keyboard's focus draws round a skinned button: gold, never only a colour change.
@@ -442,7 +442,7 @@ static func dress_button(b: Button) -> void:
 ## A button of the battle screen's parchment panels: a gold-studded button, lit gold when pointed at or focused, ink text.
 static func dress_battle_button(b: Button) -> void:
 	for st in ["normal", "hover", "pressed", "disabled"]:
-		b.add_theme_stylebox_override(st, button_box(st))
+		b.add_theme_stylebox_override(st, stud_box(st))
 	b.add_theme_stylebox_override("focus", button_focus())
 	b.add_theme_color_override("font_color", pal("ink"))
 	b.add_theme_color_override("font_hover_color", pal("crimson_dk"))
@@ -621,11 +621,11 @@ static func validate(dat: Dictionary = {}) -> Array:
 	for k in d["faces"]:
 		if str(d["faces"][k]) not in ["parch", "wood"]:
 			bad.append("skin.json: faces.%s must be parch or wood" % k)
-	if (d["pieces"] as Dictionary).has("button"):   # a piece later screens add: checked when it is there
-		var bp: Variant = d["pieces"]["button"]
+	if (d["pieces"] as Dictionary).has("stud"):   # a piece later screens add: checked when it is there
+		var bp: Variant = d["pieces"]["stud"]
 		var bb: Variant = bp.get("base") if typeof(bp) == TYPE_DICTIONARY else null
 		if typeof(bb) != TYPE_ARRAY or (bb as Array).size() != 2 or float(bp.get("margin", 0)) * 2.0 + 1.0 > minf(float(bb[0]), float(bb[1])) or typeof(bp.get("content")) != TYPE_ARRAY:
-			bad.append("skin.json: pieces.button needs a base [w, h], a margin that leaves a middle, and a content [x, y]")
+			bad.append("skin.json: pieces.stud needs a base [w, h], a margin that leaves a middle, and a content [x, y]")
 	for k in ["bar"]:
 		for f in ["height", "segment_every", "segment_at", "icon_scale", "text_size"]:
 			if not (d["pieces"][k] as Dictionary).has(f) or float(d["pieces"][k][f]) < 1.0:
