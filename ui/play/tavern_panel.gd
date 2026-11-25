@@ -265,8 +265,8 @@ func _member_card(m: Dictionary) -> Control:
 	v.add_child(gauges)
 	gauges.add_child(_gauge("HP %s / %s" % [GameText.num(u.hp), GameText.num(u.max_hp())], Kit.good(), u.max_hp(), u.hp))
 	gauges.add_child(_gauge("MP %s / %s" % [GameText.num(u.mp), GameText.num(u.max_mp())], Kit.MP_BLUE, maxf(1.0, u.max_mp()), u.mp))
-	var tb := PanelSkin.button(self, "Skill tree", func(): _tree(id), Vector2(120, 34))
 	var pts := GameSkillTree.points(u)
+	var tb := PanelSkin.button(self, "Skill tree" if pts == 0 else "Skill tree (%s)" % GameText.num(pts), func(): _tree(id), Vector2(120, 34))
 	tb.tooltip_text = "%s's skill tree%s." % [u.name, "" if pts == 0 else " (%s point%s to spend)" % [GameText.num(pts), "" if pts == 1 else "s"]]
 	side.add_child(tb)
 	var label := "Confirm" if confirm_id == id else "Dismiss"

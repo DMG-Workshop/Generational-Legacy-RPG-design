@@ -870,6 +870,15 @@ func test_companions() -> void:
 	var u2 := d.party.unit(d, m)
 	ok(GameSkillTree.companion_points_at(d.heir.level) < GameSkillTree.points_at(d.heir.level), "a hireling has fewer points than an heir of its level")
 	ok(int(m["tree"]["level"]) == d.heir.level and GameSkillTree.spent(u2) == GameSkillTree.companion_points_at(d.heir.level), "levels gained bring points it spends at once (%d at level %d)" % [GameSkillTree.spent(u2), d.heir.level])
+	# The levels it gained are told in the journal the next time the clock turns, as an heir's are.
+	ok(int(m.get("tree_news", 0)) > 0, "a companion that gained levels has skill points to tell (%d)" % int(m.get("tree_news", 0)))
+	var told: Array = []
+	GameSkillTree.on_years(d, told)
+	ok(told.any(func(t): return str(t).begins_with("Bren") and str(t).find("earns") > 0 and str(t).find("skill point") > 0), "and Bren's skill points are told: %s" % str(told.slice(0, 2)))
+	ok(not m.has("tree_news"), "once, not again")
+	var told2: Array = []
+	GameSkillTree.on_years(d, told2)
+	ok(not told2.any(func(t): return str(t).begins_with("Bren")), "nothing more to tell the next time")
 	# The player spends and refunds for a companion; the heir pays the fee.
 	m["tree"]["points"] = 3
 	var line := GameSkillTree.spend(d, "bren_cask", "w_thick_hide")

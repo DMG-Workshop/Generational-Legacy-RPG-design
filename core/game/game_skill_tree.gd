@@ -954,6 +954,7 @@ static func load_member(v: Variant) -> Dictionary:
 static func attach(u: GameHeir, m: Dictionary) -> void:
 	var t: Dictionary = m.get("tree", {})
 	var auto := 0
+	var gained := 0   # points the companion earned by the levels it has just gained
 	var plan: Dictionary = t.get("plan", {})
 	if not t.is_empty():
 		# Ranks on trees this companion's class and race cannot use (a record from before bloodlines
@@ -981,13 +982,14 @@ static func attach(u: GameHeir, m: Dictionary) -> void:
 		auto = int(t["points"])
 	elif int(t["level"]) < u.level:
 		auto = companion_points_at(u.level) - companion_points_at(int(t["level"]))
+		gained = auto   # (told in the journal: GameParty keeps it until the next time passes)
 		t["points"] = int(t["points"]) + auto
 		t["level"] = u.level
 	u.tree_ranks = (t["ranks"] as Dictionary).duplicate()
 	u.tree_free = {}
 	u.tree_points = int(t["points"])
 	u.tree_level = u.level
-	u.tree_news = 0
+	u.tree_news = gained
 	changed(u)
 	if auto > 0:
 		auto_spend(u, auto - _follow_plan(u, plan, auto))
@@ -1214,6 +1216,7 @@ static func on_years(d: GameDynasty, msgs: Array) -> void:
 		h.remove_meta("tree_note")
 		msgs.append(note)
 		d._say(note)
+	_companion_news(d, msgs)
 	if h.tree_news <= 0:
 		return
 	var line := "%s earns %s%s." % [h.name, "a skill point" if h.tree_news == 1 else "%s skill points" % GameText.num(h.tree_news),
@@ -1221,6 +1224,25 @@ static func on_years(d: GameDynasty, msgs: Array) -> void:
 	h.tree_news = 0
 	msgs.append(line)
 	d._say(line)
+
+
+## The points the party's companions earned with the levels they gained, told in the journal as the heir's are: one that the path
+## has already spent says so, one the player shaped by hand says how many wait to be spent.
+static func _companion_news(d: GameDynasty, msgs: Array) -> void:
+	for m in d.party.members:
+		var n := int(m.get("tree_news", 0))
+		if n <= 0:
+			continue
+		m.erase("tree_news")
+		var u := d.party.unit(d, m)
+		var skill_points := GameMessages.text("life", "skill_point_one") if n == 1 else GameMessages.text("life", "skill_point_many", {"n": GameText.num(n)})
+		var line := ""
+		if u.tree_points <= 0:
+			line = GameMessages.text("life", "companion_earns_spent", {"name": u.name, "skill_points": skill_points, "them": "it" if n == 1 else "them"})
+		else:
+			line = GameMessages.text("life", "companion_earns_left", {"name": u.name, "skill_points": skill_points, "left": GameText.num(u.tree_points)})
+		msgs.append(line)
+		d._say(line)
 
 
 # ---------------------------------------------------------------- save / load

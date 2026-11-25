@@ -105,6 +105,9 @@ func _body(d: GameDynasty, m: Dictionary) -> GameHeir:
 		m["diseases"] = []
 	u.diseases = m["diseases"]
 	GameSkillTree.attach(u, m)
+	if u.tree_news > 0:   # levels gained since the tree was last built: the journal tells them at the next turn of the clock
+		m["tree_news"] = int(m.get("tree_news", 0)) + u.tree_news
+		u.tree_news = 0
 	return u
 
 
