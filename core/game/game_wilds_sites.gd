@@ -57,6 +57,8 @@ static func _spot_ok(d: GameDynasty, kind: String, x: int, z: int, at_anchor: bo
 	var size := GameWorldGen.size()
 	if x < 4 or z < 4 or x >= size - 4 or z >= size - 4:
 		return false
+	if GameGates.claims(d, x, z):   # a waygate stands here: nothing else is put under or beside its arch
+		return false
 	var water_near := false
 	if str(def.get("need", "")) == "water":
 		for dz in range(-3, 4):
@@ -456,6 +458,9 @@ static func use(d: GameDynasty, lm: Dictionary) -> Dictionary:
 		vals["item"] = GameWildsLoot.give(d, item)["name"] if item != "" else "a few small things"
 	_mark_used(d, id)
 	var line := str(o["text"]).format(vals).strip_edges()
+	var lore := GameGates.lore_from(d, lm, n)   # an old inscription may teach a rune of the gates (a keyed roll, never the dynasty's dice)
+	if lore != "":
+		line = line + " " + lore
 	d._say(line)
 	return {"ok": true, "text": line}
 

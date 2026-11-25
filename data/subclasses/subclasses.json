@@ -34,12 +34,14 @@
     "disease_mult": "the chance of catching a sickness",
     "attack_mult": "your blows in battle",
     "spell_mult": "your spells in battle",
+    "rune_fee_mult": "the gold a gate's rune costs to cut again",
+    "rune_silver_mult": "the silver a stripped rune needs to be inlaid again",
     "defense_mult": "your defense in battle",
     "flee_mult": "your chance to get away from a fight"
   },
   "subclasses": [
     {"id": "breeder", "name": "Tamer", "about": "Raises creatures for a living: finds young more often, keeps them cheaper, breeds them better and sells them dearer.", "price_mult": 1.0, "perks": {"find_mult": 1.4, "keep_mult": 0.85, "fertility_mult": 1.25, "mutation_mult": 1.5, "value_mult": 1.15}},
-    {"id": "runescribe", "name": "Runescribe", "about": "Inscribes scrolls and sigils: pulls more essence from the dead, makes finer pieces for a smaller fee and gives spells an edge.", "price_mult": 1.1, "perks": {"essence_mult": 1.6, "spell_mult": 1.06, "forge_fee_mult": 0.85, "craft_quality_mult": 1.15}},
+    {"id": "runescribe", "name": "Runescribe", "about": "Inscribes scrolls and sigils: pulls more essence from the dead, makes finer pieces for a smaller fee and gives spells an edge.", "price_mult": 1.1, "perks": {"essence_mult": 1.6, "spell_mult": 1.06, "forge_fee_mult": 0.85, "craft_quality_mult": 1.15, "rune_fee_mult": 0.5, "rune_silver_mult": 0.67}},
     {"id": "armorer", "name": "Armorer", "about": "Forges and mends armour and weapons: finer pieces, a cheaper forge, more back from broken gear and a tougher hide of one's own.", "price_mult": 1.1, "perks": {"defense_mult": 1.08, "craft_quality_mult": 1.25, "salvage_mult": 1.3, "forge_fee_mult": 0.8}},
     {"id": "bladewright", "name": "Bladewright", "about": "Hammers edges onto steel: harder blows, sharper made pieces, and a better price when gear is sold on.", "price_mult": 1.1, "perks": {"attack_mult": 1.08, "craft_quality_mult": 1.2, "forge_fee_mult": 0.85, "sell_mult": 1.1}},
     {"id": "enchanter", "name": "Enchanter", "about": "Binds charms into wands, staves and rings: stronger spells, rarer finds from the dead and better-made pieces.", "price_mult": 1.3, "perks": {"spell_mult": 1.1, "rarity_mult": 1.35, "essence_mult": 1.3, "craft_quality_mult": 1.1}},

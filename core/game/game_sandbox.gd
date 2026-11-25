@@ -241,6 +241,9 @@ func refresh() -> void:
 	if storey() == 0:
 		for lm in GameWildsSites.discover_near(d, heir.x, heir.y):
 			log.append({"kind": "site", "text": GameWilds.text("found", {"heir": d.heir.name, "name": GameWildsSites.name_of(lm)})})
+		for gid in GameGates.discover_near(d, heir.x, heir.y):
+			log.append({"kind": "site", "text": GameGates.text("gate_found", {"heir": d.heir.name, "name": GameGates.name_of(str(gid))})})
+		GameGates.tend(d)
 	var night := GameDay.is_night(d)
 	var radius := int(setting("radius"))
 	var kept: Array = []
@@ -387,6 +390,12 @@ func use() -> Dictionary:
 			var spoke := GameTrials.site_use(d, str(trial_site["id"]))
 			log.append({"kind": "site", "text": str(spoke["text"])})
 			return spoke
+		var gate := GameGates.near(d, heir.x, heir.y) if storey() == 0 else ""
+		if gate != "":   # a waygate: the screen opens its panel (GatePanel); the world waits
+			GameGates.tend(d)
+			var gt := GameGates.hint(d, heir.x, heir.y)
+			log.append({"kind": "site", "text": gt})
+			return {"ok": true, "text": gt, "open": "gate", "gate": gate}
 		var site := GameWildsSites.near(d, heir.x, heir.y) if storey() == 0 else {}
 		if not site.is_empty():
 			var r := GameWildsSites.use(d, site)
