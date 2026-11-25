@@ -71,6 +71,11 @@ static func con_xp(id: String) -> float:
 	return float(band(id).get("con_xp", 1.0))
 
 
+## The share of its gold a foe of that band carries.
+static func con_gold(id: String) -> float:
+	return float(band(id).get("con_gold", 1.0))
+
+
 static func fearful_band(id: String) -> bool:
 	return id in (data()["flee_bands"] as Array)
 
@@ -96,6 +101,7 @@ static func dress(foe: Dictionary, heir_level: int) -> void:
 	var id := con(int(foe["level"]), heir_level)
 	foe["con"] = id
 	foe["xp"] = maxi(1, int(round(float(foe["xp"]) * con_xp(id)))) if int(foe["xp"]) > 0 else 0
+	foe["gold"] = maxi(1, int(round(float(foe["gold"]) * con_gold(id)))) if int(foe.get("gold", 0)) > 0 else 0
 	if fearful_band(id) and not bool(foe.get("boss", false)):
 		foe["fearful"] = true
 
@@ -122,7 +128,7 @@ static func validate() -> Array:
 		bad.append("sandbox.json: levels.bands needs at least two bands")
 	for i in list.size():
 		var b: Dictionary = list[i]
-		for k in ["id", "name", "lo", "hi", "weight", "con_below", "con_xp", "mark", "color"]:
+		for k in ["id", "name", "lo", "hi", "weight", "con_below", "con_xp", "con_gold", "mark", "color"]:
 			if not b.has(k):
 				bad.append("sandbox.json: a level band has no %s" % k)
 		if not bad.is_empty():
@@ -137,6 +143,8 @@ static func validate() -> Array:
 			bad.append("sandbox.json: level band '%s' needs a weight above 0" % id)
 		if float(b["con_xp"]) <= 0.0:
 			bad.append("sandbox.json: level band '%s' needs a con_xp above 0" % id)
+		if float(b["con_gold"]) <= 0.0:
+			bad.append("sandbox.json: level band '%s' needs a con_gold above 0" % id)
 		if str(b["mark"]) == "":
 			bad.append("sandbox.json: level band '%s' needs a mark (colour is never the only cue)" % id)
 		if str(b["color"]) not in ["dim", "good", "text", "accent", "bad"]:

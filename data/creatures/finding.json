@@ -1,7 +1,7 @@
 {
   "note": "Finding eggs and young beside the dead (roadmap item 55). One roll per foe lying dead, from the finder's own seeded dice, never the dynasty's. Chance = base x place x species rarity x the finder's skill. Only creatures that are born (data/creatures) can leave young; bosses are never searched, so a legend's clutch comes with the Explore events later. Explore events can give young outright (the `find` effect of an event outcome, only for a house that has found young before: the flag in settings.found_flag), and a slain legend that is born may leave its young (places.legend x base, once per legend).",
   "settings": {
-    "base_chance": 0.06,
+    "base_chance": 0.15,
     "max_chance": 0.5,
     "roster_cap": 6,
     "places": {
