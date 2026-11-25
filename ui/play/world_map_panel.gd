@@ -173,7 +173,7 @@ func _ready() -> void:
 	close.name = "Close"
 	top.add_child(close)
 	var room := UiSettings.room(self)
-	var wide := not UiSettings.compact(self) and room.x >= 2.0 * room.y * 0.9
+	var wide := not UiSettings.compact(self) and room.x >= room.y * 1.4
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -200,6 +200,7 @@ func _ready() -> void:
 	canvas.name = "Canvas"
 	canvas.custom_minimum_size = Vector2(side, side)
 	canvas.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	canvas.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN   # a square, whatever the room beside it
 	left.add_child(canvas)
 	var here := Kit.label(GameWorldMap.here_line(dynasty), 14, Kit.TEXT)
 	here.name = "HereLine"
