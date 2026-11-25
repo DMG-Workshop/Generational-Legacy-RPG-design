@@ -52,7 +52,10 @@ static func mark(buttons: Array, tip: Dictionary) -> void:
 			continue
 		for word in tip.get("highlight", []):
 			if (b as Button).text.begins_with(str(word)):
-				b.add_theme_stylebox_override("normal", Kit.style(HIGHLIGHT, 6, Kit.ACCENT))
-				b.add_theme_color_override("font_color", Kit.ACCENT)
+				if UiSkin.screen_active(b):
+					UiSkin.mark_on(b, true)   # the crimson plank, as for a chosen button
+				else:
+					b.add_theme_stylebox_override("normal", Kit.style(HIGHLIGHT, 6, Kit.ACCENT))
+					b.add_theme_color_override("font_color", Kit.ACCENT)
 				b.set_meta("tutorial_mark", true)
 				break

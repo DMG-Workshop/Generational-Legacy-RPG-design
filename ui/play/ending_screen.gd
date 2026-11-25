@@ -4,6 +4,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
+const SkinScreen := preload("res://ui/play/skin_screen.gd")
 
 var app: Node
 var d: GameDynasty
@@ -11,6 +12,7 @@ var d: GameDynasty
 
 func _ready() -> void:
 	d = app.dynasty
+	SkinScreen.apply(self)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
@@ -20,7 +22,9 @@ func _ready() -> void:
 	root.add_theme_constant_override("separation", 10)
 	margin.add_child(root)
 
-	root.add_child(Kit.label("The saga of House %s is over" % d.dynasty_name, 34, Kit.ACCENT))
+	var over := Kit.label("The saga of House %s is over" % d.dynasty_name, 34, Kit.ACCENT)
+	over.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(SkinScreen.ribbon(over, 30))
 	var founder: Dictionary = d.history[0] if not d.history.is_empty() else {}
 	var start: String = GameWorld.place(GameData.world["start"]).get("name", "home")
 	root.add_child(_wrapped("%s and %s, %s since %s set out from %s." % [GameAges.count(d.gen, "generation"), GameAges.count(d.age_number(), "Age"), GameAges.count(int(d.world.year), "year"), founder.get("name", "the founder"), start], 17, Kit.TEXT))

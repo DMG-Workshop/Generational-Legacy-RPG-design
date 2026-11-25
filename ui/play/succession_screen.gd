@@ -5,6 +5,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const TutorialTip := preload("res://ui/play/tutorial_tip.gd")
+const SkinScreen := preload("res://ui/play/skin_screen.gd")
 
 var app: Node
 var d: GameDynasty
@@ -12,6 +13,7 @@ var d: GameDynasty
 
 func _ready() -> void:
 	d = app.dynasty
+	SkinScreen.apply(self)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
@@ -22,7 +24,9 @@ func _ready() -> void:
 	margin.add_child(root)
 
 	var dead := d.last_death
-	root.add_child(Kit.label("%s has passed." % dead["name"], 34, Kit.ACCENT))
+	var passed := Kit.label("%s has passed." % dead["name"], 34, Kit.ACCENT)
+	passed.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(SkinScreen.ribbon(passed, 30))
 	var cname: String = "%s %s" % [GameData.races[dead.get("race_id", "human")]["name"], GameData.classes[dead["class_id"]]["name"]]
 	root.add_child(_wrapped(Kit.label("Generation %s  -  %s, level %s  -  died aged %d (%s)  -  %s, %s gold left" % [GameText.num(dead["gen"]), cname, GameText.num(dead["level"]), dead["age"], dead["cause"], "1 victory" if int(dead["battles_won"]) == 1 else "%s victories" % GameText.num(dead["battles_won"]), GameText.num(dead["gold"])], 16, Kit.dim())))
 	if d.pending_archetype != "":

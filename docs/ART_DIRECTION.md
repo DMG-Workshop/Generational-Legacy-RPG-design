@@ -130,6 +130,15 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   on the plate). A compact window or a touch screen keeps the older dark look, as the panes do. Not done: the party strip's chip faces
   (they keep their state colours as edges on a slot-coloured face), the top bar's title and Auto-battle row, the foe name plates.
 - **Not built yet:** the title and life screens, the action bar and header (the wooden header texture exists but is not drawn), the
+- **Step 2, the full-screen text screens:** the title, the life screen, the succession and ending screens and the menu and controls panels wear the
+  skin on every device (`SkinScreen.apply`, `UiSkin.screen_active`, the data's `screens`): a night-sky backdrop (colour bands, a tile of stars, a
+  strip of hills; still, so nothing to turn off for reduced motion), parchment panels with ink text, crimson ribbon titles, wooden buttons with
+  gold studs (a gold frame when pointed at, crimson when chosen, flat and dark when shut, a gold ring for the keyboard or a pad), light text fields,
+  segmented bars for health, mana and experience, and a dark well for the journal. A phone gets it as well, with whole-pixel art at 4 screen pixels
+  at 125%; the buttons keep their fingertip height. The contrast of headings on the sky, coloured news on the well and the text of planks and
+  fields is checked in both palettes by `UiSkin.validate`. The overlay panels opened from the life screen (shops, the chronicle, the house) keep
+  their own look until they are done.
+- **Not built yet:** the action bar and header (the wooden header texture exists but is not drawn), the
   ring and thing menu, icon outlines, panels' own inner boxes (a `Kit.panel` inside a pane stays dark), a touch version of the skin,
   and the pixel font (the engine's font is used; the bar words and the ribbon titles are where it would show most).
 

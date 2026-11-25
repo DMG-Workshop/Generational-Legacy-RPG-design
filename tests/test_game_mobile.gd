@@ -12,6 +12,7 @@ const GameApp := preload("res://ui/play/game_app.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const Kit := preload("res://ui/play/ui_kit.gd")
+const UiSkin := preload("res://ui/play/ui_skin.gd")
 const ShopPanel := preload("res://ui/play/shop_panel.gd")
 const PackPane := preload("res://ui/play/pack_pane.gd")
 const FigurePane := preload("res://ui/play/figure_pane.gd")
@@ -303,7 +304,7 @@ func test_touch_layout_setting() -> void:
 	var at := texts.find("Touch layout")
 	ok(at > texts.find("Text size") and texts.find("Text size") >= 0, "the menu has Touch layout under Text size")
 	var auto_b := _find(m, "Auto")
-	ok(auto_b != null and auto_b.get_theme_color("font_color") == Kit.ACCENT, "Auto is marked as in use")
+	ok(auto_b != null and _in_use(auto_b), "Auto is marked as in use")
 	ok(_find(m, "On") != null and _find(m, "Off") != null, "with On and Off beside it")
 	ok(auto_b != null and auto_b.size.y < float(UiSettings.setting("touch_target_px")) - 0.5, "the desktop's buttons are their designed size")
 	_find(m, "On").pressed.emit()
@@ -312,7 +313,7 @@ func test_touch_layout_setting() -> void:
 	var m2: Node = app.current.get_children().back()
 	ok(m2 is MenuPanel and m2 != m, "the screens are laid out again and the menu reopens")
 	var on_b := _find(m2, "On")
-	ok(on_b != null and on_b.get_theme_color("font_color") == Kit.ACCENT, "showing On in use")
+	ok(on_b != null and _in_use(on_b), "showing On in use")
 	ok(on_b != null and on_b.size.y >= float(UiSettings.setting("touch_target_px")) - 0.5, "and its buttons are now a fingertip tall")
 	ok(Kit.click() == "tap", "the help says tap")
 	_find(m2, "Off").pressed.emit()
@@ -976,6 +977,11 @@ func test_safe_area() -> void:
 	ok(app.frame.get_global_rect().is_equal_approx(Rect2(0, 0, 1280, 720)), "a desktop window has no inset")
 
 
+## A settings button marked as the one in use: gold text in the old look, the crimson plank (meta skin_on) in the skin.
+func _in_use(b: Button) -> bool:
+	return bool(b.get_meta("skin_on", false)) or b.get_theme_color("font_color") == Kit.ACCENT
+
+
 var _outside := 0
 
 
@@ -1462,7 +1468,8 @@ func test_cooldown_buttons() -> void:
 	life._autopilot("life", 1)
 	life._autopilot("gens", 10)
 	ok(d.to_dict() == state0 and app.current == life, "the handlers do nothing while cooling down")
-	var bg: Color = (one.get_theme_stylebox("disabled") as StyleBoxFlat).bg_color
+	var dsb := one.get_theme_stylebox("disabled")
+	var bg: Color = (dsb as StyleBoxFlat).bg_color if dsb is StyleBoxFlat else UiSkin.pal("wood_lo")   # a shut plank of the skin is the dark wood
 	var fg: Color = one.get_theme_color("font_disabled_color")
 	ok(_contrast(fg, bg) >= 4.5, "the countdown is readable: contrast %.2f" % _contrast(fg, bg))
 	ok(is_equal_approx(life.cool_timer.wait_time, 1.0), "the timer ticks every second")
@@ -1613,7 +1620,7 @@ func test_scale_mid_fight() -> void:
 	ok(menus.size() == 1, "one menu stays open")
 	if menus.size() == 1:
 		var cur := _find(menus[0], "150%")
-		ok(cur != null and cur.get_theme_color("font_color") == Kit.ACCENT, "and it marks 150% as the size in use")
+		ok(cur != null and _in_use(cur), "and it marks 150% as the size in use")
 		ok((menus[0] as Control).z_index > 10, "the menu draws above the fight's lists and result")
 	_check_inside(app.frame, Rect2(Vector2.ZERO, root.get_visible_rect().size), "battle after a text-size change")
 	# Touch layout On mid-fight: buttons built once (Auto-battle) grow to a fingertip too.
