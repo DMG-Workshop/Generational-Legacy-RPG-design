@@ -254,7 +254,7 @@ func _screen(what: String) -> void:
 		await _interior(what)
 		return
 	match what:
-		"worldmap", "worldpin", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
+		"worldmap", "worldpin", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
 			await _open_world(what)
 		"life":
 			pass
@@ -432,9 +432,20 @@ func _open_world(what: String) -> void:
 	if WILDS_SPOTS.has(what):
 		scr.sb.refresh()
 		scr.sb.creatures.clear()
+	if what == "smoke":   # (look only: `show=smoke`) creatures of every band with their level tags, and a smoke pot's cloud over the zone
+		d.heir.inventory.append("smoke_pot")
+		d.world_seconds = 20.0
+		var at: Vector2 = scr.sb.heir_point()
+		var bands := [[4, -6.5, -2.0, "slime"], [12, 6.5, -3.0, "wolf"], [18, -4.0, 4.0, "wolf"], [24, 5.0, 3.5, "slime"], [40, 0.5, -5.5, "wolf"]]
+		for k in bands.size():
+			var ag := GameBehaviour.new_agent(920 + k, str(bands[k][3]), at.x + float(bands[k][1]), at.y + float(bands[k][2]))
+			ag["level"] = int(bands[k][0])
+			scr.sb.creatures.append(ag)
+		scr.sb.use_smoke()
+		scr._refresh_panes()
 	if what == "turned":   # the heir faces left (the art faces right): a turned figure must stand on its shadow, as an unturned one does
 		scr.facing_dir = Vector2i(-1, 0)
-	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town else (1.5 if what == "gate" else 0.75))
+	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town or what == "smoke" else (1.5 if what == "gate" else 0.75))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()

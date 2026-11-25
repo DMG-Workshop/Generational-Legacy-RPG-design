@@ -49,6 +49,7 @@ var house_preview := false  # whether the house's footprint is drawn (after the 
 var house_button: Button
 var slots := {}              # the action bar's slots by id (a desktop window with a mouse; empty on a touch screen)
 var slot_ids: Array = []     # the numbered ones, in order
+var smoke_button: Button    # Smoke, on a touch screen's bar (null on a desktop bar, where the ninth slot is it)
 var cast_button: Button     # Cast, shown only in a dungeon: the heir's spells that work outside a fight (GameCasting.self_castable)
 var build_bar: HBoxContainer
 var orders_panel: VBoxContainer
@@ -354,6 +355,8 @@ func _old_buttons(bar: HBoxContainer) -> void:
 	bar.add_child(cast_button)
 	bar.add_child(Kit.button("Up", func(): _climb(-1), Vector2(64, BAR - 12)))
 	bar.add_child(Kit.button("Down", func(): _climb(1), Vector2(72, BAR - 12)))
+	smoke_button = Kit.button("Smoke", func(): _use_smoke(), Vector2(84, BAR - 12))
+	bar.add_child(smoke_button)
 
 
 ## The action bar on a desktop window with a mouse: the Menu and the map, then eight numbered slots (data/ui/actionbar.json).
@@ -406,7 +409,25 @@ func _slot_do(id: String) -> void:
 			_climb(-1)
 		"down":
 			_climb(1)
+		"smoke":
+			_use_smoke()
 	_refresh_slots()
+
+
+## The data's entry for a numbered slot.
+func _slot_def(id: String) -> Dictionary:
+	for def in ActionSlot.data()["slots"]:
+		if str(def["id"]) == id:
+			return def
+	return {}
+
+
+## Breaks a smoke pot where the heir stands (GameSandbox.use_smoke): from the ninth slot, the touch bar's Smoke button and the pack.
+func _use_smoke() -> Dictionary:
+	var r: Dictionary = sb.use_smoke()
+	last_line = str(r["text"])
+	_refresh_status()
+	return r
 
 
 func _can_cast() -> bool:
@@ -419,6 +440,10 @@ func _refresh_slots() -> void:
 		return
 	if slots.has("cast"):
 		slots["cast"].set_state(not _can_cast(), false)
+	if slots.has("smoke"):   # dimmed when the heir has none; the tooltip counts them
+		var pots := GameSmoke.count(app.dynasty.heir)
+		slots["smoke"].set_state(pots <= 0, GameSmoke.active(app.dynasty))
+		slots["smoke"].set_count(_slot_def("smoke"), str(slot_ids.find("smoke") + 1), pots)
 	if slots.has("build"):
 		slots["build"].set_state(false, mode == "build")
 	if slots.has("orders") and orders_panel != null:
@@ -540,7 +565,7 @@ func _tap(p: Vector2, area: Vector2) -> void:
 		var point := _point_at(p, area)
 		var named := sb.name_at(point.x, point.y)
 		if not named.is_empty():
-			_name_tag = {"text": str(named["name"]), "point": point, "until": Time.get_ticks_msec() + int(float(setting("name_seconds")) * 1000.0)}
+			_name_tag = {"text": _named_text(named), "point": point, "until": Time.get_ticks_msec() + int(float(setting("name_seconds")) * 1000.0)}
 			last_line = str(named["name"])
 			if str(named["kind"]) == "companion":
 				last_line = _select(str(named["id"]), str(named["name"]))
@@ -941,6 +966,7 @@ func _open_pack(bag: String) -> void:
 	panel.dynasty = app.dynasty
 	panel.bag = bag
 	panel.on_change = func(): _refresh_status()
+	panel.on_smoke = func() -> String: return str(_use_smoke()["text"])
 	panel.on_open_bag = func(id: String): _open_pack(id)
 	_add_pane(panel, "" if bag == "" else ":" + bag)
 
@@ -1214,8 +1240,18 @@ func _refresh_status() -> void:
 	_refresh_slots()
 	if cast_button != null:
 		cast_button.visible = GameDungeons.is_dungeon(sb.space) and not GameCasting.self_castable(d).is_empty()
+	if smoke_button != null:
+		smoke_button.text = "Smoke %d" % GameSmoke.count(d.heir) if GameSmoke.count(d.heir) > 0 else "Smoke"
+		smoke_button.modulate = Color(1, 1, 1, 1.0 if GameSmoke.count(d.heir) > 0 else 0.45)
 	var pin := _pin_line()
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line] if pin == "" else "%s  %s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], pin, line]
+	if UiSettings.touch() or UiSettings.compact(self):
+		# no status pane here: the heir's level and experience (and a smoke pot's time) lead the one status line
+		var h := d.heir
+		var lead := "Lv %s  XP %s/%s" % [GameText.num(h.level), GameText.num(h.xp), GameText.num(h.xp_to_next())]
+		if GameSmoke.active(d):
+			lead += "  " + GameSmoke.text("timer", {"time": GameSmoke.clock_text(GameSmoke.left(d))})
+		status.text = "%s  %s" % [lead, status.text]
 	_refresh_plate()
 
 
@@ -1329,6 +1365,7 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	var half := area / (2.0 * cell) + Vector2(3, 3)
 	var view := Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0))
 	var items: Array = []   # [depth, kind, thing]
+	var tags: Array = []    # [screen point, creature agent]: the level tags, drawn over everything standing
 	_bubble_pos.clear()
 	for p in GameWalls.pieces_in(Rect2i(view.position.x - 2, view.position.y - 5, view.size.x + 4, view.size.y + 10)):
 		items.append([float(int(p["z"]) + 1) + (0.5 if str(p["k"]) == "gate" else 0.0), "wall", p])
@@ -1408,6 +1445,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
 					var h := w * float(tex.get_height()) / float(tex.get_width())
 					_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell)   # the art faces left
+				if GameSandbox.level_of(a) > 0:
+					tags.append([p, a])
 			"companion":
 				var a: Dictionary = it[2]
 				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
@@ -1430,8 +1469,55 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 				else:
 					_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
+	for t in tags:
+		_paint_level_tag(c, t[0], t[1], cell)
 	_paint_bubbles(c)
 	_paint_name(c, origin, area, centre, cell)
+	_paint_smoke(c, origin, area, centre, cell)
+
+
+## The text a click's name tag shows: a creature's name carries its level and band mark ("Wolf  Lv 12 =").
+func _named_text(named: Dictionary) -> String:
+	if int(named.get("level", 0)) > 0:
+		return "%s  Lv %s %s" % [str(named["name"]), GameText.num(int(named["level"])), GameLevels.mark(str(named["con"]))]
+	return str(named["name"])
+
+
+## The colour of a band's tag, from the Kit's tokens (so high contrast and the colour-blind setting keep working).
+static func band_color(id: String) -> Color:
+	match GameLevels.color_token(id):
+		"good":
+			return Kit.good()
+		"bad":
+			return Kit.bad()
+		"dim":
+			return Kit.dim()
+		"accent":
+			return Kit.ACCENT
+	return Kit.TEXT
+
+
+## "Lv 12 =" over a creature, coloured by its band (grey, green, white, yellow, red for trivial to deadly) with the band's mark after it,
+## so the colour is never the only cue, on a dark chip so it reads on any ground.
+func _paint_level_tag(c: Control, at: Vector2, a: Dictionary, cell: float) -> void:
+	var id := sb.con(GameSandbox.level_of(a))
+	var text := "Lv %s %s" % [GameText.num(GameSandbox.level_of(a)), GameLevels.mark(id)]
+	var fs := clampi(int(round(11.0 * maxf(zoom, 0.8))), 10, 15)
+	var font := ThemeDB.fallback_font
+	var sz := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var top := at + Vector2(0, -cell * 0.75)
+	var box := Rect2(top + Vector2(-sz.x * 0.5 - 3.0, -sz.y - 1.0), sz + Vector2(6.0, 3.0))
+	c.draw_rect(box, Color(0.04, 0.04, 0.07, 0.72))
+	c.draw_string(font, box.position + Vector2(3.0, sz.y - 1.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, band_color(id))
+
+
+## The smoke pot's cloud, over the zone it covers: soft grey puffs whose places are a hash of their number, drifting a little with the
+## time (still with reduced motion). Look only: nothing here changes the game.
+func _paint_smoke(c: Control, origin: Vector2, area: Vector2, centre: Vector2, cell: float) -> void:
+	var cloud: Variant = GameSmoke.centre(app.dynasty)
+	if cloud == null or sb.space != "world":
+		return
+	WorldLook.paint_smoke(c, cloud, GameSmoke.radius(), int(GameSmoke.data()["puffs"]), origin, area, centre, cell, GameSmoke.left(app.dynasty) / float(GameSmoke.data()["seconds"]))
 
 
 ## What a click just named, over the thing for a moment.

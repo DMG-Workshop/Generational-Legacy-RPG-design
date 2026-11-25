@@ -143,6 +143,38 @@ static func paint_glow(c: Control, sources: Array, look: Dictionary, cell: float
 		c.draw_texture_rect(tex, Rect2(p - Vector2(r, r), Vector2(r, r) * 2.0), false, Color(col.r * k, col.g * k, col.b * k, 1.0))
 
 
+# ---------------------------------------------------------------- smoke
+
+## Puff i of `n` in a smoke pot's cloud of `radius` tiles at time t: {pos (tiles from the cloud's middle), r (tiles), alpha}. Spread over
+## the disc by a hash of the puff's number, drifting slowly round with the time; a hash and the time are all there is to it, so it is
+## still with reduced motion (t is 0 then) and no die is thrown.
+static func smoke_puff(i: int, _n: int, radius: float, t: float) -> Dictionary:
+	var u1 := _unit(i, 11)
+	var u2 := _unit(i, 12)
+	var u3 := _unit(i, 13)
+	var ang := u1 * TAU + t * 0.04 * (0.5 + u3)
+	var dist := sqrt(u2) * radius * 0.92
+	var wobble := Vector2(sin(t * 0.35 + u3 * TAU), cos(t * 0.28 + u1 * TAU)) * radius * 0.04
+	return {"pos": Vector2.from_angle(ang) * dist + wobble, "r": radius * (0.2 + 0.16 * u3), "alpha": 0.3 + 0.2 * u2}
+
+
+## Draws the cloud over the map: `cloud` is its middle in tiles, `fade` (0 to 1) thins it as the last of its time runs out.
+static func paint_smoke(c: Control, cloud: Vector2, radius: float, puffs: int, origin: Vector2, area: Vector2, view_centre: Vector2, cell: float, fade: float) -> void:
+	var strength := clampf(fade * 5.0, 0.0, 1.0)
+	var t := clock()
+	var tex := GroundArt.glow_texture()
+	var rect := Rect2(origin, area)
+	for i in puffs:
+		var pf := smoke_puff(i, puffs, radius, t)
+		var p: Vector2 = origin + (cloud + Vector2(pf["pos"]) - view_centre) * cell + area * 0.5
+		var r := float(pf["r"]) * cell
+		if not rect.grow(r).has_point(p):
+			continue
+		c.draw_texture_rect(tex, Rect2(p - Vector2(r, r), Vector2(r, r) * 2.0), false, Color(0.78, 0.78, 0.8, float(pf["alpha"]) * strength))
+	var mid := origin + (cloud - view_centre) * cell + area * 0.5
+	c.draw_arc(mid, radius * cell, 0.0, TAU, 64, Color(0.8, 0.8, 0.84, 0.4 * strength), maxf(1.0, cell * 0.06))
+
+
 # ---------------------------------------------------------------- weather
 
 ## The share of a hash, 0 up to (not including) 1.

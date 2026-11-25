@@ -227,6 +227,11 @@ static func validate() -> Array:
 		bad.append("sandbox.json: spawn_safe must be 0 up to the spawn radius")
 	if int(s["max_creatures"]) < 1 or int(s["spawn_burst"]) < 1:
 		bad.append("sandbox.json: max_creatures and spawn_burst must be at least 1")
+	for k in ["spawn_rest_seconds", "spawn_town_margin"]:
+		if not s.has(k) or typeof(s[k]) not in [TYPE_INT, TYPE_FLOAT] or float(s[k]) < 0.0:
+			bad.append("sandbox.json: settings.%s must be a number of 0 or more" % k)
+	bad.append_array(GameLevels.validate())
+	bad.append_array(GameSmoke.validate())
 	var mm: Variant = data().get("minimap")
 	if typeof(mm) != TYPE_DICTIONARY:
 		bad.append("sandbox.json: minimap (the colours of a town's buildings, wall and gates) is missing")
@@ -236,6 +241,32 @@ static func validate() -> Array:
 			if typeof(col) != TYPE_ARRAY or (col as Array).size() != 3:
 				bad.append("sandbox.json: minimap.%s needs a colour [r, g, b]" % k)
 	return bad
+
+
+## The world-clock second before which `refresh` spawns nothing new: set when a fight ends (runtime only, never saved).
+var rest_until := 0.0
+
+
+## Whether a tile is inside a town: within the town's wall ring (plus `spawn_town_margin`), on its cleared ground or in any area's
+## ground (GameSpaces.at_tile). Nothing spawns there.
+static func in_town(x: int, z: int) -> bool:
+	if GameWalls.cleared(x, z):
+		return true
+	for place in GameWalls.walled():
+		var a := GameWorldGen.anchor(str(place))
+		if Vector2(x - int(a["x"]), z - int(a["z"])).length() <= GameWalls.radius(str(place)) + float(setting("spawn_town_margin")):
+			return true
+	return GameSpaces.at_tile(x, z) != GameSpaces.root_id()
+
+
+## The band id of a creature of `level` against the heir (trivial, easy, even, hard or deadly).
+func con(level: int) -> String:
+	return GameLevels.con(level, d.heir.level)
+
+
+## The level of a creature agent, 0 for one made without a level (a dungeon's: its fights keep the old rules).
+static func level_of(a: Dictionary) -> int:
+	return int(a.get("level", 0))
 
 
 ## Spawns the creatures the world has in the square round the heir and lets go of those far behind.
@@ -261,8 +292,8 @@ func refresh() -> void:
 	var share := float(setting("spawn_share"))
 	var safe := float(setting("spawn_safe"))
 	var room := int(setting("max_creatures")) - creatures.size()
-	if room <= 0:
-		return
+	if room <= 0 or d.world_seconds < rest_until:
+		return   # a full crowd, or the breather after a fight: nothing new comes
 	var found: Array = []   # [roll, x, z, id]
 	for dz in range(-radius, radius + 1):
 		for dx in range(-radius, radius + 1):
@@ -281,11 +312,15 @@ func refresh() -> void:
 			var r := keep_roll.randf()
 			if r >= share:
 				continue
+			if in_town(x, z) or GameSmoke.covers(d, float(x) + 0.5, float(z) + 0.5):
+				continue   # none within a town's walls or cleared ground, and none in a smoke pot's cloud
 			found.append([r, x, z, id])
 	found.sort_custom(func(p, q): return p[0] < q[0])
 	for i in mini(mini(room, int(setting("spawn_burst"))), found.size()):
 		var f: Array = found[i]
-		creatures.append(GameBehaviour.new_agent(next_uid, str(f[3]), float(f[1]) + 0.5, float(f[2]) + 0.5))
+		var agent := GameBehaviour.new_agent(next_uid, str(f[3]), float(f[1]) + 0.5, float(f[2]) + 0.5)
+		agent["level"] = GameLevels.level_for(d, int(f[1]), int(f[2]))   # its own level, a pure function of the seed, the tile and the heir's level (GameLevels)
+		creatures.append(agent)
 		next_uid += 1
 		_occupied[_key(int(f[1]), int(f[2]))] = true
 
@@ -427,18 +462,21 @@ func name_at(fx: float, fz: float) -> Dictionary:
 	var reach := float(setting("name_reach"))
 	var here := Vector2(fx, fz)
 	var found := {"best": {}, "dist": reach + 1.0}   # (a lambda changes what it is handed, not the variables around it)
-	var consider := func(kind: String, nm: String, x: float, z: float, slack: float = 0.0, id: String = ""):
+	var consider := func(kind: String, nm: String, x: float, z: float, slack: float = 0.0, id: String = "", level: int = 0):
 		var dist := maxf(0.0, Vector2(x, z).distance_to(here) - slack)
 		if dist <= reach and dist < float(found["dist"]) and nm != "":
 			found["dist"] = dist
 			found["best"] = {"kind": kind, "name": nm, "id": id}
+			if level > 0:
+				found["best"]["level"] = level   # a creature's own level and how it stands against the heir's
+				found["best"]["con"] = con(level)
 	consider.call("heir", d.heir.name, float(heir.x) + 0.5, float(heir.y) + 0.5)
 	for a in creatures:
 		var def := {}
 		for c in GameData.creatures:
 			if str(c["id"]) == str(a["id"]):
 				def = c
-		consider.call("creature", str(def.get("name", a["id"])), float(a["x"]), float(a["z"]), 0.0, str(a["id"]))
+		consider.call("creature", str(def.get("name", a["id"])), float(a["x"]), float(a["z"]), 0.0, str(a["id"]), level_of(a))
 	for a in companions:
 		var nm := ""
 		for m in d.party.members:
@@ -571,8 +609,12 @@ func step(ticks: int = 1) -> void:
 		check_footing()
 		var night := GameDay.is_night(d)
 		var threats := _threats()
-		var cview := GameBehaviour.world_view(d, [{"x": heir_point().x, "z": heir_point().y}], night)
+		if GameSmoke.clear_if_out(d):
+			log.append({"kind": "smoke", "text": GameSmoke.text("thinned")})
+		var hidden := GameSmoke.covers(d, heir_point().x, heir_point().y)   # a heir inside the cloud is not seen from outside it
+		var cview := GameBehaviour.world_view(d, [] if hidden else [{"x": heir_point().x, "z": heir_point().y}], night)
 		creatures = GameBehaviour.step_all(creatures, cview, d.seed_value, tick)
+		creatures = _smoke_drives(creatures, cview)
 		if _contact():
 			return
 		if _landmark_approach():
@@ -868,9 +910,47 @@ func reaches_heir(a: Dictionary, rng: float) -> bool:
 	return GameWalls.line_clear(at, heir_point(), GameWalls.shut_now(d), float(setting("reach_step")))
 
 
+## The creatures inside a smoke cloud give up whatever they were doing and go out of it (GameBehaviour.drive_from): no dice, and the
+## mode is overridden here, after the behaviour step, so a hunter inside the cloud is a runner by the time contact is looked at.
+func _smoke_drives(list: Array, view: Dictionary) -> Array:
+	var c: Variant = GameSmoke.centre(d)
+	if c == null:
+		return list
+	var out: Array = []
+	for a in list:
+		if str(a["mode"]) != "dead" and Vector2(float(a["x"]), float(a["z"])).distance_to(c) <= GameSmoke.radius():
+			out.append(GameBehaviour.drive_from(a, c, view, float(GameSmoke.data()["drive"])))
+		else:
+			out.append(a)
+	return out
+
+
+## Breaks a smoke pot where the heir stands: a cloud for `smoke.seconds` of the world clock. {ok, text}. Refused indoors, upstairs, in a
+## fight, with none, and while the cloud already burns here. Draws no dice.
+func use_smoke() -> Dictionary:
+	var h := d.heir
+	if space != "world":
+		return {"ok": false, "text": GameSmoke.text("indoors")}
+	if storey() > 0:
+		return {"ok": false, "text": GameSmoke.text("upstairs")}
+	if d.battle != null:
+		return {"ok": false, "text": GameSmoke.text("fight")}
+	if GameSmoke.count(h) <= 0:
+		return {"ok": false, "text": GameSmoke.text("none", {"heir": h.name})}
+	if GameSmoke.active(d) and GameSmoke.covers(d, heir_point().x, heir_point().y) and GameSmoke.left(d) > float(GameSmoke.data()["seconds"]) * 0.5:
+		return {"ok": false, "text": GameSmoke.text("already", {"left": GameSmoke.clock_text(GameSmoke.left(d))})}
+	GameSmoke.take_one(h)
+	GameSmoke.light(d, heir_point().x, heir_point().y)
+	var line := GameSmoke.text("lit", {"heir": h.name})
+	log.append({"kind": "smoke", "text": line})
+	return {"ok": true, "text": line}
+
+
 func _contact() -> bool:
 	if d.battle != null or d.state != "life" or storey() > 0 or space != "world":
 		return false   # nothing reaches the heir upstairs or indoors
+	if GameSmoke.covers(d, heir_point().x, heir_point().y):
+		return false   # nor a heir inside a smoke cloud
 	var me := heir_point()
 	var first := -1
 	for i in creatures.size():
@@ -882,14 +962,16 @@ func _contact() -> bool:
 		return false
 	var ids: Array = []
 	var gone: Array = []
+	var levels: Array = []   # each creature's own level (GameLevels), in the order of the ids
 	for i in creatures.size():
 		var a: Dictionary = creatures[i]
 		if ids.size() >= int(setting("contact_max")):
 			break
 		if i == first or (str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_join")))):
 			ids.append(str(a["id"]))
+			levels.append(level_of(a))
 			gone.append(a)
-	var fight := d.start_encounter(ids)
+	var fight := d.start_encounter(ids, "", 1.0, levels)
 	if fight == null:
 		return false
 	var away := _escape_tile(Vector2(float(creatures[first]["x"]), float(creatures[first]["z"])))
@@ -922,6 +1004,10 @@ func _escape_tile(from: Vector2) -> Vector2i:
 func after_fight() -> void:
 	if d.battle != null:
 		return
+	rest_until = d.world_seconds + float(setting("spawn_rest_seconds"))   # a breather: nothing new spawns for a while after any fight
+	if d.last_xp_line != "":
+		log.append({"kind": "fight", "text": d.last_xp_line})   # "+N XP" in the journal
+		d.last_xp_line = ""
 	if not fight_foes.is_empty():
 		_after_dungeon_fight()
 		return

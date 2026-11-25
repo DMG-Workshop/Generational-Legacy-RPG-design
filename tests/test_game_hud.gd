@@ -160,6 +160,24 @@ func test_hud() -> void:
 		if ("%d of %d" % [d.heir.hp, d.heir.max_hp()]) in t:
 			found = true
 	ok(found, "the status pane shows the heir's health as it is now")
+	# the experience bar: level, xp and what the next level takes, and the bar's own fill
+	var xp_text := "Lv %s  %s / %s" % [GameText.num(d.heir.level), GameText.num(d.heir.xp), GameText.num(d.heir.xp_to_next())]
+	ok(xp_text in " | ".join(_labels(status)), "the status pane shows the experience toward the next level: %s" % xp_text)
+	ok(status._bars.has("xp") and (status._bars["xp"]["bar"] as ProgressBar).max_value == float(maxi(1, d.heir.xp_to_next())), "on a bar of its own that runs to the next level")
+	d.heir.xp = d.heir.xp_to_next() / 2
+	status.refresh()
+	ok((status._bars["xp"]["bar"] as ProgressBar).value == float(d.heir.xp), "and fills as experience comes")
+	ok(not status._smoke.visible, "no smoke timer with no cloud")
+	d.world_seconds = 10.0
+	GameSmoke.light(d, 5.0, 5.0)
+	status.refresh()
+	ok(status._smoke.visible and status._smoke.text == "Smoke 3:00", "a burning cloud shows its time: %s" % status._smoke.text)
+	d.world_seconds = 70.0
+	status.refresh()
+	ok(status._smoke.text == "Smoke 2:00", "and counts down: %s" % status._smoke.text)
+	d.smoke = {}
+	status.refresh()
+	ok(not status._smoke.visible, "and goes when the cloud does")
 	map.sb.log.append({"kind": "talk", "text": "A test line of the journal."})
 	journal.refresh()
 	var journal_text := ""
@@ -266,6 +284,29 @@ func test_figure_and_pack() -> void:
 	ok(pack != null, "the pack opens")
 	var squares := _slots(pack)
 	ok(squares.size() >= 24 and squares[0].item == "iron_sword", "as a grid of squares with the sword in the first (%d)" % squares.size())
+	# a smoke pot: Use in the pack (and a double click) breaks it where the heir stands
+	d.heir.inventory.append("smoke_pot")
+	d.heir.inventory.append("smoke_pot")
+	pack.refresh()
+	await _frames(2)
+	pack._pick("smoke_pot")
+	await _frames(2)
+	var use_btn: Button = null
+	for b in pack.find_children("*", "Button", true, false):
+		if (b as Button).text == "Use":
+			use_btn = b
+	ok(use_btn != null, "a smoke pot picked in the pack has a Use button")
+	if use_btn != null:
+		use_btn.pressed.emit()
+		await _frames(2)
+	ok(GameSmoke.active(d) and d.heir.inventory.count("smoke_pot") == 1, "Use breaks one and lights the cloud")
+	d.smoke = {}
+	pack._open("smoke_pot")
+	await _frames(2)
+	ok(GameSmoke.active(d) and d.heir.inventory.count("smoke_pot") == 0, "a double click does the same")
+	d.smoke = {}
+	pack._open("smoke_pot")
+	ok(not GameSmoke.active(d), "with none left nothing is lit")
 	# a bag: put the sword in, take it out
 	d.heir.inventory.append("satchel")
 	pack.refresh()

@@ -48,8 +48,8 @@ func _run() -> void:
 
 func test_data() -> void:
 	ok(ActionSlot.validate().is_empty(), "the bar's data checks: %s" % str(ActionSlot.validate()))
-	ok(ActionSlot.data()["slots"].size() == 8, "eight numbered slots")
-	for i in range(1, 9):
+	ok(ActionSlot.data()["slots"].size() == 9, "nine numbered slots")
+	for i in range(1, 10):
 		ok(WorldInput.keys_of("world_slot_%d" % i) == [str(i)], "slot %d answers to the %d key" % [i, i])
 	ok(WorldInput.validate().is_empty(), "the input data checks: %s" % str(WorldInput.validate()))
 	for def in (ActionSlot.data()["slots"] as Array) + (ActionSlot.data()["extras"] as Array):
@@ -93,13 +93,31 @@ func test_bar() -> void:
 	app.show_sandbox()
 	await _frames(3)
 	var map: Node = app.current
-	ok(map is SandboxScreen and map.slot_ids.size() == 8, "the open world has the eight numbered slots")
+	ok(map is SandboxScreen and map.slot_ids.size() == 9, "the open world has the nine numbered slots")
 	ok(map.slots.has("menu") and map.slots.has("map"), "and the Menu and the map")
 	ok(map.cast_button == null, "no text Cast button on this bar")
-	var order := ["use", "dig", "forage", "build", "cast", "orders", "up", "down"]
+	var order := ["use", "dig", "forage", "build", "cast", "orders", "up", "down", "smoke"]
 	ok(map.slot_ids == order, "in the data's order: %s" % str(map.slot_ids))
 	ok(map.slots["dig"].badge == "2" and map.slots["dig"].tooltip_text == "Dig  (2, E)", "a slot shows its number and names its keys: %s" % map.slots["dig"].tooltip_text)
 	ok(map.slots["cast"].dim, "Cast is dimmed with no spell to cast")
+	# the ninth slot is the smoke pot: dimmed with none, its tooltip counts them, the 9 key and a click light a cloud
+	ok(map.slots["smoke"].badge == "9" and map.slots["smoke"].dim, "Smoke is dimmed when the heir has no pot")
+	ok(map.slots["smoke"].tooltip_text == "Smoke pot  (9): none", "and its tooltip says none: %s" % map.slots["smoke"].tooltip_text)
+	map.last_line = ""
+	map._unhandled_input(_key(KEY_9))
+	ok(map.last_line.contains("no smoke pot") and map.app.dynasty.smoke.is_empty(), "the 9 key with none says so and lights nothing: %s" % map.last_line)
+	map.app.dynasty.heir.inventory.append("smoke_pot")
+	map.app.dynasty.heir.inventory.append("smoke_pot")
+	map._refresh_status()
+	ok(not map.slots["smoke"].dim and map.slots["smoke"].tooltip_text == "Smoke pot  (9): 2 left", "with pots it is lit and counts them: %s" % map.slots["smoke"].tooltip_text)
+	map.slots["smoke"].pressed.call()
+	ok(GameSmoke.active(map.app.dynasty) and GameSmoke.count(map.app.dynasty.heir) == 1, "a click breaks one and lights the cloud")
+	ok(map.slots["smoke"].active and map.slots["smoke"].tooltip_text == "Smoke pot  (9): 1 left", "the slot lights while it burns: %s" % map.slots["smoke"].tooltip_text)
+	map.app.dynasty.smoke = {}
+	map._unhandled_input(_key(KEY_9))
+	ok(GameSmoke.active(map.app.dynasty) and GameSmoke.count(map.app.dynasty.heir) == 0, "the 9 key does the same")
+	map.app.dynasty.smoke = {}
+	map._refresh_status()
 	# a click and the key do the same
 	map.last_line = ""
 	map.slots["use"].pressed.call()
@@ -191,6 +209,17 @@ func test_touch() -> void:
 		if b.text == "Dig":
 			found = true
 	ok(found, "among them Dig")
+	# the touch bar has a text Smoke button, dimmed with none, and the status line leads with the level and experience
+	ok(map.smoke_button != null and map.smoke_button.text == "Smoke" and map.smoke_button.modulate.a < 1.0, "a text Smoke button, dim with no pot")
+	ok(map.smoke_button.custom_minimum_size.y >= float(UiSettings.setting("touch_target_px")), "as tall as any touch button: %s" % str(map.smoke_button.custom_minimum_size))
+	var hh: GameHeir = app.dynasty.heir
+	ok(map.status.text.begins_with("Lv %s  XP %s/%s" % [GameText.num(hh.level), GameText.num(hh.xp), GameText.num(hh.xp_to_next())]), "the status line leads with level and experience: %s" % map.status.text)
+	app.dynasty.heir.inventory.append("smoke_pot")
+	map._refresh_status()
+	ok(map.smoke_button.text == "Smoke 1" and is_equal_approx(map.smoke_button.modulate.a, 1.0), "with a pot the button counts it")
+	map.smoke_button.pressed.emit()
+	await _frames(1)
+	ok(GameSmoke.active(app.dynasty) and map.status.text.contains("Smoke "), "pressing it lights the cloud and the status line shows its time: %s" % map.status.text)
 	app.queue_free()
 	UiSettings.force_touch = -1
 	await _frames(2)

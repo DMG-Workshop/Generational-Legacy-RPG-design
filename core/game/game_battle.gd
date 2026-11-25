@@ -1437,6 +1437,11 @@ func _foe_phase() -> bool:
 		if _foe_step == 0 and enemies[i]["hp"] <= 0:
 			_foe_queue.pop_front()
 			continue
+		if _foe_step == 0 and _loses_heart(i):
+			_foe_queue.pop_front()
+			if _won():
+				return false
+			continue
 		if not _foe_turn_steps(i):
 			return false
 		_foe_queue.pop_front()
@@ -1447,6 +1452,30 @@ func _foe_phase() -> bool:
 			return false
 		if _won():
 			return false
+	return true
+
+
+## A fearful foe (a weak creature of the open world, see GameLevels) below its share of health may lose heart at the start of its
+## turn: it rolls on the fight's dice (only fearful foes ever draw here, so every other fight draws exactly as before) and on a
+## success runs off: out of the fight with no xp, gold or drops (hp 0 and `fled`, so the round keeps its places). True when it ran.
+func _loses_heart(i: int) -> bool:
+	var e: Dictionary = enemies[i]
+	if not bool(e.get("fearful", false)) or bool(e.get("fled", false)) or int(e["hp"]) <= 0:
+		return false
+	if float(e["hp"]) >= GameLevels.flee_share() * float(e["max_hp"]):
+		return false
+	if rng.randf() >= GameLevels.flee_chance():
+		return false
+	e["hp"] = 0
+	e["fled"] = true
+	e["xp"] = 0
+	e["gold"] = 0
+	events.append({"type": "foe_flee", "index": i, "name": str(e["name"])})
+	_say(GameMessages.line("foe_flees", {"name": e["name"]}))
+	statuses.erase(enemy_ref(i))
+	var moved := GameCombat.close_ranks(enemies)
+	if not moved.is_empty():
+		events.append({"type": "advance", "indices": moved})
 	return true
 
 

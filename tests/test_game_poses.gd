@@ -59,10 +59,12 @@ func _run() -> void:
 	await test_breathing(bv)
 	await test_moves(bv)
 	await test_falls(bv)
+	await test_flee(bv, false)
 	ok(d.rng.state == dice, "no pose or move draws the dynasty's dice")
 	UiSettings.set_access("reduced_motion", true)
 	bv = await _fight(d)
 	await test_reduced_motion(bv)
+	await test_flee(bv, true)
 	UiSettings.set_access("reduced_motion", false)
 	for f in DirAccess.get_files_at(DIR):
 		DirAccess.remove_absolute(DIR + f)
@@ -129,6 +131,25 @@ func test_breathing(bv: Control) -> void:
 		await _wait(0.08)
 	ok(seen.size() == 2, "a breath is a bob between two places: %s" % str(seen.keys()))
 	ok(is_equal_approx(absf(seen.keys()[0] - seen.keys()[1]) if seen.size() == 2 else 0.0, bv.hero_pose.px), "one pixel of the art apart")
+
+
+# ---------------------------------------------------------------- a foe that runs off
+
+## A weak foe loses heart: it runs off the field and fades (with reduced motion it is just gone), and is out of the taps.
+func test_flee(bv: Control, reduced: bool) -> void:
+	var en: Dictionary = bv.enemy_nodes[1]
+	var root_node: Control = en["root"]
+	var x0 := root_node.position.x
+	ok(root_node.visible, "the foe is on the field")
+	bv._play_one({"type": "foe_flee", "index": 1, "name": "Slime"})
+	if reduced:
+		ok(not root_node.visible and is_equal_approx(root_node.position.x, x0), "with reduced motion it is just gone")
+	else:
+		await _frames(2)
+		ok(root_node.visible and root_node.position.x > x0, "it runs off to the side: %s" % str(root_node.position.x - x0))
+		await _wait(0.8)
+		ok(not root_node.visible and root_node.modulate.a < 0.05, "and is gone, faded out")
+	ok(not en["mark"].visible and not en["sel"].visible, "with no marks left on it")
 
 
 # ---------------------------------------------------------------- moves
