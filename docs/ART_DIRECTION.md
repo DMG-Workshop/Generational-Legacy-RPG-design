@@ -123,8 +123,17 @@ Each step is its own pull request, with the stored screenshots refreshed in it, 
   `slot_good`, `slot_bad`, the `slot` text map, contrast pairs in `skin.json`), prices carry the gold coin, the chronicle's tabs and the
   shops' tabs are wood with the open one lit in gold (`tab` piece), action keys are parchment keys (the button family, below), the house's levels are segmented bars, a row that cannot be bought keeps its reason line in readable ink, and the family tree
   is drawn as parchment cards with crimson name ribbons joined by ink lines (`family_tree_view.gd`; the old text stays on a compact window or a
-  touch screen). Not yet: the workshop, heirlooms, trials and looks panels (they get the pane's face and labels but keep dark inner boxes),
-  the skill tree's canvas, and bars in the tavern and quest board.
+  touch screen). Not yet: the skill tree's canvas, and bars in the tavern and quest board.
+- **Step 2, the overlay panels (workshop, heirlooms, trials, looks):** the same look as the house and shops, when the panel is a skinned pane.
+  The workshop's Make, Brew, calling's Works and Break up sections are wooden tabs (the open one is kept over a rebuild), each with a crimson
+  ribbon heading (`PanelSkin.heading`) and its lines as inset slots; the fee of a piece, brew or work carries a gold coin before its key, a
+  dropdown is a raised key with a parchment list (`PanelSkin.option`), and a shut key's reason is a line of text in the slot's quiet ink
+  (`PanelSkin.reason`). Heirlooms are a slot each with the level as a segmented bar and the price over the Rework key; trials are a slot each,
+  the master's portrait in an inset frame (`PanelSkin.frame`) and the hours spent a segmented bar; the looks panel's people are wooden tabs
+  (the chosen one lit), the figure and the shirt swatches sit in slots (the swatches keep their own colours, `skin_keep`) and a shut Random says
+  why. Opened from a house that is a pane, the workshop, heirlooms and trials open as panes too (`HousePanel._open_over`). Every key is a
+  raised parchment key; a compact window, a touch screen and the full-screen overlays keep the old look and the old rich layout exactly
+  (the workshop stays one long list). `tests/test_game_skin_overlays_a.gd` checks.
 - **The battle screen's frame:** `ui/play/battle_skin.gd` puts the skin on what is round the battle view (the figures, effects and
   animation are untouched). The arena has the wooden frame; the log, the command panel, the skill, spell, feat and poison lists and the
   result are parchment panels. The command panel's title (whose move is asked, or the reaction question) is a crimson ribbon, and the

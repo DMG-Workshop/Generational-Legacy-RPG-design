@@ -52,12 +52,19 @@ func _build(column: float) -> void:
 	_body.add_child(Kit.button("Close", func(): queue_free(), Vector2(column, 48)))
 
 
+## Opens a panel beside the house: as a pane of its own when the house is one (so it wears the skin), else over it as before.
+func _open_over(panel: Control) -> void:
+	if has_meta("pane"):
+		panel.set_meta("pane", panel.get_script().resource_path.get_file().get_basename())
+	get_parent().add_child(panel)
+
+
 ## The trials open over the house, as the heirlooms do.
 func _trials() -> void:
 	var panel: Control = TrialsPanel.new()
 	panel.dynasty = dynasty
 	panel.on_change = on_change
-	get_parent().add_child(panel)
+	_open_over(panel)
 
 
 ## The heirlooms open over the house, as the workshop does.
@@ -65,7 +72,7 @@ func _heirlooms() -> void:
 	var panel: Control = HeirloomPanel.new()
 	panel.dynasty = dynasty
 	panel.on_change = on_change
-	get_parent().add_child(panel)
+	_open_over(panel)
 
 
 ## The workshop opens over the house, so closing it comes back here.
@@ -73,7 +80,7 @@ func _workshop() -> void:
 	var panel: Control = CraftPanel.new()
 	panel.dynasty = dynasty
 	panel.on_change = on_change
-	get_parent().add_child(panel)
+	_open_over(panel)
 
 
 func _row(track: String, column: float) -> Control:

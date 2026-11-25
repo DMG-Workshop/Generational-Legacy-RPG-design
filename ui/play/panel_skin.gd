@@ -145,3 +145,37 @@ static func progress(host: Control, value: float, max_value: float, kind: String
 	if on(host):
 		UiSkin.dress_bar(pb, kind)
 	return pb
+
+
+## A section's heading: a small crimson ribbon with the words in gold when skinned, else the kit's gold label.
+static func heading(host: Control, text: String, size: int = 18) -> Control:
+	if not on(host):
+		return Kit.label(text, size, Kit.ACCENT)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.ribbon_box())
+	p.set_meta("skin_heading", true)
+	var l := Kit.label(text, size)
+	UiSkin.dress_title(l)
+	l.add_theme_font_size_override("font_size", size)
+	p.add_child(l)
+	return p
+
+
+## The line that says why a key is shut, as text (never a tooltip), wrapped; `slot` when it sits in a slot row.
+static func reason(host: Control, text: String, slot: bool = true, size: int = 14) -> Label:
+	var l := label(host, text, size, Kit.dim()) if slot else Kit.label(text, size, Kit.dim())
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return l
+
+
+## A dropdown dressed as a raised key with a parchment list; unskinned, as it is.
+static func option(host: Control, ob: OptionButton) -> void:
+	if on(host):
+		dress_button(ob)
+		UiSkin.dress_popup(ob.get_popup())
+
+
+## A small framed square for a picture (a portrait) in a slot row: an inset frame, or the kit's dark box when not skinned.
+static func frame(host: Control, old: StyleBox) -> StyleBox:
+	return UiSkin.inset_box(false) if on(host) else old
