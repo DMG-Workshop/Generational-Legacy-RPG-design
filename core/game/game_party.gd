@@ -9,6 +9,7 @@ extends RefCounted
 # paid; diseases is the companion's sickness (see GameDisease), shared with their unit; auto (only once the
 # player has set it) is the Auto switch for party command rounds (see GameRound).
 var members: Array = []
+var tree_news: Dictionary = {}   # member id -> skill points earned that the journal has yet to tell (runtime only: never saved, never in a fingerprint)
 # companion id -> {name, status, gen, first_gen, battles, fallen: [names], line, past: [...],
 #                  born?, rolled?, back_year?}
 # status: "serving", "dismissed" (rehire free), "left" (walked out unpaid), "fallen" (died for the house),
@@ -105,6 +106,9 @@ func _body(d: GameDynasty, m: Dictionary) -> GameHeir:
 		m["diseases"] = []
 	u.diseases = m["diseases"]
 	GameSkillTree.attach(u, m)
+	if u.tree_news > 0:   # levels gained since the tree was last built: the journal tells them at the next turn of the clock
+		tree_news[str(m["id"])] = int(tree_news.get(str(m["id"]), 0)) + u.tree_news
+		u.tree_news = 0
 	return u
 
 
