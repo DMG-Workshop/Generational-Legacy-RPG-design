@@ -1216,7 +1216,6 @@ static func on_years(d: GameDynasty, msgs: Array) -> void:
 		h.remove_meta("tree_note")
 		msgs.append(note)
 		d._say(note)
-	_companion_news(d, msgs)
 	if h.tree_news <= 0:
 		return
 	var line := "%s earns %s%s." % [h.name, "a skill point" if h.tree_news == 1 else "%s skill points" % GameText.num(h.tree_news),
@@ -1227,13 +1226,16 @@ static func on_years(d: GameDynasty, msgs: Array) -> void:
 
 
 ## The points the party's companions earned with the levels they gained, told in the journal as the heir's are: one that the path
-## has already spent says so, one the player shaped by hand says how many wait to be spent.
-static func _companion_news(d: GameDynasty, msgs: Array) -> void:
+## has already spent says so, one the player shaped by hand says how many wait to be spent. **Asked for by the screens** (through
+## GameTitles.announce and the sandbox's status refresh), never by the rules of a life, so the autopilot's journal, and with it its
+## replays and digests, are exactly what they were. Returns the lines told.
+static func announce_companions(d: GameDynasty) -> Array:
+	var told: Array = []
 	for m in d.party.members:
-		var n := int(m.get("tree_news", 0))
+		var n := int(d.party.tree_news.get(str(m["id"]), 0))
 		if n <= 0:
 			continue
-		m.erase("tree_news")
+		d.party.tree_news.erase(str(m["id"]))
 		var u := d.party.unit(d, m)
 		var skill_points := GameMessages.text("life", "skill_point_one") if n == 1 else GameMessages.text("life", "skill_point_many", {"n": GameText.num(n)})
 		var line := ""
@@ -1241,8 +1243,9 @@ static func _companion_news(d: GameDynasty, msgs: Array) -> void:
 			line = GameMessages.text("life", "companion_earns_spent", {"name": u.name, "skill_points": skill_points, "them": "it" if n == 1 else "them"})
 		else:
 			line = GameMessages.text("life", "companion_earns_left", {"name": u.name, "skill_points": skill_points, "left": GameText.num(u.tree_points)})
-		msgs.append(line)
+		told.append(line)
 		d._say(line)
+	return told
 
 
 # ---------------------------------------------------------------- save / load

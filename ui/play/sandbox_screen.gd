@@ -1191,6 +1191,8 @@ func _cell() -> float:
 
 
 func _refresh_status() -> void:
+	if not app.dynasty.party.tree_news.is_empty():   # a companion has earned skill points: the journal tells it (the pane shows it next refresh)
+		GameSkillTree.announce_companions(app.dynasty)
 	var d: GameDynasty = app.dynasty
 	var line := last_line
 	if mode == "build":
