@@ -140,7 +140,7 @@ static func sync_tip(host: Control, d: GameDynasty, top: float) -> Control:
 	if strip != null:
 		strip.queue_free()
 		host.remove_child(strip)
-	var width := minf(host.size.x - 16.0, 620.0)
+	var width := maxf(160.0, minf(host.size.x - 16.0, 620.0))
 	strip = TutorialTip.make(tip, width, func(): _skip(host))
 	strip.position = Vector2(8.0, top)
 	strip.custom_minimum_size.x = width

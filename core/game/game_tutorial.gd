@@ -13,7 +13,8 @@ extends RefCounted
 const PREDICATES := ["hunted", "trained", "wounded", "can_found_family", "too_young_for_family",
 	"family_founded", "can_retire", "first_generation",
 	"moved", "dug", "can_build", "built", "has_room", "has_companion", "gave_order", "night",
-	"guided", "has_dead", "hurt", "errand_taken", "errand_ready", "errand_paid"]
+	"guided", "has_dead", "hurt", "errand_taken", "errand_ready", "errand_paid",
+	"at_marker", "routed", "store_seen"]
 ## The questions only the screen can answer, passed in `ctx`: the guided start's "walked to the marker", "clicked to walk" and
 ## "has been in the store" (where the heir has been is not saved; a later fact of the dynasty ends a step too, so a game
 ## picked up again moves on).

@@ -142,6 +142,7 @@ func _test_data() -> void:
 	for q in qs:
 		for f in q.get("reward", {}).get("flags", []):
 			produced[f] = q["id"]
+	produced[str(GameGoal.setting("guide_flag"))] = "the guided start"   # set by the open world for a brand new first heir (GameGoal.begin), never by the autopilot
 	var per_town := {}
 	var era := {"early": 0, "mid": 0, "late": 0}
 	var uniques := 0
