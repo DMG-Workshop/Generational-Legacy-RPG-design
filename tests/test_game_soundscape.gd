@@ -772,11 +772,13 @@ func test_world() -> void:
 	# a footstep when the heir's tile changes
 	s.fx_log.clear()
 	s._ext_until = -10.0
+	s._signal_steps = false   # the real screen tells its own steps (its footstep signal); the tile-change fallback is what this probes
 	var before := sb.heir
 	sb.heir += Vector2i(1, 0)
 	s.clock = 520.0
 	await _frames(2)
 	ok(not s.fx_log.is_empty() and str(s.fx_log[0]).begins_with("step_"), "a step is heard when the heir's tile changes: %s" % str(s.fx_log))
+	s._signal_steps = true   # back to how the real screen runs
 	s.fx_log.clear()
 	sb.heir += Vector2i(1, 0)
 	s.clock = 530.0
@@ -800,7 +802,8 @@ func test_world() -> void:
 	d.quests.done.append("a_test_quest")
 	s._watch_wait = 0.0
 	await _frames(2)
-	ok(s.fx_log == ["quest_done"], "and a quest done")
+	var heard: Array = s.fx_log.filter(func(x): return not str(x).begins_with("step_"))   # the screen's glide may still be finishing the test's jump of the heir, and steps are its own
+	ok(heard == ["quest_done"], "and a quest done: %s" % str(s.fx_log))
 	s.fx_log.clear()
 	var wolf := GameBehaviour.new_agent(9999, "wolf", float(sb.heir.x) + 30.0, float(sb.heir.y) + 30.0)
 	wolf["mode"] = "chase"
