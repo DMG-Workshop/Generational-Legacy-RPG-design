@@ -4,7 +4,7 @@
 ## locale has one that uses the same {placeholders}, the source line when it does not, and for the pseudo-language a
 ## line made on the fly (accented, padded, bracketed) to show up text that will not fit or was never made
 ## translatable. Catalogs are the text in data today: `battle` (data/text/battle.json), `life` (the rest of the game's text,
-## data/text/life.json) and `tutorial` (the tips, by step id). No UI; the chosen locale is a setting of the screen side (settings.cfg), handed in with `set_locale`.
+## data/text/life.json) and `tutorial` (the tips, by step id) and `goal` (the goal arrow's labels, data/world/goals.json). No UI; the chosen locale is a setting of the screen side (settings.cfg), handed in with `set_locale`.
 class_name GameLocale
 extends RefCounted
 
@@ -68,6 +68,8 @@ static func source_lines(catalog: String) -> Dictionary:
 			return GameData.life.get("lines", {})
 		"talk":
 			return GameTalk.lines()
+		"goal":
+			return GameGoal.lines()
 		"tutorial":
 			var out := {}
 			for step in GameData.tutorial.get("steps", []):

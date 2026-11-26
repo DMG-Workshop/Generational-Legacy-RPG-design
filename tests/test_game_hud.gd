@@ -350,7 +350,7 @@ func test_figure_and_pack() -> void:
 	await _frames(2)
 	ok(_pane(map, PackPane, "pack_pane:" + bag) == null, "a bag left behind takes its pane with it")
 	# the Menu has the panes
-	map._open_menu()
+	map._open_panels_menu()
 	await _frames(2)
 	var menu: PopupMenu = null
 	for c in map.get_children():

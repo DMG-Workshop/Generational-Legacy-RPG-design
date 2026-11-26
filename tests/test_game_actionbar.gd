@@ -36,6 +36,7 @@ func _run() -> void:
 	GameData.load_all()
 	UiSettings.path = "user://test_actionbar.cfg"
 	DirAccess.remove_absolute(UiSettings.path)
+	UiSettings.set_tutorial(false)   # the guided start gives a first heir a smoke pot and these probes want none
 	GameDynasty.save_path = "user://test_actionbar_save.json"
 	WorldInput.forget_overrides()
 	test_data()
@@ -122,9 +123,11 @@ func test_bar() -> void:
 	map.last_line = ""
 	map.slots["use"].pressed.call()
 	var by_click: String = map.last_line
+	await _close_talks(map)   # a talk with someone near the start opens a panel, which would hold the keys off
 	map.last_line = ""
 	map._unhandled_input(_key(KEY_1))
 	ok(by_click != "" and map.last_line == by_click, "the 1 key does what a click on Use does: '%s'" % by_click)
+	await _close_talks(map)
 	# a held key repeats nothing
 	map.last_line = ""
 	var rep := _key(KEY_1)
@@ -176,9 +179,9 @@ func test_bar() -> void:
 	await _frames(1)
 	var menu := false
 	for c in map.get_children():
-		if c is PopupMenu:
+		if c.get_script() == load("res://ui/play/pause_panel.gd"):
 			menu = true
-	ok(menu, "the Menu button opens the Menu")
+	ok(menu, "the Menu button opens the pause screen")
 	# a click on a slot node itself
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
@@ -222,4 +225,12 @@ func test_touch() -> void:
 	ok(GameSmoke.active(app.dynasty) and map.status.text.contains("Smoke "), "pressing it lights the cloud and the status line shows its time: %s" % map.status.text)
 	app.queue_free()
 	UiSettings.force_touch = -1
+	await _frames(2)
+
+
+## Closes a conversation the Use probes may have opened (a gate guard stands near the start), so the keys that follow are heard.
+func _close_talks(map: Node) -> void:
+	for c in map.get_children():
+		if c.has_meta("modal"):
+			c.queue_free()
 	await _frames(2)

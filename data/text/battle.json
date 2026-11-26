@@ -30,6 +30,12 @@
 		"fallen": "{name} has fallen...",
 		"improvises": "{name} improvises.",
 		"foe_missed": "{foe} attacks, but {name} dodges.",
-		"mana_blow": "{name}'s mana takes {n} of the blow."
+		"mana_blow": "{name}'s mana takes {n} of the blow.",
+		"fx_miss": "miss",
+		"fx_block": "block",
+		"fx_blocked": "{n} ({absorbed} blocked)",
+		"fx_shatter": "{n} shatter",
+		"fx_found": "Found",
+		"fx_find": "{rarity} {name}"
 	}
 }

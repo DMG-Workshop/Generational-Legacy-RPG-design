@@ -45,7 +45,7 @@ func _ready() -> void:
 	var rb := SkinScreen.ribbon(t)
 	rb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(rb)
-	top.add_child(Kit.button("Close", func(): queue_free(), Vector2(100, 34)))
+	top.add_child(Kit.button("Back", func(): queue_free(), Vector2(100, 34)))
 	var how := Kit.label("Choose Change, then press a key. Escape cancels. For the mouse, pick the button for each job; a button another job has changes places. The gamepad's buttons are fixed.", 14, Kit.dim())
 	how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(how)

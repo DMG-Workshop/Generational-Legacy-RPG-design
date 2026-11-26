@@ -16,6 +16,9 @@ const BattleFx := preload("res://ui/play/battle_fx.gd")
 const PartyStrip := preload("res://ui/play/party_strip.gd")
 const Sound := preload("res://ui/play/sound.gd")
 const BattleSkin := preload("res://ui/play/battle_skin.gd")
+const HitFx := preload("res://ui/play/hit_fx.gd")
+const DamageNumber := preload("res://ui/play/damage_number.gd")
+const LootPop := preload("res://ui/play/loot_pop.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
@@ -53,6 +56,11 @@ var poison_list: Control = null # the toxins and vials in the pack
 var feat_list: Control = null
 var aim_info: Label = null      # the aim panel's "catches N foes" line
 var floats: Dictionary = {}     # ref -> status words floated this action, so they stack instead of overlap
+var _nums: Dictionary = {}      # ref -> damage numbers floated this action, so a flurry fans out (HitFx look only)
+var _fx_seq := 0                # counts the blows shown: the key of a shake's lean (CosmeticRng, never the game's dice)
+var _last_shake := 0.0          # the shake the last blow gave, which a kill carries on at least as hard
+var _loot_pack: Array = []        # the pack as the bodies were found, to see what the search added
+var result_overlay: Control = null   # the result panel's dimmed layer, where found loot flies
 var auto: bool = false          # the heir fights on their own (GameTactics), one action every AUTO_PACE
 var auto_button: Button
 var result_scroll: ScrollContainer = null   # the result panel's story, capped to the window
@@ -1871,6 +1879,7 @@ func _lands_with_next(events: Array, i: int) -> bool:
 
 func _play_events(events: Array) -> void:
 	floats = {}
+	_nums = {}
 	if strip != null:
 		strip.mark_acting(-3)
 	await _play_all(events)
@@ -1879,11 +1888,16 @@ func _play_events(events: Array) -> void:
 
 
 func _play_all(events: Array) -> void:
+	var last_crit := false
 	for i in events.size():
 		var ev: Dictionary = events[i]
 		_play_one(ev)
 		_refresh_chips()
 		_update_marks()
+		if ev["type"] == "death":   # a foe falls: the figures freeze for a beat (never in auto-battle, which must not be slower)
+			await HitFx.freeze(get_tree(), arena, HitFx.stop_seconds(last_crit, auto))
+		elif ev["type"] == "damage":
+			last_crit = bool(ev.get("crit", false))
 		if ev["type"] in ["death", "status", "round", "act", "foes"] or _lands_with_next(events, i):   # the round's markers take no time
 			continue
 		await get_tree().create_timer(0.25 if ev["type"] == "cast" else 0.35).timeout
@@ -1918,10 +1932,8 @@ func _play_one(ev: Dictionary) -> void:
 					_fx("attack", "", _body("enemy", ev["index"]), _body("enemy", ev["index"]), false, false, 0.08)
 					_fx("crit" if ev["crit"] else "hit", "", _body("enemy", ev["index"]), _body("enemy", ev["index"]), false, false, 0.12)
 				var en: Dictionary = enemy_nodes[ev["index"]]
-				var txt := GameText.num(int(ev["amount"])) + ("!" if ev["crit"] else "")
-				if ev.get("shatter", false):
-					txt += " shatter"
-				_float_text(en["root"].position + Vector2(en["w"] * 0.3, 6), txt, Color("#ffd24a") if ev["crit"] else Color.WHITE)
+				_number(ev, en["root"].position + Vector2(en["w"] * 0.3, 6), false, int(b.enemies[ev["index"]]["max_hp"]), "enemy:%d" % int(ev["index"]))
+				_feel(ev, int(b.enemies[ev["index"]]["max_hp"]), en["body"], 1.0)
 				_flash(en["body"])
 				en["hp"].value = maxf(float(b.enemies[ev["index"]]["hp"]), en["hp"].value - float(ev["amount"]))
 			elif ev["side"] == "ally":
@@ -1931,7 +1943,8 @@ func _play_one(ev: Dictionary) -> void:
 				_fx("attack", "", _body("ally", ev["ally"]), _body("ally", ev["ally"]), true, false, 0.08)
 				_fx("hit", "", _body("ally", ev["ally"]), _body("ally", ev["ally"]), false, false, 0.12)
 				var an: Dictionary = ally_nodes[ev["ally"]]
-				_float_text(an["root"].position + Vector2(34, -6), _hurt_text(ev), Kit.bad())
+				_number(ev, an["root"].position + Vector2(34, -6), true, b.allies[ev["ally"]].max_hp(), "ally:%d" % int(ev["ally"]))
+				_feel(ev, b.allies[ev["ally"]].max_hp(), an["body"], -1.0)
 				_flash(an["body"])
 				_step_ally_hp(ev["ally"], -int(ev["amount"]))
 			else:
@@ -1940,16 +1953,17 @@ func _play_one(ev: Dictionary) -> void:
 				_move(hero_pose, "hurt")
 				_fx("attack", "", _body("player", -1), _body("player", -1), true, false, 0.08)
 				_fx("hit", "", _body("player", -1), _body("player", -1), false, false, 0.12)
-				_float_text(hero_node.position + Vector2(40, 0), _hurt_text(ev), Kit.bad())
+				_number(ev, hero_node.position + Vector2(40, 0), true, d.heir.max_hp(), "heir")
+				_feel(ev, d.heir.max_hp(), hero_node.get_child(0), -1.0)
 				_flash(hero_node.get_child(0))
 				_step_heir_hp(-int(ev["amount"]))
 		"heal":
 			_fx("heal", "", _body("ally" if ev["side"] == "ally" else "player", int(ev.get("ally", -1))), _body("ally" if ev["side"] == "ally" else "player", int(ev.get("ally", -1))))
 			if ev["side"] == "ally":
-				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), GameText.signed(int(ev["amount"])), Kit.good())
+				_number(ev, ally_nodes[ev["ally"]]["root"].position + Vector2(30, -6), true, 0, "ally:%d" % int(ev["ally"]))
 				_step_ally_hp(ev["ally"], int(ev["amount"]))
 			else:
-				_float_text(hero_node.position + Vector2(40, 0), GameText.signed(int(ev["amount"])), Kit.good())
+				_number(ev, hero_node.position + Vector2(40, 0), true, 0, "heir")
 				_step_heir_hp(int(ev["amount"]))
 		"tick":
 			var def := GameCombat.status_def(str(ev["id"]))
@@ -1963,7 +1977,7 @@ func _play_one(ev: Dictionary) -> void:
 		"status":
 			var def := GameCombat.status_def(str(ev["id"]))
 			if ev.get("applied", false):
-				_float_text(_side_point(str(ev["ref"])), str(def.get("name", ev["id"])), Color(def.get("color", "#ffffff")), 16)
+				DamageNumber.status_pop(arena, _side_point(str(ev["ref"])), str(def.get("name", ev["id"])), Color(def.get("color", "#ffffff")), str(ev["ref"]))
 			elif not ev.has("removed"):
 				_float_text(_side_point(str(ev["ref"])), "resisted", Kit.dim(), 16)
 		"skip":
@@ -1987,16 +2001,16 @@ func _play_one(ev: Dictionary) -> void:
 				_move(_foe_pose(ev["index"]), "dodge")
 				_fx("dodge", "", _body("enemy", ev["index"]), _body("enemy", ev["index"]))
 				var en4: Dictionary = enemy_nodes[ev["index"]]
-				_float_text(en4["root"].position + Vector2(en4["w"] * 0.2, 6), "dodge", Kit.dim())
+				_number(ev, en4["root"].position + Vector2(en4["w"] * 0.2, 6), false, 0, "enemy:%d" % int(ev["index"]))
 				return
 			_lunge(enemy_nodes[ev["index"]]["root"], -22.0)
 			_move(_foe_pose(ev["index"]), "attack")
 			_move(_party_pose(int(ev["ally"]) if ev["side"] == "ally" else -1), "dodge")
 			_fx("dodge", "", _body("ally" if ev["side"] == "ally" else "player", int(ev.get("ally", -1))), _body("ally" if ev["side"] == "ally" else "player", int(ev.get("ally", -1))), true)
 			if ev["side"] == "ally":
-				_float_text(ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), "dodge", Kit.dim())
+				_number(ev, ally_nodes[ev["ally"]]["root"].position + Vector2(24, -6), true, 0, "ally:%d" % int(ev["ally"]))
 			else:
-				_float_text(hero_node.position + Vector2(30, 0), "dodge", Kit.dim())
+				_number(ev, hero_node.position + Vector2(30, 0), true, 0, "heir")
 		"ko":
 			_fx("defeat", "", _body("ally", ev["ally"]), _body("ally", ev["ally"]))
 			_knock_out(ev["ally"])
@@ -2009,8 +2023,10 @@ func _play_one(ev: Dictionary) -> void:
 			_fx("defeat", "", _body("enemy", ev["index"]), _body("enemy", ev["index"]))
 			if en2["pose"] != null:
 				en2["pose"].fall()
+			HitFx.shake(arena, maxf(HitFx.shake_px(ev, 0, true), _last_shake), "kill%d" % _fx_seq)
+			HitFx.collapse(en2["root"], "foe%d:%d" % [int(ev["index"]), _fx_seq])
 			var t := create_tween()
-			t.tween_property(en2["root"], "modulate:a", 0.0, UiSettings.motion_time(0.4))
+			t.tween_property(en2["root"], "modulate:a", 0.0, UiSettings.motion_time(HitFx.num("collapse", "seconds")))
 		"foe_flee":   # a weak foe loses heart: a puff of dust and it runs off the field (with reduced motion it is just gone)
 			_flee_foe(int(ev["index"]))
 		"advance":   # the back rank steps up into the fallen front rank's place
@@ -2058,10 +2074,23 @@ func _flee_foe(i: int) -> void:
 	t.chain().tween_callback(func(): root.visible = false)
 
 
-func _hurt_text(ev: Dictionary) -> String:
-	if int(ev["amount"]) == 0 and int(ev.get("absorbed", 0)) > 0:
-		return "absorbed"
-	return GameText.num(int(ev["amount"]))
+## The number or word an event floats (HitFx.number: "12", "12!", "miss", "block", "+8"), fanned out when several land on one figure in one action.
+func _number(ev: Dictionary, pos: Vector2, against_party: bool, max_hp: int, ref: String) -> void:
+	var n := HitFx.number(ev, max_hp)
+	if n.is_empty():
+		return
+	var k := int(_nums.get(ref, 0))
+	_nums[ref] = k + 1
+	DamageNumber.spawn(arena, pos + DamageNumber.stagger(k), str(n["text"]), DamageNumber.color_of(str(n["kind"]), against_party), int(n["size"]), str(n["kind"]), "%s:%d" % [ref, _fx_seq])
+
+
+## How a blow feels on the screen: a small shake of the arena for a heavy hit or a crit and a knock-back nudge of the
+## struck figure (`dir` +1 pushes it right, -1 left). Look only, off with reduced motion.
+func _feel(ev: Dictionary, max_hp: int, body: Control, dir: float) -> void:
+	_fx_seq += 1
+	_last_shake = HitFx.shake_px(ev, max_hp, false)
+	HitFx.shake(arena, _last_shake, "hit%d" % _fx_seq)
+	HitFx.nudge(body, dir * HitFx.nudge_px(ev, max_hp))
 
 
 func _unit_node(by: int) -> Control:
@@ -2221,8 +2250,9 @@ func _flash(node: CanvasItem) -> void:
 	if UiSettings.reduced_motion():
 		return
 	var t := create_tween()
-	node.modulate = Color(3, 3, 3)
-	t.tween_property(node, "modulate", Color.WHITE, 0.25)
+	var bright := HitFx.num("flash", "bright")
+	node.modulate = Color(bright, bright, bright)
+	t.tween_property(node, "modulate", Color.WHITE, HitFx.num("flash", "seconds"))
 
 
 ## An area cast lights up every foe it catches for a moment.
@@ -2360,6 +2390,7 @@ func _show_result() -> void:
 	_close_poisons()
 	Kit.clear(command_box)
 	hint.text = ""
+	var pack_before: Array = d.heir.inventory.duplicate()
 	var msgs: Array = d.finish_battle()
 	msgs.append_array(GameCraft.after_legend(d, b.result, b.enemies))   # and the parts of a slain legend
 	msgs.append_array(GameLoot.after_legend(d, b.result, b.enemies))   # a slain legend leaves something made (the screens ask, the rules of a life do not)
@@ -2372,6 +2403,7 @@ func _show_result() -> void:
 	overlay.color = Color(0, 0, 0, 0.7)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
+	result_overlay = overlay
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.add_child(center)
@@ -2413,6 +2445,8 @@ func _show_result() -> void:
 		var l := Kit.label(m, 16)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
+	_pop_loot(LootPop.gained(pack_before, d.heir.inventory), foot)   # what a slain legend left, straight into the pack
+	_loot_pack = d.heir.inventory.duplicate()
 	if d.loot.is_empty():
 		_end_foot(foot)
 	elif auto:   # auto-battle settles the bodies as the autopilot would
@@ -2425,12 +2459,19 @@ func _show_result() -> void:
 ## The dead of a won hunt: search them (extra gold, maybe a find, a chance of their sickness) or
 ## leave them. The victory's own gold is already counted.
 func _loot_choice(v: VBoxContainer, foot: VBoxContainer) -> void:
+	_loot_pack = d.heir.inventory.duplicate()
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	foot.add_child(box)
 	var risk := Kit.label(GamePlague.risk_text(d), 15, Kit.bad() if GamePlague.risk(d) > 0.0 else Kit.dim())
 	risk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(risk)
+	var tip := GameTutorial.current(d, "battle") if UiSettings.tutorial_on() else {}   # the guided start's word on searching the dead
+	if not tip.is_empty():
+		var hint := Kit.label(str(tip["text"]), 15, Kit.good())
+		hint.name = "SearchTip"
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(hint)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	box.add_child(row)
@@ -2461,10 +2502,24 @@ func _fit_result() -> void:
 		result_scroll.scroll_vertical = int(result_scroll.get_v_scroll_bar().max_value)
 
 
+## Shows the items a fight's end added to the pack as chips that fly out of the fallen foes (LootPop), above the choice or
+## the Continue button. Look only: what was taken has already been decided by the rules.
+func _pop_loot(ids: Array, foot: VBoxContainer) -> void:
+	if ids.is_empty() or result_overlay == null or not is_instance_valid(result_overlay):
+		return
+	var origins: Array = []
+	for en in enemy_nodes:
+		origins.append(result_overlay.make_canvas_position_local((en["body"] as Control).get_global_rect().get_center()))
+	var strip := LootPop.pop_out(result_overlay, foot.get_parent(), ids, origins)
+	if strip != null:
+		foot.get_parent().move_child(strip, foot.get_index())
+
+
 func _loot_done(v: VBoxContainer, foot: VBoxContainer, box: Control, lines: Array, lead: String) -> void:
 	if box != null:
 		foot.remove_child(box)
 		box.queue_free()
+	_pop_loot(LootPop.gained(_loot_pack, d.heir.inventory), foot)   # whatever the search or the leaving put in the pack pops out of the dead
 	for k in lines.size():
 		var l := Kit.label((lead if k == 0 else "") + str(lines[k]), 16, Kit.bad() if " catches " in str(lines[k]) else Kit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

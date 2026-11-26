@@ -39,6 +39,7 @@ func _run() -> void:
 	UiSettings.scale = 1.0
 	UiSettings.force_mobile = 0
 	UiSettings.force_touch = 0
+	MenuPanel.last_tab = "general"   # Report a problem and the error log are on the General tab
 	Clipboard.fake = true
 	FilePicker.fake = true
 	root.size = Vector2i(1280, 720)
@@ -198,7 +199,7 @@ func test_report_from_a_game() -> void:
 	var d := GameReport.dynasty(r)
 	ok(d != null and d.dynasty_name == app.dynasty.dynasty_name and d.heir.name == "Tess" and d.rng.state == app.dynasty.rng.state, "and the house being played, dice and all")
 	ok(p.said.text.contains("copied"), "the panel says it was copied")
-	_btn("Close", p).pressed.emit()
+	_btn("Back", p).pressed.emit()
 	await _frames(2)
 	ok(_panel() == null and _menu() != null, "Close goes back to the menu")
 	_menu().queue_free()

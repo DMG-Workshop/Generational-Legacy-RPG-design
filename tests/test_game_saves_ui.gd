@@ -97,6 +97,8 @@ func _note() -> String:
 func _title() -> void:
 	app.show_title()
 	await _frames(3)
+	app.current._show_page("new")   # the founding form with the slots under it
+	await _frames(1)
 
 
 func test_empty_title() -> void:
@@ -207,8 +209,10 @@ func test_game_menu_backup() -> void:
 	await _frames(2)
 	_press("Continue")
 	await _frames(3)
-	app.open_menu()
+	var gm: Control = app.open_menu()
 	await _frames(3)
+	gm._select("save")
+	await _frames(2)
 	Clipboard.fake_text = ""
 	ok(_press("Copy backup"), "the game menu has Copy backup")
 	await _frames(2)

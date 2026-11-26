@@ -1,11 +1,11 @@
 {
-  "note": "Sound and music (roadmap item 15; ui/play/sound.gd, checked by tools/check_data.gd). There are no recorded audio files: every sound is built in code from its description here, once, when first wanted. A sound is `wave` (sine, triangle, square, saw or noise), `notes` (one entry per step: a MIDI note number, 0 for a rest, or a list of numbers for a chord; 69 is the A above middle C), `step` (seconds per entry), `attack` and `release` (seconds each note takes to swell and to die away; together no longer than a step, so every note ends in silence and a looped track joins without a click), `volume` (0 to 1) and an optional `slide` (semitones each note bends by its end). `cues` play once; `tracks` loop and are built at `music_rate`, cues at `rate` (samples a second). `creature_voices` maps a creature id to the cue of its cry (played when a foe is hurt, lower when it dies; a creature not listed is silent). `events` maps a battle event type from data/game/battle_events.json to a cue: a name, or `{cue, variants}` where the first variant whose `field` of the event equals `is` (true, false or text) gives the cue instead; an event not listed is silent. `results` maps how a fight ended to a cue, `stings` the succession and saga's-end screens, `screens` the title, a fight and the ended saga to a track (\"\" is silence), and `ages` lists the track of each Age of the world in turn (later Ages go round again). `levels` are the volume steps the menu offers, in decibels; sound effects and music each have their own and their own on or off, kept in settings.cfg, never the save. `voices` is how many cues can sound at once and `pitch_jitter` the share a cue's pitch may wander each time, for show. `limits` cap what the validator accepts, in seconds.",
+  "note": "Sound and music (roadmap item 15; ui/play/sound.gd, checked by tools/check_data.gd). There are no recorded audio files: every sound is built in code from its description here, once, when first wanted. A sound is `wave` (sine, triangle, square, saw or noise), `notes` (one entry per step: a MIDI note number, 0 for a rest, or a list of numbers for a chord; 69 is the A above middle C), `step` (seconds per entry), `attack` and `release` (seconds each note takes to swell and to die away; together no longer than a step, so every note ends in silence and a looped track joins without a click), `volume` (0 to 1) and an optional `slide` (semitones each note bends by its end). `cues` play once; `tracks` loop and are built at `music_rate`, cues at `rate` (samples a second). `creature_voices` maps a creature id to the cue of its cry (played when a foe is hurt, lower when it dies; a creature not listed is silent). `events` maps a battle event type from data/game/battle_events.json to a cue: a name, or `{cue, variants}` where the first variant whose `field` of the event equals `is` (true, false or text) gives the cue instead; an event not listed is silent. `results` maps how a fight ended to a cue, `stings` the succession and saga's-end screens, `screens` the title, a fight and the ended saga to a track (\"\" is silence), and `ages` lists the track of each Age of the world in turn (later Ages go round again). `levels` are the volume steps the menu offers, in decibels; sound effects and music each have their own and their own on or off, kept in settings.cfg, never the save. `beds` are loops built like tracks that sound under the music (rain, wind, night, town, dungeon; a bed may also have `lowpass` (noise only: above 0 to 1, lower is duller), `floor` (the lowest its swell falls to, 0 to 0.95) and `edge` (seconds faded at both ends so the loop joins without a click, required of a bed); a track or a cue may use them too). What plays when, over the open world, is data/ui/soundscape.json. Sound effects, music and ambience each have their own volume and on or off. `voices` is how many battle cues can sound at once and `pitch_jitter` the share a cue's pitch may wander each time, for show. `limits` cap what the validator accepts, in seconds.",
   "rate": 22050,
   "music_rate": 11025,
   "voices": 4,
   "pitch_jitter": 0.03,
   "waves": ["sine", "triangle", "square", "saw", "noise"],
-  "limits": {"max_cue_seconds": 4.0, "max_track_seconds": 16.0, "max_total_seconds": 120.0},
+  "limits": {"max_cue_seconds": 4.0, "max_track_seconds": 16.0, "max_total_seconds": 480.0},
   "level_order": ["low", "medium", "high"],
   "default_level": "medium",
   "levels": {
@@ -16,8 +16,9 @@
   "text": {
     "effects": "Sound effects",
     "music": "Music",
+    "ambience": "Ambience",
     "off": "Off",
-    "about": "Battle sounds, and quiet music that changes with the Age. All of it is made by the game itself."
+    "about": "Clicks, footsteps and battle sounds; music that follows the place, the hour and a fight; and rain, wind, night and town sounds under it. All of it is made by the game itself."
   },
   "cues": {
     "hit": {"wave": "square", "notes": [45], "step": 0.12, "attack": 0.002, "release": 0.11, "volume": 0.5, "slide": -12},
@@ -44,7 +45,28 @@
     "cry_screech": {"wave": "saw", "notes": [84, 88, 80], "step": 0.1, "attack": 0.01, "release": 0.09, "volume": 0.3, "slide": -8},
     "cry_roar": {"wave": "saw", "notes": [33, 35, 31], "step": 0.3, "attack": 0.05, "release": 0.25, "volume": 0.55, "slide": -5},
     "cry_rumble": {"wave": "square", "notes": [28, 26], "step": 0.3, "attack": 0.04, "release": 0.26, "volume": 0.5, "slide": -3},
-    "cry_void": {"wave": "sine", "notes": [45, 52, 40], "step": 0.3, "attack": 0.05, "release": 0.25, "volume": 0.5, "slide": -9}
+    "cry_void": {"wave": "sine", "notes": [45, 52, 40], "step": 0.3, "attack": 0.05, "release": 0.25, "volume": 0.5, "slide": -9},
+    "ui_click": {"wave": "triangle", "notes": [76], "step": 0.05, "attack": 0.002, "release": 0.045, "volume": 0.3, "slide": -5},
+    "ui_hover": {"wave": "sine", "notes": [88], "step": 0.025, "attack": 0.003, "release": 0.02, "volume": 0.12},
+    "ui_tab": {"wave": "triangle", "notes": [69, 76], "step": 0.04, "attack": 0.003, "release": 0.035, "volume": 0.28},
+    "ui_open": {"wave": "triangle", "notes": [60, 67, 72], "step": 0.045, "attack": 0.004, "release": 0.04, "volume": 0.3},
+    "ui_close": {"wave": "triangle", "notes": [72, 67, 60], "step": 0.04, "attack": 0.004, "release": 0.035, "volume": 0.26},
+    "door_open": {"wave": "saw", "notes": [43, 46, 44], "step": 0.13, "attack": 0.02, "release": 0.1, "volume": 0.28, "slide": 3},
+    "door_close": {"wave": "square", "notes": [41, 0, 34], "step": 0.08, "attack": 0.003, "release": 0.07, "volume": 0.3, "slide": -6},
+    "pickup": {"wave": "sine", "notes": [79, 86], "step": 0.06, "attack": 0.004, "release": 0.05, "volume": 0.4},
+    "coins": {"wave": "square", "notes": [88, 93, 88, 95], "step": 0.05, "attack": 0.002, "release": 0.045, "volume": 0.2},
+    "coins_spend": {"wave": "square", "notes": [95, 88, 0, 86], "step": 0.05, "attack": 0.002, "release": 0.045, "volume": 0.2},
+    "equip": {"wave": "saw", "notes": [48, 55, 62], "step": 0.05, "attack": 0.003, "release": 0.045, "volume": 0.3},
+    "level_up": {"wave": "triangle", "notes": [60, 64, 67, 72, [67, 72, 76], [72, 76, 79], [72, 76, 79]], "step": 0.13, "attack": 0.008, "release": 0.11, "volume": 0.6},
+    "quest_done": {"wave": "sine", "notes": [67, 67, 72, 76, [72, 79, 84], [72, 79, 84]], "step": 0.15, "attack": 0.01, "release": 0.13, "volume": 0.55},
+    "alert": {"wave": "square", "notes": [76, 81], "step": 0.07, "attack": 0.003, "release": 0.06, "volume": 0.28, "slide": 2},
+    "alert_fight": {"wave": "saw", "notes": [52, 59, 64, 71], "step": 0.07, "attack": 0.004, "release": 0.06, "volume": 0.4},
+    "step_grass": {"wave": "noise", "notes": [60], "step": 0.09, "attack": 0.01, "release": 0.075, "volume": 0.28, "lowpass": 0.25},
+    "step_sand": {"wave": "noise", "notes": [60], "step": 0.12, "attack": 0.04, "release": 0.07, "volume": 0.28, "lowpass": 0.4},
+    "step_snow": {"wave": "noise", "notes": [60, 60], "step": 0.045, "attack": 0.004, "release": 0.04, "volume": 0.3, "lowpass": 0.3},
+    "step_stone": {"wave": "noise", "notes": [60], "step": 0.06, "attack": 0.002, "release": 0.055, "volume": 0.32, "lowpass": 0.75},
+    "step_wood": {"wave": "triangle", "notes": [52], "step": 0.08, "attack": 0.003, "release": 0.075, "volume": 0.34, "slide": -7},
+    "step_water": {"wave": "noise", "notes": [60, 0, 58], "step": 0.07, "attack": 0.015, "release": 0.05, "volume": 0.32, "lowpass": 0.5}
   },
   "tracks": {
     "title": {"wave": "triangle", "notes": [[38, 57, 62], 53, [57, 65], [62, 69], [38, 57], [53, 71], 57, [53, 69], [43, 62, 71], 59, [62, 74], 67, [43, 62, 77], 59, [62, 74], [59, 71], [38, 57, 77], 53, [57, 74], 62, [38, 57, 71], [53, 69], 57, [53, 65], [45, 64, 69], 60, [64, 65], 69, [45, 62, 64], 60, 64, 60, [47, 65, 71], 62, [65, 74], [71, 77], [47, 65], [62, 81], 65, [62, 77], [43, 62, 74], 59, [62, 71], 67, [43, 62, 69], 59, [62, 65], 59], "step": 0.32, "attack": 0.01, "release": 0.3, "volume": 0.5},
@@ -52,7 +74,27 @@
     "age_2": {"wave": "square", "notes": [[45, 64, 76], 64, [57, 76], 64, [45, 64, 77], [64, 81], 57, [64, 77], [53, 72, 77], 72, [65, 77], 72, [53, 72, 81], [72, 84], 65, [72, 81], [50, 69, 76], 69, [62, 76], 69, [50, 69, 74], [69, 77], 62, [69, 74], [52, 71, 72], 71, [64, 72], 71, [52, 71, 74], [71, 76], 64, [71, 72], [45, 64, 76], 64, [57, 77], 64, [45, 64, 81], [64, 76], 57, [64, 72], [53, 72, 74], 72, [65, 77], 72, [53, 72, 76], [72, 74], 65, 72], "step": 0.3, "attack": 0.01, "release": 0.26, "volume": 0.34},
     "age_3": {"wave": "triangle", "notes": [[40, 59, 71], 55, 59, 55, [40, 59, 72], 55, [52, 71], 55, [41, 60, 72], 57, 60, 57, [41, 60, 74], 57, [53, 72], 57, [40, 59, 71], 55, 59, 55, [40, 59, 67], 55, [52, 64], 55, [47, 65], 62, [65, 67], 62, [47, 65, 71], 62, 59, 62, [45, 64, 69], 60, 64, 60, [45, 64, 67], 60, [57, 65], 60, [40, 59, 64], 55, 59, 55, [40, 59], 55, 52, 55], "step": 0.32, "attack": 0.02, "release": 0.29, "volume": 0.5},
     "age_4": {"wave": "triangle", "notes": [[41, 60, 72], 60, [57, 76], [60, 81], [41, 65], [60, 77], 57, [60, 76], [43, 62, 77], 62, [59, 81], [62, 84], [43, 67], [62, 81], 59, [62, 77], [48, 67, 76], 67, [64, 77], 67, [48, 72, 81], 67, [64, 77], 67, [41, 60, 72], 60, [57, 76], 60, [41, 65, 77], 60, [57, 72], 60, [47, 65, 81], 65, [62, 77], 65, [47, 71, 76], [65, 72], 62, [65, 69], [41, 60, 72], 60, [57, 69], 60, [41, 65], 60, 57, 60], "step": 0.32, "attack": 0.02, "release": 0.29, "volume": 0.45},
-    "battle": {"wave": "square", "notes": [[33, 52, 69], 52, [48, 65], [52, 69], [33, 52], [52, 65], [48, 69], 52, [33, 52, 72], 52, [48, 69], [52, 72], [33, 52], [52, 69], [48, 72], 52, [41, 60, 69], 60, [57, 65], [60, 69], [41, 60], [60, 65], 57, [60, 64], [40, 59, 65], 59, [55, 64], [59, 65], [40, 59], [59, 64], 55, [59, 60], [33, 52, 69], 52, [48, 65], [52, 69], [33, 52], [52, 65], [48, 69], 52, [33, 52, 72], 52, [48, 76], [52, 72], [33, 52], [52, 72], [48, 69], 52, [43, 62, 76], 62, [59, 72], [62, 76], [43, 62], [62, 72], [59, 76], 62, [40, 59, 72], 59, [55, 69], 59, [40, 59, 65], 59, [55, 64], 59], "step": 0.17, "attack": 0.005, "release": 0.15, "volume": 0.3}
+    "battle": {"wave": "square", "notes": [[33, 52, 69], 52, [48, 65], [52, 69], [33, 52], [52, 65], [48, 69], 52, [33, 52, 72], 52, [48, 69], [52, 72], [33, 52], [52, 69], [48, 72], 52, [41, 60, 69], 60, [57, 65], [60, 69], [41, 60], [60, 65], 57, [60, 64], [40, 59, 65], 59, [55, 64], [59, 65], [40, 59], [59, 64], 55, [59, 60], [33, 52, 69], 52, [48, 65], [52, 69], [33, 52], [52, 65], [48, 69], 52, [33, 52, 72], 52, [48, 76], [52, 72], [33, 52], [52, 72], [48, 69], 52, [43, 62, 76], 62, [59, 72], [62, 76], [43, 62], [62, 72], [59, 76], 62, [40, 59, 72], 59, [55, 69], 59, [40, 59, 65], 59, [55, 64], 59], "step": 0.17, "attack": 0.005, "release": 0.15, "volume": 0.3},
+    "town": {"wave": "triangle", "notes": [[48, 55], 76, 79, 79, 84, 76, [55, 62], 83, 84, 86, 84, 83, [57, 64], 84, 81, 88, 81, 84, [53, 60], 81, 84, 84, 84, 81, [48, 55], 76, 79, 79, 81, 76, [53, 60], 81, 84, 84, 84, 81, [55, 62], 83, 84, 86, 0, 83, [48, 55], 76, 0, 79, 72, 0], "step": 0.26, "attack": 0.01, "release": 0.24, "volume": 0.45},
+    "wild_meadow": {"wave": "sine", "notes": [[50, 57], 78, 81, 78, 80, 81, 0, 80, [52, 59], 80, 83, 80, 80, 83, 0, 83, [57, 64], 85, 88, 85, 85, 88, 0, 86, [50, 57], 78, 81, 78, 0, 81, 0, 0], "step": 0.42, "attack": 0.02, "release": 0.38, "volume": 0.5},
+    "wild_forest": {"wave": "triangle", "notes": [[45, 52], 0, 72, 72, 0, 76, 76, 0, [50, 57], 0, 78, 0, 0, 81, 74, 0, [55, 62], 0, 83, 76, 0, 86, 74, 0, [45, 52], 0, 72, 71, 0, 76, 69, 0], "step": 0.4, "attack": 0.02, "release": 0.36, "volume": 0.5},
+    "wild_high": {"wave": "triangle", "notes": [[40, 52], 0, 71, 0, 71, 0, 76, 0, [45, 57], 0, 76, 0, 69, 0, 81, 0, [47, 59], 0, 78, 0, 69, 0, 83, 0, [40, 52], 0, 71, 0, 71, 0, 76, 0], "step": 0.45, "attack": 0.04, "release": 0.4, "volume": 0.5},
+    "wild_cold": {"wave": "sine", "notes": [[43, 50], 0, 0, 70, 0, 74, 0, 0, [51, 58], 0, 0, 79, 0, 79, 0, 0, [46, 53], 0, 0, 79, 0, 79, 0, 0, [53, 60], 0, 0, 79, 0, 75, 0, 0], "step": 0.5, "attack": 0.05, "release": 0.44, "volume": 0.45},
+    "wild_marsh": {"wave": "triangle", "notes": [[33, 40], 0, 60, 0, 0, 0, 64, 62, [34, 41], 0, 62, 0, 60, 0, 65, 64, [33, 40], 0, 60, 0, 64, 0, 64, 60, [43, 50], 0, 71, 0, 58, 0, 74, 0], "step": 0.4, "attack": 0.03, "release": 0.36, "volume": 0.5},
+    "wild_ember": {"wave": "square", "notes": [[28, 35], 55, 59, 55, [28, 35], 57, 59, 0, [29, 36], 57, 60, 57, [29, 36], 59, 60, 57, [28, 35], 55, 59, 55, [28, 35], 55, 59, 57, [35], 62, 65, 62, [35], 53, 65, 0], "step": 0.3, "attack": 0.01, "release": 0.26, "volume": 0.26},
+    "dungeon": {"wave": "sine", "notes": [[24, 31], 0, 0, 0, 68, 0, 0, 0, [25, 32], 0, 0, 0, 67, 0, 0, 0, [24, 31], 0, 0, 0, 67, 0, 0, 0, [30], 0, 0, 0, 0, 0, 0, 0], "step": 0.5, "attack": 0.05, "release": 0.44, "volume": 0.5},
+    "night": {"wave": "sine", "notes": [[48, 55], 0, 75, 0, 75, 0, 0, 77, [56, 63], 0, 84, 0, 77, 0, 0, 82, [51, 58], 0, 79, 0, 82, 0, 0, 84, [55, 62], 0, 82, 0, 82, 0, 0, 0], "step": 0.5, "attack": 0.06, "release": 0.43, "volume": 0.45}
+  },
+  "beds": {
+    "rain": {"wave": "noise", "notes": [60, 60, 60, 60, 60, 60], "step": 2.0, "attack": 1.0, "release": 1.0, "volume": 0.32, "lowpass": 0.8, "floor": 0.7, "edge": 0.1},
+    "wind": {"wave": "noise", "notes": [60, 60, 60, 60, 60], "step": 1.8, "attack": 0.9, "release": 0.9, "volume": 0.4, "lowpass": 0.15, "floor": 0.1, "edge": 0.1},
+    "snow_hush": {"wave": "noise", "notes": [60, 60, 60, 60], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.22, "lowpass": 0.1, "floor": 0.5, "edge": 0.1},
+    "fog_hum": {"wave": "sine", "notes": [[38, 45], [38, 45], [37, 44], [38, 45]], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.3, "floor": 0.5, "edge": 0.1},
+    "night_crickets": {"wave": "sine", "notes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96], "step": 0.05, "attack": 0.006, "release": 0.03, "volume": 0.16, "edge": 0.1},
+    "night_owls": {"wave": "sine", "notes": [0, 0, 0, 0, 0, 0, 67, 67, 0, 0, 64, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 67, 67, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "step": 0.3, "attack": 0.04, "release": 0.2, "volume": 0.3, "slide": -2, "edge": 0.1},
+    "town_murmur": {"wave": "noise", "notes": [60, 60, 60, 60, 60, 60, 60, 60], "step": 0.9, "attack": 0.45, "release": 0.45, "volume": 0.26, "lowpass": 0.14, "floor": 0.5, "edge": 0.1},
+    "dungeon_drone": {"wave": "triangle", "notes": [[28, 35], [28, 35], [27, 34], [28, 35]], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.32, "floor": 0.5, "edge": 0.1},
+    "dungeon_drip": {"wave": "sine", "notes": [0, 0, 0, 88, 0, 0, 0, 0, 0, 0, 0, 0, 86, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0], "step": 0.5, "attack": 0.002, "release": 0.2, "volume": 0.18, "slide": -5, "edge": 0.1}
   },
   "creature_voices": {
     "slime": "cry_bubble",

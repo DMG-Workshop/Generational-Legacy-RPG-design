@@ -6,10 +6,12 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
+const GoalView := preload("res://ui/play/goal_view.gd")
 
 var dynasty: GameDynasty
 var sb: GameSandbox = null   # where the heir is, for the pin's distance
 var _pin: Label
+var _goal: Label   # the goal arrow's words: "Goal: Rest at the family house (24 tiles NE)"
 var _who: Label
 var _gold: Label
 var _smoke: Label
@@ -39,6 +41,11 @@ func _ready() -> void:
 	_pin.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_pin.visible = false
 	v.add_child(_pin)
+	_goal = Kit.label("", 13, Kit.good())
+	_goal.name = "GoalLine"
+	_goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_goal.visible = false
+	v.add_child(_goal)
 	refresh()
 
 
@@ -63,6 +70,9 @@ func refresh() -> void:
 	var pin_text := GameTravel.pin_line(dynasty, sb.heir) if sb != null and sb.space == "world" else ""
 	_pin.text = pin_text
 	_pin.visible = pin_text != ""
+	var goal_text := GoalView.line(sb.heir) if sb != null and sb.space == "world" else ""
+	_goal.text = goal_text
+	_goal.visible = goal_text != ""
 
 
 func _put(key: String, value: float, top: float, text: String) -> void:

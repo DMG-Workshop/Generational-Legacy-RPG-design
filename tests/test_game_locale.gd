@@ -148,7 +148,7 @@ func test_translation() -> void:
 	ok(GameMessages.line("hit_ward_all", {"who": "Tess", "whom": "the wolf", "absorbed": 9}) == "Tess hits the wolf, and the ward absorbs all 9.", "a line with no translation falls back to the source")
 	var c := GameLocale.check("xx")
 	ok(c["problems"].size() == 2 and str(c["problems"]).contains("no_such_line") and str(c["problems"]).contains("hit_ward"), "checking the translation finds the unknown line and the wrong placeholders: %s" % str(c["problems"]))
-	ok(c["missing"].size() == GameLocale.source_lines("battle").size() - 3 + GameLocale.source_lines("life").size() + GameLocale.source_lines("tutorial").size() + GameLocale.source_lines("talk").size(), "and lists every line still to translate (%d)" % c["missing"].size())
+	ok(c["missing"].size() == GameLocale.source_lines("battle").size() - 3 + GameLocale.source_lines("life").size() + GameLocale.source_lines("tutorial").size() + GameLocale.source_lines("talk").size() + GameLocale.source_lines("goal").size(), "and lists every line still to translate (%d)" % c["missing"].size())
 	GameLocale.set_locale("en")
 	GameLocale._cache = {}
 	GameLocale._translations = {}
@@ -200,12 +200,14 @@ func test_setting_and_menu() -> void:
 	ok(all.contains("[Ŵéľçöмé"), "and the life screen's tip is shown in it")
 	var save := JSON.stringify(app.dynasty.to_save())
 	ok(not save.contains("locale") and not save.contains("pseudo"), "the language is not in the save")
+	MenuPanel.last_tab = "general"
 	var m: Control = app.open_menu()
 	await _frames(3)
 	ok(not _texts(m).has("Language"), "with one language to offer the menu has no Language row")
 	m.queue_free()
 	GameLocale.data()["locales"]["xx"] = {"name": "Test"}
 	GameLocale._translations["xx"] = {"battle": {}, "tutorial": {}}
+	MenuPanel.last_tab = "general"   # the Language row is on the General tab
 	m = app.open_menu()
 	await _frames(3)
 	var texts := _texts(m)

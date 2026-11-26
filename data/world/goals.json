@@ -1,0 +1,43 @@
+{
+  "note": "The goal arrow: what the heir might do next (core/game/game_goal.gd, checked by tools/check_data.gd). It is a hint worked out each time from the dynasty's own state and never saved: it never moves the heir and the autopilot never reads it. `order` is the order the goals are weighed in (the first that holds is the goal, the rest are what the goal key cycles to); a step of the first-heir tutorial that names a `goal` (data/ui/tutorial.json) comes before them all. Each goal has a one-line `label` of at most `label_max` characters once its {placeholders} are filled (the words go through the `goal` text catalog). `rest_below` is the share of health under which resting at home is the goal, `pack_full_share` the share of the carrying limit over which selling is, `gold_high` the gold (before the generation's scale) over which a visit to the store is. The guided start: `first_foe` is the creature the scripted first fight is with (the weakest hostile one; its level is the highest below the heir's that the level bands call trivial or easy, else 1), put `foe_out` tiles outside the start town's `marker_gate` gate; the marker the heir first walks to is `marker_in` tiles inside that gate; reaching it is `marker_reach` tiles. The first job is `first_quest` (data/quests/quests.json), posted by the flag `guide_flag` that the open world sets for a brand new first heir, who also gets `first_pots` smoke pots. Using the family house's `home_room` rests the heir (`home_years` of the clock, as a built bedroom does).",
+  "settings": {
+    "label_max": 60,
+    "rest_below": 0.5,
+    "pack_full_share": 0.85,
+    "gold_high": 600,
+    "marker_gate": "e",
+    "marker_in": 3,
+    "marker_reach": 2,
+    "foe_out": 6,
+    "first_foe": "slime",
+    "first_quest": "hm_first_job",
+    "guide_flag": "guided_start",
+    "first_pots": 1,
+    "home_room": "bedroom",
+    "home_years": 0.25
+  },
+  "order": ["rest_home", "quest_pay", "quest_hunt", "quest_visit", "store_sell", "gold_spend", "landmark_use", "board_new", "hunt_near"],
+  "text": {
+    "line": "Goal: {label} ({tiles} tiles {dir})",
+    "line_here": "Goal: {label} (here)",
+    "line_words": "Goal: {label}",
+    "cycled": "Goal: {label}. Press the goal key again for the next.",
+    "none": "No more goals. The goal key starts them over.",
+    "off": "The goal arrow is off (Menu, Goal arrow)."
+  },
+  "goals": {
+    "guide_marker": {"label": "Walk to the marker"},
+    "guide_foe": {"label": "Find the {name} and fight it"},
+    "store_sell": {"label": "Sell your spare loot at the store"},
+    "gold_spend": {"label": "Spend your gold at the store"},
+    "rest_home": {"label": "Rest at the family house"},
+    "rest_here": {"label": "Rest in the bedroom: press Use"},
+    "board_new": {"label": "Read the notice board"},
+    "quest_pay": {"label": "Claim your pay: {title}"},
+    "quest_hunt": {"label": "{title}: hunt {names}"},
+    "quest_find": {"label": "{title}: find {names}"},
+    "quest_visit": {"label": "{title}: go to {place}"},
+    "landmark_use": {"label": "Search {name}"},
+    "hunt_near": {"label": "Hunt the {name} nearby"}
+  }
+}

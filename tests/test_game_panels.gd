@@ -164,7 +164,7 @@ func test_keys() -> void:
 	await _frames(2)
 	ok(not _has_pane(map, "figure_pane"), "a held key's repeats do nothing")
 	# the Menu names the keys
-	map._open_menu()
+	map._open_panels_menu()
 	await _frames(1)
 	var menu: PopupMenu = null
 	for c in map.get_children():

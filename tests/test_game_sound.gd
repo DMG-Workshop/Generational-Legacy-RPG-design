@@ -563,12 +563,13 @@ func _marked(heading: String) -> String:
 func test_menu() -> void:
 	_wipe()
 	app.sound.refresh()
+	MenuPanel.last_tab = "sound"
 	var m: Control = app.open_menu()
 	await _frames(3)
 	var texts := _texts(m)
 	var text: Dictionary = Sound.data()["text"]
 	ok(texts.has("Sound effects") and texts.has("Music") and texts.has(str(text["about"])), "the menu has Sound effects and Music, and says what they are")
-	ok(texts.find("Sound effects") > texts.find("Graphics") and texts.find("Music") < texts.find("Problems"), "after Graphics and before Problems")
+	ok(m.pages["sound"].visible and not m.pages["graphics"].visible and not texts.has("Problems"), "on a tab of their own")
 	for heading in ["Sound effects", "Music"]:
 		for which in ["Off", "Low", "Medium", "High"]:
 			var b := _row_button(m, heading, which)

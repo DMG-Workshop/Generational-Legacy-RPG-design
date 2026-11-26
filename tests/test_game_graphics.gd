@@ -242,6 +242,7 @@ func test_menu() -> void:
 	app = GameApp.new()
 	root.add_child(app)
 	await _frames(3)
+	MenuPanel.last_tab = "graphics"
 	var m: Control = app.open_menu()
 	await _frames(3)
 	var texts := _texts(m)

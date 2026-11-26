@@ -19,6 +19,7 @@ const BattleView := preload("res://ui/play/battle_view.gd")
 const SuccessionScreen := preload("res://ui/play/succession_screen.gd")
 const EndingScreen := preload("res://ui/play/ending_screen.gd")
 const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
+const Toast := preload("res://ui/play/toast.gd")
 
 var dynasty: GameDynasty
 var slot := 1   # the save slot in use (GameSaves); GameDynasty.save_path is its file
@@ -58,6 +59,7 @@ func _ready() -> void:
 	pad.app = self
 	add_child(pad)
 	sound = Sound.new()
+	sound.app = self
 	add_child(sound)
 	frame = Control.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -112,6 +114,7 @@ func _process(delta: float) -> void:
 
 func _swap(screen: Control) -> void:
 	hints.hide_hint()
+	sound.quiet()   # the panes of the old screen closing and the new one's opening are not heard
 	if current != null:
 		frame.remove_child(current)
 		current.queue_free()
@@ -127,6 +130,7 @@ func use_slot(n: int) -> void:
 
 
 func show_title() -> void:
+	Toast.history.clear()   # the news of the last house is not the next one's
 	var s := TitleScreen.new()
 	s.app = self
 	_swap(s)
@@ -199,7 +203,7 @@ func show_state() -> void:
 ## The music of where the dynasty is (its Age, a fight), and a sting the first time a death or the saga's
 ## end is shown. Sound only: nothing here changes the dynasty.
 func _sound_state() -> void:
-	sound.music(Sound.track_for(dynasty))
+	sound.music(sound.track_here(dynasty))
 	var sting := Sound.sting_for(dynasty.state) if dynasty.battle == null else ""
 	var key := "%s:%d" % [dynasty.state, dynasty.gen] if sting != "" else ""
 	if key != "" and key != _stung:
@@ -267,7 +271,7 @@ func set_battery_saver(on: bool) -> void:
 	_relayout()
 
 
-## The menu's Sound effects and Music rows: "off", or a volume step, for `kind` ("sound" or "music").
+## The menu's Sound effects, Music and Ambience rows: "off", or a volume step, for `kind` ("sound", "music" or "ambience").
 func set_sound(kind: String, id: String) -> void:
 	Sound.choose(kind, id)
 	sound.refresh()
@@ -304,10 +308,22 @@ func set_tutorial(on: bool) -> void:
 	_relayout()
 
 
+## The menu's Goal arrow: whether the arrow, the goal line and the map's marker show.
+func set_goal(on: bool) -> void:
+	UiSettings.set_goal(on)
+	_relayout()
+
+
 ## The screens laid out again after a setting changed, with the menu open on top as before.
 func _relayout() -> void:
 	# A fight is laid out again in place (rebuilding it would lose its log); other screens are
 	# rebuilt at the new size.
+	if current is SandboxScreen:   # the open world: rebuilt at the new size, paused, with the options on top
+		current._save()
+		show_sandbox()
+		current.open_pause()
+		open_menu()
+		return
 	if menu_mode() == "battle":
 		current.relayout()
 		for c in current.get_children():
@@ -357,6 +373,9 @@ func go_back() -> String:
 	if top != null:
 		(top.get_meta("back_close") as Callable).call()
 		return "closed"
+	if current.has_method("open_pause"):   # the open world has a pause screen of its own
+		current.open_pause()
+		return "menu"
 	open_menu()
 	return "menu"
 
@@ -370,7 +389,7 @@ func _top_closable(n: Node) -> Control:
 		var inner := _top_closable(c)
 		if inner != null:
 			return inner
-		if c.has_meta("back_close"):
+		if c.has_meta("back_close") and not c.has_meta("pane_hud"):   # the panes that stay up (status, nearby, journal) are not closed by Escape
 			return c
 		if c.has_meta("modal"):   # waits for an answer: back opens the menu over it instead
 			return null

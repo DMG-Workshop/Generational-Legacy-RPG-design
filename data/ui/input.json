@@ -43,8 +43,9 @@
     "world_cam_down": {"name": "Look down", "keys": ["Kp 2"], "pad_axes": [["right_y", 1]]},
     "world_cam_left": {"name": "Look left", "keys": ["Kp 4"], "pad_axes": [["right_x", -1]]},
     "world_cam_right": {"name": "Look right", "keys": ["Kp 6"], "pad_axes": [["right_x", 1]]},
-    "world_zoom_in": {"name": "Zoom in", "keys": ["Equal"], "mouse": ["wheel_up"], "pad_buttons": ["right_shoulder"]},
-    "world_zoom_out": {"name": "Zoom out", "keys": ["Minus"], "mouse": ["wheel_down"], "pad_buttons": ["left_shoulder"]},
+    "world_zoom_in": {"name": "Zoom in", "keys": ["Equal", "KP Add"], "mouse": ["wheel_up"], "pad_buttons": ["right_shoulder"]},
+    "world_zoom_out": {"name": "Zoom out", "keys": ["Minus", "KP Subtract"], "mouse": ["wheel_down"], "pad_buttons": ["left_shoulder"]},
+    "world_run": {"name": "Run (hold)", "keys": ["Shift"], "pad_axes": [["trigger_right", 1]]},
     "world_dig": {"name": "Dig", "keys": ["E"], "pad_buttons": ["x"]},
     "world_build": {"name": "Build", "keys": ["R"], "pad_buttons": ["y"]},
     "world_interact": {"name": "Use", "keys": ["F"], "pad_buttons": ["a"]},
@@ -77,6 +78,7 @@
     "world_panel_gear": {"name": "Gear", "keys": ["G"], "pointer_only": true},
     "world_panel_status": {"name": "Status", "keys": ["F1"], "pointer_only": true},
     "world_panel_nearby": {"name": "Nearby map", "keys": ["F2"], "pointer_only": true},
+    "world_goal": {"name": "Goal arrow: next goal (ignore this one)", "keys": ["N"], "pointer_only": true},
     "world_pan": {"name": "Drag the view", "mouse": ["middle"], "pointer_only": true}
   }
 }

@@ -44,7 +44,7 @@ func _ready() -> void:
 	var t := Kit.label("Report a problem", 22, Kit.ACCENT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
-	top.add_child(Kit.button("Close", func(): queue_free(), Vector2(100, 34)))
+	top.add_child(Kit.button("Back", func(): queue_free(), Vector2(100, 34)))
 	var never := Kit.label(GameReport.text("never_sent"), 15, Kit.TEXT)
 	never.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(never)
