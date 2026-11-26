@@ -89,7 +89,7 @@ func clear() -> void:
 func at(key: String, target: Vector2, kind: String = "creature") -> Vector2:
 	var s: Variant = _st.get(key)
 	if s == null:
-		_st[key] = {"pos": target, "vel": Vector2.ZERO, "target": target, "frame": _frame, "stride": 0.0, "foot": 0, "speed": 0.0, "lift": 0.0}
+		_st[key] = {"pos": target, "vel": Vector2.ZERO, "target": target, "frame": _frame, "stride": 0.0, "foot": 0, "speed": 0.0, "lift": 0.0, "since": 0.0}
 		if key == "heir":
 			_heir = target
 			_heir_known = true
@@ -119,8 +119,13 @@ func at(key: String, target: Vector2, kind: String = "creature") -> Vector2:
 	st["target"] = target
 	st["pos"] = pos
 	var moved := pos.distance_to(before)
-	var speed := moved / _dt if _dt > 0.0 else 0.0
+	var elapsed := _dt + float(st["since"])   # a thing drawn on its tile (reduced motion) moves once in a while: its pace is over that while
+	var speed := moved / elapsed if elapsed > 0.0 else 0.0
 	st["speed"] = speed
+	if moved > 0.0:
+		st["since"] = 0.0
+	else:
+		st["since"] = float(st["since"]) + _dt
 	if speed >= setting("bob_min_speed"):
 		st["stride"] = float(st["stride"]) + moved
 		var step := setting("step_tiles")
@@ -131,8 +136,9 @@ func at(key: String, target: Vector2, kind: String = "creature") -> Vector2:
 				_heir = pos
 				_heir_known = true
 			_step(key, kind, st)
-	else:
-		st["stride"] = 0.0
+	elif float(st["since"]) > setting("rest_seconds"):
+		st["stride"] = 0.0   # stood still a while: the next stride starts afresh
+		st["speed"] = 0.0
 	var phase := float(st["stride"]) / maxf(setting("step_tiles"), 0.001)
 	var pace := clampf(speed / maxf(setting("bob_full_speed"), 0.001), 0.0, 1.0) if speed >= setting("bob_min_speed") else 0.0
 	st["lift"] = 0.0 if UiSettings.reduced_motion() else sin(phase * PI) * setting("bob_tiles") * pace
@@ -195,7 +201,7 @@ static func validate() -> Array:
 	var f: Variant = GameSandbox.data().get("feel")
 	if typeof(f) != TYPE_DICTIONARY:
 		return ["sandbox.json: feel (how walking looks and feels) is missing"]
-	for k in ["run_multiplier", "heir_smooth_seconds", "other_smooth_seconds", "max_speed_tiles", "snap_tiles", "step_tiles", "bob_tiles", "bob_full_speed", "bob_min_speed", "hear_tiles", "forget_frames"]:
+	for k in ["run_multiplier", "heir_smooth_seconds", "other_smooth_seconds", "max_speed_tiles", "snap_tiles", "step_tiles", "bob_tiles", "bob_full_speed", "bob_min_speed", "rest_seconds", "hear_tiles", "forget_frames"]:
 		if not (f.get(k) is float or f.get(k) is int):
 			bad.append("sandbox.json: feel.%s must be a number" % k)
 	if not bad.is_empty():
@@ -205,7 +211,7 @@ static func validate() -> Array:
 	for k in ["heir_smooth_seconds", "other_smooth_seconds"]:
 		if float(f[k]) < 0.0 or float(f[k]) > 1.0:
 			bad.append("sandbox.json: feel.%s must be from 0 to 1 second (0 is no gliding)" % k)
-	for k in ["max_speed_tiles", "snap_tiles", "step_tiles", "bob_full_speed", "hear_tiles"]:
+	for k in ["max_speed_tiles", "snap_tiles", "step_tiles", "bob_full_speed", "hear_tiles", "rest_seconds"]:
 		if float(f[k]) <= 0.0:
 			bad.append("sandbox.json: feel.%s must be above 0" % k)
 	if float(f["bob_tiles"]) < 0.0 or float(f["bob_tiles"]) > 0.3:

@@ -55,7 +55,7 @@
   "minimap": {"building": [0.66, 0.5, 0.34], "city_wall": [0.6, 0.6, 0.64], "gate": [0.95, 0.82, 0.35]},
   "reveal": {"near": 1.5, "far": 4.5, "steps": 4, "max_roof_cells": 600},
   "feel": {
-    "note": "How walking looks and feels (ui/play/glide.gd, ui/play/move_marker.gd; drawing only, nothing here changes a rule). run_multiplier: how much faster the heir walks while the run key (world_run, Shift) is held; it costs nothing. The heir is drawn gliding between tiles by a smooth-damp over heir_smooth_seconds (a creature, companion or villager over other_smooth_seconds; 0 is no gliding), capped at max_speed_tiles a second, and snaps at once when the real position jumps by more than snap_tiles. A stride is step_tiles long: each one lifts the figure by bob_tiles of a tile (full at bob_full_speed tiles a second, none under bob_min_speed) and tells of a footstep when it falls, heard within hear_tiles of the heir. An entry not drawn for forget_frames frames is forgotten. marker: the mark where a click or tap walks to, which fades over fade_seconds on arriving or cancel_fade_seconds when a key or the stick ends the walk, pulsing every pulse_seconds, radius_tiles wide, line_px thick. Reduced motion: no gliding, no bob, no pulse, no fade.",
+    "note": "How walking looks and feels (ui/play/glide.gd, ui/play/move_marker.gd; drawing only, nothing here changes a rule). run_multiplier: how much faster the heir walks while the run key (world_run, Shift) is held; it costs nothing. The heir is drawn gliding between tiles by a smooth-damp over heir_smooth_seconds (a creature, companion or villager over other_smooth_seconds; 0 is no gliding), capped at max_speed_tiles a second, and snaps at once when the real position jumps by more than snap_tiles. A stride is step_tiles long: each one lifts the figure by bob_tiles of a tile (full at bob_full_speed tiles a second, none under bob_min_speed; a stride is forgotten after rest_seconds standing still) and tells of a footstep when it falls, heard within hear_tiles of the heir. An entry not drawn for forget_frames frames is forgotten. marker: the mark where a click or tap walks to, which fades over fade_seconds on arriving or cancel_fade_seconds when a key or the stick ends the walk, pulsing every pulse_seconds, radius_tiles wide, line_px thick. Reduced motion: no gliding, no bob, no pulse, no fade.",
     "run_multiplier": 1.7,
     "heir_smooth_seconds": 0.14,
     "other_smooth_seconds": 0.2,
@@ -65,6 +65,7 @@
     "bob_tiles": 0.07,
     "bob_full_speed": 3.0,
     "bob_min_speed": 0.6,
+    "rest_seconds": 0.4,
     "hear_tiles": 14.0,
     "forget_frames": 180,
     "marker": {"fade_seconds": 0.35, "cancel_fade_seconds": 0.12, "pulse_seconds": 0.9, "radius_tiles": 0.38, "line_px": 2.0}
