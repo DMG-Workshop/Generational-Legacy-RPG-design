@@ -63,6 +63,11 @@ func pinch(zoom: float) -> float:
 	return out
 
 
+## Whether two spare fingers are down (a pinch is on).
+func pinching() -> bool:
+	return _spare.size() == 2
+
+
 func fingers() -> int:
 	return _spare.size() + (1 if stick >= 0 else 0)
 

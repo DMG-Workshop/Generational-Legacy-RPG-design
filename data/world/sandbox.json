@@ -52,6 +52,18 @@
       "timer": "Smoke {time}"
     }
   },
+  "camera": {
+    "note": "The open world's camera (core/game/game_camera.gd, ui/play/world_camera.gd). It follows the heir with a critically damped spring (input.json's camera_follow_seconds is how long it takes to arrive) and holds still while the heir stays within `dead_zone` tiles of the view's centre. While the heir walks, and for `walk_hold_seconds` after, it looks `look_ahead` tiles along the way they face, eased in over `look_ahead_seconds`. A heir farther than `snap_tiles` from the view (a gate, a coach) or in another space (a door, a stair, a dungeon) is not slid to: the view is put on them. The view may show `edge_margin` tiles beyond the world's edge and `interior_margin` beyond an interior's walls. The zoom eases over `zoom_seconds` and is remembered in settings.cfg; its limits and steps are input.json's zoom_min, zoom_max and zoom_step. `max_dt` caps a frame's time so a stall does not throw the view. With reduced motion the view is locked to the heir and the zoom changes at once.",
+    "dead_zone": 0.35,
+    "look_ahead": 1.0,
+    "look_ahead_seconds": 0.35,
+    "walk_hold_seconds": 0.4,
+    "snap_tiles": 12.0,
+    "zoom_seconds": 0.12,
+    "edge_margin": 3.0,
+    "interior_margin": 2.0,
+    "max_dt": 0.1
+  },
   "minimap": {"building": [0.66, 0.5, 0.34], "city_wall": [0.6, 0.6, 0.64], "gate": [0.95, 0.82, 0.35]},
   "reveal": {"near": 1.5, "far": 4.5, "steps": 4, "max_roof_cells": 600},
   "feel": {
