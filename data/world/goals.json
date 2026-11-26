@@ -17,6 +17,14 @@
     "home_years": 0.25
   },
   "order": ["rest_home", "quest_pay", "quest_hunt", "quest_visit", "store_sell", "gold_spend", "landmark_use", "board_new", "hunt_near"],
+  "text": {
+    "line": "Goal: {label} ({tiles} tiles {dir})",
+    "line_here": "Goal: {label} (here)",
+    "line_words": "Goal: {label}",
+    "cycled": "Goal: {label}. Press the goal key again for the next.",
+    "none": "No more goals. The goal key starts them over.",
+    "off": "The goal arrow is off (Menu, Goal arrow)."
+  },
   "goals": {
     "guide_marker": {"label": "Walk to the marker"},
     "guide_foe": {"label": "Find the {name} and fight it"},

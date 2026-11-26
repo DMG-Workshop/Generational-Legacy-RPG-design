@@ -110,6 +110,16 @@ static func set_tutorial(on: bool) -> void:
 	store("tutorial", "on" if on else "off")
 
 
+## Whether the goal arrow shows (the minimap's edge, the arrow over the world, the goal line and the world map's marker; GameGoal).
+## On until the player switches it off in the menu. A damaged value reads as on.
+static func goal_on() -> bool:
+	return str(stored("goal_arrow", "on")) != "off"
+
+
+static func set_goal(on: bool) -> void:
+	store("goal_arrow", "on" if on else "off")
+
+
 ## Whether New game and Continue open the 2D open world at once (the map), rather than the life screen's text and buttons.
 ## On unless the player has chosen the life screen in the menu; either way "Walk the world" and Back go between them.
 static func open_world_first() -> bool:

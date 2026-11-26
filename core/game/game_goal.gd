@@ -35,9 +35,16 @@ static func template(id: String) -> String:
 	return GameLocale.text("goal", id, src)
 
 
-## The source lines of the `goal` catalog (GameLocale.source_lines).
+## One of the screen's own lines (data `text`), through the catalog.
+static func text(key: String, vals: Dictionary = {}) -> String:
+	return GameLocale.text("goal", "text." + key, str(data()["text"][key])).format(vals)
+
+
+## The source lines of the `goal` catalog (GameLocale.source_lines): the labels by goal id, the screen's lines as `text.<key>`.
 static func lines() -> Dictionary:
 	var out := {}
+	for k in data()["text"]:
+		out["text." + str(k)] = str(data()["text"][k])
 	for id in data()["goals"]:
 		out[str(id)] = str(data()["goals"][id]["label"])
 	return out
@@ -342,7 +349,7 @@ static func _landmark(d: GameDynasty, from: Vector2i) -> Dictionary:
 static func validate() -> Array:
 	var bad: Array = []
 	var dat := data()
-	for k in ["settings", "order", "goals"]:
+	for k in ["settings", "order", "goals", "text"]:
 		if not dat.has(k):
 			return ["goals.json: %s is missing" % k]
 	for k in ["label_max", "rest_below", "pack_full_share", "gold_high", "marker_gate", "marker_in", "marker_reach", "foe_out", "first_foe", "first_quest", "guide_flag", "first_pots", "home_room", "home_years"]:
@@ -350,6 +357,9 @@ static func validate() -> Array:
 			bad.append("goals.json: settings.%s is missing" % k)
 	if not bad.is_empty():
 		return bad
+	for k in ["line", "line_here", "line_words", "cycled", "none", "off"]:
+		if typeof(dat["text"].get(k)) != TYPE_STRING:
+			bad.append("goals.json: text.%s is missing" % k)
 	var cap := int(dat["settings"]["label_max"])
 	for id in dat["goals"]:
 		var g: Variant = dat["goals"][id]

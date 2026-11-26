@@ -304,6 +304,12 @@ func set_tutorial(on: bool) -> void:
 	_relayout()
 
 
+## The menu's Goal arrow: whether the arrow, the goal line and the map's marker show.
+func set_goal(on: bool) -> void:
+	UiSettings.set_goal(on)
+	_relayout()
+
+
 ## The screens laid out again after a setting changed, with the menu open on top as before.
 func _relayout() -> void:
 	# A fight is laid out again in place (rebuilding it would lose its log); other screens are

@@ -9,6 +9,7 @@ extends Control
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const PanelSkin := preload("res://ui/play/panel_skin.gd")
+const GoalView := preload("res://ui/play/goal_view.gd")
 
 var dynasty: GameDynasty
 var sb: GameSandbox = null          # the open world as it runs, for Walk there and Book travel (none: the card only pins)
@@ -110,6 +111,7 @@ class MapCanvas extends Control:
 			var pt := GameTravel.pin_tile(d)
 			var pc := GameWorldMap.cell_of(pt.x, pt.y)
 			_flag((Vector2(pc) + Vector2(0.5, 0.5)) * cell, mpx, ink)
+		GoalView.paint_map(self, d, cell, mpx)   # the goal arrow's marker
 		if panel.heir_tile.x >= 0:
 			var c := GameWorldMap.cell_of(panel.heir_tile.x, panel.heir_tile.y)
 			var hp := (Vector2(c) + Vector2(0.5, 0.5)) * cell

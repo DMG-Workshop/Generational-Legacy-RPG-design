@@ -85,6 +85,16 @@ func _ready() -> void:
 	var pwhy := Kit.label("Short tips about what to do next, for a new house's first heir.", 14, Kit.dim())
 	pwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(pwhy)
+	v.add_child(Kit.label("Goal arrow", 17, Kit.ACCENT))
+	var goalrow := HBoxContainer.new()
+	goalrow.name = "GoalArrowRow"
+	goalrow.add_theme_constant_override("separation", 8)
+	v.add_child(goalrow)
+	_choice(goalrow, "On", UiSettings.goal_on(), func(): app.set_goal(true))
+	_choice(goalrow, "Off", not UiSettings.goal_on(), func(): app.set_goal(false))
+	var goalwhy := Kit.label("An arrow and a line that say what to do next. The N key sets a goal aside. It never moves you.", 14, Kit.dim())
+	goalwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(goalwhy)
 	v.add_child(Kit.label("Accessibility", 17, Kit.ACCENT))
 	var options := [
 		["colour_blind", "Colour-blind colours", "Good and bad news in blue and orange, not green and red."],

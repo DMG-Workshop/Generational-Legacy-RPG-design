@@ -33,11 +33,15 @@ static func kinds(d: GameDynasty, cx: int, cz: int, radius: int) -> Array:
 static func pin_bearing(d: GameDynasty, from_tile: Vector2i, radius: int = -1) -> Dictionary:
 	if d.map_pin.is_empty():
 		return {}
+	return bearing_to(from_tile, GameTravel.pin_tile(d), GameTravel.pin_name(d), radius)
+
+
+## The same bearing for any tile (the goal arrow's, GameGoal): {inside, angle, distance, dir, place (`name`), offset}.
+static func bearing_to(from_tile: Vector2i, at: Vector2i, name: String, radius: int = -1) -> Dictionary:
 	var r := int(GameSandbox.data()["view"].get("minimap_radius", 20)) if radius < 0 else radius
-	var at := GameTravel.pin_tile(d)
 	var off := at - from_tile
 	return {"inside": maxi(absi(off.x), absi(off.y)) <= r, "angle": atan2(float(off.y), float(off.x)), "distance": GameTravel.tiles(from_tile, at),
-		"dir": GameTravel.compass(from_tile, at), "place": GameTravel.pin_name(d), "offset": off}
+		"dir": GameTravel.compass(from_tile, at), "place": name, "offset": off}
 
 
 ## What stands on a tile of the open world that is not the family's: a town's building, a wall or tower of its wall, or a gate's

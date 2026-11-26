@@ -5,6 +5,7 @@ extends Control
 
 const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
+const GoalView := preload("res://ui/play/goal_view.gd")
 
 var dynasty: GameDynasty
 var sb: GameSandbox
@@ -39,6 +40,7 @@ class Dots extends Control:
 			_dot(Vector2(float(a["x"]), float(a["z"])), centre, cell, n, _rgb(c["companion"]), 2.0)
 		_dot(centre, centre, cell, n, _rgb(c["heir"]), 3.0)
 		_pin(sb)
+		GoalView.paint_minimap(self, size, pane.radius, GoalView.bearing(pane.dynasty, sb.heir, pane.radius))   # the goal (a map pin wins over it)
 
 	## The map pin: a flag where it stands when it is in the picture, else an arrow at the picture's edge pointing the way to it
 	## (GameMiniMap.pin_bearing says which, and the angle: the arrow turns with the bearing, nothing is random).

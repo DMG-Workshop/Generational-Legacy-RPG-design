@@ -24,6 +24,7 @@ const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const GatePanel := preload("res://ui/play/gate_panel.gd")
 const TalkPanel := preload("res://ui/play/talk_panel.gd")
 const PaneKit := preload("res://ui/play/pane_kit.gd")
+const GoalView := preload("res://ui/play/goal_view.gd")
 const StatusPane := preload("res://ui/play/status_pane.gd")
 const MinimapPane := preload("res://ui/play/minimap_pane.gd")
 const JournalPane := preload("res://ui/play/journal_pane.gd")
@@ -114,6 +115,8 @@ func _ready() -> void:
 	if not WorldInput.installed():
 		WorldInput.install()   # the app installs them at start; a screen made on its own installs them itself
 	sb = GameSandbox.start(app.dynasty)
+	if UiSettings.tutorial_on():
+		GameGoal.begin(app.dynasty)   # a brand new first heir: the guided start (its flag, a smoke pot)
 	_warm_figures()
 	map = Control.new()
 	map.clip_contents = true
@@ -208,6 +211,9 @@ func _process(delta: float) -> void:
 	_hud_wait -= delta
 	if _hud_wait <= 0.0:
 		_hud_wait = 0.25
+		GoalView.update(d, sb)   # the goal arrow's goals, and the guided start's tip and first foe
+		GoalView.place_first_foe(d, sb)
+		GoalView.sync_tip(self, d, BAR + 6.0)
 		_refresh_panes()
 	if _modal_open():
 		return   # the workshop is open: the world waits
@@ -679,6 +685,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not event.is_pressed():
 		return
+	if event.is_action_pressed("world_goal") and not _modal_open():
+		get_viewport().set_input_as_handled()
+		_cycle_goal()
+		return
 	if not _modal_open():
 		for o in GameCompanions.ORDERS:
 			if event.is_action_pressed("world_order_" + str(o)):
@@ -729,6 +739,15 @@ func _toggle_panel(id: String) -> void:
 					c.queue_free()
 					return
 			_open_world_map()
+
+
+## The goal key: the goal shown is set aside and the next shown (GoalView.cycle); a line says which.
+func _cycle_goal() -> void:
+	if not UiSettings.goal_on():
+		last_line = GameGoal.text("off")
+		return
+	var g := GoalView.cycle(app.dynasty, sb)
+	last_line = GameGoal.text("cycled", {"label": g["label"]}) if not g.is_empty() else GameGoal.text("none")
 
 
 func _toggle_pane(key: String, opener: Callable) -> void:
@@ -1264,6 +1283,8 @@ func _refresh_status() -> void:
 		smoke_button.text = "Smoke %d" % GameSmoke.count(d.heir) if GameSmoke.count(d.heir) > 0 else "Smoke"
 		smoke_button.modulate = Color(1, 1, 1, 1.0 if GameSmoke.count(d.heir) > 0 else 0.45)
 	var pin := _pin_line()
+	if pin == "" and sb.space == "world" and not _pane_up(StatusPane):
+		pin = GoalView.line(sb.heir)   # no status pane to say it (a touch screen, a narrow window): the goal leads the line
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line] if pin == "" else "%s  %s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], pin, line]
 	if UiSettings.touch() or UiSettings.compact(self):
 		# no status pane here: the heir's level and experience (and a smoke pot's time) lead the one status line
@@ -1280,10 +1301,16 @@ func _refresh_status() -> void:
 func _pin_line() -> String:
 	if sb.space != "world" or not GameTravel.has_pin(app.dynasty):
 		return ""
-	for c in get_children():
-		if c.get_script() == StatusPane and not c.is_queued_for_deletion():
-			return ""
+	if _pane_up(StatusPane):
+		return ""
 	return GameTravel.pin_line(app.dynasty, sb.heir)
+
+
+func _pane_up(script: Script) -> bool:
+	for c in get_children():
+		if c.get_script() == script and not c.is_queued_for_deletion():
+			return true
+	return false
 
 
 func _draw() -> void:
@@ -1330,6 +1357,7 @@ func _paint(c: Control) -> void:
 		c.draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
 	if outdoors:
 		_paint_standing(c, origin, area, centre, cell, colors, float(look["light"]))
+		GoalView.paint_world(c, d, origin, area, centre, cell)   # the goal arrow (a map pin wins over it)
 	elif GameDungeons.is_dungeon(sb.space):
 		_paint_dungeon(c, origin, area, centre, cell, colors)
 	else:
