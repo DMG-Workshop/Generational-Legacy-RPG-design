@@ -58,6 +58,7 @@ func _ready() -> void:
 	pad.app = self
 	add_child(pad)
 	sound = Sound.new()
+	sound.app = self
 	add_child(sound)
 	frame = Control.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -112,6 +113,7 @@ func _process(delta: float) -> void:
 
 func _swap(screen: Control) -> void:
 	hints.hide_hint()
+	sound.quiet()   # the panes of the old screen closing and the new one's opening are not heard
 	if current != null:
 		frame.remove_child(current)
 		current.queue_free()
@@ -199,7 +201,7 @@ func show_state() -> void:
 ## The music of where the dynasty is (its Age, a fight), and a sting the first time a death or the saga's
 ## end is shown. Sound only: nothing here changes the dynasty.
 func _sound_state() -> void:
-	sound.music(Sound.track_for(dynasty))
+	sound.music(sound.track_here(dynasty))
 	var sting := Sound.sting_for(dynasty.state) if dynasty.battle == null else ""
 	var key := "%s:%d" % [dynasty.state, dynasty.gen] if sting != "" else ""
 	if key != "" and key != _stung:
@@ -267,7 +269,7 @@ func set_battery_saver(on: bool) -> void:
 	_relayout()
 
 
-## The menu's Sound effects and Music rows: "off", or a volume step, for `kind` ("sound" or "music").
+## The menu's Sound effects, Music and Ambience rows: "off", or a volume step, for `kind` ("sound", "music" or "ambience").
 func set_sound(kind: String, id: String) -> void:
 	Sound.choose(kind, id)
 	sound.refresh()
