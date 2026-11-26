@@ -307,7 +307,7 @@ func test_touch_layout_setting() -> void:
 	m._select("touch")
 	await _frames(1)
 	ok(_texts(m, []).has("Touch layout") and _find(m, "Touch") != null, "and the Touch tab has the touch layout")
-	var auto_b := _find(m, "Auto")
+	var auto_b := _find(m.pages["touch"], "Auto")   # (not the Autopilot tab)
 	ok(auto_b != null and _in_use(auto_b), "Auto is marked as in use")
 	ok(_find(m, "On") != null and _find(m, "Off") != null, "with On and Off beside it")
 	ok(auto_b != null and auto_b.size.y < float(UiSettings.setting("touch_target_px")) - 0.5, "the desktop's buttons are their designed size")
@@ -1699,6 +1699,7 @@ func test_scale_mid_fight() -> void:
 	bv.set_auto(false)
 	await _frames(2)
 	var w100: float = bv.cmd_w
+	MenuPanel.last_tab = "text"
 	var m: Control = app.open_menu()
 	await _frames(2)
 	_find(m, "150%").pressed.emit()
@@ -1717,6 +1718,7 @@ func test_scale_mid_fight() -> void:
 	UiSettings.force_touch = -1
 	ok(_short_buttons(bv).size() > 0, "the desktop fight has buttons under a fingertip's height")
 	if menus.size() == 1:
+		menus[0]._select("touch")
 		_find(menus[0], "On").pressed.emit()
 		await _frames(4)
 		var short := _short_buttons(bv)

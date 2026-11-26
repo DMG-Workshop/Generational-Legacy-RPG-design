@@ -213,7 +213,7 @@ func test_screens() -> void:
 	ok(title_l.get_theme_color("font_color") == UiSkin.pal("gold_hi") and title_l.text == "GENERATIONAL LEGACY", "in the ribbon's gold")
 	var begin := _find(t, "Begin Dynasty")
 	ok(begin != null and begin.get_theme_stylebox("normal") == UiSkin.button_box("on", "wood") and begin.get_theme_stylebox("hover") == UiSkin.button_box("on", "wood"), "Begin Dynasty is the crimson plank")
-	var quit_or_settings := _find(t, "Settings")
+	var quit_or_settings := _find(t, "Options")
 	ok(quit_or_settings != null and quit_or_settings.get_theme_stylebox("normal") == UiSkin.button_box("normal", "wood") and quit_or_settings.get_theme_stylebox("hover") == UiSkin.button_box("hover", "wood") and quit_or_settings.get_theme_stylebox("focus") == UiSkin.button_focus(), "other buttons are wooden planks, lit gold when pointed at, with a gold focus ring")
 	ok(quit_or_settings.get_theme_color("font_hover_color") == UiSkin.pal("wood_accent"), "and their text turns gold")
 	var slot1 := _find(t, "> Slot 1")
@@ -328,7 +328,7 @@ func test_variants() -> void:
 	var p: Control = _boxes(t, "kit_panel")[0]
 	ok(p.get_theme_stylebox("panel") == UiSkin.panel_box() and UiSkin.pal("parch") == Color("#ffffff"), "white panels")
 	ok(_labels_read(t), "every label reads on the white panels")
-	var settings := _find(t, "Settings")
+	var settings := _find(t, "Options")
 	ok(settings.get_theme_color("font_color") == UiSkin.pal("wood_text") and UiSkin.contrast(settings.get_theme_color("font_color"), UiSkin.pal("wood")) >= 10.0, "button text is strong")
 	ok(UiSkin.button_tex(100, 40, "normal", "wood") != null and UiSkin.sky_tex().get_image().get_pixel(0, 0) == Color("#000000"), "the sky is made black")
 	UiSettings.set_access("colour_blind", true)
