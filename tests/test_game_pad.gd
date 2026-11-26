@@ -124,7 +124,7 @@ func test_moves_and_presses() -> void:
 	var m: Control = app.open_menu()
 	await _frames(4)
 	var first := _focus()
-	ok(first is Button and (first as Button).text == "Close" and _inside(first, m), "a panel that opens takes the focus: the menu's Close")
+	ok(first is Button and (first as Button).text == "Back" and _inside(first, m), "a panel that opens takes the focus: the menu's Back")
 	await _pad(JOY_BUTTON_DPAD_DOWN)
 	var second := _focus()
 	ok(second != first and second is Button and _inside(second, m), "down moves it to another button of the menu (%s)" % (second as Button).text)

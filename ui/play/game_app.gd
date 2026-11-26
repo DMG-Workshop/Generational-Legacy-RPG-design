@@ -308,6 +308,12 @@ func set_tutorial(on: bool) -> void:
 func _relayout() -> void:
 	# A fight is laid out again in place (rebuilding it would lose its log); other screens are
 	# rebuilt at the new size.
+	if current is SandboxScreen:   # the open world: rebuilt at the new size, paused, with the options on top
+		current._save()
+		show_sandbox()
+		current.open_pause()
+		open_menu()
+		return
 	if menu_mode() == "battle":
 		current.relayout()
 		for c in current.get_children():
@@ -357,6 +363,9 @@ func go_back() -> String:
 	if top != null:
 		(top.get_meta("back_close") as Callable).call()
 		return "closed"
+	if current.has_method("open_pause"):   # the open world has a pause screen of its own
+		current.open_pause()
+		return "menu"
 	open_menu()
 	return "menu"
 
