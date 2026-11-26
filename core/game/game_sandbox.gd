@@ -494,6 +494,9 @@ func use() -> Dictionary:
 				var t := GamePeople.talk(d, space, p)
 				log.append({"kind": "talk", "text": str(t["text"])})
 				return t
+			var rested := GameGoal.home_rest(self)   # the family house's bedroom: use it to rest (the guided start teaches it)
+			if not rested.is_empty():
+				return rested
 			var thing := GameDungeons.thing_near(space, heir.x, heir.y, d)
 			if not thing.is_empty():
 				var u := GameDungeons.use_thing(d, space, thing)

@@ -2466,6 +2466,12 @@ func _loot_choice(v: VBoxContainer, foot: VBoxContainer) -> void:
 	var risk := Kit.label(GamePlague.risk_text(d), 15, Kit.bad() if GamePlague.risk(d) > 0.0 else Kit.dim())
 	risk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(risk)
+	var tip := GameTutorial.current(d, "battle") if UiSettings.tutorial_on() else {}   # the guided start's word on searching the dead
+	if not tip.is_empty():
+		var hint := Kit.label(str(tip["text"]), 15, Kit.good())
+		hint.name = "SearchTip"
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(hint)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	box.add_child(row)

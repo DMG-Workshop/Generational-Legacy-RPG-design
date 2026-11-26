@@ -1,6 +1,19 @@
 {
   "quests": [
     {
+      "id": "hm_first_job",
+      "name": "Thin the Pests",
+      "giver": "hearthmere",
+      "poster": "Pell, the notice clerk",
+      "text": "Slimes, rats and strays have crept in from the common and the carters will not pass. A new hand who clears three of them is paid well and no questions asked.",
+      "requires": {"min_level": 1, "min_gen": 1, "max_gen": 85, "flags": ["guided_start"], "not_flags": []},
+      "objective": {"type": "kill", "target": ["slime", "plague_rat", "goblin", "wolf"], "count": 3, "label": "Slay {count} pests near Hearthmere"},
+      "reward": {"gold": 110, "xp": 70, "items": ["restorative_cordial"], "flags": []},
+      "outcome": "Pell counts the coins out twice, and a cordial on top: \"For the next one.\"",
+      "repeatable": false,
+      "lasting": true
+    },
+    {
       "id": "hm_wolf_cull",
       "name": "Cull the Wolves",
       "giver": "hearthmere",

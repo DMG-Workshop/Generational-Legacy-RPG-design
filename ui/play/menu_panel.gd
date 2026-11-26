@@ -104,6 +104,14 @@ func _ready() -> void:
 	_choice(prow, "On", UiSettings.tutorial_on(), func(): app.set_tutorial(true))
 	_choice(prow, "Off", not UiSettings.tutorial_on(), func(): app.set_tutorial(false))
 	pg_gen.add_child(_why("Short tips about what to do next, for a new house's first heir."))
+	pg_gen.add_child(Kit.label("Goal arrow", 17, Kit.ACCENT))
+	var goalrow := HBoxContainer.new()
+	goalrow.name = "GoalArrowRow"
+	goalrow.add_theme_constant_override("separation", 8)
+	pg_gen.add_child(goalrow)
+	_choice(goalrow, "On", UiSettings.goal_on(), func(): app.set_goal(true))
+	_choice(goalrow, "Off", not UiSettings.goal_on(), func(): app.set_goal(false))
+	pg_gen.add_child(_why("An arrow and a line that say what to do next. The N key sets a goal aside. It never moves you."))
 
 	var pg_access: VBoxContainer = pages["access"]
 	pg_access.add_child(Kit.label("Accessibility", 17, Kit.ACCENT))

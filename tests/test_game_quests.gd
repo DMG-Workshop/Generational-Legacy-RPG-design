@@ -136,12 +136,13 @@ func _travel_to(d: GameDynasty, target: String) -> void:
 
 func _test_data() -> void:
 	var qs: Array = GameData.quests
-	_check(qs.size() >= 18 and qs.size() <= 24, "18-24 quests (%d)" % qs.size())
+	_check(qs.size() >= 18 and qs.size() <= 25, "18-25 quests (%d)" % qs.size())
 	var ids := {}
 	var produced := {}
 	for q in qs:
 		for f in q.get("reward", {}).get("flags", []):
 			produced[f] = q["id"]
+	produced[str(GameGoal.setting("guide_flag"))] = "the guided start"   # set by the open world for a brand new first heir (GameGoal.begin), never by the autopilot
 	var per_town := {}
 	var era := {"early": 0, "mid": 0, "late": 0}
 	var uniques := 0
