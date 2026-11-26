@@ -5,6 +5,7 @@ extends SceneTree
 
 const GameApp := preload("res://ui/play/game_app.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const MenuKit := preload("res://ui/play/menu_kit.gd")
 const HousePanel := preload("res://ui/play/house_panel.gd")
 const DIR := "user://test_house_ui/"
 
@@ -67,6 +68,26 @@ func _run() -> void:
 	ok(d.heir.gold == before - price, "and takes its price in gold")
 	ok(_panel() != null, "the panel stays open after a purchase")
 	ok(GameParty.max_size(d) == int(GameData.bal("party_max_size")) + 1, "the Hall adds a companion place")
+
+	# A small purchase is one tap; a big one (at or over confirm.big_gold in data/ui/menus.json) asks a second time.
+	var big := int(MenuKit.data()["confirm"]["big_gold"])
+	d.heir.gold = 100000
+	var small_price := GameHouse.cost(d, GameHouse.HALL)
+	ok(small_price < big, "(the Hall's second level is a small purchase: %d)" % small_price)
+	_button_starting(_panel(), "Build").pressed.emit()
+	await _frames(2)
+	ok(GameHouse.level(d, GameHouse.HALL) == 2, "a purchase under the threshold is one tap")
+	var big_price := GameHouse.cost(d, GameHouse.HALL)
+	ok(big_price >= big, "(the third level is a big one: %d)" % big_price)
+	var gold_before := d.heir.gold
+	_button_starting(_panel(), "Build").pressed.emit()
+	await _frames(2)
+	ok(GameHouse.level(d, GameHouse.HALL) == 2 and d.heir.gold == gold_before, "a big purchase does nothing on the first tap")
+	ok(_button_starting(_panel(), "Sure?") != null, "and the button asks Sure? with the price")
+	_button_starting(_panel(), "Sure?").pressed.emit()
+	await _frames(2)
+	ok(GameHouse.level(d, GameHouse.HALL) == 3 and d.heir.gold == gold_before - big_price, "the second tap builds it")
+	ok(not _shows_text(_panel(), "Next level: "), "and the rows no longer repeat the price in a sentence")
 
 	_wipe()
 	print("house ui tests: %d checks, %d failures" % [checks, fails])
