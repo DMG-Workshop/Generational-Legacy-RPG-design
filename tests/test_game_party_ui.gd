@@ -376,6 +376,7 @@ func test_relayout_keeps_state() -> void:
 	var snap := JSON.stringify([bv.cmd_round.entries, bv.cmd_round.cursor, bv.cmd_round._order])
 	var tall_before: int = bv.command_box.get_children().filter(func(c): return c is VBoxContainer and c.get_child_count() > 2).size()
 	ok(tall_before > 0, "at 100%% the room is tall: columns of three (%d)" % tall_before)
+	MenuPanel.last_tab = "text"
 	var m: Control = app.open_menu()
 	await _frames(2)
 	for b in _buttons(m, "150%"):

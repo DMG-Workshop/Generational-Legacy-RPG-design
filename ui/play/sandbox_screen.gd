@@ -28,6 +28,8 @@ const StatusPane := preload("res://ui/play/status_pane.gd")
 const MinimapPane := preload("res://ui/play/minimap_pane.gd")
 const JournalPane := preload("res://ui/play/journal_pane.gd")
 const FigurePane := preload("res://ui/play/figure_pane.gd")
+const Toast := preload("res://ui/play/toast.gd")
+const PausePanel := preload("res://ui/play/pause_panel.gd")
 const PackPane := preload("res://ui/play/pack_pane.gd")
 const HousePanel := preload("res://ui/play/house_panel.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
@@ -96,7 +98,9 @@ var _moved_at := {}       # key -> the second it last moved
 var _fight: Control = null   # the battle screen, hosted over the map while a creature's fight is on
 var piece_button: Button
 var level_button: Button
-var last_line := ""
+var last_line := "" : set = _set_line   # the latest news: a toast says it (the status strip keeps only the place)
+var pause_closed_frame := -1   # the frame the pause screen was put away in: that frame's Escape does not open it again
+var toast: Control        # the toast layer over everything (Toast)
 var _walk_wait := 0.0
 var _greet_wait := 0.0
 var _name_tag := {}       # what a click just named: {text, point (tiles), until (msec)}; drawn over it for a moment
@@ -219,6 +223,7 @@ func _ready() -> void:
 		_make_action_buttons()
 	_refresh_status()
 	_sync_tiles()
+	toast = Toast.attach(self)
 	_open_hud.call_deferred()   # the panes that stay up (once the screen has its size)
 
 
@@ -298,7 +303,7 @@ func _process(delta: float) -> void:
 	if _save_wait <= 0.0:
 		_save()
 		_save_wait = float(setting("save_seconds"))
-	if inp["cancel"]:
+	if inp["cancel"] and Engine.get_process_frames() != pause_closed_frame:
 		_open_menu()
 		return
 	if inp["interact"]:
@@ -978,9 +983,25 @@ func _open_cast() -> void:
 	menu.popup_centered()
 
 
-## The menu over the map (the bar's Menu button, Escape, B): the family's screens as popups over the world, which waits while
-## one is open, so the player does not leave the map for the text game unless they ask ("The text screen" is the old Back).
+## The pause screen (the bar's Menu button, Escape, B): the world waits while it is up. Its Panels row is the list of the family's screens.
 func _open_menu() -> void:
+	open_pause()
+
+
+func open_pause() -> Control:
+	for c in get_children():
+		if c is PausePanel and not c.is_queued_for_deletion():
+			return c   # one is enough: Escape in the pause screen closes it (the app's back), it does not stack another
+	var p: Control = PausePanel.new()
+	p.app = app
+	p.screen = self
+	add_child(p)
+	return p
+
+
+## The family's screens as a popup over the world, which waits while one is open, so the player does not leave the map for the text
+## game unless they ask ("The text screen" is the old Back). The pause screen's Panels row.
+func _open_panels_menu() -> void:
 	var menu := PopupMenu.new()
 	menu.set_meta("modal", true)
 	var rows: Array = [
@@ -1306,6 +1327,13 @@ func _exit_tree() -> void:
 		sb.remember()   # leaving the screen (Back, a fight, a succession) keeps where the heir was
 
 
+## The news line (`last_line`) is told as a toast.
+func _set_line(v: String) -> void:
+	last_line = v
+	if toast != null and v != "":
+		toast.say(v)
+
+
 func _cell() -> float:
 	return float(setting("cell_px")) * zoom
 
@@ -1314,7 +1342,7 @@ func _refresh_status() -> void:
 	if not app.dynasty.party.tree_news.is_empty():   # a companion has earned skill points: the journal tells it (the pane shows it next refresh)
 		GameSkillTree.announce_companions(app.dynasty)
 	var d: GameDynasty = app.dynasty
-	var line := last_line
+	var line := ""   # the news is a toast now; the strip keeps the place and the build hint
 	if mode == "build":
 		var why := sb.build_check(build_kind, facing_dir.x, facing_dir.y)
 		var piece := str(GameBuild.pieces()[build_kind]["name"])

@@ -176,9 +176,9 @@ func test_bar() -> void:
 	await _frames(1)
 	var menu := false
 	for c in map.get_children():
-		if c is PopupMenu:
+		if c.get_script() == load("res://ui/play/pause_panel.gd"):
 			menu = true
-	ok(menu, "the Menu button opens the Menu")
+	ok(menu, "the Menu button opens the pause screen")
 	# a click on a slot node itself
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT

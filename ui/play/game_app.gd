@@ -19,6 +19,7 @@ const BattleView := preload("res://ui/play/battle_view.gd")
 const SuccessionScreen := preload("res://ui/play/succession_screen.gd")
 const EndingScreen := preload("res://ui/play/ending_screen.gd")
 const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
+const Toast := preload("res://ui/play/toast.gd")
 
 var dynasty: GameDynasty
 var slot := 1   # the save slot in use (GameSaves); GameDynasty.save_path is its file
@@ -129,6 +130,7 @@ func use_slot(n: int) -> void:
 
 
 func show_title() -> void:
+	Toast.history.clear()   # the news of the last house is not the next one's
 	var s := TitleScreen.new()
 	s.app = self
 	_swap(s)
@@ -310,6 +312,12 @@ func set_tutorial(on: bool) -> void:
 func _relayout() -> void:
 	# A fight is laid out again in place (rebuilding it would lose its log); other screens are
 	# rebuilt at the new size.
+	if current is SandboxScreen:   # the open world: rebuilt at the new size, paused, with the options on top
+		current._save()
+		show_sandbox()
+		current.open_pause()
+		open_menu()
+		return
 	if menu_mode() == "battle":
 		current.relayout()
 		for c in current.get_children():
@@ -359,6 +367,9 @@ func go_back() -> String:
 	if top != null:
 		(top.get_meta("back_close") as Callable).call()
 		return "closed"
+	if current.has_method("open_pause"):   # the open world has a pause screen of its own
+		current.open_pause()
+		return "menu"
 	open_menu()
 	return "menu"
 
@@ -372,7 +383,7 @@ func _top_closable(n: Node) -> Control:
 		var inner := _top_closable(c)
 		if inner != null:
 			return inner
-		if c.has_meta("back_close"):
+		if c.has_meta("back_close") and not c.has_meta("pane_hud"):   # the panes that stay up (status, nearby, journal) are not closed by Escape
 			return c
 		if c.has_meta("modal"):   # waits for an answer: back opens the menu over it instead
 			return null

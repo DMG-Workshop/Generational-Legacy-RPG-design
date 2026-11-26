@@ -1,0 +1,87 @@
+{
+  "note": "Menus and toasts (ui/play/menu_kit.gd, toast.gd, pause_panel.gd, menu_panel.gd (the options), the main menu in title_screen.gd; checked by tools/check_data.gd). Rows and tabs are listed in the order they are drawn; `id` is what the code does, `label` is what is shown, `hint` is the tooltip and the hold-to-preview text. Settings the player changes live in user://settings.cfg, never here or in a save.",
+  "toast": {
+    "max_visible": 3,
+    "seconds": 4.0,
+    "fade_seconds": 0.5,
+    "slide_px": 28,
+    "width": 340,
+    "margin": 12,
+    "top": 64,
+    "bottom": 16,
+    "gap": 6,
+    "history_max": 60,
+    "font_size": 15,
+    "repeat_seconds": 1.5
+  },
+  "main": {
+    "tagline": "Found a dynasty. Every heir inherits your blood, your curses and your legend.",
+    "rows": [
+      {"id": "continue", "label": "Continue", "hint": "Pick the house in the chosen slot up where it was left."},
+      {"id": "new", "label": "New dynasty", "hint": "Found a new house: name, class, race and bloodline."},
+      {"id": "slots", "label": "Load / Save slots", "hint": "Choose a slot, copy or restore a backup, export or import a file."},
+      {"id": "options", "label": "Options", "hint": "Sound, graphics, accessibility, text size and more."},
+      {"id": "controls", "label": "Controls", "hint": "Change the open world's keys and buttons."},
+      {"id": "about", "label": "About", "hint": "Credits and where the game keeps its files."},
+      {"id": "quit", "label": "Quit", "hint": "Leave the game."}
+    ],
+    "titles": {"menu": "GENERATIONAL LEGACY", "new": "New dynasty", "slots": "Save slots"}
+  },
+  "pause": {
+    "title": "Paused",
+    "rows": [
+      {"id": "resume", "label": "Resume", "hint": "Back to the world."},
+      {"id": "panels", "label": "Panels", "hint": "The family house, chronicle, skills, pack and the other panels."},
+      {"id": "options", "label": "Options", "hint": "Sound, graphics, accessibility, text size and more."},
+      {"id": "controls", "label": "Controls", "hint": "Change the open world's keys and buttons."},
+      {"id": "save", "label": "Save", "hint": "Write the house to the slot in use."},
+      {"id": "slots", "label": "Save slots", "hint": "Save into, or load from, another slot."},
+      {"id": "text", "label": "Back to the text game", "hint": "Leave the map for the life screen."},
+      {"id": "main", "label": "Main menu", "hint": "Save and go to the title."},
+      {"id": "quit", "label": "Quit", "hint": "Save and leave the game."}
+    ],
+    "saved": "Saved."
+  },
+  "options": {
+    "title": "Options",
+    "tabs": [
+      {"id": "sound", "label": "Sound"},
+      {"id": "graphics", "label": "Graphics"},
+      {"id": "access", "label": "Access"},
+      {"id": "controls", "label": "Controls"},
+      {"id": "text", "label": "Text size"},
+      {"id": "touch", "label": "Touch"},
+      {"id": "autopilot", "label": "Autopilot"},
+      {"id": "general", "label": "General"},
+      {"id": "save", "label": "Save"}
+    ],
+    "autopilot": {
+      "life": "Auto: this life",
+      "gens": "Auto: 10 gens",
+      "ready": "Ready",
+      "left": "%s left",
+      "about": "How long each autopilot button rests after use."
+    }
+  },
+  "slots_panel": {
+    "title": "Save slots",
+    "save_here": "Save here",
+    "load": "Load",
+    "over": "Overwrite slot %d's house?",
+    "empty": "empty",
+    "damaged": "damaged"
+  },
+  "about": {
+    "title": "About",
+    "lines": [
+      "Generational Legacy: live a life, die, and your heir carries the house on.",
+      "Made with Godot 4. Pixel font: Silkscreen.",
+      "Saves and settings stay on this device; nothing is sent anywhere."
+    ]
+  },
+  "confirm": {
+    "big_gold": 500,
+    "yes": "Yes",
+    "no": "No"
+  }
+}

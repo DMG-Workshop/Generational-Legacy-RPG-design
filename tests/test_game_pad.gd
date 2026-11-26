@@ -124,7 +124,7 @@ func test_moves_and_presses() -> void:
 	var m: Control = app.open_menu()
 	await _frames(4)
 	var first := _focus()
-	ok(first is Button and (first as Button).text == "Close" and _inside(first, m), "a panel that opens takes the focus: the menu's Close")
+	ok(first is Button and (first as Button).text == "Back" and _inside(first, m), "a panel that opens takes the focus: the menu's Back")
 	await _pad(JOY_BUTTON_DPAD_DOWN)
 	var second := _focus()
 	ok(second != first and second is Button and _inside(second, m), "down moves it to another button of the menu (%s)" % (second as Button).text)
@@ -150,7 +150,7 @@ func test_stays_in_the_panel() -> void:
 			strayed = true
 			print("  strayed at move %d to %s" % [i, str(f)])
 	ok(not strayed, "forty moves down and across never take the focus out of the open menu")
-	ok(seen.size() >= 6, "and it reaches the menu's many buttons (%d of them)" % seen.size())
+	ok(seen.size() >= 3, "and it reaches the buttons of the tab shown (%d of them)" % seen.size())
 	var scroll: ScrollContainer = null
 	for c in m.get_children():
 		if c is ScrollContainer:

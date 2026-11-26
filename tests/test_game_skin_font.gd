@@ -287,7 +287,9 @@ func test_screens() -> void:
 			ribbon_label = n.get_child(0)
 	ok(ribbon_label != null and ribbon_label.has_meta("skin_pixel_font") and ribbon_label.get_theme_font("font") == UiSkin.font_for("title"), "the title screen's ribbon is in the pixel font")
 	ok(ribbon_label != null and UiSkin.font_crisp(ribbon_label.get_theme_font_size("font_size")), "at a crisp size (%d)" % (ribbon_label.get_theme_font_size("font_size") if ribbon_label != null else 0))
-	var btns := _all(t, []).filter(func(n): return n is Button and (n as Button).text != "")
+	t._show_page("new")   # the founding form and the slots: the widest rows of the title
+	await _frames(3)
+	var btns := _all(t, []).filter(func(n): return n is Button and (n as Button).text != "" and (n as Button).is_visible_in_tree())
 	ok(btns.any(func(b): return b.has_meta("skin_pixel_font")), "some of its planks are in the pixel font")
 	for b in btns:
 		if b.has_meta("skin_pixel_font"):
@@ -336,8 +338,10 @@ func test_plain_option() -> void:
 	await _frames(4)
 	var before := _pixel_nodes(app.current).size()
 	ok(before > 0, "there is pixel text to switch off (%d)" % before)
-	app.open_menu()
+	var access_menu: Control = app.open_menu()
 	await _frames(3)
+	access_menu._select("access")   # Plain font is on the Access tab
+	await _frames(2)
 	var plain_btn: Button = null
 	var seen_label := false
 	for n in _all(app.current, []):

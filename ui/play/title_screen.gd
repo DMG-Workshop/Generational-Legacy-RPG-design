@@ -7,6 +7,8 @@ const FilePicker := preload("res://ui/play/file_picker.gd")
 const HardModePanel := preload("res://ui/play/hard_mode_panel.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
 const SkinScreen := preload("res://ui/play/skin_screen.gd")
+const MenuKit := preload("res://ui/play/menu_kit.gd")
+const AboutPanel := preload("res://ui/play/about_panel.gd")
 
 var app: Node
 var name_edit: LineEdit
@@ -31,6 +33,14 @@ var confirm_row: HBoxContainer
 var _pending: Callable = Callable()
 var hard_opts: Dictionary = {}   # the founder's hard-mode choices (see GameHardMode), none by default
 var hard_button: Button
+var page := "menu"          # "menu" (the main menu), "new" (the founding form) or "slots"
+var title_label: Label
+var sub_label: Label
+var menu_box: VBoxContainer
+var new_box: VBoxContainer   # the form, the slots and their buttons
+var form_panel: Control
+var begin_row: Control
+var main_continue: Button
 
 
 func _ready() -> void:
@@ -50,13 +60,15 @@ func _ready() -> void:
 	box.add_theme_constant_override("separation", 10)
 	center.add_child(box)
 
-	var title := Kit.label("GENERATIONAL LEGACY", 44 if not narrow else 34, Kit.ACCENT)
+	var title := Kit.label(str(MenuKit.data()["main"]["titles"]["menu"]), 44 if not narrow else 34, Kit.ACCENT)
+	title_label = title
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(SkinScreen.ribbon(title, 44 if not narrow else 30))
 	var sub := Kit.label("Found a dynasty. Every heir inherits your blood, your curses and your legend.", 16, Kit.dim())
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sub_label = sub
 	box.add_child(sub)
 	if app.closed_badly:   # the last session ended without warning: offer a report, once
 		var crow := HBoxContainer.new()
@@ -71,9 +83,14 @@ func _ready() -> void:
 			app.closed_badly = false
 			crow.queue_free(), Vector2(100, 36)))
 	box.add_child(Control.new())
+	_build_main_menu(box)
+	new_box = VBoxContainer.new()
+	new_box.add_theme_constant_override("separation", 10)
+	box.add_child(new_box)
 
 	var p := Kit.panel()
-	box.add_child(p)
+	form_panel = p
+	new_box.add_child(p)
 	# Side by side when there is room; one above the other on a narrow screen.
 	var cols: BoxContainer = VBoxContainer.new() if narrow else HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 24 if not narrow else 12)
@@ -157,25 +174,30 @@ func _ready() -> void:
 	form2.add_child(seed_edit)
 
 	var sp := Kit.panel()
-	box.add_child(sp)
+	new_box.add_child(sp)
 	slot_box = VBoxContainer.new()
 	slot_box.add_theme_constant_override("separation", 6)
 	sp.add_child(slot_box)
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
-	box.add_child(buttons)
+	begin_row = buttons
+	new_box.add_child(buttons)
+	new_box.move_child(buttons, 1)   # Begin sits right under the form, the slots (where it goes) under it
 	var begin := Kit.button("Begin Dynasty", _start, Vector2(0, 48))
 	begin.set_meta("skin_on", UiSkin.screen_active(begin))   # the crimson plank: the one to press
 	begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons.add_child(begin)
 	cont = Kit.button("Continue" if narrow else "Continue Saved Dynasty", func(): app.continue_game(UiSettings.open_world_first()), Vector2(300 if not narrow else 160, 48))
 	buttons.add_child(cont)
-	buttons.add_child(Kit.button("Settings", func(): app.open_menu(), Vector2(130, 48)))
-	if not UiSettings.is_mobile():   # phones leave an app from the system, not from a button
-		buttons.add_child(Kit.button("Quit", func(): get_tree().quit(), Vector2(120, 48)))
+	var back_row := HBoxContainer.new()
+	new_box.add_child(back_row)
+	var back_b := Kit.button("Back", func(): back(), Vector2(160, 44))
+	back_b.name = "Back"
+	back_row.add_child(back_b)
 	_refresh()
 	_build_slots()
+	_show_page("menu")
 
 
 func _column(parent: Control) -> VBoxContainer:
@@ -273,6 +295,8 @@ func _build_slots() -> void:
 	if no_export != "":   # the reason the backup buttons are shut, as text
 		slot_note.text = "%s %s" % [no_export, no_restore]
 	cont.disabled = not here["valid"]
+	if main_continue != null:
+		main_continue.disabled = cont.disabled
 
 
 func _pick(n: int) -> void:
@@ -381,3 +405,65 @@ func _open_hard() -> void:
 		hard_opts = o
 		_refresh()
 	add_child(p)
+
+
+# ---------------------------------------------------------------- the main menu
+
+## The main menu's buttons, one under the other: what each does is in data/ui/menus.json (its hint is the tooltip).
+func _build_main_menu(box: VBoxContainer) -> void:
+	menu_box = VBoxContainer.new()
+	menu_box.add_theme_constant_override("separation", 10)
+	menu_box.custom_minimum_size.x = minf(380.0, UiSettings.room(self).x - 60.0)
+	menu_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	box.add_child(menu_box)
+	for r in MenuKit.rows("main"):
+		var id := str(r["id"])
+		if id == "quit" and UiSettings.is_mobile():
+			continue   # phones leave an app from the system, not from a button
+		var b := Kit.button(str(r["label"]), func(): _main_do(id), Vector2(0, 48))
+		b.tooltip_text = str(r.get("hint", ""))
+		b.name = "Main_" + id
+		if id == "continue":
+			main_continue = b
+			b.set_meta("skin_on", UiSkin.screen_active(b))   # the crimson plank: the one to press
+		menu_box.add_child(b)
+
+
+func _main_do(id: String) -> void:
+	match id:
+		"continue":
+			app.continue_game(UiSettings.open_world_first())
+		"new":
+			_show_page("new")
+		"slots":
+			_show_page("slots")
+		"options":
+			app.open_menu()
+		"controls":
+			app.open_controls()
+		"about":
+			add_child(AboutPanel.new())
+		"quit":
+			get_tree().quit()
+
+
+## Shows one page of the title: the main menu, the founding form (with the slots) or the slots alone. The page is the screen's title.
+func _show_page(id: String) -> void:
+	page = id
+	var titles: Dictionary = MenuKit.data()["main"]["titles"]
+	title_label.text = str(titles.get(id, titles["menu"]))
+	sub_label.visible = id == "menu"
+	menu_box.visible = id == "menu"
+	new_box.visible = id != "menu"
+	form_panel.visible = id == "new"
+	begin_row.visible = id == "new"
+	if app != null and app.pad != null and app.pad.on:
+		app.pad.refocus.call_deferred()
+
+
+## Back steps from the form or the slots to the main menu (Escape, the pad's B, Android's back); on the main menu it does nothing.
+func back() -> bool:
+	if page == "menu":
+		return false
+	_show_page("menu")
+	return true

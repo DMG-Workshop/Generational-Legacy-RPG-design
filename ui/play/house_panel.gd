@@ -8,10 +8,12 @@ const PanelSkin := preload("res://ui/play/panel_skin.gd")
 const CraftPanel := preload("res://ui/play/craft_panel.gd")
 const HeirloomPanel := preload("res://ui/play/heirloom_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
+const MenuKit := preload("res://ui/play/menu_kit.gd")
 const WIDE := 760.0
 
 var dynasty: GameDynasty
 var on_change: Callable
+var confirm_track := ""   # a big purchase waiting for a second tap
 var _body: VBoxContainer
 
 
@@ -101,12 +103,14 @@ func _row(track: String, column: float) -> Control:
 	var price := GameHouse.cost(dynasty, track)
 	var text := "Fully built."
 	if price >= 0:
-		text = "Next level: %s. Costs %s gold." % [_effect(track, lv + 1), GameText.num(price)]
+		text = "Next: %s" % _effect(track, lv + 1)   # the price is on the button
 	var next := PanelSkin.label(self, text, 15, Kit.dim())
 	next.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(next)
 	var why := GameHouse.buy_error(dynasty, track)
 	var label := "Build (%s gold)" % GameText.num(price) if price >= 0 else "Fully built"
+	if confirm_track == track and price >= 0:
+		label = "Sure? (%s gold)" % GameText.num(price)
 	var b := PanelSkin.button(self, label, func(): _buy(track, column), Vector2(column, 48))
 	b.disabled = why != ""
 	if skinned:   # a coin and the price beside the key, so the cost reads at a glance
@@ -147,7 +151,14 @@ static func _effect(track: String, lv: int) -> String:
 	return "Training gives %d%% more XP." % pct
 
 
+## Spending a lot of gold asks a second time (the threshold is `confirm.big_gold` in data/ui/menus.json); a small purchase does not.
 func _buy(track: String, column: float) -> void:
+	var price := GameHouse.cost(dynasty, track)
+	if price >= int(MenuKit.data()["confirm"]["big_gold"]) and confirm_track != track:
+		confirm_track = track
+		_build(column)
+		return
+	confirm_track = ""
 	var msg := GameHouse.buy(dynasty, track)
 	dynasty._say(msg)
 	if on_change.is_valid():
