@@ -136,7 +136,7 @@ func _travel_to(d: GameDynasty, target: String) -> void:
 
 func _test_data() -> void:
 	var qs: Array = GameData.quests
-	_check(qs.size() >= 18 and qs.size() <= 24, "18-24 quests (%d)" % qs.size())
+	_check(qs.size() >= 18 and qs.size() <= 25, "18-25 quests (%d)" % qs.size())
 	var ids := {}
 	var produced := {}
 	for q in qs:

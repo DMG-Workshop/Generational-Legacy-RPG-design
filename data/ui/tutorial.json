@@ -1,5 +1,6 @@
 {
   "wounded_below": 0.5,
+  "hurt_below": 0.75,
   "steps": [
     {
       "id": "hunt",
@@ -56,6 +57,86 @@
       "done": [],
       "highlight": [],
       "text": "Pick the child who carries the house on. Some traits pass down, some lie dormant. A lower Fate Value means fewer failures."
+    },
+    {
+      "id": "guide_walk",
+      "screen": "sandbox",
+      "when": ["first_generation", "guided"],
+      "done": ["at_marker", "hunted"],
+      "highlight": [],
+      "goal": "guide_marker",
+      "text": "Welcome, {name}. Walk to the marker: WASD or the arrows move you, or hold the walk button, or drag a thumb on a phone."
+    },
+    {
+      "id": "guide_click",
+      "screen": "sandbox",
+      "when": ["first_generation", "guided", "at_marker"],
+      "done": ["routed", "hunted"],
+      "highlight": [],
+      "goal": "guide_foe",
+      "text": "Click the ground to walk there on your own. M opens the world map, Tab the panel ring. Click out toward the creature."
+    },
+    {
+      "id": "guide_fight",
+      "screen": "sandbox",
+      "when": ["first_generation", "guided", "at_marker", "routed"],
+      "done": ["hunted"],
+      "highlight": [],
+      "goal": "guide_foe",
+      "text": "An easy foe. Walk up to it to fight. A smoke pot in your pack hides you if a fight goes wrong: use it, then walk away."
+    },
+    {
+      "id": "guide_search",
+      "screen": "battle",
+      "when": ["first_generation", "guided", "has_dead"],
+      "done": [],
+      "highlight": [],
+      "text": "Search the bodies: extra gold and loot, and the only way to find eggs and young. The dead may carry sickness."
+    },
+    {
+      "id": "guide_sell",
+      "screen": "sandbox",
+      "when": ["first_generation", "guided", "hunted"],
+      "done": ["store_seen", "errand_taken"],
+      "highlight": [],
+      "goal": "store_sell",
+      "text": "Back in town, sell what you found at the store. Walk to its door and press Use (F), or double-click it."
+    },
+    {
+      "id": "guide_rest",
+      "screen": "sandbox",
+      "when": ["first_generation", "guided", "hunted", "hurt"],
+      "done": ["errand_taken"],
+      "highlight": [],
+      "goal": "rest_home",
+      "text": "Hurt? Go into the family house, stand in the bedroom and press Use to rest. It heals you in full."
+    },
+    {
+      "id": "guide_take",
+      "screen": "sandbox",
+      "when": ["first_generation", "guided", "hunted"],
+      "done": ["errand_taken"],
+      "highlight": [],
+      "goal": "board_new",
+      "text": "The notice board has a first job that pays well. Walk to its door, press Use, and take the notice."
+    },
+    {
+      "id": "guide_errand",
+      "screen": "sandbox",
+      "when": ["first_generation", "guided", "errand_taken"],
+      "done": ["errand_ready", "errand_paid"],
+      "highlight": [],
+      "goal": "quest",
+      "text": "Slay three pests near town: the arrow points to one. The Journal key (J) keeps your notices. Then return to the board."
+    },
+    {
+      "id": "guide_pay",
+      "screen": "sandbox",
+      "when": ["first_generation", "guided", "errand_ready"],
+      "done": ["errand_paid"],
+      "highlight": [],
+      "goal": "quest",
+      "text": "The job is done. Go back to the notice board's door and press Use to be paid."
     },
     {
       "id": "sandbox_move",

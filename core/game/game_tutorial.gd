@@ -12,10 +12,13 @@ extends RefCounted
 ## The questions a tip may ask of the dynasty, by the names data/ui/tutorial.json uses.
 const PREDICATES := ["hunted", "trained", "wounded", "can_found_family", "too_young_for_family",
 	"family_founded", "can_retire", "first_generation",
-	"moved", "dug", "can_build", "built", "has_room", "has_companion", "gave_order", "night"]
-## The questions only the screen can answer, passed in `ctx`.
-const CONTEXT := ["moved"]
-const SCREENS := ["life", "succession", "sandbox"]
+	"moved", "dug", "can_build", "built", "has_room", "has_companion", "gave_order", "night",
+	"guided", "has_dead", "hurt", "errand_taken", "errand_ready", "errand_paid"]
+## The questions only the screen can answer, passed in `ctx`: the guided start's "walked to the marker", "clicked to walk" and
+## "has been in the store" (where the heir has been is not saved; a later fact of the dynasty ends a step too, so a game
+## picked up again moves on).
+const CONTEXT := ["moved", "at_marker", "routed", "store_seen"]
+const SCREENS := ["life", "succession", "sandbox", "battle"]
 
 
 ## The tip to show on `screen` ("life" or "succession"), or {} when there is none. Returns
@@ -30,7 +33,7 @@ static func current(d: GameDynasty, screen: String = "life", ctx: Dictionary = {
 			continue
 		if (step.get("done", []) as Array).any(func(p): return holds(d, str(p), ctx)):
 			continue
-		return {"id": step["id"], "text": fill(GameLocale.text("tutorial", str(step["id"]), str(step["text"])), d), "highlight": (step.get("highlight", []) as Array).duplicate()}
+		return {"id": step["id"], "text": fill(GameLocale.text("tutorial", str(step["id"]), str(step["text"])), d), "highlight": (step.get("highlight", []) as Array).duplicate(), "goal": str(step.get("goal", ""))}
 	return {}
 
 
@@ -71,6 +74,19 @@ static func holds(d: GameDynasty, predicate: String, ctx: Dictionary = {}) -> bo
 			return d.party.members.any(func(m): return GameCompanions.order_of(d, str(m["id"])) != GameCompanions.FOLLOW)
 		"night":
 			return GameDay.is_night(d)
+		"guided":   # the guided start was begun for this house (GameGoal.begin)
+			return GameGoal.guided(d)
+		"has_dead":   # the bodies of the last victory, not yet searched or left
+			return not d.loot.is_empty()
+		"hurt":
+			return float(h.hp) < float(GameData.tutorial.get("hurt_below", 0.75)) * float(h.max_hp())
+		"errand_taken":   # the first job (data/world/goals.json) is on the house's list or done
+			return d.quests.is_active(GameGoal.first_quest()) or d.quests.times_done(GameGoal.first_quest()) > 0
+		"errand_ready":
+			var e := d.quests.entry(GameGoal.first_quest())
+			return not e.is_empty() and d.quests.is_complete(e)
+		"errand_paid":
+			return d.quests.times_done(GameGoal.first_quest()) > 0
 	return false
 
 
