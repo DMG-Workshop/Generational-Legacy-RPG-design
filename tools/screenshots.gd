@@ -78,6 +78,13 @@ const LOOK_SHOTS := [
 	["world_map", DESKTOP, false, "worldmap"],
 	["world_map_phone", PHONE, true, "worldmap"],
 	["world_pin", DESKTOP, false, "worldpin"],
+	["menu_pause", DESKTOP, false, "pause"],
+	["menu_pause_phone", PHONE, true, "pause"],
+	["menu_toasts", DESKTOP, false, "toasts"],
+	["menu_title_new", DESKTOP, false, "title_new"],
+	["menu_title_phone", PHONE, true, "title"],
+	["menu_options_access", DESKTOP, false, "options:access"],
+	["menu_options_phone", PHONE, true, "options:sound"],
 ]
 
 ## The pictures for a store page: the same screens, bigger. Nothing compares them; they are made on demand.
@@ -213,6 +220,15 @@ func _shoot(shot: Array) -> Image:
 		what = _arg("show", "")
 	if what == "title":
 		app.show_title()
+	elif what == "title_new":   # (look-only) the founding form, the title's second page
+		app.show_title()
+		await _frames(2)
+		app.current._show_page("new")
+	elif what.begins_with("options:"):   # (look-only) the options on one tab
+		app.show_title()
+		await _frames(2)
+		var om: Control = app.open_menu()
+		om._select(what.get_slice(":", 1))
 	else:
 		_game()
 		await _screen(what)
@@ -263,6 +279,14 @@ func _screen(what: String) -> void:
 			pass
 		"menu":
 			app.open_menu()
+		"pause", "toasts":   # (look-only) the open world paused, or with news up
+			await _open_world("homestead")
+			if what == "pause":
+				app.current.open_pause()
+			else:
+				for line in ["You find a coin.", "Hartwin greets you.", "The forge is hot.", "Rain begins."]:
+					app.current.last_line = line
+					await _frames(2)
 		"report":
 			app.open_menu()
 			app.open_report()

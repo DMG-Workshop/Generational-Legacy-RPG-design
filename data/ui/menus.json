@@ -8,6 +8,7 @@
     "width": 340,
     "margin": 12,
     "top": 64,
+    "bottom": 16,
     "gap": 6,
     "history_max": 60,
     "font_size": 15,

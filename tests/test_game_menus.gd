@@ -128,12 +128,13 @@ func test_toast() -> void:
 	t.say("News 4")
 	ok(Toast.history.size() == 5, "the same line twice in a row is told once")
 	# stacked down from the top-right corner, none on top of another
+	await _frames(3)   # their text wraps to the width once they are laid out
 	var nodes: Array = t.get_children().filter(func(c): return not c.is_queued_for_deletion())
 	var ys: Array = nodes.map(func(n): return (n as Control).position.y)
 	var sorted := ys.duplicate()
 	sorted.sort()
-	ok(ys == sorted and ys[0] >= float(MenuKit.toast("top")) - 0.5, "they stack downwards from the top (%s)" % str(ys))
-	await _frames(2)
+	var last: Control = nodes.back()
+	ok(ys == sorted and last.position.y + last.get_combined_minimum_size().y <= 720.0 - float(MenuKit.toast("bottom")) + 0.5 and ys[0] > 360.0, "on a desktop they stack up from the bottom-right corner, the newest nearest it (%s)" % str(ys))
 	for n in nodes:
 		var r := Rect2((n as Control).position, (n as Control).size)
 		ok(r.end.x <= 1280.0 + float(MenuKit.toast("slide_px")) + 0.5 and r.position.x >= 640.0, "a toast sits at the right edge (a new one is still sliding in): %s" % str(r))
@@ -165,6 +166,12 @@ func test_toast() -> void:
 	for c in t.get_children():
 		kinds.append(c.get_meta("toast_kind", ""))
 	ok(kinds.has("good") and kinds.has("bad"), "a toast has a kind that colours it")
+	# a touch screen has the stick and buttons at the bottom: the news goes to the top
+	UiSettings.force_touch = 1
+	t._process(100.0)
+	t.say("Top news")
+	ok(t.get_children().back().position.y <= float(MenuKit.toast("top")) + 0.5, "on touch the toasts stack at the top-right instead")
+	UiSettings.force_touch = -1
 	host.queue_free()
 	await _frames(2)
 

@@ -183,6 +183,7 @@ func _ready() -> void:
 	buttons.add_theme_constant_override("separation", 10)
 	begin_row = buttons
 	new_box.add_child(buttons)
+	new_box.move_child(buttons, 1)   # Begin sits right under the form, the slots (where it goes) under it
 	var begin := Kit.button("Begin Dynasty", _start, Vector2(0, 48))
 	begin.set_meta("skin_on", UiSkin.screen_active(begin))   # the crimson plank: the one to press
 	begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL

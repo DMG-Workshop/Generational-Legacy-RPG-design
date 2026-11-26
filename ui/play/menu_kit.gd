@@ -49,7 +49,7 @@ static func validate() -> Array:
 	if not bad.is_empty():
 		return bad
 	var t: Dictionary = d["toast"]
-	for k in ["max_visible", "seconds", "fade_seconds", "slide_px", "width", "margin", "top", "gap", "history_max", "font_size", "repeat_seconds"]:
+	for k in ["max_visible", "seconds", "fade_seconds", "slide_px", "width", "margin", "top", "bottom", "gap", "history_max", "font_size", "repeat_seconds"]:
 		if not t.has(k) or typeof(t[k]) not in [TYPE_INT, TYPE_FLOAT]:
 			bad.append("menus.json: toast.%s must be a number" % k)
 		elif float(t[k]) < 0.0:

@@ -74,7 +74,7 @@ func _make(text: String, kind: String) -> PanelContainer:
 	else:
 		p.add_theme_stylebox_override("panel", Kit.style(Color(0.10, 0.09, 0.16, 0.92), 6, edge))
 	p.custom_minimum_size.x = minf(float(MenuKit.toast("width")), maxf(160.0, UiSettings.room(self).x - 2.0 * float(MenuKit.toast("margin"))))
-	var l := Kit.label(text, int(MenuKit.toast("font_size")), Kit.TEXT)
+	var l := Kit.label(text, int(MenuKit.toast("font_size")), Kit.ink(Kit.TEXT) if UiSkin.screen_active(self) else Kit.TEXT)   # ink on the parchment plate
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(l)
@@ -82,13 +82,22 @@ func _make(text: String, kind: String) -> PanelContainer:
 	return p
 
 
-## The toasts stacked down from the top-right corner, newest at the bottom. `fresh`: the newest slides in from the edge.
+## The toasts stacked in a corner, newest nearest it: the bottom-right on a desktop window (the panes keep the top corners), the
+## top-right on a touch screen or a narrow one (the bottom has the stick and the buttons). `fresh`: the newest slides in from the edge.
 func _place(fresh: bool) -> void:
 	var margin := float(MenuKit.toast("margin"))
-	var y := float(MenuKit.toast("top"))
+	var gap := float(MenuKit.toast("gap"))
+	var at_top := UiSettings.touch() or UiSettings.compact(self)
+	var heights: Array = []
+	var total := 0.0
 	for i in _shown.size():
 		var n: Control = _shown[i]["node"]
 		n.size = Vector2(n.custom_minimum_size.x, 0)
+		heights.append(maxf(n.get_combined_minimum_size().y, n.size.y))
+		total += float(heights[i]) + gap
+	var y := float(MenuKit.toast("top")) if at_top else size.y - float(MenuKit.toast("bottom")) - total + gap
+	for i in _shown.size():
+		var n: Control = _shown[i]["node"]
 		var w := n.custom_minimum_size.x
 		var x := size.x - w - margin
 		n.position.y = y
@@ -105,7 +114,7 @@ func _place(fresh: bool) -> void:
 			tw.finished.connect(func():
 				if is_instance_valid(n):
 					n.remove_meta("sliding"))
-		y += maxf(n.get_combined_minimum_size().y, n.size.y) + float(MenuKit.toast("gap"))
+		y += float(heights[i]) + gap
 
 
 func _process(delta: float) -> void:
