@@ -29,6 +29,15 @@ static func target_of(heir: Vector2i) -> Vector2:
 	return Vector2(heir) + Vector2(0.5, 0.5)
 
 
+## The view's centre less the heir's tile corner, as drawn. A heir who has been put somewhere new since the last frame (a gate,
+## a door, a test) is where the next frame will put the view, so that is what is answered: clicks never aim at a stale view.
+func offset_for(heir: Vector2i, key: String) -> Vector2:
+	var target := target_of(heir)
+	if not started or key != space_key or (pos - target).length() > float(GameCamera.setting("snap_tiles")):
+		return target - Vector2(heir) + look
+	return centre - Vector2(heir)
+
+
 ## Puts the view on `target` at once: no glide, no look-ahead, no look offset.
 func snap_to(target: Vector2) -> void:
 	pos = target

@@ -47,7 +47,7 @@ var camera := WorldCamera.new()   # follows the heir, eases the zoom, holds the 
 ## player's look offset (the view eases back, it does not jump); `cam += v` moves the look by v.
 var cam: Vector2:
 	get:
-		return camera.centre - Vector2(sb.heir) if sb != null and camera.started else WorldCamera.target_of(sb.heir if sb != null else Vector2i.ZERO) - Vector2(sb.heir if sb != null else Vector2i.ZERO)
+		return camera.offset_for(sb.heir, sb.space) if sb != null else Vector2.ZERO
 	set(v):
 		if v == Vector2.ZERO:
 			camera.look = Vector2.ZERO
