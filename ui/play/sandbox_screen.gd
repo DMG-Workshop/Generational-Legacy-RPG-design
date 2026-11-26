@@ -35,9 +35,21 @@ const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
 const SpriteMotion := preload("res://ui/play/sprite_motion.gd")
+const Glide := preload("res://ui/play/glide.gd")
+const MoveMarker := preload("res://ui/play/move_marker.gd")
 const BAR := 56.0
 
+## Someone near the heir took a step, for the sound to answer (drawing only; see Glide): `who` is how the screen names them, `kind` heir,
+## companion, creature or villager, `ground` the kind of ground under them (a tile kind of the open world, or "floor" or "dungeon"), `foot`
+## 0 or 1 in turn, `speed` their pace in tiles a second and `near` their distance from the heir in tiles.
+signal footstep(who: String, kind: String, ground: String, foot: int, speed: float, near: float)
+
 var app: Node
+var glide := Glide.new()           # what is drawn gliding between tiles, bobbing and stepping (the look only)
+var move_marker := MoveMarker.new()   # the mark where a click walks to
+var heir_off := Vector2.ZERO       # where the heir is drawn less where they are, in tiles: the view follows it (the look only)
+var running := false               # whether the run key is held
+var _glide_place := ""
 var sb: GameSandbox
 var zoom := 1.0           # the view's zoom (WorldInput.zoom_after keeps it within the data's limits)
 var cam := Vector2.ZERO   # the view's offset from the heir, in tiles
@@ -114,6 +126,7 @@ func _ready() -> void:
 	if not WorldInput.installed():
 		WorldInput.install()   # the app installs them at start; a screen made on its own installs them itself
 	sb = GameSandbox.start(app.dynasty)
+	glide.footstep.connect(_on_footstep)
 	_warm_figures()
 	map = Control.new()
 	map.clip_contents = true
@@ -214,6 +227,7 @@ func _process(delta: float) -> void:
 	var inp := WorldInput.read()
 	if int(inp["zoom"]) != 0:
 		zoom = WorldInput.zoom_after(zoom, int(inp["zoom"]))
+	running = bool(inp.get("run", false))
 	var look: Vector2 = inp["look"]
 	if look.length() > 0.0:
 		cam += look * float(setting("cam_tiles_per_second")) * delta
@@ -232,11 +246,11 @@ func _process(delta: float) -> void:
 		elif _walk_wait <= 0.0:
 			facing_dir = step_for(mv)
 			sb.move(facing_dir.x, facing_dir.y)
-			_walk_wait = float(GameSandbox.setting("walk_seconds"))
+			_walk_wait = Glide.step_seconds(running)
 			stepped = true
 	elif mode == "walk" and not sb.route.is_empty() and _walk_wait <= 0.0:
 		sb.walk_one()
-		_walk_wait = float(GameSandbox.setting("walk_seconds"))
+		_walk_wait = Glide.step_seconds(running)
 		stepped = true
 		if _use_when_there and sb.route.is_empty():   # a double click out of reach: they have arrived, so use it
 			_use_when_there = false
@@ -283,6 +297,7 @@ func _process(delta: float) -> void:
 		_dig()
 	if inp["build"]:
 		_build()
+	_glide_frame(delta)
 	_refresh_status()
 	_sync_tiles()
 	SpriteArt.begin_batch()
@@ -292,6 +307,43 @@ func _process(delta: float) -> void:
 	glow_layer.queue_redraw()
 	sky_layer.queue_redraw()
 	queue_redraw()
+
+
+## Moves the look of the walk on by `delta`: the heir's drawn place (the view follows it), the mark of a click, and a new place's
+## figures start where they stand.
+func _glide_frame(delta: float) -> void:
+	var place := "%s|%d" % [sb.space, sb.storey()]
+	if place != _glide_place:
+		_glide_place = place
+		glide.clear()
+	glide.advance(delta)
+	heir_off = glide.at("heir", Vector2(sb.heir), "heir") - Vector2(sb.heir)
+	move_marker.update(sb.route.back() if not sb.route.is_empty() else null, sb.heir, sb.walk_goal != GameTravel.NONE, delta)
+
+
+## A footstep of the glide, with the ground under it, for whoever listens to `footstep`.
+func _on_footstep(key: String, kind: String, foot: int, tile: Vector2i, speed: float, near: float) -> void:
+	footstep.emit(key, kind, _ground_at(tile), foot, speed, near)
+
+
+## The kind of ground under a tile: the open world's own kind, or "floor" indoors and "dungeon" below.
+func _ground_at(t: Vector2i) -> String:
+	if GameDungeons.is_dungeon(sb.space):
+		return "dungeon"
+	if sb.space != "world" or sb.storey() > 0:
+		return "floor"
+	var d: GameDynasty = app.dynasty
+	return TileView.kind_for(GameWorldGen.tile(d, t.x, t.y), GameBuild.kind_at(d, t.x, GameBuild.SURFACE, t.y))
+
+
+## Where `key` is drawn, in tiles, given where it is.
+func _gpos(key: String, kind: String, x: float, z: float) -> Vector2:
+	return glide.at(key, Vector2(x, z), kind)
+
+
+## How far (in pixels) `key` is lifted by its stride.
+func _lift(key: String, cell: float) -> float:
+	return glide.lift(key) * cell
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -469,7 +521,7 @@ func _thing_menu(p: Vector2, area: Vector2, at: Vector2) -> void:
 	var acts := sb.thing_actions(named)
 	if acts.is_empty():
 		return
-	var tile := tile_at(p, area, sb.heir, cam, _cell())
+	var tile := tile_at(p, area, sb.heir, cam + heir_off, _cell())
 	var menu := PopupMenu.new()
 	menu.set_meta("modal", true)
 	if skinned:
@@ -527,7 +579,7 @@ static func walk_toward(p: Vector2, area: Vector2, cam_tiles: Vector2, cell: flo
 
 ## The point of the open world under a screen position, in tiles (fractions kept).
 func _point_at(p: Vector2, area: Vector2) -> Vector2:
-	return Vector2(sb.heir) + cam + (p - area * 0.5) / _cell() + Vector2(0.5, 0.5)
+	return Vector2(sb.heir) + cam + heir_off + (p - area * 0.5) / _cell() + Vector2(0.5, 0.5)
 
 
 ## A double click, with a mouse: use what is clicked. Beside the heir (or on them), Use at once; further off, walk there and use it
@@ -535,7 +587,7 @@ func _point_at(p: Vector2, area: Vector2) -> Vector2:
 func _double_click(p: Vector2, area: Vector2) -> void:
 	if p.y < 0.0 or p.y > area.y or mode != "walk":
 		return
-	var tile := tile_at(p, area, sb.heir, cam, _cell())
+	var tile := tile_at(p, area, sb.heir, cam + heir_off, _cell())
 	var named := sb.name_at(_point_at(p, area).x, _point_at(p, area).y)
 	if named.is_empty():
 		_tap(p, area)   # bare ground: a double click only walks there, like a click
@@ -561,7 +613,7 @@ func _tap(p: Vector2, area: Vector2) -> void:
 	if p.y < 0.0 or p.y > area.y:
 		return
 	_use_when_there = false
-	var tile := tile_at(p, area, sb.heir, cam, _cell())
+	var tile := tile_at(p, area, sb.heir, cam + heir_off, _cell())
 	if mode == "walk" and not UiSettings.touch():   # with a mouse, a click on a thing names it, over it, and goes no further
 		var point := _point_at(p, area)
 		var named := sb.name_at(point.x, point.y)
@@ -1295,7 +1347,7 @@ func _sync_tiles() -> void:
 	var d: GameDynasty = app.dynasty
 	var area := Vector2(size.x, size.y - BAR)
 	var cell := _cell()
-	var centre := Vector2(sb.heir) + cam
+	var centre := Vector2(sb.heir) + cam + heir_off
 	var light := clampf(float(GameDay.look(d)["light"]), float(setting("dim_floor")), 1.0)
 	map.size = area
 	var indoors := sb.space != "world"
@@ -1321,13 +1373,15 @@ func _paint(c: Control) -> void:
 	var cell := _cell()
 	var colors: Dictionary = GameSandbox.data()["colors"]
 	var look := GameDay.look(d)
-	var centre := Vector2(sb.heir) + cam
+	var centre := Vector2(sb.heir) + cam + heir_off
 	if sb.space == "world":
 		WorldLook.paint_grade(c, Rect2(origin, area), look)   # the sun's warmth by day, the night's tint as the light fails (indoors: no night, and none of the open world's route, creatures or companions to draw)
 	var outdoors := sb.space == "world"   # indoors none of the open world's route, creatures or companions is on this floor
 	for i in range(sb.route.size() if outdoors else 0):
 		var rp := origin + (Vector2(sb.route[i]) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 		c.draw_circle(rp, maxf(2.0, cell * 0.12), _rgb(colors["route"]))
+	if outdoors and move_marker.active:
+		move_marker.paint(c, origin + (Vector2(move_marker.tile) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5, cell, _rgb(colors["route"]))   # where a click walks to
 	if outdoors:
 		_paint_standing(c, origin, area, centre, cell, colors, float(look["light"]))
 	elif GameDungeons.is_dungeon(sb.space):
@@ -1361,7 +1415,7 @@ func _paint_glow(c: Control) -> void:
 		return
 	var area := Vector2(size.x, size.y - BAR)
 	var cell := _cell()
-	var centre := Vector2(sb.heir) + cam
+	var centre := Vector2(sb.heir) + cam + heir_off
 	var half := area / (2.0 * cell) + Vector2(4, 4)
 	var view := Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0))
 	WorldLook.paint_glow(c, WorldLook.glow_sources(app.dynasty, tile_view, view), look, cell, Vector2(0, BAR), area, centre)
@@ -1439,11 +1493,11 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				c.draw_texture_rect(DungeonEntranceArt.texture(str(e["place"])), Rect2(eat, Vector2(er.size) * cell), false, dim)
 			"villager":
 				var w: Dictionary = it[2]
-				var p := origin + (Vector2(float(w["x"]), float(w["z"])) - centre) * cell + area * 0.5
+				var p := origin + (_gpos("v%s" % w["id"], "villager", float(w["x"]), float(w["z"])) - centre) * cell + area * 0.5
 				var tex := _villager_tex(w)
 				if tex != null:
 					var fs := _figure_size(tex, cell) * float(w["scale"])
-					_stand(c, _shown(_villager_frames(w), tex, "v%s" % w["id"], Vector2(float(w["x"]), float(w["z"]))), p + Vector2(0, cell * 0.3), fs, _villager_flip(w, int(w["dx"]) < 0), dim, cell)
+					_stand(c, _shown(_villager_frames(w), tex, "v%s" % w["id"], Vector2(float(w["x"]), float(w["z"]))), p + Vector2(0, cell * 0.3), fs, _villager_flip(w, int(w["dx"]) < 0), dim, cell, _lift("v%s" % w["id"], cell))
 					_bubble_pos[str(w["id"])] = p + Vector2(0, cell * 0.3 - fs.y)
 			"site":
 				var t: Dictionary = it[2]
@@ -1466,7 +1520,7 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				var a: Dictionary = it[2]
 				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
 					continue   # under a whole roof: not seen
-				var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
+				var p := origin + (_gpos("c%s" % a["uid"], "creature", float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 				var tex: Texture2D = SpriteArt.creature(str(a["id"]))
 				if tex == null:
 					c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
@@ -1474,14 +1528,14 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					var s := cell / 16.0 * float(setting("creature_pixel"))
 					var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
 					var h := w * float(tex.get_height()) / float(tex.get_width())
-					_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell)   # the art faces left
+					_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), dim, cell, _lift("c%s" % a["uid"], cell))   # the art faces left
 				if GameSandbox.level_of(a) > 0:
 					tags.append([p, a])
 			"companion":
 				var a: Dictionary = it[2]
 				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
 					continue
-				var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
+				var p := origin + (_gpos("p%s" % a["id"], "companion", float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 				var tex: Texture2D = _party_figure(str(a["id"]))
 				if str(a["id"]) == selected_companion:   # the chosen one stands in a ring, and their post is marked
 					c.draw_arc(p + Vector2(0, cell * 0.3), cell * 0.7, 0.0, TAU, 28, Kit.ACCENT, 2.0)
@@ -1491,14 +1545,14 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 				if tex == null:
 					c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 				else:
-					_stand(c, _shown(_party_frames(str(a["id"])), tex, "p%s" % a["id"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell)   # the art faces right
+					_stand(c, _shown(_party_frames(str(a["id"])), tex, "p%s" % a["id"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), dim, cell, _lift("p%s" % a["id"], cell))   # the art faces right
 			"heir":
-				var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
+				var p := origin + (Vector2(sb.heir) + heir_off + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 				var tex: Texture2D = SpriteArt.figure(d.heir)
 				if tex == null:
 					c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 				else:
-					_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell)
+					_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, dim, cell, _lift("heir", cell))
 	for t in tags:
 		_paint_level_tag(c, t[0], t[1], cell)
 	_paint_bubbles(c)
@@ -1653,15 +1707,15 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 				_stand(c, _shown(SpriteArt.hero_frames(str(pr["race"]), str(pr["class"]), Color.html(str(pr["color"]))), tex, "d%s" % pr.get("id", "%s,%s" % [pr["x"], pr["z"]]), Vector2(float(pr["x"]), float(pr["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(pr["race"])), false, Color.WHITE, cell)
 		elif str(it[1]) == "companion":
 			var a: Dictionary = it[2]
-			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
+			var p := origin + (_gpos("p%s" % a["id"], "companion", float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 			var tex: Texture2D = _party_figure(str(a["id"]))
 			if tex == null:
 				c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["companion"]))
 			else:
-				_stand(c, _shown(_party_frames(str(a["id"])), tex, "p%s" % a["id"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), Color.WHITE, cell)
+				_stand(c, _shown(_party_frames(str(a["id"])), tex, "p%s" % a["id"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * _party_scale(str(a["id"])), not _faces_right("p%s" % a["id"], float(a["x"])), Color.WHITE, cell, _lift("p%s" % a["id"], cell))
 		elif str(it[1]) == "foe":
 			var a: Dictionary = it[2]
-			var p := origin + (Vector2(float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
+			var p := origin + (_gpos("c%s" % a["uid"], "creature", float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 			var tex: Texture2D = SpriteArt.creature(str(a["id"]))
 			if tex == null:
 				c.draw_circle(p, maxf(2.0, cell * 0.3), _rgb(colors["creature"]))
@@ -1669,14 +1723,14 @@ func _paint_dungeon(c: Control, origin: Vector2, area: Vector2, centre: Vector2,
 				var s := cell / 16.0 * float(setting("creature_pixel"))
 				var w := minf(tex.get_width() * s, cell * float(setting("creature_max_tiles")))
 				var h := w * float(tex.get_height()) / float(tex.get_width())
-				_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), Color.WHITE, cell)
+				_stand(c, _shown(SpriteArt.creature_frames(str(a["id"])), tex, "c%s" % a["uid"], Vector2(float(a["x"]), float(a["z"]))), p + Vector2(0, cell * 0.3), Vector2(w, h), _faces_right("c%s" % a["uid"], float(a["x"])), Color.WHITE, cell, _lift("c%s" % a["uid"], cell))
 		else:
-			var p := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
+			var p := origin + (Vector2(sb.heir) + heir_off + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 			var tex: Texture2D = SpriteArt.figure(d.heir)
 			if tex == null:
 				c.draw_circle(p, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 			else:
-				_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell)
+				_stand(c, _shown(SpriteArt.figure_frames(d.heir), tex, "heir", Vector2(sb.heir)), p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell, _lift("heir", cell))
 	var th := GameDungeonArt.theme(sb.space)
 	if th.is_empty():
 		return
@@ -1716,12 +1770,12 @@ func _paint_interior(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 			else:
 				_stand(c, tex, p + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(str(service["race"])), false, Color.WHITE, cell)
 		else:
-			var hp := origin + (Vector2(sb.heir) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
+			var hp := origin + (Vector2(sb.heir) + heir_off + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 			var tex: Texture2D = SpriteArt.figure(d.heir)
 			if tex == null:
 				c.draw_circle(hp, maxf(3.0, cell * 0.4), _rgb(colors["heir"]))
 			else:
-				_stand(c, tex, hp + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell)
+				_stand(c, tex, hp + Vector2(0, cell * 0.3), _figure_size(tex, cell) * GameVillagers.scale_of(d.heir.race_id), facing_dir.x < 0, Color.WHITE, cell, _lift("heir", cell))
 
 
 ## Makes the figures of everyone who may be drawn now, together: the villagers, the heir and the companions (a figure first made while
@@ -1852,11 +1906,11 @@ func _figure_size(tex: Texture2D, cell: float) -> Vector2:
 
 ## Draws a sprite standing with its feet at `feet`, on a shadow, turned the other way when `flip`. A turned figure is drawn through a transform that mirrors
 ## it about the middle of its box, so it stands on the same ground as the unturned one (a rect with a negative width does not: it is drawn a box to the right).
-func _stand(c: Control, tex: Texture2D, feet: Vector2, box: Vector2, flip: bool, tint: Color, cell: float) -> void:
+func _stand(c: Control, tex: Texture2D, feet: Vector2, box: Vector2, flip: bool, tint: Color, cell: float, lift: float = 0.0) -> void:
 	c.draw_set_transform(feet, 0.0, Vector2(1.0, 0.4))
 	c.draw_circle(Vector2.ZERO, box.x * 0.4, Color(0, 0, 0, float(setting("shadow_alpha"))))
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	var at := feet - Vector2(box.x * 0.5, box.y - cell * 0.1)
+	var at := feet - Vector2(box.x * 0.5, box.y - cell * 0.1 + lift)   # `lift`: the stride's bob, the shadow stays on the ground
 	if flip:
 		c.draw_set_transform(at + Vector2(box.x, 0.0), 0.0, Vector2(-1.0, 1.0))
 		c.draw_texture_rect(tex, Rect2(Vector2.ZERO, box), false, tint)
