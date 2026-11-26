@@ -35,12 +35,24 @@ const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
 const SpriteMotion := preload("res://ui/play/sprite_motion.gd")
+const WorldCamera := preload("res://ui/play/world_camera.gd")
 const BAR := 56.0
 
 var app: Node
 var sb: GameSandbox
 var zoom := 1.0           # the view's zoom (WorldInput.zoom_after keeps it within the data's limits)
-var cam := Vector2.ZERO   # the view's offset from the heir, in tiles
+var camera := WorldCamera.new()   # follows the heir, eases the zoom, holds the view inside the world (never saved)
+## The view's offset from the heir's tile corner, in tiles, as drawn (the follow's glide, the look-ahead and the numpad's look
+## all in it: the view is centred on Vector2(sb.heir) + cam). Reading it gives the centre now; `cam = Vector2.ZERO` drops the
+## player's look offset (the view eases back, it does not jump); `cam += v` moves the look by v.
+var cam: Vector2:
+	get:
+		return camera.centre - Vector2(sb.heir) if sb != null and camera.started else WorldCamera.target_of(sb.heir if sb != null else Vector2i.ZERO) - Vector2(sb.heir if sb != null else Vector2i.ZERO)
+	set(v):
+		if v == Vector2.ZERO:
+			camera.look = Vector2.ZERO
+		else:
+			camera.look += v - cam
 var facing_dir := Vector2i(0, 1)
 var mode := "walk"          # "walk" (the heir moves) or "build" (the stick aims a piece and the bar places it)
 var build_kind := "wall"    # the piece the Place button puts down
@@ -115,6 +127,8 @@ func _ready() -> void:
 		WorldInput.install()   # the app installs them at start; a screen made on its own installs them itself
 	sb = GameSandbox.start(app.dynasty)
 	_warm_figures()
+	zoom = WorldCamera.saved_zoom(zoom)   # the zoom the player last chose (settings.cfg, never the save)
+	camera.stored_zoom = zoom
 	map = Control.new()
 	map.clip_contents = true
 	map.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -213,7 +227,7 @@ func _process(delta: float) -> void:
 		return   # the workshop is open: the world waits
 	var inp := WorldInput.read()
 	if int(inp["zoom"]) != 0:
-		zoom = WorldInput.zoom_after(zoom, int(inp["zoom"]))
+		camera.zoom_by(zoom, int(inp["zoom"]))   # eased in _update_camera
 	var look: Vector2 = inp["look"]
 	if look.length() > 0.0:
 		cam += look * float(setting("cam_tiles_per_second")) * delta
@@ -244,7 +258,7 @@ func _process(delta: float) -> void:
 	elif _use_when_there and sb.route.is_empty():
 		_use_when_there = false
 	if stepped:
-		cam = Vector2.ZERO   # the view follows the heir while they walk
+		cam = Vector2.ZERO   # a step drops the look offset; the camera follows the heir on its own
 	_greet_wait -= delta
 	if sb.space == "world" and mode == "walk" and (stepped or _greet_wait <= 0.0):
 		_greet_wait = 1.0
@@ -284,6 +298,7 @@ func _process(delta: float) -> void:
 	if inp["build"]:
 		_build()
 	_refresh_status()
+	_update_camera(delta, stepped)
 	_sync_tiles()
 	SpriteArt.begin_batch()
 	_warm_frames()   # a creature that has just come into the world: its frames are made before the draw, never in it
@@ -305,6 +320,8 @@ func _gui_input(event: InputEvent) -> void:
 		var sd := event as InputEventScreenDrag
 		fingers.drag(sd.index, sd.position - Vector2(0, BAR))
 		zoom = fingers.pinch(zoom)
+		if fingers.pinching():
+			camera.zoom_goal = -1.0   # the fingers set the zoom; no easing fights them
 		queue_redraw()
 		return
 	if event is InputEventMouseButton and not UiSettings.touch():
@@ -527,7 +544,7 @@ static func walk_toward(p: Vector2, area: Vector2, cam_tiles: Vector2, cell: flo
 
 ## The point of the open world under a screen position, in tiles (fractions kept).
 func _point_at(p: Vector2, area: Vector2) -> Vector2:
-	return Vector2(sb.heir) + cam + (p - area * 0.5) / _cell() + Vector2(0.5, 0.5)
+	return Vector2(sb.heir) + cam + (p - area * 0.5) / _cell()
 
 
 ## A double click, with a mouse: use what is clicked. Beside the heir (or on them), Use at once; further off, walk there and use it
@@ -1288,6 +1305,17 @@ func _pin_line() -> String:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0))
+
+
+## One frame of the camera: the zoom eases to where the wheel or keys asked, the view follows the heir (put on them at once after a
+## change of space), and the zoom is remembered once it settles. Reduced motion: no easing.
+func _update_camera(delta: float, stepped: bool) -> void:
+	zoom = camera.zoom_step(zoom, delta)
+	var area := Vector2(size.x, size.y - BAR)
+	var cell := _cell()
+	var key := sb.space
+	camera.update(delta, WorldCamera.target_of(sb.heir), facing_dir, stepped, key, area * 0.5 / cell, camera.bounds_for(key, sb.interior), cell, area)
+	camera.remember_zoom(zoom, not fingers.pinching())
 
 
 ## Keeps the tile chunks of the view and puts them where the view is (the heir at the middle, the camera's offset, the zoom, the light).
