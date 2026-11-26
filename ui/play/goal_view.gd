@@ -122,6 +122,32 @@ static func bearing(d: GameDynasty, from: Vector2i, radius: int) -> Dictionary:
 	return GameMiniMap.bearing_to(from, g["tile"], str(g["label"]), radius)
 
 
+# ---------------------------------------------------------------- room beside the panes
+
+## The part of `map_rect` that the panes that stay up (status and minimap, in the sides) leave free, for arrows at the edge of the view
+## to stand in, not under a pane. Only the panes on each side count; a screen with none (a phone) has all of it.
+static func free_rect(host: Control, map_rect: Rect2) -> Rect2:
+	var left := map_rect.position.x
+	var right := map_rect.end.x
+	if host != null:
+		for c in host.get_children():
+			if not (c is Control) or not c.has_meta("pane_hud") or c.is_queued_for_deletion() or not (c as Control).visible:
+				continue
+			var r := Rect2((c as Control).position, (c as Control).size)
+			if map_rect.size.y <= 100.0:   # a thin lane (the tip strip's): the panes it would run into
+				if not r.intersects(map_rect):
+					continue
+			elif r.get_center().y > map_rect.get_center().y:   # the whole view (the arrows'): the panes up in its top half
+				continue
+			if r.get_center().x < map_rect.get_center().x:
+				left = maxf(left, r.end.x + 6.0)
+			else:
+				right = minf(right, r.position.x - 6.0)
+	if right - left < 160.0:
+		return map_rect
+	return Rect2(Vector2(left, map_rect.position.y), Vector2(right - left, map_rect.size.y))
+
+
 # ---------------------------------------------------------------- the tip strip
 
 ## Keeps the open world's tip strip (one row, the first-heir tutorial's "sandbox" steps) up to date on `host`: made when a tip applies,
@@ -129,6 +155,7 @@ static func bearing(d: GameDynasty, from: Vector2i, radius: int) -> Dictionary:
 static func sync_tip(host: Control, d: GameDynasty, top: float) -> Control:
 	var strip := host.get_node_or_null("TutorialTip") as Control
 	var tip := GameTutorial.current(d, "sandbox", facts) if UiSettings.tutorial_on() and d.gen <= 1 else {}
+	var lane := free_rect(host, Rect2(8.0, top, host.size.x - 16.0, 40.0))   # between the status pane and the minimap
 	if tip.is_empty():
 		if strip != null:
 			strip.queue_free()
@@ -136,13 +163,14 @@ static func sync_tip(host: Control, d: GameDynasty, top: float) -> Control:
 		_tip_id = ""
 		return null
 	if strip != null and _tip_id == str(tip["id"]):
+		strip.position = lane.position
 		return strip
 	if strip != null:
 		strip.queue_free()
 		host.remove_child(strip)
-	var width := maxf(160.0, minf(host.size.x - 16.0, 620.0))
+	var width := maxf(160.0, minf(lane.size.x, 620.0))
 	strip = TutorialTip.make(tip, width, func(): _skip(host))
-	strip.position = Vector2(8.0, top)
+	strip.position = lane.position
 	strip.custom_minimum_size.x = width
 	strip.size = Vector2(width, 0)
 	host.add_child(strip)
@@ -196,7 +224,7 @@ static func paint_world(c: Control, d: GameDynasty, origin: Vector2, area: Vecto
 	var p := origin + (Vector2(tile) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5
 	var col := Kit.good()
 	var ink := Color(0.05, 0.04, 0.08)
-	var rect := Rect2(origin, area).grow(-18.0)
+	var rect := free_rect(c.get_parent() as Control, Rect2(origin, area)).grow(-18.0)
 	var font := ThemeDB.fallback_font
 	if rect.has_point(p):
 		var bob := _pulse() * 3.0
@@ -210,10 +238,11 @@ static func paint_world(c: Control, d: GameDynasty, origin: Vector2, area: Vecto
 		c.draw_style_box(Kit.style(Color(0.1, 0.09, 0.14, 0.88), 5, col), box)
 		c.draw_string(font, box.position + Vector2(6.0, sz.y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.92, 0.9, 0.96))
 		return
-	var dir := (p - (origin + area * 0.5)).normalized()
+	var mid := rect.get_center()
+	var dir := (p - mid).normalized()
 	var half := rect.size * 0.5
 	var t := minf(half.x / maxf(absf(dir.x), 0.0001), half.y / maxf(absf(dir.y), 0.0001))
-	var at := origin + area * 0.5 + dir * t
+	var at := mid + dir * t
 	draw_pointer(c, at, dir, 11.0, col, ink)
 	var n := GameTravel.tiles(Vector2i(centre), tile)
 	var text := "%s  %d" % [str(g["label"]), n]

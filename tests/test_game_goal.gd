@@ -45,6 +45,7 @@ func _run() -> void:
 	test_first_fight()
 	test_hands_off()
 	await test_screen()
+	await test_phone()
 	DirAccess.remove_absolute(UiSettings.path)
 	print("goal tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -383,7 +384,7 @@ func test_screen() -> void:
 	ok(GameGoal.guided(d) and GameSmoke.count(d.heir) >= 1, "the open world began the guided start: its flag and a smoke pot")
 	var strip := map.get_node_or_null("TutorialTip") as Control
 	ok(strip != null and "marker" in str((strip.find_child("TipText", true, false) as Label).text), "the tip strip says to walk to the marker")
-	ok(strip != null and strip.position.y > 40.0 and strip.position.x < 40.0, "it sits at the top left of the map")
+	ok(strip != null and strip.position.y > 40.0 and strip.position.y < 120.0, "it sits along the top of the map, beside the panes")
 	var status: Control = null
 	var mini: Control = null
 	for c in map.get_children():
@@ -438,3 +439,32 @@ func test_screen() -> void:
 	UiSettings.set_tutorial(true)
 	app.queue_free()
 	await _frames(2)
+
+
+## A phone: no panes, so the goal leads the one status line, and the tip strip stays within the width of the screen.
+func test_phone() -> void:
+	UiSettings.force_touch = 1
+	UiSettings.force_mobile = 1
+	DirAccess.remove_absolute(UiSettings.path)
+	GoalView.reset()
+	root.size = Vector2i(844, 390)
+	var app: Node = GameApp.new()
+	root.add_child(app)
+	await _frames(3)
+	app.closed_badly = false
+	app.new_game("Tess", "warrior", "faetouched", 7)
+	await _frames(2)
+	app.show_sandbox()
+	await _frames(6)
+	var map: Node = app.current
+	map._hud_wait = 0.0
+	await _frames(3)
+	ok(map.status.text.contains("Goal: Walk to the marker"), "on a phone the goal leads the status line: %s" % map.status.text)
+	var strip := map.get_node_or_null("TutorialTip") as Control
+	ok(strip != null and strip.position.x >= 0.0 and strip.position.x + strip.size.x <= 844.0 + 1.0, "the tip strip stays within the screen (%s, %s)" % [str(strip.position) if strip != null else "none", str(strip.size) if strip != null else ""])
+	ok(strip != null and strip.size.y <= 390.0 * 0.35, "and takes no more than a third of the height")
+	app.queue_free()
+	await _frames(2)
+	UiSettings.force_touch = -1
+	UiSettings.force_mobile = -1
+	root.size = Vector2i(1280, 720)
