@@ -98,7 +98,7 @@ func _place(fresh: bool) -> void:
 			n.set_meta("sliding", true)
 			n.position.x = x + float(MenuKit.toast("slide_px"))
 			n.modulate.a = 0.0
-			var tw := create_tween()
+			var tw := n.create_tween()   # bound to the toast: it goes with it
 			tw.set_parallel(true)
 			tw.tween_property(n, "position:x", x, UiSettings.motion_time(0.18))
 			tw.tween_property(n, "modulate:a", 1.0, UiSettings.motion_time(0.18))

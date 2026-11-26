@@ -209,8 +209,10 @@ func test_game_menu_backup() -> void:
 	await _frames(2)
 	_press("Continue")
 	await _frames(3)
-	app.open_menu()
+	var gm: Control = app.open_menu()
 	await _frames(3)
+	gm._select("save")
+	await _frames(2)
 	Clipboard.fake_text = ""
 	ok(_press("Copy backup"), "the game menu has Copy backup")
 	await _frames(2)

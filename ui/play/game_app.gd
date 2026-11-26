@@ -19,6 +19,7 @@ const BattleView := preload("res://ui/play/battle_view.gd")
 const SuccessionScreen := preload("res://ui/play/succession_screen.gd")
 const EndingScreen := preload("res://ui/play/ending_screen.gd")
 const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
+const Toast := preload("res://ui/play/toast.gd")
 
 var dynasty: GameDynasty
 var slot := 1   # the save slot in use (GameSaves); GameDynasty.save_path is its file
@@ -127,6 +128,7 @@ func use_slot(n: int) -> void:
 
 
 func show_title() -> void:
+	Toast.history.clear()   # the news of the last house is not the next one's
 	var s := TitleScreen.new()
 	s.app = self
 	_swap(s)
@@ -379,7 +381,7 @@ func _top_closable(n: Node) -> Control:
 		var inner := _top_closable(c)
 		if inner != null:
 			return inner
-		if c.has_meta("back_close"):
+		if c.has_meta("back_close") and not c.has_meta("pane_hud"):   # the panes that stay up (status, nearby, journal) are not closed by Escape
 			return c
 		if c.has_meta("modal"):   # waits for an answer: back opens the menu over it instead
 			return null

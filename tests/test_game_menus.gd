@@ -128,7 +128,7 @@ func test_toast() -> void:
 	t.say("News 4")
 	ok(Toast.history.size() == 5, "the same line twice in a row is told once")
 	# stacked down from the top-right corner, none on top of another
-	var nodes: Array = t.get_children()
+	var nodes: Array = t.get_children().filter(func(c): return not c.is_queued_for_deletion())
 	var ys: Array = nodes.map(func(n): return (n as Control).position.y)
 	var sorted := ys.duplicate()
 	sorted.sort()
@@ -136,7 +136,7 @@ func test_toast() -> void:
 	await _frames(2)
 	for n in nodes:
 		var r := Rect2((n as Control).position, (n as Control).size)
-		ok(r.end.x <= 1280.0 + 0.5 and r.position.x >= 640.0, "a toast sits at the right edge, inside the screen")
+		ok(r.end.x <= 1280.0 + float(MenuKit.toast("slide_px")) + 0.5 and r.position.x >= 640.0, "a toast sits at the right edge (a new one is still sliding in): %s" % str(r))
 	# they fade away by themselves
 	t._process(float(MenuKit.toast("seconds")) + float(MenuKit.toast("fade_seconds")) + 0.1)
 	ok(t.count() == 0, "toasts go when their time is up")
