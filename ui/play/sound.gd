@@ -16,6 +16,7 @@ extends Node
 
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const SoundScape := preload("res://ui/play/sound_scape.gd")
+const TouchHint := preload("res://ui/play/touch_hint.gd")
 const PATH := "res://data/ui/sound.json"
 const KINDS := ["sound", "music", "ambience"]   # the three settings: sound effects, music and the beds under it
 const RESULTS := ["victory", "defeat", "fled"]   # how a fight can end (GameBattle.result)
@@ -35,6 +36,7 @@ var playing := ""           # the track sounding now, "" for none
 var wanted := ""            # the track the screens last asked for, played when music is switched on
 var app: Node               # the game app (set by it): the screen and dynasty the soundscape follows; null for none
 var clock := -1.0           # tests: the time in seconds the soundscape reads instead of the real one (-1 for the real one)
+var force_threads := false   # tests: build on a worker thread even with no output
 var instant_fades := false  # tracks and beds swell at once (set when there is nothing to hear them on)
 var _voices: Array = []
 var _fx: Array = []         # the pool for everything but the battle: the interface, footsteps, the world
@@ -55,6 +57,10 @@ var _last_step := -10.0
 var _alt := false
 var _ext_until := -10.0     # the time until which footsteps came from outside, so the screen's own are not added
 var _last_hover := -10.0
+var _last_tab := -10.0
+var _hovered: Control
+var _last_steps := {}      # walker -> the time of its last step heard
+var _signal_steps := false # the screen tells its own steps (its `footstep` signal), so none are found from tile changes
 var _quiet_until := -10.0
 var _screen: Node
 var _watch_wait := 0.0
@@ -442,7 +448,7 @@ func event(ev: Dictionary) -> void:
 
 ## A sound of the interface, the ground or the world, on a voice of its own so it never cuts a fight's: nothing for a
 ## name that is no cue or with sound effects off, and (with a sound output) nothing yet for one still being built.
-func fx(name: String, pitch: float = 1.0) -> bool:
+func fx(name: String, pitch: float = 1.0, db_extra: float = 0.0) -> bool:
 	if not data()["cues"].has(name):
 		return false
 	_caption_cue(name)
@@ -457,7 +463,7 @@ func fx(name: String, pitch: float = 1.0) -> bool:
 	_fx_next += 1
 	var jitter := float(data()["pitch_jitter"])
 	p.stream = stream(name)
-	p.volume_db = db("sound")
+	p.volume_db = db("sound") + db_extra
 	p.pitch_scale = pitch * (1.0 + _dice.randf_range(-jitter, jitter))
 	if has_output():
 		p.play()
@@ -473,7 +479,7 @@ func prepare(name: String) -> bool:
 		return true
 	if def_of(name).is_empty():
 		return false
-	if not has_output():
+	if not has_output() and not force_threads:
 		return stream(name) != null
 	if not _jobs.has(name):
 		_jobs[name] = WorkerThreadPool.add_task(_build_job.bind(name, def_of(name).duplicate(true), rate_of(name)))
@@ -704,10 +710,8 @@ func quiet() -> void:
 func _on_node(n: Node) -> void:
 	if n is BaseButton:
 		_wire_button(n)
-	elif n is TabBar:
-		n.tab_changed.connect(_on_tab)
-	elif n is TabContainer:
-		n.tab_changed.connect(_on_tab)
+	elif n is TabBar or n is TabContainer:
+		n.tab_changed.connect(_on_tab)   # (a container and its own bar both tell: _on_tab sounds once)
 	elif n is Control and (n.has_meta("pane") or n.has_meta("modal")):
 		if _now() >= _quiet_until:
 			ui("open")
@@ -726,7 +730,6 @@ func _wire_button(b: BaseButton) -> void:
 		return
 	b.set_meta("snd", true)
 	b.pressed.connect(_on_pressed)
-	b.mouse_entered.connect(_on_hover.bind(b))
 
 
 func _on_pressed() -> void:
@@ -735,12 +738,25 @@ func _on_pressed() -> void:
 
 
 func _on_tab(_i: int) -> void:
-	if _now() >= _quiet_until:
+	var now := _now()
+	if now >= _quiet_until and now - _last_tab > 0.05:
+		_last_tab = now
 		ui("tab")
 
 
-func _on_hover(b: BaseButton) -> void:
-	if b.disabled or UiSettings.touch() or _now() < _quiet_until:
+## The control under the pointer, looked at each frame (no hover signals of the buttons': touch screens have none,
+## TouchHint owns them): a new enabled button under a mouse ticks, at most once each `hover_gap`.
+func _poll_hover() -> void:
+	var h: Control = get_viewport().gui_get_hovered_control() if get_viewport() != null else null
+	if h == _hovered:
+		return
+	_hovered = h
+	if h is BaseButton:
+		hover_on(h)
+
+
+func hover_on(b: BaseButton) -> void:
+	if b.disabled or UiSettings.touch() or TouchHint.finger or _now() < _quiet_until:
 		return
 	var now := _now()
 	if now - _last_hover < float(SoundScape.data()["ui"]["hover_gap"]):
@@ -775,6 +791,25 @@ func step_sound(kind: String, outside: bool = false) -> void:
 	_alt = not _alt
 	var alt := float(f["alternate"])
 	fx(SoundScape.step_cue(kind), 1.0 + (alt if _alt else -alt))
+
+
+## A step told by the open-world screen's `footstep` signal (who walked, what kind of thing, the ground under it, which
+## foot, its pace in tiles a second, its distance from the heir in tiles). The heir's is full; others' are quieter and
+## quieter again the further they are, and none is heard beyond the data's range. Each walker has its own gap.
+func on_footstep(who: String, kind: String, ground: String, foot: int, speed: float, near: float) -> void:
+	var f: Dictionary = SoundScape.data()["footsteps"]
+	var heir := who == "heir" or kind == "heir"
+	if not heir and near > float(f["hear_tiles"]):
+		return
+	var now := _now()
+	if now - float(_last_steps.get(who, -10.0)) < float(f["gap"]):
+		return
+	_last_steps[who] = now
+	if _last_steps.size() > 64:
+		_last_steps = {who: now}
+	var alt := float(f["alternate"])
+	var extra := 0.0 if heir else float(f["others_db"]) - near * float(f["far_db"])
+	fx(SoundScape.step_cue(ground), 1.0 + (alt if foot == 1 else -alt) + clampf(speed - 4.0, -2.0, 4.0) * 0.01, extra)
 
 
 # ---------------------------------------------------------------- captions
@@ -847,6 +882,7 @@ func _tick_captions(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_poll()
+	_poll_hover()
 	if not _warm.is_empty() and _jobs.size() < 2:
 		prepare(str(_warm.pop_front()))
 	step_fades(delta)
@@ -885,9 +921,14 @@ func _watch(delta: float) -> void:
 		_screen = app.current
 		quiet()
 		_tile = Vector2i(-99999, -99999)
+	if app.current != null and app.current.has_signal("footstep") and not app.current.footstep.is_connected(on_footstep):
+		app.current.footstep.connect(on_footstep)   # the walk tells of its steps: they are heard as it tells them
+		_signal_steps = true
+	elif app.current == null or not app.current.has_signal("footstep"):
+		_signal_steps = false
 	if sb != null and d.state == "life":
 		if _tile != sb.heir:
-			if _tile.x != -99999 and _tile_space == sb.space and _now() > _ext_until and d.battle == null:
+			if _tile.x != -99999 and _tile_space == sb.space and _now() > _ext_until and d.battle == null and not _signal_steps:
 				step_sound(SoundScape.ground_kind(d, sb))
 			_tile = sb.heir
 			_tile_space = sb.space
@@ -1017,8 +1058,10 @@ static func validate() -> Array:
 		bad.append("sound.json: %.1f seconds of sound in all, more than the %.1f allowed" % [total, float(limits.get("max_total_seconds", 0.0))])
 	# what plays when
 	var used: Dictionary = {}
-	for name in SoundScape.used_names():
-		used[name] = true
+	var scape_bad := SoundScape.validate(dat)
+	if scape_bad.is_empty():
+		for name in SoundScape.used_names():
+			used[name] = true
 	var spec := GameEventSpec.spec()
 	for t in dat["events"]:
 		var entry: Variant = dat["events"][t]
@@ -1077,7 +1120,7 @@ static func validate() -> Array:
 	for name in (dat["cues"] as Dictionary).keys() + (dat["tracks"] as Dictionary).keys() + (dat["beds"] as Dictionary).keys():
 		if not used.has(name):
 			bad.append("sound.json: '%s' is never played" % name)
-	bad.append_array(SoundScape.validate(dat))
+	bad.append_array(scape_bad)
 	return bad
 
 

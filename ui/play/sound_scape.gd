@@ -274,6 +274,11 @@ static func validate(snd: Dictionary) -> Array:
 	for b in f["biomes"]:
 		if not (f["kinds"] as Dictionary).has(str(f["biomes"][b])):
 			bad.append("soundscape.json: biome '%s' has the ground '%s', which is not a kind" % [b, f["biomes"][b]])
+	for k in ["hear_tiles", "others_db", "far_db"]:
+		if not f.has(k) or typeof(f[k]) not in [TYPE_INT, TYPE_FLOAT]:
+			bad.append("soundscape.json: footsteps.%s must be a number" % k)
+	if not bad.is_empty():
+		return bad
 	if float(f["gap"]) < 0.0 or float(f["gap"]) > 2.0 or float(f["alternate"]) < 0.0 or float(f["alternate"]) > 0.3:
 		bad.append("soundscape.json: footsteps gap must be 0 to 2 seconds and alternate 0 to 0.3")
 	for k in ["door_open", "door_close", "pickup", "coins", "spend", "equip", "level_up", "quest", "alert", "fight"]:

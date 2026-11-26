@@ -86,14 +86,14 @@
     "night": {"wave": "sine", "notes": [[48, 55], 0, 75, 0, 75, 0, 0, 77, [56, 63], 0, 84, 0, 77, 0, 0, 82, [51, 58], 0, 79, 0, 82, 0, 0, 84, [55, 62], 0, 82, 0, 82, 0, 0, 0], "step": 0.5, "attack": 0.06, "release": 0.43, "volume": 0.45}
   },
   "beds": {
-    "rain": {"wave": "noise", "notes": [60, 60, 60, 60, 60, 60], "step": 2.0, "attack": 1.0, "release": 1.0, "volume": 0.5, "lowpass": 0.55, "floor": 0.7, "edge": 0.1},
-    "wind": {"wave": "noise", "notes": [60, 60, 60, 60, 60], "step": 1.8, "attack": 0.9, "release": 0.9, "volume": 0.55, "lowpass": 0.05, "floor": 0.1, "edge": 0.1},
-    "snow_hush": {"wave": "noise", "notes": [60, 60, 60, 60], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.3, "lowpass": 0.1, "floor": 0.5, "edge": 0.1},
-    "fog_hum": {"wave": "sine", "notes": [[38, 45], [38, 45], [37, 44], [38, 45]], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.4, "floor": 0.5, "edge": 0.1},
+    "rain": {"wave": "noise", "notes": [60, 60, 60, 60, 60, 60], "step": 2.0, "attack": 1.0, "release": 1.0, "volume": 0.32, "lowpass": 0.8, "floor": 0.7, "edge": 0.1},
+    "wind": {"wave": "noise", "notes": [60, 60, 60, 60, 60], "step": 1.8, "attack": 0.9, "release": 0.9, "volume": 0.4, "lowpass": 0.15, "floor": 0.1, "edge": 0.1},
+    "snow_hush": {"wave": "noise", "notes": [60, 60, 60, 60], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.22, "lowpass": 0.1, "floor": 0.5, "edge": 0.1},
+    "fog_hum": {"wave": "sine", "notes": [[38, 45], [38, 45], [37, 44], [38, 45]], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.3, "floor": 0.5, "edge": 0.1},
     "night_crickets": {"wave": "sine", "notes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 96, 0, 96, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96], "step": 0.05, "attack": 0.006, "release": 0.03, "volume": 0.16, "edge": 0.1},
     "night_owls": {"wave": "sine", "notes": [0, 0, 0, 0, 0, 0, 67, 67, 0, 0, 64, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 67, 67, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "step": 0.3, "attack": 0.04, "release": 0.2, "volume": 0.3, "slide": -2, "edge": 0.1},
-    "town_murmur": {"wave": "noise", "notes": [60, 60, 60, 60, 60, 60, 60, 60], "step": 0.9, "attack": 0.45, "release": 0.45, "volume": 0.35, "lowpass": 0.14, "floor": 0.5, "edge": 0.1},
-    "dungeon_drone": {"wave": "triangle", "notes": [[28, 35], [28, 35], [27, 34], [28, 35]], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.45, "floor": 0.5, "edge": 0.1},
+    "town_murmur": {"wave": "noise", "notes": [60, 60, 60, 60, 60, 60, 60, 60], "step": 0.9, "attack": 0.45, "release": 0.45, "volume": 0.26, "lowpass": 0.14, "floor": 0.5, "edge": 0.1},
+    "dungeon_drone": {"wave": "triangle", "notes": [[28, 35], [28, 35], [27, 34], [28, 35]], "step": 3.0, "attack": 1.5, "release": 1.5, "volume": 0.32, "floor": 0.5, "edge": 0.1},
     "dungeon_drip": {"wave": "sine", "notes": [0, 0, 0, 88, 0, 0, 0, 0, 0, 0, 0, 0, 86, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0], "step": 0.5, "attack": 0.002, "release": 0.2, "volume": 0.18, "slide": -5, "edge": 0.1}
   },
   "creature_voices": {
