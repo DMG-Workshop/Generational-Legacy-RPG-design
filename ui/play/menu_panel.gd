@@ -91,6 +91,7 @@ func _ready() -> void:
 		["high_contrast", "High contrast", "Quiet text in a brighter grey."],
 		["reduced_motion", "Reduced motion", "No sliding or lunging in fights; numbers fade where they are."],
 		["plain_font", "Plain font", "Titles, buttons and bars in the usual font, not the pixel font."],
+		["sound_captions", "Captions for sounds", "A short line on screen for each sound that matters, even with sound off."],
 	]
 	for opt in options:
 		var key: String = opt[0]
@@ -136,7 +137,7 @@ func _ready() -> void:
 	bwhy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(bwhy)
 	var stext: Dictionary = Sound.data()["text"]
-	for pair in [["sound", "effects"], ["music", "music"]]:
+	for pair in [["sound", "effects"], ["music", "music"], ["ambience", "ambience"]]:
 		var kind: String = pair[0]
 		v.add_child(Kit.label(str(stext[pair[1]]), 17, Kit.ACCENT))
 		var srow := HBoxContainer.new()

@@ -9,6 +9,7 @@ static var touch_layout := ""    # "auto", "on" or "off"; "" until read from dis
 static var force_touch := -1     # 1 or 0 overrides touch detection (tests, screenshots)
 static var force_mobile := -1    # 1 or 0 overrides OS.has_feature("mobile") (tests, screenshots)
 static var force_touchscreen := -1   # 1 or 0 overrides DisplayServer.is_touchscreen_available() (tests)
+static var revision := 0         # how many values have been stored this run (Sound keeps the file's contents until this or the file changes)
 static var insets := Rect2()     # safe-area margins of the root UI: position = left/top, size = right/bottom
 
 
@@ -58,13 +59,14 @@ static func store(key: String, value: Variant) -> bool:
 	var cf := ConfigFile.new()
 	cf.load(path)
 	cf.set_value("ui", key, value)
+	revision += 1
 	return cf.save(path) == OK
 
 
 ## The accessibility options (the menu's Accessibility row): colour-blind colours, high contrast and
 ## reduced motion and plain font. Each is a yes or no in settings.cfg; a file from before they existed, or a damaged
 ## value, reads as off.
-const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion", "plain_font"]
+const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion", "plain_font", "sound_captions"]
 
 
 static func access_on(key: String) -> bool:

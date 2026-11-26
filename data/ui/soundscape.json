@@ -1,0 +1,58 @@
+{
+  "note": "What sounds when, over the open world (ui/play/sound_scape.gd and sound.gd; checked by tools/check_data.gd with data/ui/sound.json, which holds the sounds themselves). `ui` is the cue of a click, a hover tick (at most one each `hover_gap` seconds), a tab change, a pane or panel opening and closing (nothing for `quiet_seconds` after a screen is swapped in, so the panes that open themselves are not heard). `footsteps` maps a kind of ground to a cue: `kinds`, `aliases` (other names the movement code may use for a kind), `biomes` (the kind of ground a biome has), and the ground of a town (`town`), a dungeon, a room indoors and an upper storey, of water, and of any biome while it snows; `gap` is the shortest time between two steps heard, `alternate` how far the pitch of every other step differs (left foot, right foot). `world` is the cue of each thing that happens to the heir. `scape` picks the music: the fight's, a dungeon's, a room's and a town's track, the night's in the wilds, else the biome's. `ambience` picks the beds that loop under the music, each as [bed, level 0 to 1]: from the weather's precipitation, extra beds for a weather id, fog above a share, wind in the biome, the night's by biome, the town's murmur, the dungeon's; weather and night beds are `indoors_muffle` as loud inside, and `town_night` as loud in a town at night. `fade` is how long a track or bed takes to swell in or out, in seconds. `captions` gives the line shown for a sound when Captions for sounds is on (text for each cue and bed worth one, how long a line stays and how many show at once). Nothing here is random or saved.",
+  "fx_voices": 4,
+  "bed_voices": 4,
+  "watch_seconds": 0.1,
+  "fade": {"music": 1.6, "bed": 2.2},
+  "ui": {"click": "ui_click", "hover": "ui_hover", "tab": "ui_tab", "open": "ui_open", "close": "ui_close", "hover_gap": 0.06, "quiet_seconds": 1.0},
+  "footsteps": {
+    "default": "grass",
+    "gap": 0.12,
+    "alternate": 0.07,
+    "kinds": {"grass": "step_grass", "sand": "step_sand", "snow": "step_snow", "stone": "step_stone", "wood": "step_wood", "water": "step_water"},
+    "aliases": {"dirt": "grass", "meadow": "grass", "forest": "grass", "path": "stone", "road": "stone", "cobble": "stone", "floor": "wood", "plank": "wood", "boards": "wood", "ford": "water", "shallows": "water", "river": "water", "mud": "water", "gravel": "stone", "rock": "stone"},
+    "biomes": {"plains": "grass", "forest": "grass", "hills": "grass", "mountains": "stone", "swamp": "water", "tundra": "snow", "coast": "sand", "volcanic": "stone"},
+    "water": "water",
+    "town": "stone",
+    "dungeon": "stone",
+    "indoors": "wood",
+    "upstairs": "wood",
+    "snowing": "snow"
+  },
+  "world": {"door_open": "door_open", "door_close": "door_close", "pickup": "pickup", "coins": "coins", "spend": "coins_spend", "equip": "equip", "level_up": "level_up", "quest": "quest_done", "alert": "alert", "fight": "alert_fight"},
+  "scape": {
+    "fight": "battle",
+    "dungeon": "dungeon",
+    "indoors": "town",
+    "town": "town",
+    "night": "night",
+    "default": "wild_meadow",
+    "biomes": {"plains": "wild_meadow", "coast": "wild_meadow", "forest": "wild_forest", "hills": "wild_high", "mountains": "wild_high", "tundra": "wild_cold", "swamp": "wild_marsh", "volcanic": "wild_ember"}
+  },
+  "ambience": {
+    "precip": {"rain": [["rain", 0.85]], "snow": [["snow_hush", 1.0]]},
+    "weather": {"storm": [["rain", 0.4], ["wind", 1.0]], "overcast": [["wind", 0.3]], "snow": [["wind", 0.4]]},
+    "fog": {"above": 0.5, "beds": [["fog_hum", 1.0]]},
+    "wind_biomes": {"mountains": 0.6, "hills": 0.35, "tundra": 0.6, "coast": 0.4},
+    "night": {"default": [["night_crickets", 1.0], ["night_owls", 0.8]], "biomes": {"tundra": [["night_owls", 1.0]], "mountains": [["night_owls", 1.0]], "volcanic": [], "swamp": [["night_crickets", 1.0]]}},
+    "town": [["town_murmur", 1.0]],
+    "indoors": [["town_murmur", 0.6]],
+    "dungeon": [["dungeon_drone", 1.0], ["dungeon_drip", 1.0]],
+    "indoors_muffle": 0.3,
+    "town_night": 0.5
+  },
+  "captions": {
+    "seconds": 2.5,
+    "max_lines": 3,
+    "cues": {
+      "hit": "Hit", "crit": "Critical hit", "hurt": "Ouch", "miss": "Miss", "heal": "Healing", "cast": "Spell",
+      "guard": "Guard", "fall": "A foe falls", "ko": "Someone falls", "flee": "Fleeing", "victory": "Victory fanfare",
+      "defeat": "Defeat", "death": "A heir dies", "saga_end": "The saga ends",
+      "ui_open": "Pane opens", "ui_close": "Pane closes",
+      "door_open": "Door opens", "door_close": "Door closes", "pickup": "Item picked up", "coins": "Coins", "coins_spend": "Coins spent",
+      "equip": "Gear equipped", "level_up": "Level up", "quest_done": "Quest complete", "alert": "A creature notices you", "alert_fight": "A creature attacks"
+    },
+    "beds": {"rain": "Rain", "wind": "Wind", "snow_hush": "Snow falls", "fog_hum": "Fog", "night_crickets": "Crickets", "night_owls": "An owl", "town_murmur": "Voices murmur", "dungeon_drone": "A low hum", "dungeon_drip": "Dripping water"},
+    "creature": "A creature cries out"
+  }
+}
