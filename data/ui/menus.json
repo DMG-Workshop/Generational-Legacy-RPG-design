@@ -79,6 +79,7 @@
     ]
   },
   "confirm": {
+    "big_gold": 500,
     "yes": "Yes",
     "no": "No"
   }

@@ -300,11 +300,13 @@ func test_touch_layout_setting() -> void:
 	# The menu offers it next to Text size; a choice lays the screens out again.
 	app.show_title()
 	await _frames(2)
+	MenuPanel.last_tab = "text"
 	var m: Control = app.open_menu()
 	await _frames(2)
-	var texts := _texts(m, [])
-	var at := texts.find("Touch layout")
-	ok(at > texts.find("Text size") and texts.find("Text size") >= 0, "the menu has Touch layout under Text size")
+	ok(_texts(m, []).has("Text size"), "the options open on the Text size tab")
+	m._select("touch")
+	await _frames(1)
+	ok(_texts(m, []).has("Touch layout") and _find(m, "Touch") != null, "and the Touch tab has the touch layout")
 	var auto_b := _find(m, "Auto")
 	ok(auto_b != null and _in_use(auto_b), "Auto is marked as in use")
 	ok(_find(m, "On") != null and _find(m, "Off") != null, "with On and Off beside it")
@@ -674,10 +676,11 @@ func test_static_scan() -> void:
 		var src := FileAccess.get_file_as_string(p)
 		if ".quit(" in src:
 			quits.append(p.get_file())
-	ok(quits == ["title_screen.gd"], "only the title screen can quit the game: %s" % str(quits))
-	var title_src := FileAccess.get_file_as_string("res://ui/play/title_screen.gd")
-	var at := title_src.find(".quit(")
-	ok(at > 0 and title_src.rfind("if not UiSettings.is_mobile()", at) > title_src.rfind("\n\n", at), "and only off mobile")
+	quits.sort()
+	ok(quits == ["pause_panel.gd", "title_screen.gd"], "only the title screen and the pause screen can quit the game: %s" % str(quits))
+	for f in ["title_screen.gd", "pause_panel.gd"]:
+		var src := FileAccess.get_file_as_string("res://ui/play/" + f)
+		ok(src.contains('if id == "quit" and UiSettings.is_mobile():'), "%s leaves its Quit out on mobile" % f)
 
 
 ## The title's Quit: there on a desktop, not on a phone or tablet.
@@ -690,7 +693,7 @@ func test_quit_button() -> void:
 	app.show_title()
 	await _frames(2)
 	ok(_find(app.current, "Quit") == null, "a phone's title has no Quit")
-	ok(_find(app.current, "Settings") != null and _find(app.current, "Begin") != null, "and keeps its other buttons")
+	ok(_find(app.current, "Options") != null and _find(app.current, "New dynasty") != null, "and keeps its other buttons")
 	for mode in ["title", "game"]:
 		if mode == "game":
 			_game()
@@ -831,6 +834,34 @@ func test_every_tooltip_reachable() -> void:
 	app.show_state()
 	await _frames(4)
 	await _probe(app.current, "succession_screen.gd")
+	# The menus: the title's main menu, the options (a tab with tooltips), the pause screen and its slots.
+	app.show_title()
+	await _frames(3)
+	await _probe(app.current, "title_screen.gd")
+	var om: Control = app.open_menu()
+	await _frames(3)
+	om._select("access")
+	await _frames(2)
+	await _probe(om, "menu_panel.gd")
+	om.queue_free()
+	_game()
+	app.show_sandbox()
+	await _frames(3)
+	var pause: Control = app.current.open_pause()
+	await _frames(3)
+	await _probe(pause, "pause_panel.gd")
+	pause.do("slots")
+	await _frames(3)
+	var slots: Control = null
+	for c in pause.get_children():
+		if c.get_script() == load("res://ui/play/slots_panel.gd"):
+			slots = c
+	ok(slots != null, "the pause screen opens the save slots")
+	if slots != null:
+		await _probe(slots, "slots_panel.gd")
+	pause.queue_free()
+	app.show_state()
+	await _frames(2)
 	print("  tooltips proven by a hold: ", covered)
 	for p in _reachable():
 		var src := FileAccess.get_file_as_string(p)

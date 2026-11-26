@@ -240,7 +240,7 @@ func _ready() -> void:
 	elif mode == "battle":
 		pages["general"].add_child(_why("The fight is saved as you go: closing the game now reopens it where you left off."))
 	v.add_child(note)
-	_select(last_tab if pages.has(last_tab) else str(MenuKit.rows("options")[0]["id"]))
+	_select(last_tab if pages.has(last_tab) else str(MenuKit.rows("options")[0]["id"]), false)
 
 
 func _why(text: String) -> Label:
@@ -255,7 +255,7 @@ static func _clock(seconds: float) -> String:
 
 
 ## Shows one tab's page and marks its button.
-func _select(id: String) -> void:
+func _select(id: String, by_player: bool = true) -> void:
 	if not pages.has(id):
 		return
 	tab = id
@@ -278,7 +278,7 @@ func _select(id: String) -> void:
 				b.add_theme_stylebox_override("normal", Kit.style(Color("#3d3860"), 6, Kit.ACCENT))
 				b.add_theme_color_override("font_color", Kit.ACCENT)
 		tab_row.add_child(b)
-	if app != null and app.pad != null and app.pad.on:
+	if by_player and app != null and app.pad != null and app.pad.on:
 		for b in tab_row.get_children():
 			if b.get_meta("tab_id") == id:
 				(b as Control).grab_focus.call_deferred()   # the focus stays on the tab just chosen

@@ -97,6 +97,8 @@ func _note() -> String:
 func _title() -> void:
 	app.show_title()
 	await _frames(3)
+	app.current._show_page("new")   # the founding form with the slots under it
+	await _frames(1)
 
 
 func test_empty_title() -> void:

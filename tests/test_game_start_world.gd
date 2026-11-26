@@ -13,6 +13,7 @@ const HousePanel := preload("res://ui/play/house_panel.gd")
 const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const GameApp := preload("res://ui/play/game_app.gd")
+const MenuPanel := preload("res://ui/play/menu_panel.gd")
 const SUCCESSION := "succession"
 
 var fails := 0
@@ -157,6 +158,7 @@ func test_menu() -> void:
 	app.new_game("Tess", "warrior", "faetouched", 7)
 	await _frames(2)
 	UiSettings.set_open_world_first(true)
+	MenuPanel.last_tab = "general"
 	app.open_menu()
 	await _frames(3)
 	var life := _button(app, "Life screen")
@@ -283,13 +285,20 @@ func test_map_menu() -> void:
 	ok(map is SandboxScreen, "the open world is up")
 	map._open_menu()
 	await _frames(2)
-	var menu: PopupMenu = null
+	var menu: Control = null
 	for c in map.get_children():
-		if c is PopupMenu:
+		if c.get_script() == load("res://ui/play/pause_panel.gd"):
 			menu = c
-	ok(menu != null and menu.has_meta("modal") and app.current == map, "Menu opens a popup over the map and stays on it")
-	ok(menu != null and menu.item_count >= 6 and menu.get_item_text(0) == "Back to the map" and menu.get_item_text(menu.item_count - 1) == "The text screen", "with the family's screens and the way back to the text game")
+	ok(menu != null and menu.has_meta("modal") and app.current == map, "Menu opens the pause screen over the map and stays on it")
+	var labels: Array = []
+	if menu != null:
+		for id in menu.buttons:
+			labels.append((menu.buttons[id] as Button).text)
+	ok(labels.size() >= 8 and labels[0] == "Resume" and "Options" in labels and "Save" in labels and "Back to the text game" in labels and "Main menu" in labels, "with Resume, Options, Save, the way back to the text game and the main menu: %s" % str(labels))
 	ok(map._modal_open(), "and the world waits while it is open")
+	if menu != null:
+		menu.close()
+	await _frames(2)
 	for script in [HousePanel, Chronicle, SkillTreePanel]:
 		map._open_popup(script)
 		await _frames(2)

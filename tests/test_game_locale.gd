@@ -200,12 +200,14 @@ func test_setting_and_menu() -> void:
 	ok(all.contains("[Ŵéľçöмé"), "and the life screen's tip is shown in it")
 	var save := JSON.stringify(app.dynasty.to_save())
 	ok(not save.contains("locale") and not save.contains("pseudo"), "the language is not in the save")
+	MenuPanel.last_tab = "general"
 	var m: Control = app.open_menu()
 	await _frames(3)
 	ok(not _texts(m).has("Language"), "with one language to offer the menu has no Language row")
 	m.queue_free()
 	GameLocale.data()["locales"]["xx"] = {"name": "Test"}
 	GameLocale._translations["xx"] = {"battle": {}, "tutorial": {}}
+	MenuPanel.last_tab = "general"   # the Language row is on the General tab
 	m = app.open_menu()
 	await _frames(3)
 	var texts := _texts(m)

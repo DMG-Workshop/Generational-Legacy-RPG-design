@@ -150,7 +150,7 @@ func test_stays_in_the_panel() -> void:
 			strayed = true
 			print("  strayed at move %d to %s" % [i, str(f)])
 	ok(not strayed, "forty moves down and across never take the focus out of the open menu")
-	ok(seen.size() >= 6, "and it reaches the menu's many buttons (%d of them)" % seen.size())
+	ok(seen.size() >= 3, "and it reaches the buttons of the tab shown (%d of them)" % seen.size())
 	var scroll: ScrollContainer = null
 	for c in m.get_children():
 		if c is ScrollContainer:

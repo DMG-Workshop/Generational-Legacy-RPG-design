@@ -80,6 +80,8 @@ static func validate() -> Array:
 	for id in ["continue", "new", "options", "quit"]:
 		if label_of("main", id) == id:
 			bad.append("menus.json: the main menu needs a %s row" % id)
+	if typeof(d["confirm"].get("big_gold")) not in [TYPE_INT, TYPE_FLOAT] or float(d["confirm"]["big_gold"]) < 1.0:
+		bad.append("menus.json: confirm.big_gold must be a positive amount of gold")
 	if typeof(d["about"].get("lines")) != TYPE_ARRAY or (d["about"]["lines"] as Array).is_empty():
 		bad.append("menus.json: about.lines must be a list")
 	return bad

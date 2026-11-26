@@ -445,6 +445,8 @@ func test_screen() -> void:
 	app.autosave()
 	var menu: Control = app.open_menu()
 	await _frames(3)
+	menu._select("save")
+	await _frames(2)
 	var copy := _btn(menu, "Copy backup")
 	var export := _btn(menu, "Export to file")
 	ok(copy != null and copy.disabled and export != null and export.disabled, "the menu's Copy backup and Export to file are shut")
@@ -455,6 +457,8 @@ func test_screen() -> void:
 	# the title refuses too
 	app.show_title()
 	await _frames(3)
+	app.current._show_page("new")
+	await _frames(2)
 	title = app.current
 	ok(_btn(title, "> Slot 1").text.ends_with("(iron-man)"), "the title marks the slot: %s" % _btn(title, "> Slot 1").text)
 	for name in ["Copy backup", "Export to file", "Restore backup", "Import from file"]:
@@ -478,6 +482,8 @@ func test_screen() -> void:
 	ok(app.dynasty.hard == {} and not JSON.stringify(app.dynasty.to_save()).contains("\"hard\""), "a dynasty begun without the panel is a plain one")
 	var plain_menu: Control = app.open_menu()
 	await _frames(3)
+	plain_menu._select("save")
+	await _frames(2)
 	ok(not _btn(plain_menu, "Copy backup").disabled and not _text_in(plain_menu, "iron-man"), "and its menu backs it up as always")
 	plain_menu.queue_free()
 	var pc := Chronicle.new()

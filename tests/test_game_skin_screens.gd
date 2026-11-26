@@ -272,6 +272,7 @@ func test_screens() -> void:
 	house.queue_free()
 	await _frames(2)
 	# the menu and the controls
+	MenuPanel.last_tab = "text"
 	var m: Control = app.open_menu()
 	await _frames(3)
 	ok(m is MenuPanel and m.get_child(0) is ColorRect, "the menu keeps its dimmed backdrop, with no sky over it")

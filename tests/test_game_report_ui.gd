@@ -39,6 +39,7 @@ func _run() -> void:
 	UiSettings.scale = 1.0
 	UiSettings.force_mobile = 0
 	UiSettings.force_touch = 0
+	MenuPanel.last_tab = "general"   # Report a problem and the error log are on the General tab
 	Clipboard.fake = true
 	FilePicker.fake = true
 	root.size = Vector2i(1280, 720)
