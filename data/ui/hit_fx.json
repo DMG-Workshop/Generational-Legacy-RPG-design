@@ -1,0 +1,71 @@
+{
+	"note": "The look of a blow and of loot (ui/play/hit_fx.gd, damage_number.gd, loot_pop.gd; checked by tools/check_data.gd). Rendering only: it reads the typed events of a fight and never changes them or draws a die of the game. Times are seconds at normal speed and go through UiSettings.motion_time, so with reduced motion the shake, hit-stop, flash, nudge, collapse, beam and pop all go and only the words stay. A word that must be read (miss, block) is text from the battle catalog, never colour alone.",
+	"numbers": {
+		"size": 26,
+		"crit_size": 36,
+		"heavy_size": 32,
+		"heal_size": 26,
+		"word_size": 20,
+		"status_size": 16,
+		"life": 0.7,
+		"rise": 50.0,
+		"pop_scale": 1.5,
+		"crit_pop_scale": 1.9,
+		"stagger_px": 18.0,
+		"stagger_rows": 3,
+		"crit_color": "#ffd24a",
+		"heavy_fraction": 0.25
+	},
+	"shake": {
+		"heavy_px": 3.0,
+		"crit_px": 6.0,
+		"kill_px": 5.0,
+		"seconds": 0.2,
+		"steps": 6
+	},
+	"hit_stop": {
+		"kill_seconds": 0.07,
+		"crit_kill_seconds": 0.11,
+		"not_in_auto": true
+	},
+	"nudge": {
+		"px": 8.0,
+		"heavy_px": 16.0,
+		"out_seconds": 0.05,
+		"back_seconds": 0.16
+	},
+	"flash": {
+		"bright": 3.0,
+		"seconds": 0.25
+	},
+	"collapse": {
+		"sink_px": 12.0,
+		"tilt_degrees": 14.0,
+		"seconds": 0.45
+	},
+	"status_pop": {
+		"seconds": 0.9,
+		"rise": 26.0,
+		"pop_scale": 1.6,
+		"letters": 3,
+		"size": 14
+	},
+	"loot": {
+		"pop_seconds": 0.45,
+		"arc_px": 46.0,
+		"stagger_seconds": 0.08,
+		"beam_seconds": 0.7,
+		"beam_width": 10.0,
+		"beam_height": 90.0,
+		"beam_from": "rare",
+		"icon_px": 24,
+		"rarity": {
+			"common": {"color": "#c8c8d0", "mark": ""},
+			"fine": {"color": "#7fd18b", "mark": "+"},
+			"rare": {"color": "#5aa9ff", "mark": "*"},
+			"epic": {"color": "#c27cff", "mark": "**"},
+			"legendary": {"color": "#ffb347", "mark": "***"},
+			"mythic": {"color": "#ff5e8a", "mark": "****"}
+		}
+	}
+}

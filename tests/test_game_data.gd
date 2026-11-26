@@ -87,6 +87,12 @@ func test_lines() -> void:
 		["improvises", {"name": "Bren"}, "Bren improvises."],
 		["foe_missed", {"foe": "Wolf", "name": "Tess"}, "Wolf attacks, but Tess dodges."],
 		["mana_blow", {"name": "Tess", "n": 5}, "Tess's mana takes 5 of the blow."],
+		["fx_miss", {}, "miss"],
+		["fx_block", {}, "block"],
+		["fx_blocked", {"n": "12", "absorbed": "3"}, "12 (3 blocked)"],
+		["fx_shatter", {"n": "12"}, "12 shatter"],
+		["fx_found", {}, "Found"],
+		["fx_find", {"rarity": "** Epic", "name": "Iron Sword"}, "** Epic Iron Sword"],
 	]
 	var keys: Array = GameData.messages["lines"].keys()
 	for c in cases:
