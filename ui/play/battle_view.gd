@@ -18,6 +18,7 @@ const Sound := preload("res://ui/play/sound.gd")
 const BattleSkin := preload("res://ui/play/battle_skin.gd")
 const HitFx := preload("res://ui/play/hit_fx.gd")
 const BattleSpeed := preload("res://ui/play/battle_speed.gd")
+const AllyOrders := preload("res://ui/play/ally_orders.gd")
 const DamageNumber := preload("res://ui/play/damage_number.gd")
 const LootPop := preload("res://ui/play/loot_pop.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
@@ -67,6 +68,9 @@ var auto_button: Button
 var speed_button: Button        # the screen's speed: 1x, 2x, 4x (BattleSpeed)
 var skip_button: Button         # Skip animations: each round shows its result and the log only
 var forward_button: Button = null   # the auto-battle panel's Fast-forward
+var orders: Control = null      # the companions' one-tap orders (AllyOrders), only with companions
+var orders_button: Button = null   # on a short screen: opens the orders over the arena
+var orders_open := false
 var result_scroll: ScrollContainer = null   # the result panel's story, capped to the window
 var result_panel: Control = null
 var _auto_waiting: bool = false # an auto action is due once AUTO_PACE has passed
@@ -122,6 +126,15 @@ func _ready() -> void:
 		strip = PartyStrip.new()
 		strip.skinned = skinned
 		strip.chip_pressed.connect(_on_chip)
+		orders = AllyOrders.new()
+		orders.ordered.connect(_order)
+		orders.focus_pressed.connect(_focus)
+		orders.all_auto_pressed.connect(_all_auto)
+		orders_button = Kit.button("Orders", func(): _toggle_orders(), Vector2(0, 34))
+		orders_button.name = "OrdersButton"
+		orders_button.add_theme_font_size_override("font_size", 15)
+		top_bar.add_child(orders_button)
+		top_bar.move_child(orders_button, auto_button.get_index())
 		_place_strip()
 	if not auto:
 		cmd_round = d.battle_round()
@@ -286,13 +299,10 @@ func _exit_tree() -> void:
 
 ## The screen's speed and Skip, side by side before Auto-battle. Look only: they change how long the screen takes.
 func _build_speed_controls() -> void:
-	var compact := UiSettings.compact(self)
-	var w: Dictionary = BattleSpeed.speed_data().get("widths", {})
-	speed_button = Kit.button("", _cycle_speed, Vector2(float(w.get("speed_compact" if compact else "speed", 74)), 34))
-	skip_button = Kit.button("", _toggle_skip, Vector2(float(w.get("skip_compact" if compact else "skip", 92)), 34))
+	speed_button = Kit.button("", _cycle_speed, Vector2(0, 34))
+	skip_button = Kit.button("", _toggle_skip, Vector2(0, 34))
 	for btn in [speed_button, skip_button]:
 		btn.add_theme_font_size_override("font_size", 15)
-		btn.clip_text = true
 		top_bar.add_child(btn)
 	speed_button.name = "SpeedButton"
 	skip_button.name = "SkipButton"
@@ -302,7 +312,7 @@ func _build_speed_controls() -> void:
 func _show_speed() -> void:
 	if speed_button == null:
 		return
-	var compact := UiSettings.compact(self)
+	var compact := UiSettings.compact(self) or UiSettings.touch()   # the short words where the room is tight
 	var n := BattleSpeed.chosen()
 	speed_button.text = BattleSpeed.text("speed_compact" if compact else "speed", {"n": n})
 	speed_button.add_theme_color_override("font_color", _ink(Kit.good() if n > 1 else Kit.TEXT))
@@ -499,10 +509,13 @@ func _build_actors() -> void:
 		chips.position = Vector2(0, h + 33)
 		chips.z_index = 1
 		root.add_child(chips)
+		var flag := _flag("focus", AllyOrders.text("mark_focus"), Kit.ACCENT)   # the party's focus: set from the orders row
+		flag["box"].position = Vector2(0, -20)
+		root.add_child(flag["box"])
 		arena.add_child(root)
 		if bool(e.get("fled", false)):
 			root.visible = false   # a fight reopened after a foe ran off: it is not on the field
-		enemy_nodes.append({"root": root, "body": body, "pose": pose, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h})
+		enemy_nodes.append({"root": root, "body": body, "pose": pose, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h, "focus": flag})
 
 
 ## A companion: smaller figure in class colours with a race-tinted head, name, level and HP.
@@ -556,10 +569,13 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	var chips := _chips()
 	chips.position = Vector2(0, 156)
 	root.add_child(chips)
+	var mark := _flag("", "", Kit.TEXT)   # what this companion will do this round
+	mark["box"].position = Vector2(0, -18)
+	root.add_child(mark["box"])
 	if a.hp <= 0:
 		body.modulate = Color(0.35, 0.35, 0.4)
 	arena.add_child(root)
-	return {"root": root, "body": body, "pose": pose, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
+	return {"root": root, "body": body, "pose": pose, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips, "mark": mark}
 
 
 ## The land the fight is in (SceneryArt: the place's scene in its weather and season), filling the arena
@@ -748,6 +764,10 @@ func _on_foe_input(idx: int, ev: InputEvent) -> void:
 	if aiming.is_empty():
 		target = idx
 		_update_marks()
+		if ev.double_click and cmd_round != null and not auto and strip != null:   # a double tap is the party's Focus
+			_focus()
+		else:
+			_sync_orders()
 	elif str(aiming.get("aim", "")) == "ally":
 		return   # a heal asks whom among the party, not which foe
 	elif idx == aim_at:
@@ -1380,6 +1400,7 @@ func _place_strip() -> void:
 		want.move_child(strip, 1)   # under the top bar, or between the title and the Auto-battle button
 	strip.visible = not auto
 	title_label.visible = not (in_bar and strip.visible)
+	_place_orders(in_bar)
 
 
 func _sync_strip() -> void:
@@ -1389,6 +1410,150 @@ func _sync_strip() -> void:
 	if cmd_round != null and not auto:
 		var v := cmd_round.view()
 		strip.refresh(v, int(v["cursor"]))
+	_sync_orders()
+
+
+# ---------------------------------------------------------------- the companions' orders
+
+## The orders stand in a row under the party strip, or on a short screen open over the bottom of the arena from a button.
+func _place_orders(short_screen: bool) -> void:
+	if orders == null:
+		return
+	if short_screen and arena == null:   # the arena is not built yet: it is placed when the strip first refreshes
+		return
+	var inline := not short_screen
+	orders.named = not inline
+	var want: Node = root_box if inline else arena
+	if orders.get_parent() != want:
+		if orders.get_parent() != null:
+			orders.get_parent().remove_child(orders)
+		want.add_child(orders)
+		if inline:
+			root_box.move_child(orders, strip.get_index() + 1)
+		else:
+			orders.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+			orders.z_index = 6
+			orders.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	orders_button.visible = short_screen and not auto and not result_shown
+	orders.visible = not auto and (inline or orders_open)
+
+
+func _toggle_orders() -> void:
+	orders_open = not orders_open
+	_sync_orders()
+
+
+## The row follows the round: lit where a member has an order, off while the round plays or a question waits, gone in
+## auto-battle. Also puts each ally's order on their figure and the focus on its foe.
+func _sync_orders() -> void:
+	if orders == null or cmd_round == null:
+		return
+	_place_orders(_short())
+	var shown := not auto and not b.is_over() and not result_shown
+	if not shown:
+		orders.visible = false
+		orders_button.visible = false
+		_hide_marks()
+		return
+	orders.ink = _ink(Kit.TEXT)
+	orders.lit = _ink(Kit.good())
+	var rows := GamePartyOrders.rows(cmd_round)
+	var pin := cmd_round.pin_ref()
+	var at := "" if target < 0 or target >= b.enemies.size() or b.enemies[target]["hp"] <= 0 else str(b.enemies[target]["name"])
+	orders.refresh(rows, {"enabled": not busy and not cmd_round.asking(),
+		"pin_name": "" if pin == "" else str(b.enemies[int(pin.get_slice(":", 1))]["name"]), "target_name": at, "all_auto": GamePartyOrders.all_auto(cmd_round)})
+	orders_button.text = "Orders" if not orders_open else "Hide orders"
+	_show_marks(rows)
+
+
+func _hide_marks() -> void:
+	for an in ally_nodes:
+		an["mark"]["box"].visible = false
+	for en in enemy_nodes:
+		en["focus"]["box"].visible = false
+
+
+## Each ally's order, in words and a small icon, over their figure; the focused foe's flag.
+func _show_marks(rows: Array) -> void:
+	for row in rows:
+		var by := int(row["by"])
+		if by < 0 or by >= ally_nodes.size():
+			continue
+		var m: Dictionary = ally_nodes[by]["mark"]
+		var words := AllyOrders.mark_text(str(row["mark"]))
+		m["box"].visible = words != "" and not b.is_over()
+		m["label"].text = words
+		m["icon"].texture = AllyOrders.icon(AllyOrders.mark_glyph(str(row["mark"])))
+		m["icon"].visible = m["icon"].texture != null
+	var pin := cmd_round.pin_ref() if cmd_round != null else ""
+	for i in enemy_nodes.size():
+		var fm: Dictionary = enemy_nodes[i]["focus"]
+		fm["box"].visible = pin == "enemy:%d" % i and b.enemies[i]["hp"] > 0 and not b.is_over()
+
+
+## A small flag of an icon and words, outlined so it reads on any ground; hidden until it has something to say.
+func _flag(glyph: String, words: String, color: Color) -> Dictionary:
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.z_index = 2
+	box.visible = false
+	var icon := TextureRect.new()
+	icon.texture = AllyOrders.icon(glyph)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.modulate = color
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	box.add_child(icon)
+	var l := Kit.label(words, 12, color)
+	l.add_theme_color_override("font_outline_color", Color.BLACK)
+	l.add_theme_constant_override("outline_size", 4)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(l)
+	return {"box": box, "icon": icon, "label": l}
+
+
+## A button of the row: one order for one companion. It queues the same command the long way round would.
+func _order(by: int, kind: String) -> void:
+	if busy or cmd_round == null or auto or result_shown or cmd_round.asking() or _guarded():
+		return
+	if kind == "auto":
+		_set_member_auto(by)
+		return
+	aiming = {}
+	_show_area({}, -1)
+	_close_spells()
+	_close_skills()
+	_close_feats()
+	var foe := "" if target < 0 or target >= b.enemies.size() or b.enemies[target]["hp"] <= 0 else "enemy:%d" % target
+	var why := GamePartyOrders.give(cmd_round, by, kind, foe)
+	if why != "":
+		_build_commands()
+		hint.text = why
+	elif cmd_round.ready() and cmd_round.auto_commits():
+		_commit()
+	else:
+		_build_commands()
+
+
+## Focus: the foe picked is the one every companion on Auto or Attack goes for, until it falls; again to let go.
+func _focus() -> void:
+	if busy or cmd_round == null or auto or result_shown or cmd_round.asking() or _guarded():
+		return
+	var ref := "enemy:%d" % target
+	if cmd_round.pin_ref() == ref:
+		cmd_round.set_pin("")
+	else:
+		var why := cmd_round.set_pin(ref)
+		if why != "":
+			hint.text = why
+	_sync_orders()
+
+
+func _all_auto() -> void:
+	if busy or cmd_round == null or auto or result_shown or cmd_round.asking() or _guarded():
+		return
+	GamePartyOrders.set_all_auto(cmd_round, not GamePartyOrders.all_auto(cmd_round))
+	_build_commands()
 
 
 ## A kit colour made to read on a skinned button's parchment (the colour itself on the older look).
@@ -1918,6 +2083,7 @@ func _do(action: Callable, from_event: int = 0) -> void:
 	hint.text = ""
 	if auto:
 		_auto_panel()
+	_sync_orders()
 	var log_start := b.log.size()
 	action.call()
 	for i in range(log_start, b.log.size()):
@@ -2500,6 +2666,7 @@ func _show_result() -> void:
 		return
 	result_shown = true
 	aiming = {}
+	_sync_orders()
 	_close_spells()
 	_close_skills()
 	_close_feats()

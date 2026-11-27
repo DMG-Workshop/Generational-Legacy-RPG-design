@@ -153,8 +153,4 @@ static func validate() -> Array:
 	for k in ["speed", "speed_compact", "skip_on", "skip_off", "skip_compact_on", "skip_compact_off", "speed_tip", "skip_tip", "forward", "forward_tip"]:
 		if str((s.get("text", {}) as Dictionary).get(k, "")) == "":
 			out.append("battle speed: text.%s is missing" % k)
-	for k in ["speed", "skip", "speed_compact", "skip_compact"]:
-		var w: Variant = (s.get("widths", {}) as Dictionary).get(k)
-		if typeof(w) not in [TYPE_INT, TYPE_FLOAT] or float(w) < 30.0 or float(w) > 200.0:
-			out.append("battle speed: widths.%s must be between 30 and 200 pixels" % k)
 	return out

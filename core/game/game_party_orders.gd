@@ -8,7 +8,9 @@
 ##       # attack: at the party's focus (GameRound.pin_ref) when one is set, else at `foe_ref` ("" = the heir's focus, as ever)
 ##       # skill: the member's first class skill they can use now, at the focus or `foe_ref`, else at any foe it reaches
 ##   static func skill_row(r: GameRound, by: int) -> Dictionary   # that skill's menu row, {} when none can be used now
-##   static func give(r: GameRound, by: int, kind: String, foe_ref: String = "") -> String   # "" done, else why not (nothing changed)
+##   static func give(r: GameRound, by: int, kind: String, foe_ref: String = "") -> String   # "" done, else why not (nothing changed); an order
+##       # for a member on Auto takes them off Auto first, "auto" puts them on it
+##   static func rows(r: GameRound) -> Array                      # what the buttons and figures show, one entry per member (see below)
 ##   static func all_auto(r: GameRound) -> bool                   # every companion who can still fight is on Auto (false with no companions)
 ##   static func set_all_auto(r: GameRound, on: bool) -> void     # the Auto switch of every companion (the heir keeps their own)
 class_name GamePartyOrders
@@ -68,7 +70,12 @@ static func give(r: GameRound, by: int, kind: String, foe_ref: String = "") -> S
 		return ""
 	var cmd := command(r, by, kind, foe_ref)
 	if cmd.is_empty():
-		return GameMessages.text("life", "unknown_command")
+		return GameMessages.text("life", "no_skill_now" if kind == "skill" else "unknown_command")
+	var why := r.check(by, cmd)
+	if why != "":
+		return why
+	if bool(r.auto.get(by, false)):   # an order from the player takes the member off Auto, as a tap on their chip does
+		r.set_auto(by, false)
 	return r.queue(by, cmd)
 
 
@@ -87,3 +94,32 @@ static func set_all_auto(r: GameRound, on: bool) -> void:
 	for by in r.members():
 		if by >= 0 and bool(r.auto.get(by, false)) != on:
 			r.set_auto(by, on)
+
+
+## What the order buttons need to know, one entry per member of the party in index order (fallen included):
+## {"by", "name", "state" ("ready"|"held"|"ko"), "decision" (GameRound.view's), "active": which of attack | defend | skill | auto the
+## member's decision is ("" for a spell, a feat, an item, a flee or no decision yet), "mark": what to show on their figure
+## ("attack"|"defend"|"skill"|"auto"|"held"|"" for nothing), "word": the chip's short wording, "skill": the name of the skill the
+## Skill button would use ("" when none can be used now)}. The heir is included, with no skill (their own panel has them all).
+static func rows(r: GameRound) -> Array:
+	var out: Array = []
+	for m in r.view()["members"]:
+		var by := int(m["by"])
+		var decision := str(m["decision"])
+		var kind := str(m["kind"])
+		var active := ""
+		if decision in ["auto", "fallback"]:
+			active = "auto"
+		elif decision == "queued" and kind in ["attack", "defend", "skill"]:
+			active = kind
+		var mark := active
+		if decision == "queued" and mark == "" and kind in ["spell", "feat", "item"]:
+			mark = "skill"
+		if decision == "held":
+			mark = "held"
+		elif decision in ["ko", "empty"]:
+			mark = ""
+		var skill := "" if by < 0 else str(skill_row(r, by).get("label", ""))
+		out.append({"by": by, "name": str(m["name"]), "state": str(m["state"]), "decision": decision, "active": active, "mark": mark,
+			"word": str((m["chip"] as Dictionary).get("short", "")), "skill": skill})
+	return out

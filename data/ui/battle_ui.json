@@ -6,7 +6,6 @@
 		"reduced_wait_scale": 0.3,
 		"waits": {"event": 0.35, "cast": 0.25, "auto_pace": 0.4},
 		"keys": {"skip": "S", "speed": "F"},
-		"widths": {"speed": 74, "skip": 92, "speed_compact": 52, "skip_compact": 66},
 		"text": {
 			"speed": "Speed {n}x",
 			"speed_compact": "{n}x",

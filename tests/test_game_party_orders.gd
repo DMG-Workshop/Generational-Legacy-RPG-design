@@ -5,6 +5,12 @@
 extends SceneTree
 
 const Scen := preload("res://tests/round_scenarios.gd")
+const GameApp := preload("res://ui/play/game_app.gd")
+const UiSettings := preload("res://ui/play/ui_settings.gd")
+const TouchHint := preload("res://ui/play/touch_hint.gd")
+const AllyOrders := preload("res://ui/play/ally_orders.gd")
+const BattleSpeed := preload("res://ui/play/battle_speed.gd")
+const DIR := "user://test_party_orders/"
 const TRIO := ["sister_oriel", "bren_cask", "tarsk_ember_eye"]
 
 var fails := 0
@@ -19,14 +25,37 @@ func ok(cond: bool, what: String) -> void:
 
 
 func _init() -> void:
+	_run.call_deferred()
+
+
+func _frames(n: int) -> void:
+	for i in n:
+		await process_frame
+
+
+func _run() -> void:
 	GameData.load_all()
+	DirAccess.make_dir_recursive_absolute(DIR)
+	GameDynasty.save_path = DIR + "save.json"
+	UiSettings.path = DIR + "settings.cfg"
+	UiSettings.scale = 1.0
+	UiSettings.force_mobile = 0
+	UiSettings.force_touch = 0
+	TouchHint.finger = false
 	test_data()
+	test_rows()
 	test_commands()
 	test_give_and_auto()
 	test_pin_rules()
 	test_no_pin_plays_as_before()
 	test_pin_steers_auto_and_attack()
 	test_pin_saves()
+	await test_screen()
+	await test_touch_and_solo()
+	UiSettings.force_touch = -1
+	UiSettings.force_mobile = -1
+	for f in DirAccess.get_files_at(DIR):
+		DirAccess.remove_absolute(DIR + f)
 	print("orders tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -98,6 +127,8 @@ func test_give_and_auto() -> void:
 	ok(GamePartyOrders.give(r, 2, "skill", "enemy:0") == "", "giving Skill queues it")
 	ok(r.entries[2]["cmd"]["act"] == "ability", "as a skill")
 	ok(GamePartyOrders.give(r, 0, "auto") == "" and bool(r.auto[0]) and not r.entries.has(0), "giving Auto switches the member and drops their choice")
+	ok(GamePartyOrders.give(r, 0, "defend") == "" and not bool(r.auto[0]) and r.entries[0]["cmd"]["act"] == "defend", "and an order after that takes them off Auto")
+	GamePartyOrders.give(r, 0, "auto")
 	ok(GamePartyOrders.give(r, 5, "attack") != "" and GamePartyOrders.give(r, 5, "auto") != "", "someone who is not in the fight is refused")
 	ok(not GamePartyOrders.all_auto(r), "not everyone is on Auto yet")
 	GamePartyOrders.set_all_auto(r, true)
@@ -234,3 +265,166 @@ func _edited(save: Dictionary, edit: Callable) -> Dictionary:
 	edit.call(fight["battle"])
 	out["battle"] = Marshalls.variant_to_base64(fight)
 	return out
+
+
+func test_rows() -> void:
+	var s := _round()
+	var r: GameRound = s[2]
+	var rows := GamePartyOrders.rows(r)
+	ok(rows.size() == 4 and int(rows[0]["by"]) == -1 and int(rows[3]["by"]) == 2, "one entry for the heir and each companion")
+	ok(str(rows[1]["decision"]) == "empty" and str(rows[1]["active"]) == "" and str(rows[1]["mark"]) == "", "nobody has an order yet")
+	ok(str(rows[1]["skill"]) != "" and str(rows[0]["skill"]) == "", "a companion's Skill button names the skill; the heir has none")
+	GamePartyOrders.give(r, 0, "attack", "enemy:1")
+	GamePartyOrders.give(r, 1, "defend")
+	GamePartyOrders.give(r, 2, "auto")
+	rows = GamePartyOrders.rows(r)
+	ok(str(rows[1]["active"]) == "attack" and str(rows[1]["mark"]) == "attack", "an Attack is lit and shown")
+	ok(str(rows[2]["active"]) == "defend" and str(rows[2]["mark"]) == "defend", "so is a Defend")
+	ok(str(rows[3]["active"]) == "auto" and str(rows[3]["mark"]) == "auto", "and an Auto")
+	GamePartyOrders.give(r, 0, "skill", "enemy:0")
+	ok(str(GamePartyOrders.rows(r)[1]["active"]) == "skill", "and a Skill")
+	var spell := r.menu(1).filter(func(x): return x["group"] == "spell" and x["enabled"])
+	if not spell.is_empty():
+		var c: Dictionary = (spell[0]["cmd"] as Dictionary).duplicate()
+		c["target"] = "enemy:0"
+		r.queue(0, c)
+		ok(str(GamePartyOrders.rows(r)[1]["active"]) == "" and str(GamePartyOrders.rows(r)[1]["mark"]) == "skill", "a spell lights no button but shows as a skill on the figure")
+	var b: GameBattle = s[1]
+	b.allies[2].hp = 0
+	ok(str(GamePartyOrders.rows(r)[3]["state"]) == "ko" and str(GamePartyOrders.rows(r)[3]["mark"]) == "" and str(GamePartyOrders.rows(r)[3]["skill"]) == "", "a fallen member has nothing to show")
+
+
+# ---------------------------------------------------------------- on the battle screen
+
+func _open_screen(d: GameDynasty) -> Control:
+	app.dynasty = d
+	d.auto_battle = false
+	app.show_state()
+	await _frames(4)
+	return app.current
+
+
+func _button(bv: Control, by: int, kind: String) -> Button:
+	return bv.orders.cells[by]["buttons"][kind]
+
+
+func _flag_text(node: Dictionary) -> String:
+	return str(node["label"].text) if node["box"].visible else ""
+
+
+var app: Node
+
+
+func test_screen() -> void:
+	root.size = Vector2i(1280, 720)
+	await _frames(2)
+	app = GameApp.new()
+	root.add_child(app)
+	await _frames(2)
+	app.new_game("Tess", "warrior", "faetouched", 77, "human")
+	ok(AllyOrders.validate().is_empty(), "the orders data passes its own check: %s" % str(AllyOrders.validate()))
+	var d := Scen.make(6, "paladin", 2, "hunt")
+	var bv: Control = await _open_screen(d)
+	var b := d.battle
+	var r := d.battle_round()
+	ok(bv.orders != null and bv.orders.is_inside_tree() and bv.orders.visible, "a battle with companions has the orders row")
+	ok(bv.orders.cells.size() == 3 and bv.orders.focus_button != null and bv.orders.all_auto_button != null, "a cell for each member: the heir's has Focus and All Auto")
+	for by in [0, 1]:
+		for kind in ["attack", "defend", "skill", "auto"]:
+			var btn := _button(bv, by, kind)
+			ok(btn.icon != null and btn.text != "" and btn.custom_minimum_size.y >= 40.0, "%s's %s button has an icon, a word and room to tap" % [str(b.unit(by).name), kind])
+	ok(_button(bv, 0, "attack").text == "Attack" and _button(bv, 0, "auto").text == "Auto", "the words are short")
+	ok(_flag_text(bv.ally_nodes[0]["mark"]) == "", "no order on the figures yet")
+	# One tap each.
+	_button(bv, 0, "attack").pressed.emit()
+	ok(r.entries.has(0) and r.entries[0]["cmd"]["act"] == "attack", "Attack queues the companion's attack")
+	ok(_flag_text(bv.ally_nodes[0]["mark"]) == "Attack", "and the figure says Attack")
+	ok(bool(_button(bv, 0, "attack").get_meta("lit")) and not bool(_button(bv, 0, "defend").get_meta("lit")), "the button is lit")
+	_button(bv, 0, "defend").pressed.emit()
+	ok(r.entries[0]["cmd"]["act"] == "defend" and _flag_text(bv.ally_nodes[0]["mark"]) == "Defend", "Defend replaces it and shows")
+	_button(bv, 1, "skill").pressed.emit()
+	ok(r.entries.has(1) and r.entries[1]["cmd"]["act"] == "ability" and _flag_text(bv.ally_nodes[1]["mark"]) == "Skill", "Skill queues a class skill and shows")
+	_button(bv, 1, "auto").pressed.emit()
+	ok(bool(r.auto[1]) and not r.entries.has(1) and _flag_text(bv.ally_nodes[1]["mark"]) == "Auto", "Auto switches them over and shows")
+	_button(bv, 1, "attack").pressed.emit()
+	ok(r.entries.has(1) and not bool(r.auto[1]) and _flag_text(bv.ally_nodes[1]["mark"]) == "Attack", "an order for a companion on Auto takes them off Auto")
+	# Focus.
+	var foes: Array = b.living_enemies()
+	bv.target = int(foes[-1])
+	bv._update_marks()
+	ok(not bv.enemy_nodes[int(foes[-1])]["focus"]["box"].visible, "no foe is flagged at first")
+	bv.orders.focus_button.pressed.emit()
+	ok(b.pin == int(foes[-1]) and r.pin_ref() == "enemy:%d" % int(foes[-1]), "Focus pins the foe picked")
+	ok(bv.enemy_nodes[int(foes[-1])]["focus"]["box"].visible and bv.enemy_nodes[int(foes[-1])]["focus"]["label"].text == "FOCUS", "and flags it with a word")
+	ok(bv.orders.focus_button.text.begins_with("Focus: "), "the button names it: %s" % bv.orders.focus_button.text)
+	_button(bv, 0, "attack").pressed.emit()
+	ok(r.entries[0]["cmd"]["target"] == "enemy:%d" % int(foes[-1]), "an Attack with a focus set goes to it")
+	bv.orders.focus_button.pressed.emit()
+	ok(b.pin == -1 and not bv.enemy_nodes[int(foes[-1])]["focus"]["box"].visible and bv.orders.focus_button.text == "Focus", "Focus again lets go")
+	# All Auto.
+	bv.orders.all_auto_button.pressed.emit()
+	ok(GamePartyOrders.all_auto(r) and bv.orders.all_auto_button.text == "All Auto: ON", "All Auto puts the companions on Auto and says so")
+	ok(_flag_text(bv.ally_nodes[0]["mark"]) == "Auto" and _flag_text(bv.ally_nodes[1]["mark"]) == "Auto", "and each figure says Auto")
+	bv.orders.all_auto_button.pressed.emit()
+	ok(not GamePartyOrders.all_auto(r) and bv.orders.all_auto_button.text == "All Auto", "again hands them back")
+	# While the round plays the row is off; in auto-battle it is gone.
+	_button(bv, 0, "attack").pressed.emit()
+	bv.busy = true
+	bv._sync_orders()
+	ok(_button(bv, 0, "attack").disabled and bv.orders.focus_button.disabled, "the row is off while a round plays")
+	_button(bv, 0, "defend").pressed.emit()
+	ok(r.entries[0]["cmd"]["act"] == "attack", "and a tap does nothing then")
+	bv.busy = false
+	bv._sync_orders()
+	ok(not _button(bv, 0, "attack").disabled, "and back on after")
+	b.allies[1].hp = 0
+	bv._sync_orders()
+	ok(_button(bv, 1, "attack").disabled and _button(bv, 1, "skill").disabled, "a fallen companion's buttons are off")
+	b.allies[1].hp = 50
+	bv.set_auto(true)
+	await _frames(2)
+	ok(not bv.orders.visible and not bv.ally_nodes[0]["mark"]["box"].visible, "auto-battle hides the row and the marks")
+	bv.set_auto(false)
+	await _frames(2)
+	ok(bv.orders.visible, "and taking over brings them back")
+	# Everything chosen: the round plays with the one-tap orders, as chosen.
+	UiSettings.set_battle_skip(true)
+	_button(bv, 0, "attack").pressed.emit()
+	_button(bv, 1, "defend").pressed.emit()
+	bv.orders.focus_button.pressed.emit()
+	var guard := 0
+	while r.cursor != -2 and not r.ready() and guard < 6:
+		guard += 1
+		r.queue(r.cursor, {"act": "attack", "target": ""})
+	var turn := b.turn
+	r.ask_reactions = false   # (a hurt companion would stop the round on a question; this is about the orders)
+	bv._commit()
+	await _frames(3)
+	guard = 0
+	while bv.busy and guard < 200:
+		guard += 1
+		await process_frame
+	ok(b.turn > turn or b.is_over(), "the round played")
+	ok(b.events.any(func(ev): return str(ev["type"]) == "defend" and int(ev.get("by", -9)) == 1) or b.is_over(), "the companion who was told to defend defended")
+	UiSettings.set_battle_skip(false)
+	BattleSpeed.set_speed(1)
+
+
+func test_touch_and_solo() -> void:
+	UiSettings.force_touch = 1
+	var d := Scen.make(6, "paladin", 2, "hunt")
+	var bv: Control = await _open_screen(d)
+	var tall := float(UiSettings.setting("touch_target_px"))
+	var all_tall := true
+	for by in bv.orders.cells:
+		for btn in (bv.orders.cells[by]["buttons"] as Dictionary).values():
+			all_tall = all_tall and (btn as Button).custom_minimum_size.y >= tall
+	all_tall = all_tall and bv.orders.focus_button.custom_minimum_size.y >= tall and bv.orders.all_auto_button.custom_minimum_size.y >= tall
+	ok(all_tall, "on a touch screen every order button is at least %d tall" % int(tall))
+	ok(bv.speed_button.custom_minimum_size.y >= tall and bv.skip_button.custom_minimum_size.y >= tall, "and so are the speed and skip buttons")
+	UiSettings.force_touch = 0
+	# A lone heir has no orders.
+	var solo := Scen.make(6, "paladin", 0, "hunt")
+	var sv: Control = await _open_screen(solo)
+	ok(sv.orders == null, "a solo hunt has no orders row")
+	ok(sv.get("strip") == null, "and no party strip, as ever")

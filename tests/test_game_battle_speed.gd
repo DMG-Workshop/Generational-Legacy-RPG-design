@@ -309,9 +309,6 @@ func test_controls() -> void:
 	ok(UiSettings.battle_speed() == 4, "it goes to the top speed")
 	ff.pressed.emit()
 	ok(UiSettings.battle_speed() == 1, "and back to 1x")
-	# Compact windows get the short words.
-	var wide: float = bv.speed_button.custom_minimum_size.x
-	ok(wide >= float(BattleSpeed.speed_data()["widths"]["speed_compact"]), "the speed button is wide enough for its words")
 	# Leaving the screen ends it.
 	d.battle = null
 	app.dynasty = GameDynasty.new_game(5, "Ann", "mage", "faetouched", "elf")

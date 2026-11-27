@@ -817,6 +817,8 @@ func test_every_tooltip_reachable() -> void:
 	await _probe(bv, "battle_view.gd")
 	ok(bv.strip != null, "a battle with companions has the party strip")
 	await _probe(bv.strip, "party_strip.gd")
+	ok(bv.orders != null, "and the companions' orders row")
+	await _probe(bv.orders, "ally_orders.gd")
 	bv._open_feats()
 	await _frames(4)
 	if bv.feat_list != null:
