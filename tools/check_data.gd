@@ -20,6 +20,7 @@ const UiSkin := preload("res://ui/play/ui_skin.gd")
 const ItemIcon := preload("res://ui/play/item_icon.gd")
 const RadialMenu := preload("res://ui/play/radial_menu.gd")
 const ActionSlot := preload("res://ui/play/action_slot.gd")
+const BattleSpeed := preload("res://ui/play/battle_speed.gd")
 const CODE := ["res://core/game/"]
 
 
@@ -50,6 +51,8 @@ static func problems() -> Array:
 			out.append("%s: %s" % [pair[0], p])
 	for p in GameShops.validate():
 		out.append("shops: %s" % p)
+	for p in BattleSpeed.validate():
+		out.append(p)
 	return out
 
 

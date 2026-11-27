@@ -1,0 +1,54 @@
+{
+	"note": "The battle screen's own controls (ui/play/battle_speed.gd, ally_orders.gd; checked by tools/check_data.gd). Rendering only: nothing here reaches the rules, the dice or the typed events of a fight. 'speed' is how long the SCREEN takes: the speed steps, how far each shrinks the hit-stop and the shake, the event pacing and the words of the controls. 'orders' are the companions' one-tap buttons: the word and 8x8 pixel glyph of each ('#' drawn, '.' clear) and the words of the row.",
+	"speed": {
+		"steps": [1, 2, 4],
+		"fx_scale": {"1": 1.0, "2": 0.5, "4": 0.0},
+		"reduced_wait_scale": 0.3,
+		"waits": {"event": 0.35, "cast": 0.25, "auto_pace": 0.4},
+		"keys": {"skip": "S", "speed": "F"},
+		"widths": {"speed": 74, "skip": 92, "speed_compact": 52, "skip_compact": 66},
+		"text": {
+			"speed": "Speed {n}x",
+			"speed_compact": "{n}x",
+			"skip_on": "Skip: ON",
+			"skip_off": "Skip: OFF",
+			"skip_compact_on": "Skip*",
+			"skip_compact_off": "Skip",
+			"speed_tip": "How fast the fight plays on screen: 1x, 2x or 4x. Only the waiting and the animations change; the dice and the result are the same. Key: {key}.",
+			"skip_tip": "Skip animations: each round shows only its result and the log. The result is the same as when it is played out. Key: {key}.",
+			"forward": "Fast-forward {n}x",
+			"forward_tip": "Auto-battle at {n}x speed. Press again to go back to 1x."
+		}
+	},
+	"orders": {
+		"kinds": ["attack", "defend", "skill", "auto"],
+		"words": {"attack": "Attack", "defend": "Defend", "skill": "Skill", "auto": "Auto"},
+		"tips": {
+			"attack": "{name} attacks{at}.",
+			"defend": "{name} defends this round.",
+			"skill": "{name} uses {skill}{at}.",
+			"skill_none": "{name} has no skill to use now.",
+			"auto": "{name} fights on their own, choosing as the autopilot would."
+		},
+		"text": {
+			"title": "Orders",
+			"all_auto": "All Auto",
+			"all_auto_on": "All Auto: ON",
+			"all_auto_tip": "Every companion fights on their own, choosing as the autopilot would. Press again to give the orders yourself.",
+			"focus": "Focus",
+			"focus_on": "Focus: {name}",
+			"focus_tip": "Pick a foe, then press this: every companion on Auto or Attack goes for it, round after round, until it falls. Press again to let go.",
+			"focus_none": "Pick a foe first.",
+			"at": " at {name}",
+			"idle": "Pick",
+			"mark_focus": "FOCUS"
+		},
+		"glyphs": {
+			"attack": ["......##", ".....###", "....###.", "...###..", "#.###...", ".###....", ".##.....", "#..#...."],
+			"defend": [".######.", "########", "########", "########", ".######.", "..####..", "...##...", "........"],
+			"skill": ["...##...", "...##...", "##.##.##", ".######.", "..####..", ".######.", "##.##.##", "#..##..#"],
+			"auto": ["..####..", ".#....#.", "#...####", "#....##.", "#.......", "#......#", ".#....#.", "..####.."],
+			"focus": ["...##...", "...##...", "..#..#..", "###..###", "###..###", "..#..#..", "...##...", "...##..."]
+		}
+	}
+}

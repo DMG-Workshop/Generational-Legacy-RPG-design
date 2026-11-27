@@ -96,6 +96,26 @@ static func motion_time(seconds: float) -> float:
 	return 0.0 if reduced_motion() else seconds
 
 
+## The battle screen's speed (1, 2 or 4; BattleSpeed keeps it to the data's steps) and whether it skips animations. Both are
+## the player's, in settings.cfg, never the save; a missing or damaged value reads as 1x and off.
+static func battle_speed() -> int:
+	var v: Variant = stored("battle_speed", 1)
+	return int(v) if typeof(v) == TYPE_INT else 1
+
+
+static func set_battle_speed(n: int) -> void:
+	store("battle_speed", n)
+
+
+static func battle_skip() -> bool:
+	var v: Variant = stored("battle_skip", false)
+	return typeof(v) == TYPE_BOOL and bool(v)
+
+
+static func set_battle_skip(on: bool) -> void:
+	store("battle_skip", on)
+
+
 static func set_access(key: String, on: bool) -> bool:
 	if not ACCESS_KEYS.has(key):
 		return false
