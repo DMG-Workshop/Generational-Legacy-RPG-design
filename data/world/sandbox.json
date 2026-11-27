@@ -175,7 +175,8 @@
     "companion": ["walk"],
     "person": ["talk", "walk"],
     "landmark": ["use", "walk"],
-    "building": ["use", "walk"]
+    "building": ["use", "walk"],
+    "water": ["fish"]
   },
   "text": {
     "selected": "{name} is selected: right click to send them, T Y U O P to give an order.",
@@ -186,6 +187,7 @@
     "act_walk": "Walk there",
     "act_talk": "Go and talk",
     "act_use": "Go there and use it",
+    "act_fish": "Fish from the bank",
     "act_order": "Order: {order}",
     "not_a_step": "The heir can only step to a tile beside them.",
     "edge": "The edge of the world is there.",

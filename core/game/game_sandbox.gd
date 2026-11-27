@@ -540,6 +540,8 @@ func use() -> Dictionary:
 				route = []
 				refresh()
 			return r
+		if not GameFishing.spot(d, heir.x, heir.y).is_empty():   # the bank of a sea, lake or river: the screen opens the fishing panel
+			return fish()
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
 		"keep":
@@ -595,6 +597,10 @@ func name_at(fx: float, fz: float) -> Dictionary:
 			var b := GameTown.at(int(floor(fx)), int(floor(fz)))
 			if not b.is_empty():
 				consider.call("building", _building_name(b), fx, fz)
+		if found["best"].is_empty():   # open water, named so the thing menu can offer to fish it
+			var body := GameWorldGen.body_at(d.seed_value, int(floor(fx)), int(floor(fz))) if GameWorldGen.in_bounds(int(floor(fx)), int(floor(fz))) else ""
+			if GameWorldGen.is_water(body):
+				found["best"] = {"kind": "water", "name": GameFishing.water_name(body).left(1).to_upper() + GameFishing.water_name(body).substr(1), "id": body}
 	return found["best"]
 
 
@@ -940,9 +946,28 @@ func forage() -> Dictionary:
 		return {"ok": false, "text": GameForage.text("upstairs")}
 	var out := GameForage.forage(d, heir.x, heir.y)
 	if out["ok"]:
+		var worms := GameFishing.bait_find(d, int(out["x"]), int(out["z"]))   # bait for the rod, on dice keyed on the node (a line for the screen only)
+		if worms > 0:
+			out["text"] = "%s %s" % [out["text"], GameFishing.text("worms", {"heir": d.heir.name, "n": worms})]
 		log.append({"kind": "forage", "text": str(out["text"])})
 		dirty.append(Vector2i(int(out["x"]), int(out["z"])))
 	return out
+
+
+## Fishing from the bank (GameFishing): {ok, text, open: "fishing", spot} when the heir has a rod and water within reach, else why not.
+## Nothing is drawn or changed here; the screen opens the panel, which casts.
+func fish() -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": GameFishing.text("indoors")}
+	if storey() > 0:
+		return {"ok": false, "text": GameFishing.text("upstairs")}
+	if d.battle != null:
+		return {"ok": false, "text": GameFishing.text("fight")}
+	var why := GameFishing.why_not(d, heir.x, heir.y)
+	if why != "":
+		return {"ok": false, "text": why}
+	var sp := GameFishing.spot(d, heir.x, heir.y)
+	return {"ok": true, "text": GameFishing.text("bank", {"heir": d.heir.name, "water": GameFishing.water_name(str(sp["body"]))}), "open": "fishing", "spot": sp}
 
 
 ## Digs the cell `depth` below the surface straight under the heir (`GameMine.dig`): {ok, why, ...}.

@@ -22,6 +22,7 @@ const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const GatePanel := preload("res://ui/play/gate_panel.gd")
+const FishingPanel := preload("res://ui/play/fishing_panel.gd")
 const TalkPanel := preload("res://ui/play/talk_panel.gd")
 const PaneKit := preload("res://ui/play/pane_kit.gd")
 const GoalView := preload("res://ui/play/goal_view.gd")
@@ -574,6 +575,11 @@ func _thing_act(named: Dictionary, action: String, tile: Vector2i) -> void:
 			_open_figure()
 		"pack":
 			_open_pack("")
+		"fish":
+			if GameFishing.spot(app.dynasty, sb.heir.x, sb.heir.y).is_empty():
+				last_line = GameFishing.text("walk_bank")   # a click on far water: nothing to cast into from here
+			else:
+				_fish()
 		"walk", "talk", "use":
 			var planned := sb.set_route(tile)
 			if planned["ok"]:
@@ -758,6 +764,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_radial_release()
 		return
 	if not event.is_pressed():
+		return
+	if event.is_action_pressed("world_fish") and not _modal_open() and mode == "walk":
+		get_viewport().set_input_as_handled()
+		_fish()
 		return
 	if event.is_action_pressed("world_goal") and not _modal_open():
 		get_viewport().set_input_as_handled()
@@ -1094,6 +1104,7 @@ func _open_pack(bag: String) -> void:
 	panel.bag = bag
 	panel.on_change = func(): _refresh_status()
 	panel.on_smoke = func() -> String: return str(_use_smoke()["text"])
+	panel.on_fish = func() -> String: return _fish()
 	panel.on_open_bag = func(id: String): _open_pack(id)
 	_add_pane(panel, "" if bag == "" else ":" + bag)
 
@@ -1147,6 +1158,8 @@ func _use() -> void:
 		_open_trials()
 	elif str(r.get("open", "")) == "gate":
 		_open_gate(str(r["gate"]))
+	elif str(r.get("open", "")) == "fishing":
+		_open_fishing(r["spot"])
 	elif r.has("who") and not (r["who"] as Dictionary).is_empty():
 		_say(str(r["who"]["id"]), str(r.get("bare", "")))   # a villager answered: their words show over their head
 		if not (r["choices"] as Array).is_empty():
@@ -1188,6 +1201,28 @@ func _dig() -> void:
 		last_line = str(r["why"])
 	_refresh_status()
 	queue_redraw()
+
+
+## Fishing from the bank (GameSandbox.fish): the panel opens over the map when the heir has a rod and water within reach. The line to say.
+func _fish() -> String:
+	var r := sb.fish()
+	last_line = str(r["text"])
+	if r["ok"]:
+		_open_fishing(r["spot"])
+	_refresh_status()
+	queue_redraw()
+	return last_line
+
+
+## The fishing panel over the map: the world waits while it is open. Catches change the pack and the stores, so the screen saves when it closes.
+func _open_fishing(spot: Dictionary) -> void:
+	var panel: Control = FishingPanel.new()
+	panel.dynasty = app.dynasty
+	panel.spot = spot
+	panel.on_change = func():
+		_refresh_status()
+		_save()
+	_add_pane(panel)
 
 
 func _forage() -> void:
