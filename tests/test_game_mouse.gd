@@ -96,7 +96,7 @@ func test_name_at() -> void:
 	sb.creatures = [GameBehaviour.new_agent(1, "wolf", hx + 5.0, hz + 5.0, 1.0)]
 	var wolf := sb.name_at(hx + 5.0, hz + 5.0)
 	ok(wolf.get("kind", "") == "creature" and wolf.get("name", "") == "Dire Wolf", "a creature names itself: %s" % str(wolf))
-	ok(sb.name_at(hx + 5.0, hz + 8.0).is_empty(), "and only close to it")
+	ok(sb.name_at(hx + 5.0, hz + 8.0).get("kind", "") != "creature", "and only close to it (a signpost or stall may stand near, but not the wolf)")
 	sb.creatures = [GameBehaviour.new_agent(1, "wolf", hx + 5.0, hz + 5.0, 1.0), GameBehaviour.new_agent(2, "goblin", hx + 5.5, hz + 5.0, 1.0)]
 	ok(sb.name_at(hx + 5.55, hz + 5.0).get("name", "") == "Goblin Raider", "the nearer of two is named")
 	sb.creatures = []
