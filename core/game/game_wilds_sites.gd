@@ -238,6 +238,8 @@ static func legend_name(lm: Dictionary) -> String:
 
 
 static func name_of(lm: Dictionary) -> String:
+	if lm.has("name"):
+		return str(lm["name"])   # a stall of the market (GameNightLife) has its own
 	return str(_def(str(lm["kind"]))["name"]).format({"legend": legend_name(lm)})
 
 

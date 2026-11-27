@@ -137,6 +137,9 @@ func place_line() -> String:
 		line = _text("upstairs_at", {"n": storey()}) if line == "" else "%s %s" % [_text("upstairs_at", {"n": storey()}), line]
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty() and storey() == 0:
+		var stall_hint := GameNightLife.stall_hint(d, heir.x, heir.y)
+		if stall_hint != "":
+			return stall_hint if line == "" else "%s %s" % [line, stall_hint]
 		var trial_site := GameTrials.site_hint(d, heir.x, heir.y)
 		if trial_site != "":
 			return trial_site if line == "" else "%s %s" % [line, trial_site]
@@ -177,6 +180,8 @@ func move(dx: int, dz: int) -> Dictionary:
 	var c := can_step(dx, dz)
 	if not c["ok"]:
 		return c
+	if space == "world":
+		_leave_print(heir)
 	heir += Vector2i(dx, dz)
 	_arrive()
 	GameTravel.after_step(self)   # a pin the heir has come to comes off
@@ -329,6 +334,28 @@ func refresh() -> void:
 		creatures.append(agent)
 		next_uid += 1
 		_occupied[_key(int(f[1]), int(f[2]))] = true
+
+
+## How the weather scales the seconds between the heir's steps on foot: 1 in clear weather, above 1 in snow (data/world/weather_effects.json).
+## The sandbox screen multiplies its walk and run pace by it; nothing else in the open world's rules does.
+func step_pace() -> float:
+	return GameWeatherFx.walk_mult(d) if space == "world" else 1.0
+
+
+## The tiles the heir has crossed in snow, newest last, as {x, z, at (world seconds)}: only the look (the screen draws them), never saved.
+var prints: Array = []
+
+
+## Notes a footprint on the tile the heir leaves, when the weather leaves them.
+func _leave_print(from: Vector2i) -> void:
+	if not GameWeatherFx.prints_now(d):
+		if not prints.is_empty():
+			prints.clear()
+		return
+	prints.append({"x": from.x, "z": from.y, "at": d.world_seconds})
+	var keep := int(GameWeatherFx.setting("max_prints"))
+	if prints.size() > keep:
+		prints = prints.slice(prints.size() - keep)
 
 
 ## The interior whose door is on the tile the heir stands on ("" when there is none): a dungeon's door on the open world, a
@@ -519,6 +546,11 @@ func use() -> Dictionary:
 			var t := GameTalk.talk(d, who, GameDay.hour(d))
 			log.append({"kind": "talk", "text": str(t["text"])})
 			return t
+		var stall := GameNightLife.stall_near(d, heir.x, heir.y)   # the day's market stall: its trader's panel
+		if not stall.is_empty():
+			var st := GameNightLife.stall_use(d, stall)
+			log.append({"kind": "site", "text": str(st["text"])})
+			return st
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty():
 		var trial_site := GameTrials.site_near(d, heir.x, heir.y) if storey() == 0 else {}
@@ -576,6 +608,9 @@ func name_at(fx: float, fz: float) -> Dictionary:
 				found["best"]["level"] = level   # a creature's own level and how it stands against the heir's
 				found["best"]["con"] = con(level)
 	consider.call("heir", d.heir.name, float(heir.x) + 0.5, float(heir.y) + 0.5)
+	if storey() == 0:
+		for s in GameNightLife.stalls_in(d, Rect2i(floori(fx) - 2, floori(fz) - 2, 5, 5)):
+			consider.call("person", GameNightLife.text("trader"), float(s["x"]) + 0.5, float(s["z"]) + 0.5)
 	for a in creatures:
 		var def := {}
 		for c in GameData.creatures:
@@ -718,7 +753,7 @@ func step(ticks: int = 1) -> void:
 		if GameSmoke.clear_if_out(d):
 			log.append({"kind": "smoke", "text": GameSmoke.text("thinned")})
 		var hidden := GameSmoke.covers(d, heir_point().x, heir_point().y)   # a heir inside the cloud is not seen from outside it
-		var cview := GameBehaviour.world_view(d, [] if hidden else [{"x": heir_point().x, "z": heir_point().y}], night)
+		var cview := GameWeatherFx.apply(d, GameBehaviour.world_view(d, [] if hidden else [{"x": heir_point().x, "z": heir_point().y}], night))   # with the weather's sight, speeds and shelter
 		creatures = GameBehaviour.step_all(creatures, cview, d.seed_value, tick)
 		creatures = _smoke_drives(creatures, cview)
 		if _contact():
