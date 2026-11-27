@@ -1065,6 +1065,7 @@ func _contact() -> bool:
 	var ids: Array = []
 	var gone: Array = []
 	var levels: Array = []   # each creature's own level (GameLevels), in the order of the ids
+	var tiles: Array = []    # the tile each stood on: what its elite and its pattern are rolled on (GameVariety)
 	for i in creatures.size():
 		var a: Dictionary = creatures[i]
 		if ids.size() >= int(setting("contact_max")):
@@ -1072,8 +1073,9 @@ func _contact() -> bool:
 		if i == first or (str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_join")))):
 			ids.append(str(a["id"]))
 			levels.append(level_of(a))
+			tiles.append([floori(float(a["x"])), floori(float(a["z"]))])
 			gone.append(a)
-	var fight := d.start_encounter(ids, "", 1.0, levels)
+	var fight := d.start_encounter(ids, "", 1.0, levels, tiles)
 	if fight == null:
 		return false
 	var away := _escape_tile(Vector2(float(creatures[first]["x"]), float(creatures[first]["z"])))
@@ -1188,7 +1190,10 @@ func _landmark_approach() -> bool:
 ## Starts the fight a landmark sends (`plan` is GameWildsFights.plan): its foes by the hunt's own rules, the heir's way clear behind them, the first blow
 ## theirs on an ambush unless the heir is already hurt below `surprise_min_hp`. Marks the landmark fought (its cooldown starts). Returns whether a fight began.
 func begin_landmark_fight(lm: Dictionary, plan: Dictionary) -> bool:
-	var fight := d.start_encounter(plan["foes"], str(lm["area"]), float(plan["level_mult"]))
+	var keys: Array = []
+	for n in (plan["foes"] as Array).size():
+		keys.append([str(lm["id"]), n])
+	var fight := d.start_encounter(plan["foes"], str(lm["area"]), float(plan["level_mult"]), [], keys)
 	if fight == null:
 		return false
 	GameWildsFights.mark_fought(d, lm)
@@ -1296,7 +1301,7 @@ func _dungeon_contact() -> bool:
 	var gone: Array = []
 	var fight: GameBattle = null
 	if bool(lead["boss"]):
-		fight = d.start_legend_at(str(lead["id"]))
+		fight = d.start_legend_at(str(lead["id"]), true)
 		gone = [lead]
 	else:
 		var ids: Array = []
@@ -1308,7 +1313,7 @@ func _dungeon_contact() -> bool:
 			if a == lead or (str(a["mode"]) == "chase" and Vector2(float(a["x"]), float(a["z"])).distance_to(me) <= float(setting("contact_join"))):
 				ids.append(str(a["id"]))
 				gone.append(a)
-		fight = d.start_encounter(ids, place)
+		fight = d.start_encounter(ids, place, 1.0, [], gone.map(func(a): return [place, str(a["room"]), str(a["key"])]))
 	if fight == null:
 		return false
 	d.sandbox_escape = {"x": outside.x, "z": outside.y, "space": space}

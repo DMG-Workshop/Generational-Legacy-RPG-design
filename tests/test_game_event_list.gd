@@ -6,7 +6,7 @@
 extends SceneTree
 
 const Scen := preload("res://tests/round_scenarios.gd")
-const SOURCES := ["res://core/game/game_battle.gd", "res://core/game/game_round.gd", "res://core/game/game_tactics.gd"]
+const SOURCES := ["res://core/game/game_battle.gd", "res://core/game/game_round.gd", "res://core/game/game_tactics.gd", "res://core/game/game_variety.gd"]
 
 var fails := 0
 var checks := 0

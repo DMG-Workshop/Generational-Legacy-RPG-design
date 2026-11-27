@@ -20,6 +20,7 @@ const HitFx := preload("res://ui/play/hit_fx.gd")
 const DamageNumber := preload("res://ui/play/damage_number.gd")
 const LootPop := preload("res://ui/play/loot_pop.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
+const BossCard := preload("res://ui/play/boss_card.gd")
 const AREA := Color("#ff9a3c")
 const MIN_COMMAND_FONT := 11   # the smallest a command shrinks to before its text is clipped
 
@@ -185,6 +186,7 @@ func _ready() -> void:
 		if b.is_over():   # saved after the last blow, before its result was shown
 			call_deferred("_show_result")
 		return
+	BossCard.intro(self)   # a legend's title card
 	_say("A battle begins!")
 	if not b.allies.is_empty():
 		var party: Array = b.allies.map(func(a): return a.name)
@@ -349,8 +351,13 @@ func _build_actors() -> void:
 	for a in b.allies:
 		ally_nodes.append(_build_ally(a))
 
-	var solo := b.enemies.size() == 1
-	for i in b.enemies.size():
+	_build_foes(0)
+
+
+## The figures of the foes from index `from` on (a foe that joins a fight later is built when its event plays).
+func _build_foes(from: int) -> void:
+	var solo := from == 0 and b.enemies.size() == 1
+	for i in range(from, b.enemies.size()):
 		var e: Dictionary = b.enemies[i]
 		var root := Control.new()
 		var w := 170.0 if e["boss"] else (120.0 if solo else 88.0)
@@ -403,7 +410,7 @@ func _build_actors() -> void:
 		while lv_size > 8 and font.get_string_size(lv_text, HORIZONTAL_ALIGNMENT_LEFT, -1, lv_size).x > w - 8.0:
 			lv_size -= 1
 		var pale := tex == null and Color(e["color"]).get_luminance() > 0.45
-		var elite := str(e["name"]).begins_with("Elite")
+		var elite := str(e["name"]).begins_with("Elite") or e.has("elite")
 		var lv := Kit.label(lv_text, lv_size, (Kit.ACCENT.darkened(0.6) if elite else Kit.BG) if pale else (Kit.ACCENT if elite else Kit.TEXT))
 		if tex != null:   # over a sprite the level sits on a dark tag, so it reads on any colour
 			lv.add_theme_stylebox_override("normal", _level_tag())
@@ -496,6 +503,9 @@ func _build_ally(a: GameHeir) -> Dictionary:
 ## place without a scene.
 func _build_scenery() -> void:
 	var tex := SceneryArt.for_world(d.world)
+	var lair := GameVariety.arena_place(b)   # a legend is fought in its own lair
+	if lair != "":
+		tex = SceneryArt.texture(lair, d.world.weather_id, str(d.world.season().get("id", "")))
 	if tex == null:
 		return
 	var shown := AtlasTexture.new()
@@ -1905,6 +1915,8 @@ func _play_all(events: Array) -> void:
 
 func _play_one(ev: Dictionary) -> void:
 	var by := int(ev.get("by", -1))
+	if ev.get("heavy", false):
+		BossCard.heavy(self, ev)   # a blow that was announced lands
 	app.sound.event(ev)   # the event's cue, if the data gives it one
 	if str(ev.get("side", "")) == "enemy" and ev["type"] in ["damage", "death"] and int(ev.get("index", -1)) in range(b.enemies.size()):
 		app.sound.creature(str(b.enemies[int(ev["index"])]["id"]), ev["type"] == "death")   # the foe's cry
@@ -2047,6 +2059,8 @@ func _play_one(ev: Dictionary) -> void:
 		"foes":
 			if strip != null:
 				strip.mark_acting(-2)
+		"wind_up", "guard_up", "summon", "phase":   # the open world's telegraphs, a foe that joins, a legend's phases
+			BossCard.play(self, ev)
 		"coat":
 			_float_text(hero_node.position + Vector2(30, 70), "blade coated", GamePlague.toxin_color(), 18)
 		"coat_end":
@@ -2391,6 +2405,7 @@ func _show_result() -> void:
 	Kit.clear(command_box)
 	hint.text = ""
 	var pack_before: Array = d.heir.inventory.duplicate()
+	var held_before := d.heirlooms.size()
 	var msgs: Array = d.finish_battle()
 	msgs.append_array(GameCraft.after_legend(d, b.result, b.enemies))   # and the parts of a slain legend
 	msgs.append_array(GameLoot.after_legend(d, b.result, b.enemies))   # a slain legend leaves something made (the screens ask, the rules of a life do not)
@@ -2441,6 +2456,7 @@ func _show_result() -> void:
 	foot.add_theme_constant_override("separation", 8)
 	outer.add_child(foot)
 	result_panel = p
+	BossCard.victory(v, GameVariety.victory_beat(d, b, held_before))   # a legend's fall and its heirloom, before the story
 	for m in msgs:
 		var l := Kit.label(m, 16)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
