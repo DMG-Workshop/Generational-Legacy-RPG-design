@@ -39,6 +39,7 @@ const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
 const SpriteMotion := preload("res://ui/play/sprite_motion.gd")
 const Glide := preload("res://ui/play/glide.gd")
+const SkyLife := preload("res://ui/play/sky_life.gd")
 const MoveMarker := preload("res://ui/play/move_marker.gd")
 const WorldCamera := preload("res://ui/play/world_camera.gd")
 const BAR := 56.0
@@ -271,11 +272,11 @@ func _process(delta: float) -> void:
 		elif _walk_wait <= 0.0:
 			facing_dir = step_for(mv)
 			sb.move(facing_dir.x, facing_dir.y)
-			_walk_wait = Glide.step_seconds(running)
+			_walk_wait = Glide.step_seconds(running) * sb.step_pace()   # snow slows the walk a little
 			stepped = true
 	elif mode == "walk" and not sb.route.is_empty() and _walk_wait <= 0.0:
 		sb.walk_one()
-		_walk_wait = Glide.step_seconds(running)
+		_walk_wait = Glide.step_seconds(running) * sb.step_pace()
 		stepped = true
 		if _use_when_there and sb.route.is_empty():   # a double click out of reach: they have arrived, so use it
 			_use_when_there = false
@@ -1382,7 +1383,12 @@ func _refresh_status() -> void:
 	var pin := _pin_line()
 	if pin == "" and sb.space == "world" and not _pane_up(StatusPane):
 		pin = GoalView.line(sb.heir)   # no status pane to say it (a touch screen, a narrow window): the goal leads the line
+	var sky: Array = GameWeatherFx.notes(d, sb.heir) if sb.space == "world" else []   # what the night and the weather do, in words
+	var sky_line := " / ".join(sky)
+	status.tooltip_text = "\n".join(sky)
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line] if pin == "" else "%s  %s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], pin, line]
+	if sky_line != "" and (UiSettings.touch() or UiSettings.compact(self) or not _pane_up(StatusPane)):
+		status.text += "  " + sky_line   # no status pane to say it: the strip does
 	if UiSettings.touch() or UiSettings.compact(self):
 		# no status pane here: the heir's level and experience (and a smoke pot's time) lead the one status line
 		var h := d.heir
@@ -1466,6 +1472,7 @@ func _paint(c: Control) -> void:
 	if outdoors and move_marker.active:
 		move_marker.paint(c, origin + (Vector2(move_marker.tile) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5, cell, _rgb(colors["route"]))   # where a click walks to
 	if outdoors:
+		SkyLife.paint_prints(c, d, sb.prints, origin, area, centre, cell)   # footprints in the snow (the look only)
 		_paint_standing(c, origin, area, centre, cell, colors, float(look["light"]))
 		GoalView.paint_world(c, d, origin, area, centre, cell)   # the goal arrow (a map pin wins over it)
 	elif GameDungeons.is_dungeon(sb.space):
@@ -1503,6 +1510,7 @@ func _paint_glow(c: Control) -> void:
 	var half := area / (2.0 * cell) + Vector2(4, 4)
 	var view := Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0))
 	WorldLook.paint_glow(c, WorldLook.glow_sources(app.dynasty, tile_view, view), look, cell, Vector2(0, BAR), area, centre)
+	SkyLife.paint_glow_halos(c, app.dynasty, view, Vector2(0, BAR), area, centre, cell)   # the glowcaps shine
 
 
 ## Fog, then rain or snow, then the vignette over the map (the weather only in the open world, and not with reduced motion).
@@ -1513,6 +1521,9 @@ func _paint_sky(c: Control) -> void:
 	var rect := Rect2(Vector2(0, BAR), Vector2(size.x, size.y - BAR))
 	if sb.space == "world":
 		WorldLook.paint_fog(c, rect, look)
+		var cell := _cell()
+		var heir_px := Vector2(0, BAR) + (Vector2(sb.heir) + heir_off + Vector2(0.5, 0.5) - (Vector2(sb.heir) + cam)) * cell + rect.size * 0.5
+		SkyLife.paint_veil(c, app.dynasty, rect, heir_px, cell)   # past the heir's sight in fog and storm the world fades
 		WorldLook.paint_weather(c, rect, look)
 	WorldLook.paint_vignette(c, rect, look)
 
@@ -1535,6 +1546,11 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 		items.append([float(w["z"]), "villager", w])
 	for e in GameDungeonArt.entrances_in(view):
 		items.append([float(e["rect"].end.y) - 0.1, "entrance", e])
+	if sb.storey() == 0:
+		for g in SkyLife.glow_tiles(d, view):   # the night's glowcaps
+			items.append([float(int(g["z"])) + 0.4, "glow", g])
+		for s in GameNightLife.stalls_in(d, view):   # the day's market stalls
+			items.append([float(int(s["z"])) + 0.9, "stall", s])
 	if sb.storey() == 0:
 		for g in GateArt.in_view(d, view):   # the waygates: arches of old stone with a ring of runes
 			items.append([float((g["rect"] as Rect2i).end.y) - 0.5, "gate", g])
@@ -1565,6 +1581,10 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_texture_rect(inside, box, false, dim)
 					_paint_residents(c, b, at, cell, dim)
 				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"]), GameVillagers.door_scale(b)), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
+			"glow":
+				SkyLife.paint_glowcap(c, it[2], origin, area, centre, cell)
+			"stall":
+				SkyLife.paint_stall(c, it[2], origin, area, centre, cell, dim)
 			"gate":
 				var g: Dictionary = it[2]
 				var gr: Rect2i = g["rect"]
@@ -1602,8 +1622,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					_stand(c, mtex, tp + Vector2(0, cell * 0.3), Vector2(mw, mh), false, dim, cell)   # the art faces left, and so does the master (a mirrored figure is drawn a box to the right, see _stand)   # the art faces left; the master turns to the heir
 			"creature":
 				var a: Dictionary = it[2]
-				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
-					continue   # under a whole roof: not seen
+				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))) or not GameWeatherFx.seen_by_heir(d, sb.heir_point(), float(a["x"]), float(a["z"])):
+					continue   # under a whole roof, or out in the fog past the heir's sight: not seen
 				var p := origin + (_gpos("c%s" % a["uid"], "creature", float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 				var tex: Texture2D = SpriteArt.creature(str(a["id"]))
 				if tex == null:

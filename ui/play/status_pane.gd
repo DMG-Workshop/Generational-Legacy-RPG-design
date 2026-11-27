@@ -11,6 +11,7 @@ const GoalView := preload("res://ui/play/goal_view.gd")
 var dynasty: GameDynasty
 var sb: GameSandbox = null   # where the heir is, for the pin's distance
 var _pin: Label
+var _sky: Label    # what the night and the weather do: "Rain: herbs regrow faster and fire creatures slow."
 var _goal: Label   # the goal arrow's words: "Goal: Rest at the family house (24 tiles NE)"
 var _who: Label
 var _gold: Label
@@ -41,6 +42,11 @@ func _ready() -> void:
 	_pin.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_pin.visible = false
 	v.add_child(_pin)
+	_sky = Kit.label("", 13, Kit.dim())
+	_sky.name = "SkyLine"
+	_sky.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_sky.visible = false
+	v.add_child(_sky)
 	_goal = Kit.label("", 13, Kit.good())
 	_goal.name = "GoalLine"
 	_goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -70,6 +76,9 @@ func refresh() -> void:
 	var pin_text := GameTravel.pin_line(dynasty, sb.heir) if sb != null and sb.space == "world" else ""
 	_pin.text = pin_text
 	_pin.visible = pin_text != ""
+	var sky_text := "\n".join(GameWeatherFx.notes(dynasty, sb.heir)) if sb != null and sb.space == "world" else ""
+	_sky.text = sky_text
+	_sky.visible = sky_text != ""
 	var goal_text := GoalView.line(sb.heir) if sb != null and sb.space == "world" else ""
 	_goal.text = goal_text
 	_goal.visible = goal_text != ""
