@@ -94,7 +94,9 @@ static func node_key(x: int, z: int) -> String:
 ## Whether a node was gathered less than `regrow_years` ago.
 static func depleted(d: GameDynasty, x: int, z: int) -> bool:
 	var k := node_key(x, z)
-	return d.gathered.has(k) and float(d.world.year) - float(d.gathered[k]) < float(setting("regrow_years"))
+	if not d.gathered.has(k):
+		return false
+	return float(d.world.year) - float(d.gathered[k]) < float(setting("regrow_years")) / GameWeatherFx.regrow_mult(d, x, z)   # rain brings the herbs back sooner
 
 
 ## The saved gathered nodes, checked: "x,z" keys with a finite number for the year, else dropped.
@@ -394,6 +396,8 @@ static func scan(d: GameDynasty, post: Vector2, claimed: Dictionary = {}) -> Arr
 				continue
 			var t := GameWorldGen.tile(d, x, z)
 			var n: Dictionary = t["node"]
+			if n.is_empty() and not t["water"]:
+				n = GameNightLife.glow_node(d, x, z)   # a glowcap, in the dark
 			if t["water"] or n.is_empty() or str(n["material"]) == "":
 				continue
 			found.append({"x": x, "z": z, "material": str(n["material"]), "amount": int(n["amount"]), "dist": Vector2(x, z).distance_to(post)})

@@ -1227,7 +1227,7 @@ func _ui_tests() -> void:
 	# A stunned heir: the round passes on its own.
 	d.battle.apply_status("heir", "stun", 1.0, 2, "enemy:0")
 	var turn := d.battle.turn
-	_button(view, "Defend").pressed.emit()
+	_button(view.command_box, "Defend").pressed.emit()   # (not the companions' order row's Defend, which comes first in the tree)
 	for k in 80:
 		if d.battle.turn >= turn + 2 and not view.busy:
 			break

@@ -21,7 +21,8 @@
     "brew_counter": "brewed"
   },
   "brews": {
-    "healing_potion": {"name": "healing potion", "cost": {"herb": 2}, "fee": 6, "makes": 1}
+    "healing_potion": {"name": "healing potion", "cost": {"herb": 2}, "fee": 6, "makes": 1},
+    "sailors_stew": {"name": "sailor's stew", "cost": {"fish": 3, "herb": 1}, "fee": 4, "makes": 2}
   },
   "calling_brews": {
     "distilled_elixir": {"subclass": "alchemist", "name": "distilled elixir", "cost": {"herb": 3, "glass": 1}, "fee": 12, "makes": 3},

@@ -71,6 +71,11 @@
 ##       # at them below settings.cover_below of their health, once a round ("" takes it back); "" ok, else the reason.
 ##       # Kept from round to round; it costs no action and draws no dice.
 ##   func next_cover(by: int) -> String  # the next choice for by's cover, "" (none) after the last member
+##   func set_pin(ref: String) -> String # the party's focus: "enemy:N" (a standing foe) makes every companion on Auto, and every Attack with
+##       # no target of its own, go for that foe round after round until it falls ("" clears it); "" ok, else the reason. Kept on the
+##       # battle (GameBattle.pin, saved with it). Only what the player sets: with none, a fight plays exactly as it always did.
+##       # data/combat/rounds.json settings.pin says which of "auto" and "attack" follow it. Costs no action and draws no dice.
+##   func pin_ref() -> String            # the focused foe's ref while it stands, else ""
 ##
 ## REACTIONS THAT ASK FIRST (only when ask_reactions is true: the battle screen sets it; tests, scenarios and
 ## the autopilots leave it off, so their rounds always play through):
@@ -145,7 +150,7 @@ static func validate() -> Array:
 	GameData.load_all()
 	var out: Array = []
 	var s: Dictionary = GameData.combat.get("rounds", {}).get("settings", {})
-	for key in ["default_auto", "flee_covers_party", "confirm_single", "ally_defend", "defend_mp_pct", "brace_taken", "cover_below", "potion_for_companions", "chip_texts"]:
+	for key in ["default_auto", "flee_covers_party", "confirm_single", "ally_defend", "defend_mp_pct", "brace_taken", "cover_below", "potion_for_companions", "chip_texts", "pin"]:
 		if not s.has(key):
 			out.append("rounds: settings has no %s" % key)
 	if not out.is_empty():
@@ -162,6 +167,13 @@ static func validate() -> Array:
 		out.append("rounds: brace_taken must be above 0 and at most 1")
 	if typeof(s["cover_below"]) not in [TYPE_FLOAT, TYPE_INT] or float(s["cover_below"]) <= 0.0 or float(s["cover_below"]) > 1.0:
 		out.append("rounds: cover_below must be above 0 and at most 1")
+	var pn = s["pin"]
+	if typeof(pn) != TYPE_DICTIONARY:
+		out.append("rounds: pin must be an object")
+	else:
+		for key in ["auto", "attack"]:
+			if typeof(pn.get(key)) != TYPE_BOOL:
+				out.append("rounds: pin.%s must be true or false" % key)
 	var ct = s["chip_texts"]
 	if typeof(ct) != TYPE_DICTIONARY:
 		out.append("rounds: chip_texts must be an object")
@@ -644,7 +656,7 @@ static func plan_for(p_b: GameBattle, by: int, cmd: Dictionary) -> Dictionary:
 	var act := str(c.get("act", ""))
 	var target := str(c.get("target", ""))
 	if act == "attack":
-		var t := _foe_index(target) if target != "" else p_b._valid_target(p_b.focus)
+		var t := _foe_index(target) if target != "" else p_b.press_target("attack")
 		return {"act": "attack", "target": t} if t >= 0 and p_b.enemies[t]["hp"] > 0 else {}
 	if _why_not(p_b, by, c) != "":
 		return {}
@@ -861,7 +873,7 @@ func view() -> Dictionary:
 			"decision": decision, "chip": chip, "kind": kind, "statuses": statuses, "tip": tip, "cover": str(covers.get(by, ""))})
 	return {"number": number, "cursor": cursor, "ready": ready(), "can_back": not _order.is_empty(), "can_repeat": can_repeat(),
 		"flee": flee_by != -2, "auto_commit": auto_commits(), "manual_count": manual_count(), "over": b.is_over(), "members": list,
-		"asking": asking()}
+		"asking": asking(), "pin": pin_ref()}
 
 
 # ---------------------------------------------------------------- playing the round
@@ -894,6 +906,22 @@ func next_cover(by: int) -> String:
 			opts.append(GameBattle.ref_of(m))
 	var at := opts.find(str(covers.get(by, "")))
 	return opts[(at + 1) % opts.size()]
+
+
+## The party's focus (see the interface above). The heir is never moved by it: their own blows go where they aim.
+func set_pin(ref: String) -> String:
+	if ref == "":
+		b.pin = -1
+		return ""
+	var why := _why_foe(b, ref)
+	if why != "":
+		return why
+	b.pin = _foe_index(ref)
+	return ""
+
+
+func pin_ref() -> String:
+	return "enemy:%d" % b.pin if b.pin >= 0 and b.pin in b.living_enemies() else ""
 
 
 ## The covers that can apply this round, keyed by the covered member's ref: both standing, the coverer

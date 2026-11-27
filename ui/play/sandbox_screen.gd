@@ -22,6 +22,7 @@ const WorldMapPanel := preload("res://ui/play/world_map_panel.gd")
 const TrialsPanel := preload("res://ui/play/trials_panel.gd")
 const MerchantPanel := preload("res://ui/play/merchant_panel.gd")
 const GatePanel := preload("res://ui/play/gate_panel.gd")
+const FishingPanel := preload("res://ui/play/fishing_panel.gd")
 const TalkPanel := preload("res://ui/play/talk_panel.gd")
 const PaneKit := preload("res://ui/play/pane_kit.gd")
 const GoalView := preload("res://ui/play/goal_view.gd")
@@ -37,8 +38,10 @@ const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
+const DropArt := preload("res://ui/play/drop_art.gd")
 const SpriteMotion := preload("res://ui/play/sprite_motion.gd")
 const Glide := preload("res://ui/play/glide.gd")
+const SkyLife := preload("res://ui/play/sky_life.gd")
 const MoveMarker := preload("res://ui/play/move_marker.gd")
 const WorldCamera := preload("res://ui/play/world_camera.gd")
 const BAR := 56.0
@@ -271,11 +274,11 @@ func _process(delta: float) -> void:
 		elif _walk_wait <= 0.0:
 			facing_dir = step_for(mv)
 			sb.move(facing_dir.x, facing_dir.y)
-			_walk_wait = Glide.step_seconds(running)
+			_walk_wait = Glide.step_seconds(running) * GameRoads.pace_for(sb) * sb.step_pace()   # snow slows the walk a little
 			stepped = true
 	elif mode == "walk" and not sb.route.is_empty() and _walk_wait <= 0.0:
 		sb.walk_one()
-		_walk_wait = Glide.step_seconds(running)
+		_walk_wait = Glide.step_seconds(running) * GameRoads.pace_for(sb) * sb.step_pace()
 		stepped = true
 		if _use_when_there and sb.route.is_empty():   # a double click out of reach: they have arrived, so use it
 			_use_when_there = false
@@ -302,6 +305,7 @@ func _process(delta: float) -> void:
 	while _tick_wait <= 0.0:
 		sb.step(1)
 		_tick_wait += float(GameSandbox.setting("tick_seconds"))
+	_drop_news()
 	var lines := GameClock.feed(d, delta * sb.time_flow())
 	for e in lines:
 		last_line = str(e.get("text", e)) if e is Dictionary else str(e)
@@ -333,6 +337,18 @@ func _process(delta: float) -> void:
 	glow_layer.queue_redraw()
 	sky_layer.queue_redraw()
 	queue_redraw()
+
+
+## What the ground's loot just told (GameDrops via the sandbox): each line is a toast, and a pickup the soundscape does not hear
+## by itself (it hears gold and the pack growing) gets the pickup cue.
+func _drop_news() -> void:
+	if sb.drop_news.is_empty():
+		return
+	for n in sb.drop_news:
+		last_line = str(n["text"])
+		if str(n["kind"]) in ["potion", "material", "essence", "egg"] and "sound" in app and app.sound != null and app.sound.has_method("cue"):
+			app.sound.cue("pickup")
+	sb.drop_news.clear()
 
 
 ## Moves the look of the walk on by `delta`: the heir's drawn place (the view follows it), the mark of a click, and a new place's
@@ -511,6 +527,15 @@ func _use_smoke() -> Dictionary:
 	return r
 
 
+## Pitches a camp where the heir stands, or strikes the one there (GameCamp.toggle): the Camp key, the pack's Use on the tent and the heir's menu.
+func _camp() -> Dictionary:
+	var r: Dictionary = GameCamp.toggle(sb)
+	last_line = str(r["text"])
+	_refresh_status()
+	queue_redraw()
+	return r
+
+
 func _can_cast() -> bool:
 	return GameDungeons.is_dungeon(sb.space) and not GameCasting.self_castable(app.dynasty).is_empty()
 
@@ -574,6 +599,13 @@ func _thing_act(named: Dictionary, action: String, tile: Vector2i) -> void:
 			_open_figure()
 		"pack":
 			_open_pack("")
+		"camp", "rest", "cook", "strike":
+			last_line = str(GameCamp.act(sb, action)["text"])
+		"fish":
+			if GameFishing.spot(app.dynasty, sb.heir.x, sb.heir.y).is_empty():
+				last_line = GameFishing.text("walk_bank")   # a click on far water: nothing to cast into from here
+			else:
+				_fish()
 		"walk", "talk", "use":
 			var planned := sb.set_route(tile)
 			if planned["ok"]:
@@ -758,6 +790,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		_radial_release()
 		return
 	if not event.is_pressed():
+		return
+	if event.is_action_pressed("world_camp") and not _modal_open():
+		get_viewport().set_input_as_handled()
+		_camp()
+	if event.is_action_pressed("world_fish") and not _modal_open() and mode == "walk":
+		get_viewport().set_input_as_handled()
+		_fish()
 		return
 	if event.is_action_pressed("world_goal") and not _modal_open():
 		get_viewport().set_input_as_handled()
@@ -959,6 +998,7 @@ func _open_fight() -> void:
 	host.app = app
 	host.sound = app.sound if "sound" in app else null
 	host.on_done = _fight_over
+	host.ground_loot = sb.space == "world" and sb.storey() == 0 and sb.fight_foes.is_empty()   # the open world's dead leave their spoils on the ground
 	var bv: Control = BattleView.new()
 	bv.app = host
 	host.current = bv
@@ -1094,6 +1134,8 @@ func _open_pack(bag: String) -> void:
 	panel.bag = bag
 	panel.on_change = func(): _refresh_status()
 	panel.on_smoke = func() -> String: return str(_use_smoke()["text"])
+	panel.on_camp = func() -> String: return str(_camp()["text"])
+	panel.on_fish = func() -> String: return _fish()
 	panel.on_open_bag = func(id: String): _open_pack(id)
 	_add_pane(panel, "" if bag == "" else ":" + bag)
 
@@ -1147,6 +1189,8 @@ func _use() -> void:
 		_open_trials()
 	elif str(r.get("open", "")) == "gate":
 		_open_gate(str(r["gate"]))
+	elif str(r.get("open", "")) == "fishing":
+		_open_fishing(r["spot"])
 	elif r.has("who") and not (r["who"] as Dictionary).is_empty():
 		_say(str(r["who"]["id"]), str(r.get("bare", "")))   # a villager answered: their words show over their head
 		if not (r["choices"] as Array).is_empty():
@@ -1188,6 +1232,28 @@ func _dig() -> void:
 		last_line = str(r["why"])
 	_refresh_status()
 	queue_redraw()
+
+
+## Fishing from the bank (GameSandbox.fish): the panel opens over the map when the heir has a rod and water within reach. The line to say.
+func _fish() -> String:
+	var r := sb.fish()
+	last_line = str(r["text"])
+	if r["ok"]:
+		_open_fishing(r["spot"])
+	_refresh_status()
+	queue_redraw()
+	return last_line
+
+
+## The fishing panel over the map: the world waits while it is open. Catches change the pack and the stores, so the screen saves when it closes.
+func _open_fishing(spot: Dictionary) -> void:
+	var panel: Control = FishingPanel.new()
+	panel.dynasty = app.dynasty
+	panel.spot = spot
+	panel.on_change = func():
+		_refresh_status()
+		_save()
+	_add_pane(panel)
 
 
 func _forage() -> void:
@@ -1382,7 +1448,11 @@ func _refresh_status() -> void:
 	var pin := _pin_line()
 	if pin == "" and sb.space == "world" and not _pane_up(StatusPane):
 		pin = GoalView.line(sb.heir)   # no status pane to say it (a touch screen, a narrow window): the goal leads the line
+	var sky: Array = GameWeatherFx.notes(d, sb.heir) if sb.space == "world" else []   # what the night and the weather do, in words
+	var sky_line := " / ".join(sky)
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line] if pin == "" else "%s  %s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], pin, line]
+	if sky_line != "" and (UiSettings.touch() or UiSettings.compact(self) or not _pane_up(StatusPane)):
+		status.text += "  " + sky_line   # no status pane to say it: the strip does
 	if UiSettings.touch() or UiSettings.compact(self):
 		# no status pane here: the heir's level and experience (and a smoke pot's time) lead the one status line
 		var h := d.heir
@@ -1466,6 +1536,7 @@ func _paint(c: Control) -> void:
 	if outdoors and move_marker.active:
 		move_marker.paint(c, origin + (Vector2(move_marker.tile) + Vector2(0.5, 0.5) - centre) * cell + area * 0.5, cell, _rgb(colors["route"]))   # where a click walks to
 	if outdoors:
+		SkyLife.paint_prints(c, d, sb.prints, origin, area, centre, cell)   # footprints in the snow (the look only)
 		_paint_standing(c, origin, area, centre, cell, colors, float(look["light"]))
 		GoalView.paint_world(c, d, origin, area, centre, cell)   # the goal arrow (a map pin wins over it)
 	elif GameDungeons.is_dungeon(sb.space):
@@ -1502,7 +1573,10 @@ func _paint_glow(c: Control) -> void:
 	var centre := Vector2(sb.heir) + cam
 	var half := area / (2.0 * cell) + Vector2(4, 4)
 	var view := Rect2i(floori(centre.x - half.x), floori(centre.y - half.y), ceili(half.x * 2.0), ceili(half.y * 2.0))
-	WorldLook.paint_glow(c, WorldLook.glow_sources(app.dynasty, tile_view, view), look, cell, Vector2(0, BAR), area, centre)
+	var lights := WorldLook.glow_sources(app.dynasty, tile_view, view)
+	lights.append_array(RoadsideArt.glow_sources(sb))   # the camp fire
+	WorldLook.paint_glow(c, lights, look, cell, Vector2(0, BAR), area, centre)
+	SkyLife.paint_glow_halos(c, app.dynasty, view, Vector2(0, BAR), area, centre, cell)   # the glowcaps shine
 
 
 ## Fog, then rain or snow, then the vignette over the map (the weather only in the open world, and not with reduced motion).
@@ -1513,6 +1587,9 @@ func _paint_sky(c: Control) -> void:
 	var rect := Rect2(Vector2(0, BAR), Vector2(size.x, size.y - BAR))
 	if sb.space == "world":
 		WorldLook.paint_fog(c, rect, look)
+		var cell := _cell()
+		var heir_px := Vector2(0, BAR) + (Vector2(sb.heir) + heir_off + Vector2(0.5, 0.5) - (Vector2(sb.heir) + cam)) * cell + rect.size * 0.5
+		SkyLife.paint_veil(c, app.dynasty, rect, heir_px, cell)   # past the heir's sight in fog and storm the world fades
 		WorldLook.paint_weather(c, rect, look)
 	WorldLook.paint_vignette(c, rect, look)
 
@@ -1536,12 +1613,25 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	for e in GameDungeonArt.entrances_in(view):
 		items.append([float(e["rect"].end.y) - 0.1, "entrance", e])
 	if sb.storey() == 0:
+		for g in SkyLife.glow_tiles(d, view):   # the night's glowcaps
+			items.append([float(int(g["z"])) + 0.4, "glow", g])
+		for s in GameNightLife.stalls_in(d, view):   # the day's market stalls
+			items.append([float(int(s["z"])) + 0.9, "stall", s])
+	if sb.storey() == 0:
 		for g in GateArt.in_view(d, view):   # the waygates: arches of old stone with a ring of runes
 			items.append([float((g["rect"] as Rect2i).end.y) - 0.5, "gate", g])
 	if sb.storey() == 0:
 		for t in GameTrials.sites(d):
 			if view.has_point(Vector2i(int(t["x"]), int(t["z"]))):
 				items.append([float(int(t["z"])) + 0.5, "site", t])
+	if sb.storey() == 0:
+		for p in GameDrops.lying(d):   # loot left where the dead fell
+			if view.has_point(Vector2i(floori(float(p["x"])), floori(float(p["z"])))):
+				items.append([float(p["z"]) + 0.2, "drop", p])
+		for st in GameCaravans.in_rect(d, view):   # a wagon and its trader on the road between two towns
+			items.append([float(st["z"]) + 0.4, "caravan", st])
+		if GameCamp.active(sb):
+			items.append([float(sb.camp["z"]) + 0.5, "camp", null])
 	for a in sb.creatures:
 		items.append([float(a["z"]) + 0.5, "creature", a])
 	for a in sb.landmark_dwellers():
@@ -1565,6 +1655,14 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_texture_rect(inside, box, false, dim)
 					_paint_residents(c, b, at, cell, dim)
 				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"]), GameVillagers.door_scale(b)), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
+			"drop":
+				var dp: Dictionary = it[2]
+				var dat := origin + (Vector2(float(dp["x"]), float(dp["z"])) - centre) * cell + area * 0.5
+				DropArt.paint(c, dp, dat, cell, dim, Time.get_ticks_msec() / 1000.0, float(dp["until"]) - d.world_seconds)
+			"glow":
+				SkyLife.paint_glowcap(c, it[2], origin, area, centre, cell)
+			"stall":
+				SkyLife.paint_stall(c, it[2], origin, area, centre, cell, dim)
 			"gate":
 				var g: Dictionary = it[2]
 				var gr: Rect2i = g["rect"]
@@ -1600,10 +1698,14 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					var mw := minf(mtex.get_width() * ms, cell * float(setting("creature_max_tiles")))
 					var mh := mw * float(mtex.get_height()) / float(mtex.get_width())
 					_stand(c, mtex, tp + Vector2(0, cell * 0.3), Vector2(mw, mh), false, dim, cell)   # the art faces left, and so does the master (a mirrored figure is drawn a box to the right, see _stand)   # the art faces left; the master turns to the heir
+			"caravan":
+				RoadsideArt.paint_caravan(c, it[2], origin, area, centre, cell, dim)
+			"camp":
+				RoadsideArt.paint_camp(c, sb, origin, area, centre, cell, dim)
 			"creature":
 				var a: Dictionary = it[2]
-				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))):
-					continue   # under a whole roof: not seen
+				if tile_view.covered(floori(float(a["x"])), floori(float(a["z"]))) or not GameWeatherFx.seen_by_heir(d, sb.heir_point(), float(a["x"]), float(a["z"])):
+					continue   # under a whole roof, or out in the fog past the heir's sight: not seen
 				var p := origin + (_gpos("c%s" % a["uid"], "creature", float(a["x"]), float(a["z"])) - centre) * cell + area * 0.5
 				var tex: Texture2D = SpriteArt.creature(str(a["id"]))
 				if tex == null:
@@ -1640,6 +1742,8 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 	for t in tags:
 		_paint_level_tag(c, t[0], t[1], cell)
 	_paint_bubbles(c)
+	if sb.storey() == 0:
+		RoadsideArt.paint_tags(c, d, sb.heir_point(), origin, area, centre, cell, zoom)   # a signpost's name tag, once the heir is near
 	_paint_name(c, origin, area, centre, cell)
 	_paint_smoke(c, origin, area, centre, cell)
 

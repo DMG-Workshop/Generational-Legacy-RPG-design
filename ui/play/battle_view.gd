@@ -17,6 +17,8 @@ const PartyStrip := preload("res://ui/play/party_strip.gd")
 const Sound := preload("res://ui/play/sound.gd")
 const BattleSkin := preload("res://ui/play/battle_skin.gd")
 const HitFx := preload("res://ui/play/hit_fx.gd")
+const BattleSpeed := preload("res://ui/play/battle_speed.gd")
+const AllyOrders := preload("res://ui/play/ally_orders.gd")
 const DamageNumber := preload("res://ui/play/damage_number.gd")
 const LootPop := preload("res://ui/play/loot_pop.gd")
 const UiSkin := preload("res://ui/play/ui_skin.gd")
@@ -64,6 +66,12 @@ var _loot_pack: Array = []        # the pack as the bodies were found, to see wh
 var result_overlay: Control = null   # the result panel's dimmed layer, where found loot flies
 var auto: bool = false          # the heir fights on their own (GameTactics), one action every AUTO_PACE
 var auto_button: Button
+var speed_button: Button        # the screen's speed: 1x, 2x, 4x (BattleSpeed)
+var skip_button: Button         # Skip animations: each round shows its result and the log only
+var forward_button: Button = null   # the auto-battle panel's Fast-forward
+var orders: Control = null      # the companions' one-tap orders (AllyOrders), only with companions
+var orders_button: Button = null   # on a short screen: opens the orders over the arena
+var orders_open := false
 var result_scroll: ScrollContainer = null   # the result panel's story, capped to the window
 var result_panel: Control = null
 var _auto_waiting: bool = false # an auto action is due once AUTO_PACE has passed
@@ -82,10 +90,8 @@ var root_box: VBoxContainer
 var _held_waiting := false      # a held party's pass is due once held_pass_seconds have gone
 var _guard_until := 0           # msec: a finger's taps on a panel that has just been rebuilt are ignored until then
 
-const AUTO_PACE := 0.4
-
-
 func _ready() -> void:
+	BattleSpeed.active = true
 	d = app.dynasty
 	b = d.battle
 	skinned = BattleSkin.on(self)
@@ -111,6 +117,7 @@ func _ready() -> void:
 	title_label.clip_text = true
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_bar.add_child(title_label)
+	_build_speed_controls()
 	auto = GameTactics.auto_from_start(d)
 	auto_button = Kit.button("", func(): set_auto(not auto), Vector2(float(UiSettings.setting("party_auto_w")) if _party() else 190.0, 34))
 	auto_button.add_theme_font_size_override("font_size", 15)
@@ -120,6 +127,15 @@ func _ready() -> void:
 		strip = PartyStrip.new()
 		strip.skinned = skinned
 		strip.chip_pressed.connect(_on_chip)
+		orders = AllyOrders.new()
+		orders.ordered.connect(_order)
+		orders.focus_pressed.connect(_focus)
+		orders.all_auto_pressed.connect(_all_auto)
+		orders_button = Kit.button("Orders", func(): _toggle_orders(), Vector2(0, 34))
+		orders_button.name = "OrdersButton"
+		orders_button.add_theme_font_size_override("font_size", 15)
+		top_bar.add_child(orders_button)
+		top_bar.move_child(orders_button, auto_button.get_index())
 		_place_strip()
 	if not auto:
 		cmd_round = d.battle_round()
@@ -279,7 +295,73 @@ func back() -> bool:
 	return true
 
 
+func _exit_tree() -> void:
+	BattleSpeed.active = false
+
+
+## The screen's speed and Skip, side by side before Auto-battle. Look only: they change how long the screen takes.
+func _build_speed_controls() -> void:
+	speed_button = Kit.button("", _cycle_speed, Vector2(0, 34))
+	skip_button = Kit.button("", _toggle_skip, Vector2(0, 34))
+	for btn in [speed_button, skip_button]:
+		btn.add_theme_font_size_override("font_size", 15)
+		top_bar.add_child(btn)
+	speed_button.name = "SpeedButton"
+	skip_button.name = "SkipButton"
+	_show_speed()
+
+
+func _show_speed() -> void:
+	if speed_button == null:
+		return
+	var compact := UiSettings.compact(self) or UiSettings.touch()   # the short words where the room is tight
+	var n := BattleSpeed.chosen()
+	speed_button.text = BattleSpeed.text("speed_compact" if compact else "speed", {"n": n})
+	speed_button.add_theme_color_override("font_color", _ink(Kit.good() if n > 1 else Kit.TEXT))
+	speed_button.tooltip_text = BattleSpeed.text("speed_tip", {"key": OS.get_keycode_string(BattleSpeed.key("speed"))})
+	var on := UiSettings.battle_skip()
+	skip_button.text = BattleSpeed.text(("skip_compact_" if compact else "skip_") + ("on" if on else "off"))
+	skip_button.add_theme_color_override("font_color", _ink(Kit.good() if on else Kit.TEXT))
+	skip_button.tooltip_text = BattleSpeed.text("skip_tip", {"key": OS.get_keycode_string(BattleSpeed.key("skip"))})
+	if forward_button != null and is_instance_valid(forward_button):
+		_show_forward()
+
+
+func _cycle_speed() -> void:
+	BattleSpeed.cycle()
+	_show_speed()
+
+
+func _toggle_skip() -> void:
+	UiSettings.set_battle_skip(not UiSettings.battle_skip())
+	_show_speed()
+
+
+## Auto-battle's fast-forward: the top speed, or back to 1x when it is already there.
+func _forward() -> void:
+	var s := BattleSpeed.steps()
+	BattleSpeed.set_speed(1 if BattleSpeed.chosen() == s[-1] else int(s[-1]))
+	_show_speed()
+
+
+func _show_forward() -> void:
+	var n := BattleSpeed.chosen()
+	var top: int = BattleSpeed.steps()[-1]
+	forward_button.text = BattleSpeed.text("forward", {"n": top})
+	forward_button.add_theme_color_override("font_color", _ink(Kit.good() if n == top and n > 1 else Kit.TEXT))
+	forward_button.tooltip_text = BattleSpeed.text("forward_tip", {"n": top})
+
+
 func _unhandled_input(ev: InputEvent) -> void:
+	if ev is InputEventKey and ev.pressed and not ev.echo and not ev.ctrl_pressed and not ev.alt_pressed and not ev.meta_pressed and not result_shown:
+		if ev.keycode == BattleSpeed.key("skip"):
+			_toggle_skip()
+			get_viewport().set_input_as_handled()
+			return
+		if ev.keycode == BattleSpeed.key("speed"):
+			_cycle_speed()
+			get_viewport().set_input_as_handled()
+			return
 	if not ev.is_action_pressed("ui_cancel"):
 		return
 	if not aiming.is_empty():
@@ -434,10 +516,13 @@ func _build_foes(from: int) -> void:
 		chips.position = Vector2(0, h + 33)
 		chips.z_index = 1
 		root.add_child(chips)
+		var flag := _flag("focus", AllyOrders.text("mark_focus"), Kit.ACCENT)   # the party's focus: set from the orders row
+		flag["box"].position = Vector2(0, 2)
+		root.add_child(flag["box"])
 		arena.add_child(root)
 		if bool(e.get("fled", false)):
 			root.visible = false   # a fight reopened after a foe ran off: it is not on the field
-		enemy_nodes.append({"root": root, "body": body, "pose": pose, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h})
+		enemy_nodes.append({"root": root, "body": body, "pose": pose, "hp": hp, "sel": sel, "mark": mark, "chips": chips, "w": w, "h": h, "focus": flag})
 
 
 ## A companion: smaller figure in class colours with a race-tinted head, name, level and HP.
@@ -491,10 +576,13 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	var chips := _chips()
 	chips.position = Vector2(0, 156)
 	root.add_child(chips)
+	var mark := _flag("", "", Kit.TEXT)   # what this companion will do this round
+	mark["box"].position = Vector2(0, 2)
+	root.add_child(mark["box"])
 	if a.hp <= 0:
 		body.modulate = Color(0.35, 0.35, 0.4)
 	arena.add_child(root)
-	return {"root": root, "body": body, "pose": pose, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips}
+	return {"root": root, "body": body, "pose": pose, "hp": hp, "mp": mp, "info": info, "ko": ko, "down": a.hp <= 0, "chips": chips, "mark": mark}
 
 
 ## The land the fight is in (SceneryArt: the place's scene in its weather and season), filling the arena
@@ -686,6 +774,10 @@ func _on_foe_input(idx: int, ev: InputEvent) -> void:
 	if aiming.is_empty():
 		target = idx
 		_update_marks()
+		if ev.double_click and cmd_round != null and not auto and strip != null:   # a double tap is the party's Focus
+			_focus()
+		else:
+			_sync_orders()
 	elif str(aiming.get("aim", "")) == "ally":
 		return   # a heal asks whom among the party, not which foe
 	elif idx == aim_at:
@@ -1145,7 +1237,7 @@ func _pass_held() -> void:
 	if _held_waiting:
 		return
 	_held_waiting = true
-	await get_tree().create_timer(float(UiSettings.setting("held_pass_seconds"))).timeout
+	await get_tree().create_timer(BattleSpeed.pause(float(UiSettings.setting("held_pass_seconds")))).timeout
 	_held_waiting = false
 	if is_inside_tree() and not busy and not result_shown and not b.is_over() and not auto and cmd_round != null and _only_held_left():
 		_commit()
@@ -1318,6 +1410,7 @@ func _place_strip() -> void:
 		want.move_child(strip, 1)   # under the top bar, or between the title and the Auto-battle button
 	strip.visible = not auto
 	title_label.visible = not (in_bar and strip.visible)
+	_place_orders(in_bar)
 
 
 func _sync_strip() -> void:
@@ -1327,6 +1420,150 @@ func _sync_strip() -> void:
 	if cmd_round != null and not auto:
 		var v := cmd_round.view()
 		strip.refresh(v, int(v["cursor"]))
+	_sync_orders()
+
+
+# ---------------------------------------------------------------- the companions' orders
+
+## The orders stand in a row under the party strip, or on a short screen open over the bottom of the arena from a button.
+func _place_orders(short_screen: bool) -> void:
+	if orders == null:
+		return
+	if short_screen and arena == null:   # the arena is not built yet: it is placed when the strip first refreshes
+		return
+	var inline := not short_screen
+	orders.named = not inline
+	var want: Node = root_box if inline else arena
+	if orders.get_parent() != want:
+		if orders.get_parent() != null:
+			orders.get_parent().remove_child(orders)
+		want.add_child(orders)
+		if inline:
+			root_box.move_child(orders, strip.get_index() + 1)
+		else:
+			orders.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+			orders.z_index = 6
+			orders.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	orders_button.visible = short_screen and not auto and not result_shown
+	orders.visible = not auto and (inline or orders_open)
+
+
+func _toggle_orders() -> void:
+	orders_open = not orders_open
+	_sync_orders()
+
+
+## The row follows the round: lit where a member has an order, off while the round plays or a question waits, gone in
+## auto-battle. Also puts each ally's order on their figure and the focus on its foe.
+func _sync_orders() -> void:
+	if orders == null or cmd_round == null:
+		return
+	_place_orders(_short())
+	var shown := not auto and not b.is_over() and not result_shown
+	if not shown:
+		orders.visible = false
+		orders_button.visible = false
+		_hide_marks()
+		return
+	orders.ink = _ink(Kit.TEXT)
+	orders.lit = _ink(Kit.good())
+	var rows := GamePartyOrders.rows(cmd_round)
+	var pin := cmd_round.pin_ref()
+	var at := "" if target < 0 or target >= b.enemies.size() or b.enemies[target]["hp"] <= 0 else str(b.enemies[target]["name"])
+	orders.refresh(rows, {"enabled": not busy and not cmd_round.asking(),
+		"pin_name": "" if pin == "" else str(b.enemies[int(pin.get_slice(":", 1))]["name"]), "target_name": at, "all_auto": GamePartyOrders.all_auto(cmd_round)})
+	orders_button.text = "Orders" if not orders_open else "Hide orders"
+	_show_marks(rows)
+
+
+func _hide_marks() -> void:
+	for an in ally_nodes:
+		an["mark"]["box"].visible = false
+	for en in enemy_nodes:
+		en["focus"]["box"].visible = false
+
+
+## Each ally's order, in words and a small icon, over their figure; the focused foe's flag.
+func _show_marks(rows: Array) -> void:
+	for row in rows:
+		var by := int(row["by"])
+		if by < 0 or by >= ally_nodes.size():
+			continue
+		var m: Dictionary = ally_nodes[by]["mark"]
+		var words := AllyOrders.mark_text(str(row["mark"]))
+		m["box"].visible = words != "" and not b.is_over()
+		m["label"].text = words
+		m["icon"].texture = AllyOrders.icon(AllyOrders.mark_glyph(str(row["mark"])))
+		m["icon"].visible = m["icon"].texture != null
+	var pin := cmd_round.pin_ref() if cmd_round != null else ""
+	for i in enemy_nodes.size():
+		var fm: Dictionary = enemy_nodes[i]["focus"]
+		fm["box"].visible = pin == "enemy:%d" % i and b.enemies[i]["hp"] > 0 and not b.is_over()
+
+
+## A small flag of an icon and words, outlined so it reads on any ground; hidden until it has something to say.
+func _flag(glyph: String, words: String, color: Color) -> Dictionary:
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.z_index = 2
+	box.visible = false
+	var icon := TextureRect.new()
+	icon.texture = AllyOrders.icon(glyph)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.modulate = color
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	box.add_child(icon)
+	var l := Kit.label(words, 12, color)
+	l.add_theme_color_override("font_outline_color", Color.BLACK)
+	l.add_theme_constant_override("outline_size", 4)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(l)
+	return {"box": box, "icon": icon, "label": l}
+
+
+## A button of the row: one order for one companion. It queues the same command the long way round would.
+func _order(by: int, kind: String) -> void:
+	if busy or cmd_round == null or auto or result_shown or cmd_round.asking() or _guarded():
+		return
+	if kind == "auto":
+		_set_member_auto(by)
+		return
+	aiming = {}
+	_show_area({}, -1)
+	_close_spells()
+	_close_skills()
+	_close_feats()
+	var foe := "" if target < 0 or target >= b.enemies.size() or b.enemies[target]["hp"] <= 0 else "enemy:%d" % target
+	var why := GamePartyOrders.give(cmd_round, by, kind, foe)
+	if why != "":
+		_build_commands()
+		hint.text = why
+	elif cmd_round.ready() and cmd_round.auto_commits():
+		_commit()
+	else:
+		_build_commands()
+
+
+## Focus: the foe picked is the one every companion on Auto or Attack goes for, until it falls; again to let go.
+func _focus() -> void:
+	if busy or cmd_round == null or auto or result_shown or cmd_round.asking() or _guarded():
+		return
+	var ref := "enemy:%d" % target
+	if cmd_round.pin_ref() == ref:
+		cmd_round.set_pin("")
+	else:
+		var why := cmd_round.set_pin(ref)
+		if why != "":
+			hint.text = why
+	_sync_orders()
+
+
+func _all_auto() -> void:
+	if busy or cmd_round == null or auto or result_shown or cmd_round.asking() or _guarded():
+		return
+	GamePartyOrders.set_all_auto(cmd_round, not GamePartyOrders.all_auto(cmd_round))
+	_build_commands()
 
 
 ## A kit colour made to read on a skinned button's parchment (the colour itself on the older look).
@@ -1345,7 +1582,7 @@ func _build_auto_commands() -> void:
 	_auto_panel()
 	if not _auto_waiting:
 		_auto_waiting = true
-		get_tree().create_timer(AUTO_PACE).timeout.connect(_auto_step)
+		get_tree().create_timer(BattleSpeed.pause(BattleSpeed.wait("auto_pace"))).timeout.connect(_auto_step)
 
 
 ## What the command panel shows while the heir fights on their own.
@@ -1368,6 +1605,10 @@ func _auto_panel() -> void:
 	row.add_theme_constant_override("separation", 10)
 	v.add_child(row)
 	row.add_child(Kit.button("Take over", func(): set_auto(false), Vector2(180, 38)))
+	forward_button = Kit.button("", _forward, Vector2(170, 38))
+	forward_button.name = "FastForward"
+	row.add_child(forward_button)
+	_show_forward()
 	if d.battle_kind in ["hunt", "hunt_hard"]:   # a run of hunts: this fight finishes, no next one starts
 		var stop := Kit.button("Stopping after this fight" if app.hunt_stopped else "Stop after this fight", _stop_after_fight, Vector2(220, 38))
 		stop.name = "StopAfterFight"
@@ -1852,6 +2093,7 @@ func _do(action: Callable, from_event: int = 0) -> void:
 	hint.text = ""
 	if auto:
 		_auto_panel()
+	_sync_orders()
 	var log_start := b.log.size()
 	action.call()
 	for i in range(log_start, b.log.size()):
@@ -1866,7 +2108,7 @@ func _do(action: Callable, from_event: int = 0) -> void:
 	if auto and b.heir_skip:   # a status cost the heir this turn: the round goes on without them
 		hint.text = "%s cannot act this turn." % d.heir.name
 		Kit.clear(command_box)
-		await get_tree().create_timer(float(UiSettings.setting("held_pass_seconds"))).timeout
+		await get_tree().create_timer(BattleSpeed.pause(float(UiSettings.setting("held_pass_seconds")))).timeout
 		_do(func(): b.pass_turn())
 		return
 	if cmd_round != null and cmd_round.number != b.turn:   # the turn moved on outside a round (a coat, a direct call)
@@ -1900,6 +2142,9 @@ func _play_events(events: Array) -> void:
 func _play_all(events: Array) -> void:
 	var last_crit := false
 	for i in events.size():
+		if BattleSpeed.skip():   # Skip: the rest of the round is shown as its result, with none of the motion
+			_settle(events.slice(i))
+			return
 		var ev: Dictionary = events[i]
 		_play_one(ev)
 		_refresh_chips()
@@ -1910,7 +2155,39 @@ func _play_all(events: Array) -> void:
 			last_crit = bool(ev.get("crit", false))
 		if ev["type"] in ["death", "status", "round", "act", "foes"] or _lands_with_next(events, i):   # the round's markers take no time
 			continue
-		await get_tree().create_timer(0.25 if ev["type"] == "cast" else 0.35).timeout
+		await get_tree().create_timer(BattleSpeed.pause(BattleSpeed.wait("cast" if ev["type"] == "cast" else "event"))).timeout
+
+
+## Skip animations: what `events` leave on the screen, put there at once. Only the standing of the figures is
+## kept (who has fallen, run off or stepped up) and the bars and chips are set to the true values; no number, effect,
+## sound or motion. The battle itself is not touched: it has long since played them.
+func _settle(events: Array) -> void:
+	for ev in events:
+		match str(ev["type"]):
+			"death":
+				var en: Dictionary = enemy_nodes[int(ev["index"])]
+				en["mark"].visible = false
+				if en["pose"] != null:
+					en["pose"].fall(true)
+				en["root"].modulate.a = 0.0
+			"ko":
+				_knock_out(int(ev["ally"]), true)
+			"foe_flee":
+				var i := int(ev["index"])
+				if i >= 0 and i < enemy_nodes.size():
+					enemy_nodes[i]["mark"].visible = false
+					enemy_nodes[i]["sel"].visible = false
+					enemy_nodes[i]["root"].visible = false
+			"advance":
+				for k in ev["indices"]:
+					enemy_nodes[int(k)]["root"].position = _foe_spot(int(k))
+			"field", "field_end":
+				field.queue_redraw()
+	if d.heir.hp <= 0 and hero_pose != null:
+		hero_pose.fall(true)
+	_update_view()
+	if strip != null:
+		strip.mark_acting(-3)
 
 
 func _play_one(ev: Dictionary) -> void:
@@ -2038,12 +2315,12 @@ func _play_one(ev: Dictionary) -> void:
 			HitFx.shake(arena, maxf(HitFx.shake_px(ev, 0, true), _last_shake), "kill%d" % _fx_seq)
 			HitFx.collapse(en2["root"], "foe%d:%d" % [int(ev["index"]), _fx_seq])
 			var t := create_tween()
-			t.tween_property(en2["root"], "modulate:a", 0.0, UiSettings.motion_time(HitFx.num("collapse", "seconds")))
+			t.tween_property(en2["root"], "modulate:a", 0.0, BattleSpeed.time(HitFx.num("collapse", "seconds")))
 		"foe_flee":   # a weak foe loses heart: a puff of dust and it runs off the field (with reduced motion it is just gone)
 			_flee_foe(int(ev["index"]))
 		"advance":   # the back rank steps up into the fallen front rank's place
 			for k in ev["indices"]:
-				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), UiSettings.motion_time(0.3))
+				create_tween().tween_property(enemy_nodes[int(k)]["root"], "position", _foe_spot(int(k)), BattleSpeed.time(0.3))
 		"defend":
 			_move(_party_pose(by), "guard")
 			_fx("guard", "", _body("player", by), _body("player", by))
@@ -2081,7 +2358,7 @@ func _flee_foe(i: int) -> void:
 		root.visible = false
 		return
 	_fx("flee", "", _body("enemy", i), _body("enemy", i))
-	var t := create_tween()
+	var t := BattleSpeed.tune(create_tween())
 	t.set_parallel(true)
 	t.tween_property(root, "position:x", root.position.x + 260.0, 0.55)
 	t.tween_property(root, "modulate:a", 0.0, 0.55)
@@ -2181,17 +2458,22 @@ func _ally_info(i: int, hp: int) -> void:
 	l.add_theme_font_size_override("font_size", 10 if wide else 12)
 
 
-func _knock_out(i: int) -> void:
+func _knock_out(i: int, quiet: bool = false) -> void:
 	var an: Dictionary = ally_nodes[i]
 	if an["down"]:
 		return
 	an["down"] = true
 	an["ko"].visible = true
+	if quiet:   # Skip: down at once, with no words or fade
+		if an["pose"] != null:
+			an["pose"].fall(true)
+		an["body"].modulate = Color(0.35, 0.35, 0.4)
+		return
 	if an["pose"] != null:
 		an["pose"].fall()
 	_float_text(an["root"].position + Vector2(10, -6), "knocked out", Kit.bad())
 	var t := create_tween()
-	t.tween_property(an["body"], "modulate", Color(0.35, 0.35, 0.4), UiSettings.motion_time(0.4))
+	t.tween_property(an["body"], "modulate", Color(0.35, 0.35, 0.4), BattleSpeed.time(0.4))
 
 
 ## A figure drawn from a sprite, in a FigurePose holder that breathes and plays the moves. `n` spreads the
@@ -2254,7 +2536,7 @@ func _lunge(node: Control, dx: float) -> void:
 	if UiSettings.reduced_motion():   # the step is motion only: who acted is still in the log
 		return
 	var home := node.position
-	var t := create_tween()
+	var t := BattleSpeed.tune(create_tween())
 	t.tween_property(node, "position:x", home.x + dx, 0.1)
 	t.tween_property(node, "position:x", home.x, 0.15)
 
@@ -2263,7 +2545,7 @@ func _flash(node: CanvasItem) -> void:
 	node.modulate = Color.WHITE
 	if UiSettings.reduced_motion():
 		return
-	var t := create_tween()
+	var t := BattleSpeed.tune(create_tween())
 	var bright := HitFx.num("flash", "bright")
 	node.modulate = Color(bright, bright, bright)
 	t.tween_property(node, "modulate", Color.WHITE, HitFx.num("flash", "seconds"))
@@ -2274,7 +2556,7 @@ func _pulse(mark: CanvasItem) -> void:
 	mark.visible = true
 	mark.modulate = Color(1, 1, 1, 1)
 	var t := create_tween()
-	t.tween_property(mark, "modulate:a", 0.0, UiSettings.motion_time(0.6))
+	t.tween_property(mark, "modulate:a", 0.0, BattleSpeed.time(0.6))
 	t.tween_callback(func():
 		mark.modulate = Color.WHITE
 		_update_marks())
@@ -2287,7 +2569,7 @@ func _float_text(pos: Vector2, text: String, color: Color, size: int = 26) -> vo
 	l.position = pos
 	l.z_index = 3
 	arena.add_child(l)
-	var t := create_tween()
+	var t := BattleSpeed.tune(create_tween())
 	t.set_parallel(true)
 	if not UiSettings.reduced_motion():   # with reduced motion the number stays put and fades
 		l.pivot_offset = l.get_combined_minimum_size() * 0.5
@@ -2398,6 +2680,7 @@ func _show_result() -> void:
 		return
 	result_shown = true
 	aiming = {}
+	_sync_orders()
 	_close_spells()
 	_close_skills()
 	_close_feats()
@@ -2464,6 +2747,11 @@ func _show_result() -> void:
 	_pop_loot(LootPop.gained(pack_before, d.heir.inventory), foot)   # what a slain legend left, straight into the pack
 	_loot_pack = d.heir.inventory.duplicate()
 	if d.loot.is_empty():
+		_end_foot(foot)
+	elif "ground_loot" in app and app.ground_loot:   # a fight on the open world: the spoils are left on the ground, not searched here
+		var note := Kit.label(GameDrops.text("ground_note"), 15, Kit.dim())
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		foot.add_child(note)
 		_end_foot(foot)
 	elif auto:   # auto-battle settles the bodies as the autopilot would
 		_loot_done(v, foot, null, GamePlague.bot_loot(d), "Auto-battle: ")
@@ -2570,7 +2858,7 @@ func _end_foot(foot: VBoxContainer) -> void:
 	var stop := Kit.button("Stop", _stop_hunting, Vector2(0, 44))
 	stop.tooltip_text = "Stop hunting and go back to %s's life." % d.heir.name
 	foot.add_child(stop)
-	get_tree().create_timer(float(GameData.bal("auto_hunt")["pause_s"])).timeout.connect(_next_hunt.bind(d.battle_kind))
+	get_tree().create_timer(BattleSpeed.pause(float(GameData.bal("auto_hunt")["pause_s"]))).timeout.connect(_next_hunt.bind(d.battle_kind))
 
 
 ## Stop pressed while auto-battle fights a hunt: this fight plays out, no next one starts.

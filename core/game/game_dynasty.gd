@@ -25,6 +25,7 @@ var world_event: Dictionary = {}    # the war, famine or golden age running now,
 var trials: Dictionary = {}     # the family's trial state: quest steps done, legacy gains, the trial under way, tries and waits (see GameTrials); saved only when not empty
 var smoke: Dictionary = {}      # the smoke pot's cloud now burning on the open world: {x, z, until (world_seconds)} (see GameSmoke); saved only while it burns
 var last_xp_line := ""          # the line a won fight of the open world left about its xp and band (runtime only; the sandbox's journal takes it)
+var drops: Array = []           # loot lying on the open world's ground (see GameDrops); saved only while some lies
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
@@ -34,6 +35,7 @@ var journal: Array = []
 var battle: GameBattle = null
 var next_id: int = 1
 var killer_id: String = ""
+var killer_info: Dictionary = {}   # the foe that struck the last heir down: {id, name, level, con}; not saved (the death summary reads it when it is there)
 var total_hunts: int = 0
 var roster: Array = []          # eggs and young the family keeps (see GameRoster); saved only when not empty
 var mine: Dictionary = {}       # the ground dug at each site, its strain and its gateways (see GameMine); saved only when not empty
@@ -42,6 +44,8 @@ var built: Dictionary = {}      # the pieces the family has built, {"x,y,z": kin
 var shop_sold: Dictionary = {}  # what the family has bought off the shelves this season, {"place|shop": {period: "year|season", keys: [..]}} (see GameShops.sold_out); saved only when set
 var gates: Dictionary = {}      # the waygates: runes learned, slots repaired (gate:slot -> world year), gates found, guards posted (see GameGates); saved only when set
 var wilds: Dictionary = {}      # the landmarks of the wilds found and used, {found: [ids], used: {id: {gen, n}}} (see GameWildsSites); saved only when set
+var fishing: Dictionary = {}    # the angler's record book {caught: {fish item: {n, best}}, points} (see GameFishing); saved only once something is caught
+var fishing_casts := 0          # casts made this run, for the keyed dice (never saved)
 var sandbox_at: Dictionary = {} # where the heir last stood in the open world, {x, z, gen, place} (see GameSandbox); saved only when set
 var gathered: Dictionary = {}   # nodes companions have gathered, {"x,z": world year} (see GameCompanions); saved only when not empty
 var dungeon_marks: Dictionary = {}   # what the heir has opened, sprung, used or killed in the dungeons, {"kind:place:key": world year} (see GameDungeons); saved only when not empty
@@ -810,9 +814,11 @@ func finish_battle() -> Array:
 		"defeat":
 			heir.clean_streak = 0
 			killer_id = ""
+			killer_info = {}
 			for e in b.enemies:
 				if e["hp"] > 0:
 					killer_id = e["id"]
+					killer_info = {"id": str(e["id"]), "name": str(e.get("name", "")), "level": int(e.get("level", 0)), "con": str(e.get("con", ""))}
 					break
 			if heir.trait_total("extra_life") > 0.0 and not heir.extra_life_used:
 				heir.extra_life_used = true
@@ -1106,6 +1112,8 @@ func to_dict() -> Dictionary:
 		out["sandbox_at"] = sandbox_at
 	if not shop_sold.is_empty():   # and only once something was bought off a shelf
 		out["shop_sold"] = shop_sold
+	if not GameFishing.to_save(self).is_empty():   # and only once something is caught
+		out["fishing"] = GameFishing.to_save(self)
 	if not blessing.is_empty():   # and only once a shop has blessed the party
 		out["blessing"] = blessing
 	if not casts_used.is_empty():   # and only once a shop has cast a spell
@@ -1122,6 +1130,8 @@ func to_dict() -> Dictionary:
 		out["trials"] = trials
 	if world_seconds > 0.0:   # likewise: only once the clock has run
 		out["world_seconds"] = world_seconds
+	if not drops.is_empty():   # only while loot lies on the ground
+		out["drops"] = drops
 	if GameSmoke.active(self):   # only while a smoke pot's cloud burns
 		out["smoke"] = smoke
 	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
@@ -1183,6 +1193,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.damage = GameRepair.load_state(d.get("damage", {}), g.built)
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.sandbox_at = GameSandbox.load_at(d.get("sandbox_at", {}))
+	g.fishing = GameFishing.load_state(d.get("fishing", {}))
 	g.wilds = GameWildsSites.load_state(d.get("wilds", {}))
 	g.gates = GameGates.load_state(d.get("gates", {}))
 	g.blessing = GameCasting.load_blessing(d.get("blessing", {}))
@@ -1194,6 +1205,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.world_event = GameWorldEvents.load_state(d.get("world_event", {}))
 	g.world_seconds = GameDay.load_seconds(d.get("world_seconds", 0.0))
 	g.smoke = GameSmoke.load_state(d.get("smoke", {}), g.world_seconds)
+	g.drops = GameDrops.load_list(d.get("drops", []))
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0
 	g.map_pin = GameTravel.clean_pin(d.get("map_pin", {}))

@@ -238,8 +238,8 @@ func test_run() -> void:
 	ok(is_equal_approx(walk, float(GameSandbox.setting("walk_seconds"))), "a walk is the data's walk_seconds")
 	ok(run < walk and is_equal_approx(run * Glide.run_multiplier(), walk), "a run steps faster by the data's multiplier (%f against %f)" % [run, walk])
 	# a remapped key
-	var r := WorldInput.remap("world_run", 0, "V")
-	ok(bool(r.get("ok", false)) and WorldInput.keys_of("world_run") == ["V"], "the run key can be remapped")
+	var r := WorldInput.remap("world_run", 0, "F7")
+	ok(bool(r.get("ok", false)) and WorldInput.keys_of("world_run") == ["F7"], "the run key can be remapped")
 	WorldInput.reset("world_run")
 	ok(WorldInput.keys_of("world_run") == ["Shift"], "and put back")
 

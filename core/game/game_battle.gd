@@ -18,6 +18,7 @@ var result: String = ""        # "", "victory", "defeat", "fled"
 var defending: bool = false
 var turn: int = 0
 var focus: int = -1            # the enemy the heir last struck; allies press the same target
+var pin: int = -1              # the foe the player asked the party to focus (GameRound.set_pin); -1 when nobody did (see press_target)
 var log: Array = []
 var events: Array = []         # UI hints from the most recent action
 var statuses: Dictionary = {}  # ref -> [{id, turns, amount, stacks, source, beat}]
@@ -60,7 +61,7 @@ func _init(p_heir: GameHeir, p_enemies: Array, p_rng: RandomNumberGenerator) -> 
 ## the dice are the dynasty's and saved with it; each companion is kept as who they are and their health and
 ## mana, and rebuilt from the party on load. The worked-out numbers (_nums, _gear) are worked out again.
 func to_dict() -> Dictionary:
-	return {
+	var out := {
 		"enemies": enemies, "damage_bonus": damage_bonus, "slayer_bonus": slayer_bonus, "weather": weather,
 		"biomes": biomes, "allies": allies.map(func(a): return {"id": str(a.get_meta("companion", "")), "hp": a.hp, "mp": a.mp}),
 		"foe_hp_mult": foe_hp_mult, "result": result, "defending": defending, "turn": turn, "focus": focus,
@@ -71,6 +72,9 @@ func to_dict() -> Dictionary:
 		"reaction": reaction, "covered": _covered, "asked_for": _asked_for, "foe_queue": _foe_queue,
 		"foe_step": _foe_step, "braced": braced, "variety": variety,
 	}
+	if pin >= 0:   # only when the player set one: a fight nobody gave a focus to saves as it always did
+		out["pin"] = pin
+	return out
 
 
 ## The fight a to_dict() saved, given back its heir, its dice and its companions (rebuilt from the party in
@@ -141,6 +145,8 @@ static func restore(v: Dictionary, p_heir: GameHeir, p_rng: RandomNumberGenerato
 	b._foe_step = v["foe_step"]
 	b.braced = v["braced"]
 	b.variety = typeof(v.get("variety")) == TYPE_BOOL and bool(v["variety"])   # an older save has none: an ordinary fight
+	if typeof(v.get("pin")) == TYPE_INT:   # saves from before the party focus have none
+		b.pin = int(v["pin"]) if int(v["pin"]) < b.enemies.size() else -1
 	b.resumed = true
 	return b
 
@@ -1342,6 +1348,16 @@ func _heal_ally(ai: int, amount: int, source: String, by: int = -2) -> void:
 	a.hp = mini(a.max_hp(), a.hp + amount)
 	events.append({"type": "heal", "side": "ally", "ally": ai, "amount": a.hp - before, "by": ai if by == -2 else by})
 	_say(GameMessages.line("restores", {"name": a.name, "n": a.hp - before, "source": source}))
+
+
+## The foe the party's blows go to when nobody picked one for them: the foe the player asked everyone to focus
+## (`pin`, GameRound.set_pin) while it stands and the data lets that kind of member ("auto" or "attack",
+## data/combat/rounds.json settings.pin) follow it, else the heir's focus as it always was. With no pin it is exactly
+## `_valid_target(focus)`.
+func press_target(use: String) -> int:
+	if pin >= 0 and pin in living_enemies() and bool((GameData.combat["rounds"]["settings"]["pin"] as Dictionary).get(use, false)):
+		return pin
+	return _valid_target(focus)
 
 
 func _valid_target(t: int) -> int:

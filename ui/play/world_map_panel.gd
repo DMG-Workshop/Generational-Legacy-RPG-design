@@ -69,6 +69,10 @@ class MapCanvas extends Control:
 		var mpx := float(GameWorldMap.setting("marker_px"))
 		var font := ThemeDB.fallback_font
 		var ink := Color(0.1, 0.08, 0.14)
+		for l in GameRoads.known_links(d):   # the roads out of the places the family has been to, under the markers
+			var ra := (Vector2(GameWorldMap.cell_of(int(l["ax"]), int(l["az"]))) + Vector2(0.5, 0.5)) * cell
+			var rb := (Vector2(GameWorldMap.cell_of(int(l["bx"]), int(l["bz"]))) + Vector2(0.5, 0.5)) * cell
+			draw_line(ra, rb, Color(0.46, 0.34, 0.2, 0.85), 1.5)
 		for m in GameWorldMap.markers(d):
 			var at: Vector2 = (Vector2(m["cell"]) + Vector2(0.5, 0.5)) * cell
 			var kind := str(m["kind"])

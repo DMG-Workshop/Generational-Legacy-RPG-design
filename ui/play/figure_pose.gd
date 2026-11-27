@@ -10,6 +10,7 @@ extends Control
 
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const BattleSpeed := preload("res://ui/play/battle_speed.gd")
 
 ## The moves, as steps of [x toward the other side, y down] in art pixels and the seconds the figure holds
 ## there, ending where it stands. A step is a jump, not a glide, like the frames of a sprite.
@@ -78,14 +79,14 @@ func play(move: String, tint: Color = Color(0, 0, 0, 0)) -> void:
 	if _move != null:
 		_move.kill()
 	position = Vector2.ZERO
-	_move = create_tween()
+	_move = BattleSpeed.tune(create_tween())
 	for step in MOVES[move]:
 		var to := Vector2(float(step[0]) * facing * px, float(step[1]) * px)
 		_move.tween_callback(func(): position = to)
 		_move.tween_interval(float(step[2]))
 	if tint.a > 0.0:
 		sprite.modulate = Color.WHITE.lerp(tint, 0.6) * 1.6
-		create_tween().tween_property(sprite, "modulate", Color.WHITE, 0.3)
+		BattleSpeed.tune(create_tween()).tween_property(sprite, "modulate", Color.WHITE, 0.3)
 
 
 ## Lies down, the head toward the back, turning about the feet; at once with reduced motion or `now`.
@@ -105,5 +106,5 @@ func fall(now: bool = false) -> void:
 	if now or UiSettings.reduced_motion():
 		rotation = down
 		return
-	_move = create_tween()
+	_move = BattleSpeed.tune(create_tween())
 	_move.tween_property(self, "rotation", down, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)

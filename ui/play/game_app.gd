@@ -17,6 +17,7 @@ const TitleScreen := preload("res://ui/play/title_screen.gd")
 const LifeScreen := preload("res://ui/play/life_screen.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const SuccessionScreen := preload("res://ui/play/succession_screen.gd")
+const DeathPanel := preload("res://ui/play/death_panel.gd")
 const EndingScreen := preload("res://ui/play/ending_screen.gd")
 const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
 const Toast := preload("res://ui/play/toast.gd")
@@ -32,6 +33,8 @@ var frame: Control
 var hints: Node
 var pad: Node   # menus by gamepad and keyboard (PadFocus)
 var sound: Node   # cues and music (Sound): the screens ask it, it never touches the dynasty
+var death_panel_on := true   # an heir's death is told (DeathPanel) before the succession screen; tests of the succession screen turn it off
+var _death_seen := -1   # the generation whose death summary has been shown, so carrying on (and a screen laid out again) goes straight to the succession
 var _stung := ""   # the death or ending the sting has already played for, so a screen laid out again is quiet
 var safe_override := Rect2i()   # tests and screenshots: a pretend safe area, in window pixels
 var _safe_seen := Rect2i()
@@ -185,6 +188,13 @@ func show_state() -> void:
 		var b := BattleView.new()
 		b.app = self
 		_swap(b)
+	elif dynasty.state == "succession" and death_panel_on and _death_seen != dynasty.gen and GameDeath.has_death(dynasty):
+		var dp := DeathPanel.new()
+		dp.app = self
+		dp.on_carry = func():
+			_death_seen = dynasty.gen
+			show_state()
+		_swap(dp)
 	elif dynasty.state == "succession":
 		var s := SuccessionScreen.new()
 		s.app = self

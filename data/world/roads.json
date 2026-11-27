@@ -1,0 +1,67 @@
+{
+  "note": "Roads, signposts and caravans of the open world (core/game/game_roads.gd, core/game/game_caravans.gd; drawn by ui/play/tile_view.gd and ui/play/roadside_art.gd; checked by tools/check_data.gd). Everything here is look and convenience: GameWorldGen's tile, height, water and node answer exactly as before. A tile is road when it lies within `half_width` tiles (plus or minus `wobble` of a hash of the tile, so the edge is ragged) of one of GameWorldGen.roads()'s straight links, on dry land, and not on the ground of a town, dungeon or plot. A road tile is drawn as a worn trail (one of 16 glyphs, `trail_<mask>`, by which of its four neighbours are road: ragged edges where the road ends, ruts and grit from `trail`) and a walker on it takes `pace` of the usual time between steps (1 off the road; below 1 is faster). Signposts stand beside the road: one `gap` tiles outside the ground of each place on each road that leaves it (`end`), one outside each town gate (`gate`), and one at each place two roads cross away from a place (`cross`), `side` tiles to one side of the road (the side is a hash), on the nearest free dry tile within `search`. A signpost names the places and how far each is (`tag_range` tiles from it the name tag shows over the post). Caravans: a wagon and its trader walk each road between two towns of `towns_only` at `tiles_per_hour` (a day is 24 hours, GameDay), wait `rest_hours` in each town, and set out at a time keyed on the seed and the road (`depart_hours` spreads them); pure of the seed, the road and the hour, nothing is saved but what the family buys (GameWildsTrade's marks). Use beside one (within `reach` tiles) opens the merchant panel with the wares of the landmark kind `caravan` (data/world/wilds.json). Nothing here draws a die of the dynasty's.",
+  "settings": {
+    "half_width": 0.6,
+    "wobble": 0.3,
+    "pace": 0.78,
+    "gap": 3,
+    "side": 2,
+    "search": 4,
+    "tag_range": 4.5,
+    "read_reach": 1.6,
+    "cross_min_gap": 12.0,
+    "lines_max": 4
+  },
+  "trail": {
+    "body": [0.6, 0.48, 0.31, 0.8],
+    "rut": [0.44, 0.33, 0.21, 0.88],
+    "grit": [0.76, 0.66, 0.48, 0.85],
+    "edge": [0.56, 0.45, 0.3, 0.38],
+    "rut_share": 14,
+    "grit_share": 10,
+    "edge_share": 60
+  },
+  "glyphs": {
+    "signpost": {
+      "rows": [
+        "..sss...",
+        ".sSSSss.",
+        "..sss.s.",
+        ".ssssS..",
+        "..sSs...",
+        "...p....",
+        "...p....",
+        "..ppp..."
+      ],
+      "palette": {
+        "s": [0.62, 0.46, 0.26, 1.0],
+        "S": [0.8, 0.64, 0.4, 1.0],
+        "p": [0.38, 0.27, 0.16, 1.0]
+      }
+    }
+  },
+  "caravans": {
+    "towns_only": true,
+    "tiles_per_hour": 8.0,
+    "rest_hours": 5.0,
+    "depart_hours": 24.0,
+    "min_length": 60.0,
+    "reach": 1.8,
+    "area": "default",
+    "biome": "plains"
+  },
+  "text": {
+    "sign_name": "Signpost",
+    "sign_cross": "Crossroads",
+    "line": "{place}, {n} tiles {way}",
+    "line_short": "{place} {n}",
+    "read_end": "The signpost by the road out of {here} reads: {lines}.",
+    "read_gate": "The signpost by {here}'s gate reads: {lines}.",
+    "read_cross": "The signpost at the crossing reads: {lines}.",
+    "join": "; ",
+    "caravan_name": "Caravan",
+    "caravan_use": "The caravan trader unrolls a cloth of wares by the road.",
+    "caravan_resting": "The caravan stands in the town, its trader off the road.",
+    "ways": {"n": "north", "ne": "north-east", "e": "east", "se": "south-east", "s": "south", "sw": "south-west", "w": "west", "nw": "north-west"}
+  }
+}

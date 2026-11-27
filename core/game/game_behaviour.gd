@@ -168,6 +168,8 @@ static func _act(a: Dictionary, p: Dictionary, threat: Dictionary, herd_centre: 
 		next["mode"] = "dead"
 		next["target"] = {}
 		return next
+	if bool(p["flier"]) and bool(view.get("shelter_fliers", false)):
+		return GameWeatherFx.shelter_step(a, p, view)   # a storm: fliers go home and wait it out
 	var pos := _pos(a)
 	var home := _home(a)
 	var prev := str(a["mode"])
@@ -175,7 +177,7 @@ static func _act(a: Dictionary, p: Dictionary, threat: Dictionary, herd_centre: 
 	var uid := int(a["uid"])
 	var mode := "wander"
 	var goal := pos
-	var speed := float(p["speed"])
+	var speed := float(p["speed"]) * float((view.get("speed_by", {}) as Dictionary).get(str(a["id"]), 1.0))   # the weather's (rain slows fire creatures)
 	var hostile: bool = bool(p["hostile"])
 	var scared: bool = float(a["hp"]) < float(p["flee_hp"]) or bool(p["skittish"])
 	var leash := float(p["leash"])

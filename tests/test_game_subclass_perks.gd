@@ -149,7 +149,7 @@ func test_brews() -> void:
 	var line := GameCraft.brew(al, "distilled_elixir")
 	ok(al.heir.potions == potions + int(plan["makes"]) and GameCraft.have(al, "herb") == herbs - 3 and al.rng.state == rng and "brews" in line, "brewing it spends the herbs and fills the pack, no dice: %s" % line)
 	# the brew is never listed with the plain brews
-	ok(GameCraft.brews() == ["healing_potion"], "the plain brew list is unchanged")
+	ok(GameCraft.brews() == ["healing_potion", "sailors_stew"], "the plain brew list holds the healing potion and the sailor's stew and none of the callings' own")
 
 
 func test_shops() -> void:

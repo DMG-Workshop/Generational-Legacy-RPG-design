@@ -353,6 +353,7 @@
 		"only_heir_vials": "Only the heir throws vials.",
 		"no_such_vial": "No such vial.",
 		"unknown_command": "Unknown command.",
+		"no_skill_now": "No skill can be used now.",
 		"too_hurt_round": "Too hurt.",
 		"not_enough_mp": "Not enough MP.",
 		"choose_foe": "Choose a foe.",
