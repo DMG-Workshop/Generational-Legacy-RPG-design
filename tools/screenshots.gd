@@ -480,7 +480,7 @@ func _open_world(what: String) -> void:
 				for p in GameRoads.posts(d):
 					if str(p["kind"]) != "gate" and Vector2(float(p["x"]) + 0.5, float(p["z"]) + 0.5).distance_to(Vector2(float(st["x"]), float(st["z"]))) < 5.0 and not found:
 						found = true
-						scr.sb.heir = Vector2i(int(p["x"]) + 2, int(p["z"]) + 3)
+						scr.sb.heir = Vector2i(int(p["x"]) + (2 if what == "roadside_night" else 7), int(p["z"]) + 3)
 			if found:
 				break
 		if what == "roadside_night":
