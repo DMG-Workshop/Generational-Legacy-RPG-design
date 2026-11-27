@@ -393,6 +393,7 @@ func test_screen() -> void:
 	root.size = Vector2i(1280, 720)
 	await _frames(2)
 	var app := GameApp.new()
+	app.death_panel_on = false   # these tests are of the succession screen itself (the death summary has its own suite)
 	root.add_child(app)
 	await _frames(3)
 	var title = app.current

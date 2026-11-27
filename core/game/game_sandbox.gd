@@ -1112,13 +1112,14 @@ func after_fight() -> void:
 	if d.battle != null:
 		return
 	rest_until = d.world_seconds + float(setting("spawn_rest_seconds"))   # a breather: nothing new spawns for a while after any fight
+	if fight_foes.is_empty():
+		_leave_loot()   # the open ground's dead leave their spoils where they fell (a dungeon's keep the search choice)
 	if d.last_xp_line != "":
 		log.append({"kind": "fight", "text": d.last_xp_line})   # "+N XP" in the journal
 		d.last_xp_line = ""
 	if not fight_foes.is_empty():
 		_after_dungeon_fight()
 		return
-	_leave_loot()
 	if not fight_site.is_empty():
 		_after_landmark_fight()
 	if d.sandbox_escape.is_empty():
