@@ -70,7 +70,9 @@ static func give(r: GameRound, by: int, kind: String, foe_ref: String = "") -> S
 		return ""
 	var cmd := command(r, by, kind, foe_ref)
 	if cmd.is_empty():
-		return GameMessages.text("life", "no_skill_now" if kind == "skill" else "unknown_command")
+		if kind != "attack" and kind != "defend":
+			return GameMessages.text("life", "no_skill_now")
+		return GameMessages.text("life", "unknown_command")
 	var why := r.check(by, cmd)
 	if why != "":
 		return why

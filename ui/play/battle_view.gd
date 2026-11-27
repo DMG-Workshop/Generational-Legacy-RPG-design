@@ -510,7 +510,7 @@ func _build_actors() -> void:
 		chips.z_index = 1
 		root.add_child(chips)
 		var flag := _flag("focus", AllyOrders.text("mark_focus"), Kit.ACCENT)   # the party's focus: set from the orders row
-		flag["box"].position = Vector2(0, -20)
+		flag["box"].position = Vector2(0, 2)
 		root.add_child(flag["box"])
 		arena.add_child(root)
 		if bool(e.get("fled", false)):
@@ -570,7 +570,7 @@ func _build_ally(a: GameHeir) -> Dictionary:
 	chips.position = Vector2(0, 156)
 	root.add_child(chips)
 	var mark := _flag("", "", Kit.TEXT)   # what this companion will do this round
-	mark["box"].position = Vector2(0, -18)
+	mark["box"].position = Vector2(0, 2)
 	root.add_child(mark["box"])
 	if a.hp <= 0:
 		body.modulate = Color(0.35, 0.35, 0.4)
