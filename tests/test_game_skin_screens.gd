@@ -175,6 +175,7 @@ func _start() -> void:
 	UiSettings.scale = 1.0
 	UiSettings.apply(root)
 	app = GameApp.new()
+	app.death_panel_on = false   # these tests are of the succession screen itself (the death summary has its own suite)
 	root.add_child(app)
 	await _frames(3)
 	app.closed_badly = false

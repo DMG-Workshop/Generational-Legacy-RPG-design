@@ -56,6 +56,9 @@ static func problems() -> Array:
 		out.append(p)
 	for p in BattleSpeed.validate():
 		out.append(p)
+	for pair in [["drops", GameDrops.validate()], ["death summary", GameDeath.validate()]]:
+		for p in pair[1]:
+			out.append("%s: %s" % [pair[0], p])
 	return out
 
 

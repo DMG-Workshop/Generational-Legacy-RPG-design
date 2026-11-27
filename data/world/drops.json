@@ -1,0 +1,46 @@
+{
+  "note": "Loot on the open world's ground (core/game/game_drops.gd, drawn by ui/play/drop_art.gd). When a fight begun in the open world is won, what the dead carried (the search of the bodies, played exactly as GameLoot.search_dead plays it, on a copy of the dynasty so every die is the same) is left where they fell as small objects the heir picks up by walking within `reach` tiles of them. `ttl_seconds` is how long one lies, on the world clock (GameDynasty.world_seconds); in its last `fade_seconds` it blinks. `spread` is how many tiles round a fallen foe a drop may land. `max_drops` caps what lies about (the oldest go first). `kinds` give each kind of drop its rarity (an item has its own) and its look (`shape`: coins, bundle, gem or egg); an item of `gem_from` rarity or better is drawn as a gem. `beam_from` (a rarity) and up throw a light beam of `beam_tiles` height. `bob_tiles` and `bob_hz` are the soft bob. Searching the dead may sicken the one who does it (their sickness is picked up with the first thing taken from that fight). Text is here so the screen, the log and the toasts say the same thing.",
+  "settings": {
+    "reach": 0.9,
+    "ttl_seconds": 300.0,
+    "fade_seconds": 30.0,
+    "spread": 1,
+    "max_drops": 40,
+    "gem_from": "epic",
+    "beam_from": "rare",
+    "beam_tiles": 1.6,
+    "bob_tiles": 0.07,
+    "bob_hz": 0.7,
+    "label_min_cell": 22
+  },
+  "kinds": {
+    "gold": {"rarity": "common", "shape": "coins"},
+    "potion": {"rarity": "fine", "shape": "bundle"},
+    "item": {"rarity": "common", "shape": "bundle"},
+    "material": {"rarity": "fine", "shape": "bundle"},
+    "essence": {"rarity": "rare", "shape": "gem"},
+    "egg": {"rarity": "rare", "shape": "egg"}
+  },
+  "text": {
+    "scattered": "{foes} lie where they fell. What they carried is on the ground: walk over it to take it.",
+    "gold": "{n} gold",
+    "potion": "{n} healing potion",
+    "potions": "{n} healing potions",
+    "material": "Materials",
+    "essence": "Essences",
+    "egg": "A young {species}",
+    "took_gold": "{h} picks up {gold} gold.",
+    "took_potion": "{h} picks up {what}.",
+    "took_item": "{h} picks up {name}.",
+    "took_item_rare": "{h} picks up {name}: {rarity}!",
+    "took_sold": "{h} cannot use another {name} and sells it where it lies for {gold} gold.",
+    "took_material": "{h} gathers {list}.",
+    "took_egg": "{h} takes up the {young}: {name}.",
+    "took_egg_hatch": "{h} takes up a {young} and names it {name}.",
+    "heavy": "{name}: too heavy ({weight} to carry, {room} room left).",
+    "egg_full": "There is no room in the house to keep the {young}.",
+    "caught": "Handling the dead, {h} catches {disease}.",
+    "gone": "What lay on the ground is gone.",
+    "ground_note": "The dead lie where they fell. Their spoils are on the ground: walk over them to take them."
+  }
+}

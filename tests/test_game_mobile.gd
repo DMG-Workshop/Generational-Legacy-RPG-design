@@ -9,6 +9,7 @@
 extends SceneTree
 
 const GameApp := preload("res://ui/play/game_app.gd")
+const DeathPanel := preload("res://ui/play/death_panel.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const TouchHint := preload("res://ui/play/touch_hint.gd")
 const Kit := preload("res://ui/play/ui_kit.gd")
@@ -835,6 +836,9 @@ func test_every_tooltip_reachable() -> void:
 	d.retire()
 	app.show_state()
 	await _frames(4)
+	await _probe(app.current, "death_panel.gd")   # the death summary comes first
+	app.current._carry()
+	await _frames(4)
 	await _probe(app.current, "succession_screen.gd")
 	# The menus: the title's main menu, the options (a tab with tooltips), the pause screen and its slots.
 	app.show_title()
@@ -1312,6 +1316,10 @@ func _layout_pass(wsize: Vector2i, s: float) -> void:
 	d.retire()
 	app.show_state()
 	await _frames(4)
+	if app.current is DeathPanel:   # (the same death is told once: a later pass of this layout goes straight on)
+		_check_inside(app.frame, room, "death summary " + tag)
+		app.current._carry()
+		await _frames(4)
 	_check_inside(app.frame, room, "succession " + tag)
 	# A big family (orcs and halflings have up to four) with traits and a fate mark: every card and
 	# its Choose button fit beside each other.

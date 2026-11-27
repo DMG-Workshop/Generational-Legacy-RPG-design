@@ -37,6 +37,7 @@ const Chronicle := preload("res://ui/play/chronicle_panel.gd")
 const SkillTreePanel := preload("res://ui/play/skill_tree_panel.gd")
 const BattleView := preload("res://ui/play/battle_view.gd")
 const MapFight := preload("res://ui/play/map_fight.gd")
+const DropArt := preload("res://ui/play/drop_art.gd")
 const SpriteMotion := preload("res://ui/play/sprite_motion.gd")
 const Glide := preload("res://ui/play/glide.gd")
 const MoveMarker := preload("res://ui/play/move_marker.gd")
@@ -302,6 +303,7 @@ func _process(delta: float) -> void:
 	while _tick_wait <= 0.0:
 		sb.step(1)
 		_tick_wait += float(GameSandbox.setting("tick_seconds"))
+	_drop_news()
 	var lines := GameClock.feed(d, delta * sb.time_flow())
 	for e in lines:
 		last_line = str(e.get("text", e)) if e is Dictionary else str(e)
@@ -333,6 +335,18 @@ func _process(delta: float) -> void:
 	glow_layer.queue_redraw()
 	sky_layer.queue_redraw()
 	queue_redraw()
+
+
+## What the ground's loot just told (GameDrops via the sandbox): each line is a toast, and a pickup the soundscape does not hear
+## by itself (it hears gold and the pack growing) gets the pickup cue.
+func _drop_news() -> void:
+	if sb.drop_news.is_empty():
+		return
+	for n in sb.drop_news:
+		last_line = str(n["text"])
+		if str(n["kind"]) in ["potion", "material", "essence", "egg"] and "sound" in app and app.sound != null and app.sound.has_method("cue"):
+			app.sound.cue("pickup")
+	sb.drop_news.clear()
 
 
 ## Moves the look of the walk on by `delta`: the heir's drawn place (the view follows it), the mark of a click, and a new place's
@@ -959,6 +973,7 @@ func _open_fight() -> void:
 	host.app = app
 	host.sound = app.sound if "sound" in app else null
 	host.on_done = _fight_over
+	host.ground_loot = sb.space == "world" and sb.storey() == 0 and sb.fight_foes.is_empty()   # the open world's dead leave their spoils on the ground
 	var bv: Control = BattleView.new()
 	bv.app = host
 	host.current = bv
@@ -1542,6 +1557,10 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 		for t in GameTrials.sites(d):
 			if view.has_point(Vector2i(int(t["x"]), int(t["z"]))):
 				items.append([float(int(t["z"])) + 0.5, "site", t])
+	if sb.storey() == 0:
+		for p in GameDrops.lying(d):   # loot left where the dead fell
+			if view.has_point(Vector2i(floori(float(p["x"])), floori(float(p["z"])))):
+				items.append([float(p["z"]) + 0.2, "drop", p])
 	for a in sb.creatures:
 		items.append([float(a["z"]) + 0.5, "creature", a])
 	for a in sb.landmark_dwellers():
@@ -1565,6 +1584,10 @@ func _paint_standing(c: Control, origin: Vector2, area: Vector2, centre: Vector2
 					c.draw_texture_rect(inside, box, false, dim)
 					_paint_residents(c, b, at, cell, dim)
 				c.draw_texture_rect(BuildingArt.texture(str(b["kind"]), int(b["style"]), int(b["w"]), int(b["h"]), GameVillagers.door_scale(b)), box, false, Color(dim.r, dim.g, dim.b, lid) if inside != null else dim)
+			"drop":
+				var dp: Dictionary = it[2]
+				var dat := origin + (Vector2(float(dp["x"]), float(dp["z"])) - centre) * cell + area * 0.5
+				DropArt.paint(c, dp, dat, cell, dim, Time.get_ticks_msec() / 1000.0, float(dp["until"]) - d.world_seconds)
 			"gate":
 				var g: Dictionary = it[2]
 				var gr: Rect2i = g["rect"]

@@ -25,6 +25,7 @@ var world_event: Dictionary = {}    # the war, famine or golden age running now,
 var trials: Dictionary = {}     # the family's trial state: quest steps done, legacy gains, the trial under way, tries and waits (see GameTrials); saved only when not empty
 var smoke: Dictionary = {}      # the smoke pot's cloud now burning on the open world: {x, z, until (world_seconds)} (see GameSmoke); saved only while it burns
 var last_xp_line := ""          # the line a won fight of the open world left about its xp and band (runtime only; the sandbox's journal takes it)
+var drops: Array = []           # loot lying on the open world's ground (see GameDrops); saved only while some lies
 var house: Dictionary = {}      # the family house: track -> level bought (see GameHouse); the dynasty keeps it across heirs
 var slain_bosses: Dictionary = {}
 var pending_archetype: String = ""
@@ -34,6 +35,7 @@ var journal: Array = []
 var battle: GameBattle = null
 var next_id: int = 1
 var killer_id: String = ""
+var killer_info: Dictionary = {}   # the foe that struck the last heir down: {id, name, level, con}; not saved (the death summary reads it when it is there)
 var total_hunts: int = 0
 var roster: Array = []          # eggs and young the family keeps (see GameRoster); saved only when not empty
 var mine: Dictionary = {}       # the ground dug at each site, its strain and its gateways (see GameMine); saved only when not empty
@@ -798,9 +800,11 @@ func finish_battle() -> Array:
 		"defeat":
 			heir.clean_streak = 0
 			killer_id = ""
+			killer_info = {}
 			for e in b.enemies:
 				if e["hp"] > 0:
 					killer_id = e["id"]
+					killer_info = {"id": str(e["id"]), "name": str(e.get("name", "")), "level": int(e.get("level", 0)), "con": str(e.get("con", ""))}
 					break
 			if heir.trait_total("extra_life") > 0.0 and not heir.extra_life_used:
 				heir.extra_life_used = true
@@ -1110,6 +1114,8 @@ func to_dict() -> Dictionary:
 		out["trials"] = trials
 	if world_seconds > 0.0:   # likewise: only once the clock has run
 		out["world_seconds"] = world_seconds
+	if not drops.is_empty():   # only while loot lies on the ground
+		out["drops"] = drops
 	if GameSmoke.active(self):   # only while a smoke pot's cloud burns
 		out["smoke"] = smoke
 	if clock_carry > 0.0:   # only once the clock holds time: older saves and fresh ones stay alike
@@ -1182,6 +1188,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.world_event = GameWorldEvents.load_state(d.get("world_event", {}))
 	g.world_seconds = GameDay.load_seconds(d.get("world_seconds", 0.0))
 	g.smoke = GameSmoke.load_state(d.get("smoke", {}), g.world_seconds)
+	g.drops = GameDrops.load_list(d.get("drops", []))
 	var carry = d.get("clock_carry", 0.0)
 	g.clock_carry = maxf(0.0, float(carry)) if (typeof(carry) == TYPE_FLOAT or typeof(carry) == TYPE_INT) and is_finite(float(carry)) else 0.0
 	g.map_pin = GameTravel.clean_pin(d.get("map_pin", {}))

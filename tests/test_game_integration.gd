@@ -81,6 +81,7 @@ func _ui_tests() -> void:
 	GameDynasty.save_path = UI_SAVE
 	root.size = Vector2i(1280, 720)   # headless starts tiny; clicks need the real window
 	var app: Control = GameApp.new()
+	app.death_panel_on = false   # these tests are of the succession screen itself (the death summary has its own suite)
 	root.add_child(app)
 	await _frames()
 	await test_ui_event_death_is_saved(app)

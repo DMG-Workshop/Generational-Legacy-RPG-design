@@ -9,6 +9,7 @@ var dynasty: GameDynasty
 var app: Node               # the real app: it saves and has the sound
 var sound: Node
 var hunt_stopped := true
+var ground_loot := false      # a fight on the open world's ground: the dead's spoils are left on the ground (GameDrops), not offered as a search
 var current: Control = null   # the battle screen that is running (the app's `current` is the map)
 var on_done: Callable
 
