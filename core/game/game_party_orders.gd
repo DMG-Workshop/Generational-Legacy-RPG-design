@@ -11,7 +11,7 @@
 ##   static func give(r: GameRound, by: int, kind: String, foe_ref: String = "") -> String   # "" done, else why not (nothing changed)
 ##   static func all_auto(r: GameRound) -> bool                   # every companion who can still fight is on Auto (false with no companions)
 ##   static func set_all_auto(r: GameRound, on: bool) -> void     # the Auto switch of every companion (the heir keeps their own)
-class_name GameOrders
+class_name GamePartyOrders
 extends RefCounted
 
 const KINDS := ["attack", "defend", "skill", "auto"]
