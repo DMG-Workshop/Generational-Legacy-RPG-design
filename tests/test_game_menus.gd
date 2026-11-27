@@ -454,7 +454,7 @@ func test_back_everywhere() -> void:
 	for f in dir.get_files():
 		if not f.ends_with(".gd") or not (f.ends_with("_panel.gd") or f.ends_with("_pane.gd")):
 			continue
-		if f in ["panel_skin.gd"]:
+		if f in ["panel_skin.gd", "death_panel.gd"]:   # the death summary is a full-screen step of the succession (its own Carry on button), not an overlay Escape may close
 			continue
 		var src := FileAccess.get_file_as_string("res://ui/play/" + f)
 		seen += 1
