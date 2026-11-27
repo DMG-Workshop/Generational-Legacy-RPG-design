@@ -85,6 +85,9 @@ const LOOK_SHOTS := [
 	["menu_title_phone", PHONE, true, "title"],
 	["menu_options_access", DESKTOP, false, "options:access"],
 	["menu_options_phone", PHONE, true, "options:sound"],
+	["death_summary", DESKTOP, false, "death"],
+	["death_summary_phone", PHONE, true, "death"],
+	["drops", DESKTOP, false, "drops"],
 ]
 
 ## The pictures for a store page: the same screens, bigger. Nothing compares them; they are made on demand.
@@ -273,7 +276,7 @@ func _screen(what: String) -> void:
 		await _waygate(what)
 		return
 	match what:
-		"worldmap", "worldpin", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
+		"worldmap", "worldpin", "drops", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
 			await _open_world(what)
 		"life":
 			pass
@@ -290,6 +293,15 @@ func _screen(what: String) -> void:
 		"report":
 			app.open_menu()
 			app.open_report()
+		"death":   # (look-only) the death summary shown before the succession: a slain heir with a house, an heirloom and a title
+			d.heirlooms.append({"name": "Crown of Ash", "boss": "Ash King", "gen": 1})
+			d.house = {"hall": 2, "yard": 1}
+			d.heir.kills = {"wolf": 14, "bandit": 6}
+			d.heir.battles_won = 17
+			d.killer_id = "wolf"
+			d.killer_info = {"id": "wolf", "name": "Elite Wolf", "level": 21, "con": "hard"}
+			d._die("slain in battle")
+			app.show_state()
 		"event":
 			GameEvents.begin(d, "elven_wardens")
 			app.show_state()
@@ -470,9 +482,32 @@ func _open_world(what: String) -> void:
 			scr.sb.creatures.append(ag)
 		scr.sb.use_smoke()
 		scr._refresh_panes()
+	if what == "drops":   # (look-only) loot of every kind and rarity lying on the ground by the heir, one with its time nearly out
+		var at2: Vector2 = scr.sb.heir_point()
+		scr.sb.creatures.clear()
+		var seen := {}
+		var rr := RandomNumberGenerator.new()
+		rr.seed = 3
+		for i in 4000:
+			var iid := GameLoot.roll_item(rr, 8, 60.0)
+			seen[GameLoot.rarity_name(iid)] = iid
+		var row: Array = [{"kind": "gold", "gold": 85}, {"kind": "potion", "n": 2}, {"kind": "material", "mats": {"iron": 3}}, {"kind": "essence", "ess": {"keen": 1}}, {"kind": "egg", "species": "wolf", "name": "Pip", "born": "egg"}]
+		for r in ["common", "fine", "rare", "epic", "legendary", "mythic"]:
+			if seen.has(r):
+				row.append({"kind": "item", "item": seen[r]})
+		for i in row.size():
+			var p: Dictionary = row[i]
+			p["uid"] = i + 1
+			p["gid"] = 1
+			p["x"] = at2.x - 4.5 + float(i % 6) * 1.9
+			p["z"] = at2.y + 1.0 + float(i / 6) * 1.8
+			p["until"] = 20.0 if i == 1 else 900.0
+			p["sick"] = []
+		d.drops = row
+		d.world_seconds = 5.0
 	if what == "turned":   # the heir faces left (the art faces right): a turned figure must stand on its shadow, as an unturned one does
 		scr.facing_dir = Vector2i(-1, 0)
-	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town or what == "smoke" else (1.5 if what == "gate" else 0.75))
+	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (2.4 if what == "drops" else (1.0 if town or what == "smoke" else (1.5 if what == "gate" else 0.75)))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
