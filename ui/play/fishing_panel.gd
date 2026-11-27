@@ -174,7 +174,7 @@ func _refresh() -> void:
 		"wait":
 			hint = GameFishing.text("waiting")
 		"bite":
-			hint = GameFishing.text("bite") + " " + GameFishing.text("tap_to_reel")
+			hint = GameFishing.text("tap_to_reel")
 		"ready":
 			hint = GameFishing.text("easy_reel") if easy else GameFishing.text("tap_to_reel")
 	_said.text = line if hint == "" else ("%s\n%s" % [line, hint] if line != "" else hint)
