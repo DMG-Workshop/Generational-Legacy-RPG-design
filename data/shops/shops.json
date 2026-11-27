@@ -345,6 +345,20 @@
       2
      ],
      "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "fishing_rod",
+      "worm_bait"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
     }
    ],
    "services": []
@@ -1331,6 +1345,20 @@
      ],
      "rarity_max": "fine",
      "rarity_min": "common"
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "fishing_rod",
+      "worm_bait"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
     }
    ],
    "services": []

@@ -80,6 +80,8 @@ const LOOK_SHOTS := [
 	["world_pin", DESKTOP, false, "worldpin"],
 	["roadside", DESKTOP, false, "roadside"],
 	["roadside_night", DESKTOP, false, "roadside_night"],
+	["fishing_panel", DESKTOP, false, "fishing"],
+	["fishing_book", DESKTOP, false, "fishbook"],
 	["menu_pause", DESKTOP, false, "pause"],
 	["menu_pause_phone", PHONE, true, "pause"],
 	["menu_toasts", DESKTOP, false, "toasts"],
@@ -278,7 +280,7 @@ func _screen(what: String) -> void:
 		await _waygate(what)
 		return
 	match what:
-		"worldmap", "worldpin", "drops", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "roadside", "roadside_night", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
+		"worldmap", "worldpin", "drops", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "fishing", "fishbook", "roadside", "roadside_night", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
 			await _open_world(what)
 		"life":
 			pass
@@ -456,6 +458,18 @@ func _open_world(what: String) -> void:
 		d.trials["steps"] = {str(GameTrials.placed(d.seed_value, "material")[0]["id"]): 1}
 		var site: Dictionary = GameTrials.sites(d)[0]
 		spot = Vector2i(int(site["x"]) + 2, int(site["z"]) + 2)
+	if what == "fishing" or what == "fishbook":   # (look-only) the heir at the bank of a lake with a rod, a few worms and some fish in the book
+		d.heir.inventory.append_array(["fishing_rod", "worm_bait", "worm_bait"])
+		var size := GameWorldGen.size()
+		for z in range(2, size - 2, 2):
+			for x in range(2, size - 2, 2):
+				if GameWorldGen.body_at(d.seed_value, x, z) == "" and str(GameFishing.spot(d, x, z).get("body", "")) == "lake" and spot != Vector2i(x, z) and not GameFishing.spot(d, x, z).is_empty():
+					spot = Vector2i(x, z)
+					break
+			if GameFishing.spot(d, spot.x, spot.y).get("body", "") == "lake":
+				break
+		for r in [["fish_perch", 22.0, "fair"], ["fish_perch", 31.5, "fine"], ["fish_trout", 40.0, "fine"], ["fish_carp", 62.0, "fair"], ["fish_eel", 70.0, "fair"], ["fish_minnow", 6.0, "fair"]]:
+			GameFishing.land(d, {"item": r[0], "cm": r[1], "size": r[2]})
 	d.world.visit("hearthmere")
 	app.show_sandbox()
 	await _frames(3)
@@ -537,6 +551,26 @@ func _open_world(what: String) -> void:
 		scr._refresh_panes()
 		scr._refresh_status()
 		await _frames(2)
+	if what == "fishing":
+		UiSettings.set_access("reduced_motion", false)   # (the timing bar only runs with motion on)
+		scr._fish()
+		await _frames(2)
+		for c in scr.get_children():
+			if c.has_method("cast") and c.has_method("tap"):
+				c.cast()
+				c.step(c.wait + 0.01)
+				c.t = 0.3
+		await _frames(3)
+	if what == "fishbook":
+		scr._open_popup(scr.Chronicle)
+		await _frames(3)
+		for c in scr.get_children():
+			var tabs := c.find_children("*", "TabContainer", true, false)
+			for t in tabs:
+				var f: Node = t.get_node_or_null("Fishing")
+				if f != null:
+					t.current_tab = f.get_index()
+		await _frames(3)
 	if what == "worldmap":   # (look-only) the world map with a town's card up
 		scr._open_world_map()
 		await _frames(3)

@@ -66,7 +66,7 @@ static func store(key: String, value: Variant) -> bool:
 ## The accessibility options (the menu's Accessibility row): colour-blind colours, high contrast and
 ## reduced motion and plain font. Each is a yes or no in settings.cfg; a file from before they existed, or a damaged
 ## value, reads as off.
-const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion", "plain_font", "sound_captions"]
+const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion", "plain_font", "sound_captions", "easy_fishing"]
 
 
 static func access_on(key: String) -> bool:

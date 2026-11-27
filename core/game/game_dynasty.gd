@@ -44,6 +44,8 @@ var built: Dictionary = {}      # the pieces the family has built, {"x,y,z": kin
 var shop_sold: Dictionary = {}  # what the family has bought off the shelves this season, {"place|shop": {period: "year|season", keys: [..]}} (see GameShops.sold_out); saved only when set
 var gates: Dictionary = {}      # the waygates: runes learned, slots repaired (gate:slot -> world year), gates found, guards posted (see GameGates); saved only when set
 var wilds: Dictionary = {}      # the landmarks of the wilds found and used, {found: [ids], used: {id: {gen, n}}} (see GameWildsSites); saved only when set
+var fishing: Dictionary = {}    # the angler's record book {caught: {fish item: {n, best}}, points} (see GameFishing); saved only once something is caught
+var fishing_casts := 0          # casts made this run, for the keyed dice (never saved)
 var sandbox_at: Dictionary = {} # where the heir last stood in the open world, {x, z, gen, place} (see GameSandbox); saved only when set
 var gathered: Dictionary = {}   # nodes companions have gathered, {"x,z": world year} (see GameCompanions); saved only when not empty
 var dungeon_marks: Dictionary = {}   # what the heir has opened, sprung, used or killed in the dungeons, {"kind:place:key": world year} (see GameDungeons); saved only when not empty
@@ -1098,6 +1100,8 @@ func to_dict() -> Dictionary:
 		out["sandbox_at"] = sandbox_at
 	if not shop_sold.is_empty():   # and only once something was bought off a shelf
 		out["shop_sold"] = shop_sold
+	if not GameFishing.to_save(self).is_empty():   # and only once something is caught
+		out["fishing"] = GameFishing.to_save(self)
 	if not blessing.is_empty():   # and only once a shop has blessed the party
 		out["blessing"] = blessing
 	if not casts_used.is_empty():   # and only once a shop has cast a spell
@@ -1177,6 +1181,7 @@ static func from_dict(d: Dictionary) -> GameDynasty:
 	g.damage = GameRepair.load_state(d.get("damage", {}), g.built)
 	g.gathered = GameCompanions.load_gathered(d.get("gathered", {}))
 	g.sandbox_at = GameSandbox.load_at(d.get("sandbox_at", {}))
+	g.fishing = GameFishing.load_state(d.get("fishing", {}))
 	g.wilds = GameWildsSites.load_state(d.get("wilds", {}))
 	g.gates = GameGates.load_state(d.get("gates", {}))
 	g.blessing = GameCasting.load_blessing(d.get("blessing", {}))

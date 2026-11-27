@@ -20,6 +20,8 @@ static func data() -> Dictionary:
 
 ## The name of the glyph an item is drawn with: its slot's, else its kind's, else the default.
 static func glyph_of(id: String) -> String:
+	if data().get("item_glyph", {}).has(id):   # a thing with a picture of its own (the fish)
+		return str(data()["item_glyph"][id])
 	var def := GameItems.item_def(id)
 	var slot := str(def.get("slot", ""))
 	if slot != "" and data()["slot_glyph"].has(slot):
@@ -33,10 +35,13 @@ static func glyph_of(id: String) -> String:
 ## The main colour of an item: its material's first listed tag, brightened a little by its tier.
 static func color_of(id: String) -> Color:
 	var base: Array = data()["default_color"]
-	for t in GameMaterials.tags_of(GameItems.material_of(id)):
-		if data()["tag_colors"].has(str(t)):
-			base = data()["tag_colors"][str(t)]
-			break
+	if data().get("item_color", {}).has(id):   # a colour of its own (the fish)
+		base = data()["item_color"][id]
+	else:
+		for t in GameMaterials.tags_of(GameItems.material_of(id)):
+			if data()["tag_colors"].has(str(t)):
+				base = data()["tag_colors"][str(t)]
+				break
 	var c := Color(float(base[0]), float(base[1]), float(base[2]))
 	var tier := int(GameItems.item_def(id).get("tier", 1))
 	return c.lightened(clampf(float(tier - 1) * 0.04, 0.0, 0.25))
@@ -87,6 +92,12 @@ static func validate() -> Array:
 		for k in dat[map]:
 			if not dat["glyphs"].has(str(dat[map][k])):
 				bad.append("icons.json: %s %s names the glyph %s, which does not exist" % [map, k, dat[map][k]])
+	for k in dat.get("item_glyph", {}):
+		if not dat["glyphs"].has(str(dat["item_glyph"][k])):
+			bad.append("icons.json: item_glyph %s names the glyph %s, which does not exist" % [k, dat["item_glyph"][k]])
+	for k in dat.get("item_color", {}):
+		if typeof(dat["item_color"][k]) != TYPE_ARRAY or (dat["item_color"][k] as Array).size() != 3:
+			bad.append("icons.json: item colour %s needs three numbers" % k)
 	for k in dat["tag_colors"]:
 		if typeof(dat["tag_colors"][k]) != TYPE_ARRAY or (dat["tag_colors"][k] as Array).size() != 3:
 			bad.append("icons.json: tag colour %s needs three numbers" % k)

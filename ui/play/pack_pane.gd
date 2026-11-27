@@ -16,6 +16,7 @@ var on_change := Callable()     # func(): the pack changed; the other panes redr
 var on_open_bag := Callable()   # func(bag_id): open that bag's pane
 var on_smoke := Callable()      # func() -> String: break a smoke pot where the heir stands, and say what came of it (the open world's screen)
 var on_camp := Callable()       # func() -> String: pitch (or strike) a camp where the heir stands, and say what came of it (the open world's screen)
+var on_fish := Callable()       # func() -> String: take the rod to the water (opens the fishing panel when the heir is at a bank), and say what came of it
 var _grid: GridContainer
 var _head: Label
 var _line: Label
@@ -94,6 +95,8 @@ func _build() -> void:
 			_actions.add_child(Kit.button("Use", func(): _say(_light()), Vector2(70, 32)))
 		if _picked == GameCamp.item_id():
 			_actions.add_child(Kit.button("Use", func(): _say(_pitch()), Vector2(70, 32)))
+		if _picked == str(GameFishing.setting("rod")):
+			_actions.add_child(Kit.button("Use", func(): _say(_fish()), Vector2(70, 32)))
 		if GameItems.slot_of(_picked) in GameItems.SLOTS:
 			_actions.add_child(Kit.button("Wear", func(): _say(GameItems.equip(dynasty, _picked)), Vector2(70, 32)))
 		if bag != "":
@@ -115,6 +118,8 @@ func _open(id: String) -> void:
 		_say(_light())
 	elif id == GameCamp.item_id():
 		_say(_pitch())
+	elif id == str(GameFishing.setting("rod")):
+		_say(_fish())
 	elif GameItems.slot_of(id) in GameItems.SLOTS:
 		_say(GameItems.equip(dynasty, id))
 
@@ -127,6 +132,9 @@ func _light() -> String:
 ## A tent is pitched in the open world (the screen's `on_camp` says what came of it); nowhere else has a camp.
 func _pitch() -> String:
 	return str(on_camp.call()) if on_camp.is_valid() else GameCamp.text("indoors")
+## A fishing rod is used at the water's edge in the open world (the screen's `on_fish` opens the panel there); nowhere else has water to fish.
+func _fish() -> String:
+	return str(on_fish.call()) if on_fish.is_valid() else GameFishing.text("indoors")
 
 
 func _say(text: String) -> void:
