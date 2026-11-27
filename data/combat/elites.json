@@ -1,0 +1,80 @@
+{
+	"note": "Variety in the fights of the open world (core/game/game_variety.gd): elite foes, attack patterns and the phases of a legend. Every RULE here applies only to a fight with `variety` on (GameDynasty.start_encounter given variety keys, and a dungeon's legend): hunts, hunt-board legends and everything the autopilot or the golden scenarios play never read it, so they play exactly as before. Every roll is a keyed hash of the dynasty's seed, the tile or place and the creature, never the dynasty's dice. Mods: `name` is the prefix; hp, atk, def, agi are multipliers; `reward` multiplies xp and gold; `taken` multiplies the damage the foe takes; `drain` is the share of the damage it deals that it heals; `rage` raises its blows by up to that share as its health falls; `lead` raises every other foe's blows by that share while it stands; `pack_only` mods are given only by the pack-leader roll. Patterns: `every` is the cycle in rounds (at least 3, so a telegraph comes first). heavy: a blow of `mult` times, announced the round before (wind_up). brace: the foe spends its turn bracing and takes `taken` times the damage until its next turn. call: below `below` of its health the foe calls for help (announced, then `count` kin arrive the next round) once a fight.",
+	"settings": {
+		"elite_chance": 0.12,
+		"chance_by_con": {"trivial": 0.0, "easy": 0.5, "even": 1.0, "hard": 1.0, "deadly": 0.5},
+		"leader_min_foes": 3,
+		"leader_chance": 0.3,
+		"pattern_chance": 0.6,
+		"max_foes": 6,
+		"kin": {"hp": 0.5, "atk": 0.7, "def": 0.7, "level": 0.8, "reward": 0.4}
+	},
+	"mods": {
+		"swift": {"name": "Swift", "weight": 3, "hp": 0.9, "atk": 1.1, "agi": 1.8, "reward": 1.35},
+		"armoured": {"name": "Armoured", "weight": 3, "hp": 1.2, "def": 1.7, "agi": 0.8, "reward": 1.4},
+		"vampiric": {"name": "Vampiric", "weight": 2, "atk": 1.05, "drain": 0.5, "reward": 1.5},
+		"berserk": {"name": "Berserk", "weight": 2, "hp": 1.1, "rage": 0.8, "reward": 1.5},
+		"warded": {"name": "Warded", "weight": 2, "taken": 0.75, "reward": 1.4},
+		"pack_leader": {"name": "Pack Leader", "weight": 0, "pack_only": true, "hp": 1.4, "atk": 1.15, "lead": 0.12, "reward": 1.6}
+	},
+	"patterns": {
+		"heavy": {"every": 3, "mult": 1.8},
+		"brace": {"every": 4, "taken": 0.5},
+		"call": {"below": 0.5, "count": 1}
+	},
+	"assign": {
+		"wolf": ["call", "heavy"],
+		"frost_wolf": ["call", "heavy"],
+		"thornhound": ["heavy"],
+		"goblin": ["call", "brace"],
+		"bandit": ["brace", "call"],
+		"skeleton": ["brace"],
+		"harpy": ["call"],
+		"plague_rat": ["call"],
+		"bog_troll": ["heavy"],
+		"ogre": ["heavy"],
+		"stone_golem": ["heavy", "brace"],
+		"drake": ["heavy"],
+		"ash_wyrm": ["heavy"],
+		"ghoul": ["heavy"],
+		"abyssal_knight": ["brace", "heavy"]
+	},
+	"bosses": {
+		"grimfang": {
+			"epithet": "Alpha of the Whisperwood",
+			"phases": [
+				{"at": 0.66, "summon": ["wolf", "wolf"]},
+				{"at": 0.33, "atk": 1.25, "pattern": "heavy"}
+			]
+		},
+		"hollow_king": {
+			"epithet": "Sovereign of the Barrow",
+			"phases": [
+				{"at": 0.7, "pattern": "heavy"},
+				{"at": 0.45, "summon": ["skeleton", "skeleton"]},
+				{"at": 0.2, "atk": 1.2}
+			]
+		},
+		"vaerthax": {
+			"epithet": "The Ember Drake",
+			"phases": [
+				{"at": 0.6, "pattern": "heavy"},
+				{"at": 0.3, "atk": 1.2, "def": 0.9}
+			]
+		},
+		"stonefather": {
+			"epithet": "Heart of the Deepstone",
+			"phases": [
+				{"at": 0.6, "pattern": "brace"},
+				{"at": 0.3, "atk": 1.25, "pattern": "heavy"}
+			]
+		},
+		"the_unmade": {
+			"epithet": "What Waits Beyond the Rift",
+			"phases": [
+				{"at": 0.66, "summon": ["rift_shade"]},
+				{"at": 0.33, "atk": 1.2, "pattern": "heavy"}
+			]
+		}
+	}
+}

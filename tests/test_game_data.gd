@@ -93,6 +93,18 @@ func test_lines() -> void:
 		["fx_shatter", {"n": "12"}, "12 shatter"],
 		["fx_found", {}, "Found"],
 		["fx_find", {"rarity": "** Epic", "name": "Iron Sword"}, "** Epic Iron Sword"],
+		["wind_up_heavy", {"name": "Ogre"}, "Ogre is winding up a heavy blow!"],
+		["wind_up_call", {"name": "Wolf"}, "Wolf is calling for help!"],
+		["heavy_blow", {"name": "Ogre"}, "Ogre brings the heavy blow down!"],
+		["guard_up", {"name": "Skeleton"}, "Skeleton braces behind its guard."],
+		["joins", {"name": "Wolf"}, "Wolf joins the fight!"],
+		["drains", {"name": "Vampiric Ghoul", "n": 9}, "Vampiric Ghoul drinks in 9 life."],
+		["phase_enrage", {"name": "Grimfang"}, "Grimfang is enraged!"],
+		["phase_pattern", {"name": "Grimfang"}, "Grimfang changes the way it fights!"],
+		["phase_summon", {"name": "Grimfang"}, "Grimfang calls for its servants!"],
+		["boss_falls", {"name": "Grimfang"}, "Grimfang has fallen!"],
+		["boss_heirloom", {"heirloom": "Fang"}, "Heirloom claimed: Fang"],
+		["boss_heirloom_held", {"heirloom": "Fang"}, "The house already holds Fang."],
 	]
 	var keys: Array = GameData.messages["lines"].keys()
 	for c in cases:

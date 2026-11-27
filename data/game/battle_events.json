@@ -5,7 +5,7 @@
 		"act": {"about": "A party member is about to act (GameRound.resolve only); a fallback marker follows the first one of the same member.", "fields": {"by": "int", "manual": "bool"}, "optional": {"fallback": "bool", "flee": "bool", "held": "bool"}},
 		"foes": {"about": "The foes start acting (GameRound.resolve only).", "fields": {}},
 		"cast": {"about": "An ability or spell is used; the blows it causes carry the same `cast` number.", "fields": {"by": "int", "name": "string", "cast": "int", "aoe": "bool", "element": "string", "targets": "ints"}},
-		"damage": {"about": "A blow lands. side is who was hit: enemy (index), player (the heir) or ally (index of the foe, and ally of the companion).", "fields": {"side": "string", "index": "int", "amount": "int"}, "optional": {"ally": "int", "by": "int", "crit": "bool", "cast": "int", "element": "string", "shatter": "bool", "absorbed": "int"}},
+		"damage": {"about": "A blow lands. side is who was hit: enemy (index), player (the heir) or ally (index of the foe, and ally of the companion).", "fields": {"side": "string", "index": "int", "amount": "int"}, "optional": {"ally": "int", "by": "int", "crit": "bool", "cast": "int", "element": "string", "shatter": "bool", "absorbed": "int", "heavy": "bool"}},
 		"miss": {"about": "A blow is dodged. side is who dodged.", "fields": {"side": "string", "index": "int"}, "optional": {"ally": "int", "by": "int", "cast": "int"}},
 		"heal": {"about": "Hit points restored to the heir (side player) or a companion (side ally).", "fields": {"side": "string", "amount": "int", "by": "int"}, "optional": {"ally": "int"}},
 		"mana": {"about": "Mana gained (positive) or taken by a blow (negative).", "fields": {"by": "int", "amount": "int"}},
@@ -23,6 +23,10 @@
 		"coat": {"about": "The heir coats the blade with a toxin.", "fields": {"item": "string"}},
 		"coat_end": {"about": "The coating is spent.", "fields": {"item": "string"}},
 		"field": {"about": "An area is fouled (caltrops, a mire).", "fields": {"name": "string", "x": "number", "y": "number", "radius": "number"}},
-		"field_end": {"about": "A fouled area clears.", "fields": {"name": "string"}}
+		"field_end": {"about": "A fouled area clears.", "fields": {"name": "string"}},
+		"wind_up": {"about": "A foe of the open world telegraphs what it will do on its next turn (variety fights only): pattern is heavy (a heavy blow) or call (it calls for help). The party can answer by defending or covering.", "fields": {"index": "int", "pattern": "string"}},
+		"guard_up": {"about": "A foe braces: it spends its turn on guard and takes less damage until its next turn (variety fights only).", "fields": {"index": "int"}},
+		"summon": {"about": "A foe joins the fight, last in the line (a call for help answered, a legend's servants); index is its place in the foes (variety fights only).", "fields": {"index": "int", "by": "int", "name": "string"}},
+		"phase": {"about": "A legend takes up its next phase (variety fights only): step counts them from 1.", "fields": {"index": "int", "step": "int"}}
 	}
 }

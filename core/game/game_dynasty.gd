@@ -634,7 +634,9 @@ func start_hunt(kind: String) -> GameBattle:
 ## Starts a fight with particular wild creatures that have caught the heir in the open world (GameSandbox): the hunt's
 ## rules (levels round the heir's, the hunt's scale and reward) for exactly these creatures, by id. Returns null when
 ## nothing known was given. Draws from the dynasty's dice like any hunt; the autopilot never calls it.
-func start_encounter(ids: Array, place_id: String = "", level_mult: float = 1.0, levels: Array = []) -> GameBattle:
+## `variety_keys` (one per creature: what it stands for, its tile or its place and room) turns on the open world's variety for
+## this fight (GameVariety: elites, attack patterns), rolled on keyed hashes of the seed and never the dynasty's dice.
+func start_encounter(ids: Array, place_id: String = "", level_mult: float = 1.0, levels: Array = [], variety_keys: Array = []) -> GameBattle:
 	var cfg: Dictionary = GameData.bal("hunt_rewards")["hunt"]
 	var danger := float((GameWorld.place(place_id) if place_id != "" else world.here()).get("danger", 1.0))
 	var foes: Array = []
@@ -657,7 +659,11 @@ func start_encounter(ids: Array, place_id: String = "", level_mult: float = 1.0,
 		foes.append(foe)
 	if foes.is_empty():
 		return null
-	return _begin_battle(foes, "hunt")
+	if not variety_keys.is_empty():
+		GameVariety.dress(self, foes, variety_keys)
+	var fight := _begin_battle(foes, "hunt")
+	fight.variety = not variety_keys.is_empty()
+	return fight
 
 
 ## A wild creature built as a foe of `level` by the hunt's rules, or {} when the id is not a creature: no dice. What a guard
@@ -672,10 +678,16 @@ func foe_for(creature_id: String, level: int) -> Dictionary:
 
 ## Starts the fight with a particular stirring legend in its own lair (the sandbox's dungeons), wherever the family's place is.
 ## Null when it is not stirring. Draws no dice, like start_legend.
-func start_legend_at(boss_id: String) -> GameBattle:
+## With `variety` (the open world's dungeon) the legend takes up its phases (GameVariety); without, it fights as it always did.
+func start_legend_at(boss_id: String, variety: bool = false) -> GameBattle:
 	for c in stirring_legends():
 		if str(c["id"]) == boss_id:
-			return _begin_battle([_make_enemy(c, 1.0, 1.0, int(c.get("min_level", 1)))], "legend")
+			var foe := _make_enemy(c, 1.0, 1.0, int(c.get("min_level", 1)))
+			if variety:
+				GameVariety.dress_boss(self, foe)
+			var fight := _begin_battle([foe], "legend")
+			fight.variety = variety
+			return fight
 	return null
 
 

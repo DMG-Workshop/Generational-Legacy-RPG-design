@@ -47,6 +47,7 @@ var _foe_queue: Array = []        # foes still to act this round, in order
 var _foe_step: int = 0            # where the foe at the head of _foe_queue is in its turn (see _foe_turn_steps)
 var braced: Dictionary = {}    # ref -> true: a companion braced this round (see GameRound, settings.brace_taken)
 var resumed: bool = false      # not saved: this fight was loaded from a save made in the middle of it
+var variety: bool = false      # an open-world fight: elites, attack patterns and a legend's phases are in play (GameVariety). Off for hunts and everything the autopilot plays
 
 
 func _init(p_heir: GameHeir, p_enemies: Array, p_rng: RandomNumberGenerator) -> void:
@@ -69,7 +70,7 @@ func to_dict() -> Dictionary:
 		"exposures": exposures, "blade": _blade, "round_on": round_on, "round_acted": round_acted,
 		"round_marks": round_marks, "round_cmds": round_cmds, "round_covers": round_covers, "round_asks": round_asks,
 		"reaction": reaction, "covered": _covered, "asked_for": _asked_for, "foe_queue": _foe_queue,
-		"foe_step": _foe_step, "braced": braced,
+		"foe_step": _foe_step, "braced": braced, "variety": variety,
 	}
 	if pin >= 0:   # only when the player set one: a fight nobody gave a focus to saves as it always did
 		out["pin"] = pin
@@ -143,6 +144,7 @@ static func restore(v: Dictionary, p_heir: GameHeir, p_rng: RandomNumberGenerato
 	b._foe_queue = v["foe_queue"]
 	b._foe_step = v["foe_step"]
 	b.braced = v["braced"]
+	b.variety = typeof(v.get("variety")) == TYPE_BOOL and bool(v["variety"])   # an older save has none: an ordinary fight
 	if typeof(v.get("pin")) == TYPE_INT:   # saves from before the party focus have none
 		b.pin = int(v["pin"]) if int(v["pin"]) < b.enemies.size() else -1
 	b.resumed = true
@@ -401,7 +403,10 @@ func _rule_dealt(ref: String) -> float:
 ## off more than half of a blow: settings.party_taken_floor.
 func _taken_mult(ref: String) -> float:
 	var low := 0.1 if _side(ref) == "enemy" else float(GameCombat.setting("party_taken_floor"))
-	return maxf(low, 1.0 + status_mod(ref, "damage_taken"))
+	var m := maxf(low, 1.0 + status_mod(ref, "damage_taken"))
+	if variety and _side(ref) == "enemy":
+		m *= GameVariety.taken_mult(self, _index(ref))   # a warded or braced foe takes less
+	return m
 
 
 ## True while a status will cost the unit its next turn for certain (stun, freeze, sleep).
@@ -1601,6 +1606,8 @@ func _enemy_turn(i: int) -> void:
 func _foe_turn_steps(i: int) -> bool:
 	var ref := enemy_ref(i)
 	if _foe_step == 0:
+		if variety:
+			GameVariety.begin_turn(self, i)   # a legend may take up its next phase
 		if not fields.is_empty():
 			_tread(i)
 		_foe_step = 1 if _start_turn(ref) else 4
@@ -1621,6 +1628,8 @@ func _foe_turn_steps(i: int) -> bool:
 ## asked to cover that member (round_asks), the blow waits in `reaction` and this returns false; else
 ## it strikes and returns true. Asking draws no dice, so a fight with nobody to ask plays as before.
 func _enemy_act(i: int) -> bool:
+	if variety and GameVariety.act(self, i):
+		return true   # the turn went on a brace or an answered call; a heavy blow is only announced or armed here
 	var who := _cover_for(i, _enemy_target())
 	var can := _askable_for(who)
 	if not can.is_empty():
@@ -1635,6 +1644,8 @@ func _enemy_strike(i: int, who: int) -> void:
 		_enemy_hit_ally(i, who)
 	else:
 		_enemy_hit_heir(i)
+	if variety:
+		GameVariety.end_blow(self, i)
 
 
 func _enemy_hit_heir(i: int) -> void:
@@ -1650,10 +1661,14 @@ func _enemy_hit_heir(i: int) -> void:
 	if defending:
 		dmg *= 0.5
 	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult("heir") * (1.0 + _shatter("heir")) * float(me["taken"])
+	if variety:
+		dmg *= GameVariety.blow_mult(self, i)
 	var amount := maxi(1, int(round(dmg)))
 	var absorbed := mini(amount, _ward("heir"))
 	absorbed += _mind_over_matter(-1, amount - absorbed)
 	events.append({"type": "damage", "side": "player", "index": i, "amount": amount - absorbed, "crit": false, "absorbed": absorbed})
+	if variety:
+		GameVariety.landed(self, i, amount - absorbed)
 	_say_blow(e["name"], heir.name, amount - absorbed, absorbed, false)
 	_absorb("heir", amount, false)
 	_lose_hp("heir", amount - absorbed)
@@ -1715,12 +1730,16 @@ func _enemy_hit_ally(i: int, ai: int) -> void:
 	if e["element"] == "fire":
 		dmg *= 1.0 - clampf(a.trait_total("fire_resistance"), 0.0, 0.8)
 	dmg *= _dealt_mult(enemy_ref(i)) * _taken_mult(ref) * (1.0 + _shatter(ref)) * float(nums["taken"])
+	if variety:
+		dmg *= GameVariety.blow_mult(self, i)
 	if braced.has(ref):
 		dmg *= float(GameRound.setting("brace_taken"))
 	var amount := maxi(1, int(round(dmg)))
 	var absorbed := mini(amount, _ward(ref))
 	absorbed += _mind_over_matter(ai, amount - absorbed)
 	events.append({"type": "damage", "side": "ally", "index": i, "ally": ai, "amount": amount - absorbed, "crit": false, "absorbed": absorbed})
+	if variety:
+		GameVariety.landed(self, i, amount - absorbed)
 	_say_blow(e["name"], a.name, amount - absorbed, absorbed, false)
 	_absorb(ref, amount, false)
 	_lose_hp(ref, amount - absorbed)

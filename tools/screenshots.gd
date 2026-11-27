@@ -89,6 +89,9 @@ const LOOK_SHOTS := [
 	["menu_title_phone", PHONE, true, "title"],
 	["menu_options_access", DESKTOP, false, "options:access"],
 	["menu_options_phone", PHONE, true, "options:sound"],
+	["battle_boss", DESKTOP, false, "boss:hollow_king"],
+	["battle_elite", DESKTOP, false, "elite:wolf"],
+	["battle_boss_phone", PHONE, true, "boss:vaerthax"],
 	["death_summary", DESKTOP, false, "death"],
 	["death_summary_phone", PHONE, true, "death"],
 	["drops", DESKTOP, false, "drops"],
@@ -410,7 +413,25 @@ func _screen(what: String) -> void:
 					_select_tab(tc, _arg("tab", ""))
 				await _frames(2)
 		_:
-			if what.begins_with("battle:"):
+			if what.begins_with("boss:"):   # (look-only) a legend's fight of the open world: the title card, its lair, a phase on the way
+				var c := GameCombat.creature_def(what.get_slice(":", 1))
+				d.heir.level = 30
+				d.heir.hp = d.heir.max_hp()
+				var lg := d._begin_battle([d._make_enemy(c, 1.0, 1.0, 25)], "legend")
+				GameVariety.dress_boss(d, lg.enemies[0])
+				lg.variety = true
+				d.auto_battle = false
+				app.show_state()
+			elif what.begins_with("elite:"):   # (look-only) a pack with an elite and a heavy blow winding up
+				d.heir.level = 20
+				d.heir.hp = d.heir.max_hp()
+				var pack := d.start_encounter([what.get_slice(":", 1), what.get_slice(":", 1), what.get_slice(":", 1)], "", 1.0, [20, 20, 20], [[1, 1], [2, 2], [3, 3]])
+				GameVariety._give(d, pack.enemies[0], "swift")
+				GameVariety.add_pattern(d, pack.enemies[1], "heavy", GameVariety.keyed(1, "shot", 0))
+				pack.enemies[1]["v"]["pt"]["heavy"]["wind_t"] = 0
+				d.auto_battle = false
+				app.show_state()
+			elif what.begins_with("battle:"):
 				d.world.visit(what.get_slice(":", 1))
 				d.world.location = what.get_slice(":", 1)
 				d.start_hunt("hunt")

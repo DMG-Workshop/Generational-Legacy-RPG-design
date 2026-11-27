@@ -64,6 +64,10 @@ By race of the heir:
 - The short-lived ones stand out the other way: **the autopilot almost never loses an orc or a beastkin in battle** (1 in 754 lives). They die of old age at a mean level of 31-35, before the autopilot's Hard hunt rules (level 40 and up) let it take the risky fights. That is the autopilot's caution more than the game's difficulty, but it is where the numbers differ most.
 - The hybrids appear only through marriages, so their rows rest on 70 to 90 lives and are good to several points at best.
 
+## Variety in the open world's fights (elites, patterns, legend phases)
+
+`data/combat/elites.json` (`GameVariety`) gives the fights of the open world elite foes (Swift, Armoured, Vampiric, Berserk, Warded, Pack Leader), attack patterns (a heavy blow telegraphed the round before, a guard that braces, a call for help) and a legend's phases. Every one of these rules is behind `GameBattle.variety`, which only `GameDynasty.start_encounter` given variety keys (a creature's contact, a landmark's fight, a dungeon's room) and a dungeon's legend (`start_legend_at(id, true)`) set. Hunts, hard hunts, hunt-board legends and every fight the autopilot (`GameBot`) or the golden scenarios play have it off, so with it off no hook draws a die or changes a number: the harness figures and `tests/fixtures/round_baseline.json` are unchanged by it, and `tests/test_game_variety.gd` checks that a fight plays byte for byte the same with the flag forced on and plain foes. Its own rolls are keyed hashes of the seed, the tile and the creature, never the dynasty's dice. Run the harness before and after any change to it: the death band must not move.
+
 ## Long runs and budgets
 
 The harness above answers "are battle deaths in the band?". The **long run** answers "is anything getting heavier?": `tools/long_run_check.gd` plays whole dynasties for many generations with the autopilot and measures, per dynasty, the generations reached, the size of the final save, how long it takes to load, how long a generation takes to play and the journal's size, against `data/game/budgets.json`.
