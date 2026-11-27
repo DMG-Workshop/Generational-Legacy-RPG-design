@@ -57,7 +57,7 @@ static func _lives_here(c: Dictionary, spec: Dictionary, ctx: Dictionary) -> boo
 		return true   # the pool is the place's own; hunt_pool has already chosen
 	var depth := int(ctx.get("depth", -1))
 	if depth < 0:
-		return str(ctx.get("surface", "")) in spec.get("surface", []) or _area_adds(ctx).has(str(c.get("id", "")))
+		return str(ctx.get("surface", "")) in spec.get("surface", []) or _area_adds(ctx).has(str(c.get("id", ""))) or GameNightLife.adds(ctx).has(str(c.get("id", "")))
 	var band: Array = spec.get("depth", [])
 	return band.size() == 2 and depth >= int(band[0]) and depth <= int(band[1])
 
@@ -89,7 +89,7 @@ static func weight_of(id: String, ctx: Dictionary) -> float:
 	w *= float(spec.get("weather", {}).get(str(ctx.get("weather", "")), 1.0))
 	if bool(ctx.get("night", false)):
 		w *= float(spec.get("night", 1.0))
-	return w
+	return GameNightLife.adjust_weight(id, ctx, w)   # what is met only by night, or only by day (data/world/night_life.json)
 
 
 ## The table for a context: [{id, weight}] sorted by id, empty when nothing lives there.

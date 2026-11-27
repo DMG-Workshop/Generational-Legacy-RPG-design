@@ -1,0 +1,18 @@
+{
+  "note": "What weather does in the open world (core/game/game_weather_fx.gd, checked by tools/check_data.gd). Every effect is a multiplier that is exactly 1 in clear weather (a weather with no entry here has none): `walk` scales the seconds between the heir's steps on foot (above 1 is slower; the sandbox screen asks GameSandbox.step_pace), `herb_regrow` scales how fast a gathered herb node regrows (GameCompanions.depleted divides the regrow years by it: above 1 is faster), `slow` scales the speed of creatures of an element (below 1 is slower; it goes to GameBehaviour as the view's `speed_by`), `shelter_fliers` sends creatures that fly home to wait the weather out (they neither see nor chase), and the weather's `sight` in daycycle.json shortens how far creatures see (the view's `sight_mult`) and, with `view_tiles`, how far the heir sees: past `view_tiles` times the sight the world fades into the fog (`veil_alpha` at the edge, softly over `veil_soft` of the radius; the sandbox screen draws it and hides creatures beyond `hide_margin` times the radius). `text` is the line the status pane and the status strip's tooltip say. `prints` is the snow's footprints: the tiles the heir has crossed are marked for `print_seconds` of the world clock, at most `max_prints` (cosmetic: nothing reads them but the screen). The text game, hunts and the autopilot never ask for any of it.",
+  "settings": {
+    "view_tiles": 14.0,
+    "veil_alpha": 0.92,
+    "veil_soft": 0.45,
+    "hide_margin": 1.1,
+    "max_prints": 48,
+    "print_seconds": 40.0
+  },
+  "weather": {
+    "rain": {"herb_regrow": 1.5, "slow": {"fire": 0.7}, "text": "Rain: herbs regrow faster and fire creatures slow."},
+    "storm": {"herb_regrow": 1.25, "slow": {"fire": 0.6}, "shelter_fliers": true, "text": "Storm: flying creatures take shelter, and you see less."},
+    "snow": {"walk": 1.15, "prints": true, "text": "Snow: walking is slower, and you leave footprints."},
+    "fog": {"text": "Fog: you and the creatures see less far."},
+    "heat": {"text": "Heat haze: everyone sees a little less far."}
+  }
+}

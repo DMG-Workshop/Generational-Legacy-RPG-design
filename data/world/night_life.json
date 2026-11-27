@@ -1,0 +1,37 @@
+{
+  "note": "What the open world has only by night or only by day (core/game/game_night_life.gd, checked by tools/check_data.gd). By night: `day_only_off` lists wild creatures of data/creatures/spawn.json that do not roam the surface by day (their spawn weight is `day_mult` of itself in daylight; they are met after dark as ever), and `night_adds` lets in creatures of the wild list that already exist (their biomes in creatures.json map to the surface) on a surface they do not usually roam, by that weight, after dark only (the era still limits who can be met). `glow` is a night-only gathering node: on a tile of the listed surface biomes that has no ordinary node (and is not water, a town's or dungeon's ground or a wall's), a keyed hash of the seed and the tile makes a glowcap at `density` of them; it gives `min` to `max` of its material and is gathered, and regrows, like any node (GameCompanions), but is there only while it is night (GameDay.is_night). By day: each walled town has a market stall outside its first gate, a trader (GameWildsTrade, the wandering merchant's wares and dealing, on a keyed set of wares) who is there between `stall_open` and `stall_close` of the day's hours and gone at night and in the weathers of `closed_weather`. Nothing here draws the dynasty's dice, nothing is saved (a purchase uses the shop marks that exist), the text game never asks and the autopilot never walks the open world. Colours are 0 to 1 red, green, blue.",
+  "settings": {
+    "day_mult": 0.0,
+    "stall_open": 7.0,
+    "stall_close": 18.0,
+    "stall_reach": 1.8,
+    "stall_kind": "merchant",
+    "stall_out": [4, 5, 6, 7, 8],
+    "stall_side": [4, 5, 6],
+    "note_reach": 40.0,
+    "glow_color": [0.45, 1.0, 0.8],
+    "glow_cap": 0.4,
+    "closed_weather": ["storm", "snow"]
+  },
+  "day_only_off": ["ghoul", "thornhound"],
+  "night_adds": {
+    "plains": {"skeleton": 0.5, "wraith": 0.25},
+    "forest": {"wraith": 0.35}
+  },
+  "glow": {
+    "kind": "glowcap",
+    "name": "Glowcap",
+    "material": "herb",
+    "min": 2,
+    "max": 4,
+    "density": {"forest": 0.05, "swamp": 0.045}
+  },
+  "text": {
+    "night_note": "Night: glowcaps bloom in the forest and the fen; ghouls and thornhounds are out.",
+    "day_note": "Day: a market stall trades outside the town gate.",
+    "stall_name": "Market stall",
+    "stall_hint": "Use: trade at the market stall.",
+    "stall_open": "A trader at the market stall lays out wares.",
+    "trader": "Stall trader"
+  }
+}
