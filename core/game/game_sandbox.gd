@@ -30,6 +30,7 @@ var walk_goal := Vector2i(-1, -1)  # the tile a walk in legs is going to (GameTr
 var walk_place := ""               # the town that walk is for
 var walk_replans := 0              # how many times it has been planned again after being stopped
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
+var camp: Dictionary = {}          # the camp pitched on the open world (GameCamp): {x, z, since, rests, cooks}, {} for none; runtime only, never saved
 
 
 ## A sandbox for a dynasty, with the heir where the text game has them and the world kept round them.
@@ -315,8 +316,8 @@ func refresh() -> void:
 			var r := keep_roll.randf()
 			if r >= share:
 				continue
-			if in_town(x, z) or GameSmoke.covers(d, float(x) + 0.5, float(z) + 0.5):
-				continue   # none within a town's walls or cleared ground, and none in a smoke pot's cloud
+			if in_town(x, z) or GameSmoke.covers(d, float(x) + 0.5, float(z) + 0.5) or GameCamp.covers(self, float(x) + 0.5, float(z) + 0.5):
+				continue   # none within a town's walls or cleared ground, none in a smoke pot's cloud and none in a camp fire's ring
 			found.append([r, x, z, id])
 	found.sort_custom(func(p, q): return p[0] < q[0])
 	for i in mini(mini(room, int(setting("spawn_burst"))), found.size()):
@@ -517,6 +518,10 @@ func use() -> Dictionary:
 			log.append({"kind": "talk", "text": str(t["text"])})
 			return t
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
+	if u.is_empty() and storey() == 0:
+		var roadside := GameRoadside.use(self)   # the camp fire, a caravan's wares, a signpost to read
+		if not roadside.is_empty():
+			return roadside
 	if u.is_empty():
 		var trial_site := GameTrials.site_near(d, heir.x, heir.y) if storey() == 0 else {}
 		if not trial_site.is_empty():   # a trial's master, at its site: the screen opens the Trials panel
@@ -591,6 +596,7 @@ func name_at(fx: float, fz: float) -> Dictionary:
 		if found["best"].is_empty():   # the ground itself, named only when no one stands on it
 			for lm in GameWildsSites.within(d, fx, fz, reach + 2.0):
 				consider.call("landmark", GameWildsSites.name_of(lm), float(lm["x"]) + 0.5, float(lm["z"]) + 0.5, 0.5)
+		GameRoadside.consider(self, fx, fz, reach, consider)   # a signpost, a caravan, the camp
 		if found["best"].is_empty():
 			var b := GameTown.at(int(floor(fx)), int(floor(fz)))
 			if not b.is_empty():
@@ -709,6 +715,7 @@ func step(ticks: int = 1) -> void:
 			_dungeon_tick()
 			continue   # the open world is outside: its creatures and companions wait
 		check_footing()
+		GameCamp.tick(self)   # a camp burns out, or is struck when the heir has walked far from it
 		var night := GameDay.is_night(d)
 		var threats := _threats()
 		if GameSmoke.clear_if_out(d):
@@ -1057,7 +1064,7 @@ func _contact() -> bool:
 	var first := -1
 	for i in creatures.size():
 		var a: Dictionary = creatures[i]
-		if str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_range"))):
+		if str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_range"))) and not GameCamp.shields(self, a):
 			first = i
 			break
 	if first < 0:
@@ -1069,7 +1076,7 @@ func _contact() -> bool:
 		var a: Dictionary = creatures[i]
 		if ids.size() >= int(setting("contact_max")):
 			break
-		if i == first or (str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_join")))):
+		if i == first or (str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_join"))) and not GameCamp.shields(self, a)):
 			ids.append(str(a["id"]))
 			levels.append(level_of(a))
 			gone.append(a)
@@ -1077,6 +1084,9 @@ func _contact() -> bool:
 	if fight == null:
 		return false
 	var away := _escape_tile(Vector2(float(creatures[first]["x"]), float(creatures[first]["z"])))
+	var by_fire := GameCamp.escape_tile(self)   # a fight fled from ends beside the camp, when there is one
+	if by_fire.x >= 0:
+		away = by_fire
 	d.sandbox_escape = {"x": away.x, "z": away.y}
 	for a in gone:
 		creatures.erase(a)

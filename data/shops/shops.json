@@ -1293,6 +1293,19 @@
     {
      "type": "items",
      "kinds": [],
+     "tags": [],
+     "ids": [
+      "tent"
+     ],
+     "count": [
+      1,
+      1
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
      "tags": [
       "hunt",
       "pelt",

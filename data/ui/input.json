@@ -78,6 +78,7 @@
     "world_panel_gear": {"name": "Gear", "keys": ["G"], "pointer_only": true},
     "world_panel_status": {"name": "Status", "keys": ["F1"], "pointer_only": true},
     "world_panel_nearby": {"name": "Nearby map", "keys": ["F2"], "pointer_only": true},
+    "world_camp": {"name": "Pitch or strike a camp (needs a tent)", "keys": ["V"], "pointer_only": true},
     "world_goal": {"name": "Goal arrow: next goal (ignore this one)", "keys": ["N"], "pointer_only": true},
     "world_pan": {"name": "Drag the view", "mouse": ["middle"], "pointer_only": true}
   }
