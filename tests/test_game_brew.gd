@@ -40,7 +40,7 @@ func _fresh() -> GameDynasty:
 
 func test_data() -> void:
 	ok(GameCraft.validate().is_empty(), "the shipped data passes: %s" % str(GameCraft.validate()))
-	ok(GameCraft.brews() == ["healing_potion"], "one brew ships: the healing potion")
+	ok(GameCraft.brews() == ["healing_potion", "sailors_stew"], "two brews ship: the healing potion and the sailor's stew")
 	var row: Dictionary = GameCraft.data()["brews"]["healing_potion"]
 	var keep: Variant = row["cost"]
 	row["cost"] = {"unobtainium": 1}
