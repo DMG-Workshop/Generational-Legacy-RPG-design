@@ -420,7 +420,7 @@ func _build_foes(from: int) -> void:
 		if scenery != null:
 			var name_w := get_theme_default_font().get_string_size(str(e["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 			root.add_child(_plate(Vector2(-3, h + 1), Vector2(maxf(w, minf(name_w, w + 64.0)) + 6.0, 32)))
-		var lbl := Kit.label(e["name"], 13, GamePlague.infected_color() if e.has("infected") else Kit.TEXT)
+		var lbl := Kit.label(e["name"], 13, GamePlague.infected_color() if e.has("infected") else (Kit.ACCENT if e.has("elite") else Kit.TEXT))
 		lbl.position = Vector2(0, h + 3)
 		lbl.size = Vector2(w + 64, 18)
 		lbl.clip_text = true

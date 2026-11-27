@@ -47,14 +47,20 @@ static func intro(v) -> void:
 		box.add_child(sub)
 	v.arena.add_child(band)
 	if UiSettings.reduced_motion():
-		v.get_tree().create_timer(CARD_SECONDS).timeout.connect(band.queue_free)
+		v.get_tree().create_timer(CARD_SECONDS).timeout.connect(_retire.bind(band, v))
 		return
 	band.modulate.a = 0.0
 	var t: Tween = v.create_tween()
 	t.tween_property(band, "modulate:a", 1.0, 0.3)
 	t.tween_interval(CARD_SECONDS - 0.6)
 	t.tween_property(band, "modulate:a", 0.0, 0.3)
-	t.tween_callback(band.queue_free)
+	t.tween_callback(_retire.bind(band, v))
+
+
+## The card goes: hidden first and freed a moment later, so the skin's deferred look at its labels never meets a freed one.
+static func _retire(band: Control, v) -> void:
+	band.visible = false
+	v.get_tree().create_timer(0.2).timeout.connect(band.queue_free)
 
 
 ## The words a blow that was announced shows as it lands: a heavy blow shakes the arena and says so beside its number.
