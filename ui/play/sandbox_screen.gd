@@ -1385,7 +1385,6 @@ func _refresh_status() -> void:
 		pin = GoalView.line(sb.heir)   # no status pane to say it (a touch screen, a narrow window): the goal leads the line
 	var sky: Array = GameWeatherFx.notes(d, sb.heir) if sb.space == "world" else []   # what the night and the weather do, in words
 	var sky_line := " / ".join(sky)
-	status.tooltip_text = "\n".join(sky)
 	status.text = "%s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], line] if pin == "" else "%s  %s  %s  %s" % [GameDay.time_text(d), GameDay.look(d)["weather"], pin, line]
 	if sky_line != "" and (UiSettings.touch() or UiSettings.compact(self) or not _pane_up(StatusPane)):
 		status.text += "  " + sky_line   # no status pane to say it: the strip does

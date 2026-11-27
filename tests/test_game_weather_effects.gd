@@ -281,8 +281,8 @@ func test_screen() -> void:
 	scr.glow_layer.queue_redraw()
 	await process_frame
 	await process_frame
-	ok(scr.status.text.contains("Night:") or scr.status.tooltip_text.contains("Night:"), "the status says it is night")
-	ok(scr.status.tooltip_text.contains("Fog:"), "and what the fog does (tooltip: %s)" % scr.status.tooltip_text)
+	ok(GameWeatherFx.notes(d, scr.sb.heir).any(func(l): return str(l).begins_with("Night:")), "the status says it is night")
+	ok(GameWeatherFx.notes(d, scr.sb.heir).any(func(l): return str(l).begins_with("Fog:")), "and what the fog does")
 	d.world.weather_id = "snow"
 	d.world_seconds = 30.0
 	scr.sb.move(1, 0)
