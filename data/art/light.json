@@ -14,7 +14,7 @@
       "willow_tree": "tree", "ancient_tree": "tree", "fae_tree": "tree", "giant_fungus": "tree", "dead_tree": "small_tree",
       "outcrop": "rock", "boulder": "rock", "standing_stone": "rock", "cairn": "rock", "crystal": "rock", "rubble": "bush",
       "ruin_wall": "block", "herb_patch": "bush", "fern": "bush", "bone_pile": "bush", "fallen_log": "bush",
-      "tent_red": "block", "tent_green": "block", "tent_blue": "block", "wagon": "block", "haystack": "block",
+      "signpost": "bush", "tent_red": "block", "tent_green": "block", "tent_blue": "block", "wagon": "block", "haystack": "block",
       "shrine": "block", "well": "block", "cot_wall": "block", "cot_door_low": "block", "crate": "bush", "scarecrow": "bush", "hedge": "bush"
     },
     "building": {"dx": 0.32, "dy": 0.14, "grow": 0.1, "alpha": 0.3, "layers": 3}

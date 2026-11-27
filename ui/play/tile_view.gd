@@ -56,6 +56,7 @@ static func kinds() -> Array:
 	out.append("snow")   # the high peaks
 	out.append("ford")   # the shallows across a river (GameRelief.kind), walked
 	out.append_array(GameWilds.glyph_ids())   # the look of the wilds: ground tones and decor, tree looks, landmarks (wilds.json)
+	out.append_array(GameRoads.glyph_ids())   # the worn trails along the roads and the signpost (roads.json)
 	return out
 
 
@@ -63,6 +64,7 @@ static func kinds() -> Array:
 static func all_glyphs() -> Dictionary:
 	var out: Dictionary = (settings().get("glyphs", {}) as Dictionary).duplicate()
 	out.merge(GameWilds.glyphs())
+	out.merge(GameRoads.glyphs())
 	return out
 
 
@@ -558,6 +560,8 @@ func _thing_from(tile: Dictionary, built: String, x: int, z: int) -> String:
 		return GameWilds.node_look(d.seed_value, tile)   # the node's own glyph, or the look its biome's trees give it
 	if GameMine.is_dug(d, GameWorldGen.MINE_SITE, x, 0, z):
 		return "dug"
+	if interior_id == "" and not GameRoads.post_at(d, x, z).is_empty():
+		return "signpost"   # a signpost beside the road (GameRoads.posts)
 	return ""
 
 
@@ -569,6 +573,9 @@ func _decor_from(tile: Dictionary, built: String, x: int, z: int) -> String:
 	var site := GameWildsSites.glyph_at(d, x, z)
 	if site != "":
 		return site
+	var trail := GameRoads.trail_at(d, x, z) if interior_id == "" else ""
+	if trail != "":
+		return trail   # a road's worn trail lies over the ground's own tones
 	return GameWilds.ground_glyph(d.seed_value, tile)
 
 
@@ -699,7 +706,7 @@ static func validate() -> Array:
 	if not glyphs.has("dug"):
 		bad.append("sandbox.json: a dug shaft has no glyph")
 	for k in kinds():
-		if GameWilds.glyphs().has(k) and not s["colors"].has(k):
+		if (GameWilds.glyphs().has(k) or GameRoads.glyphs().has(k)) and not s["colors"].has(k):
 			continue   # a glyph's kind is clear but for its drawing: it needs no flat colour
 		if not s["colors"].has(k) or typeof(s["colors"][k]) != TYPE_ARRAY or (s["colors"][k] as Array).size() != 3:
 			bad.append("sandbox.json: tiles.colors has no [r, g, b] for '%s'" % k)
