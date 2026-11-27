@@ -525,7 +525,7 @@ func test_screen() -> void:
 		if c.has_meta("pane"):
 			c.queue_free()
 	await process_frame
-	ok(InputMap.has_action("world_fish") and WorldInput.keys_of("world_fish") == ["V"], "the Fish key is in the input map")
+	ok(InputMap.has_action("world_fish") and WorldInput.keys_of("world_fish") == ["X"], "the Fish key is in the input map")
 	scr.queue_free()
 	fake.queue_free()
 	await process_frame
