@@ -78,6 +78,8 @@ const LOOK_SHOTS := [
 	["world_map", DESKTOP, false, "worldmap"],
 	["world_map_phone", PHONE, true, "worldmap"],
 	["world_pin", DESKTOP, false, "worldpin"],
+	["roadside", DESKTOP, false, "roadside"],
+	["roadside_night", DESKTOP, false, "roadside_night"],
 	["menu_pause", DESKTOP, false, "pause"],
 	["menu_pause_phone", PHONE, true, "pause"],
 	["menu_toasts", DESKTOP, false, "toasts"],
@@ -273,7 +275,7 @@ func _screen(what: String) -> void:
 		await _waygate(what)
 		return
 	match what:
-		"worldmap", "worldpin", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
+		"worldmap", "worldpin", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "roadside", "roadside_night", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
 			await _open_world(what)
 		"life":
 			pass
@@ -470,9 +472,25 @@ func _open_world(what: String) -> void:
 			scr.sb.creatures.append(ag)
 		scr.sb.use_smoke()
 		scr._refresh_panes()
+	if what in ["roadside", "roadside_night"]:   # (look only) a road with its signpost, a caravan passing and a camp at night
+		var found := false
+		for k in 2000:
+			d.world_seconds = float(k) * 3.0
+			for st in GameCaravans.out(d):
+				for p in GameRoads.posts(d):
+					if str(p["kind"]) != "gate" and Vector2(float(p["x"]) + 0.5, float(p["z"]) + 0.5).distance_to(Vector2(float(st["x"]), float(st["z"]))) < 5.0 and not found:
+						found = true
+						scr.sb.heir = Vector2i(int(p["x"]) + 2, int(p["z"]) + 3)
+			if found:
+				break
+		if what == "roadside_night":
+			d.world_seconds = 105.0
+			scr.sb.camp = {"x": scr.sb.heir.x - 1, "z": scr.sb.heir.y, "since": d.world_seconds, "rests": 2, "cooks": 2}
+		scr.sb.refresh()
+		scr.sb.creatures.clear()
 	if what == "turned":   # the heir faces left (the art faces right): a turned figure must stand on its shadow, as an unturned one does
 		scr.facing_dir = Vector2i(-1, 0)
-	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town or what == "smoke" else (1.5 if what == "gate" else 0.75))
+	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town or what == "smoke" else (1.5 if what == "gate" or what.begins_with("roadside") else 0.75))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
