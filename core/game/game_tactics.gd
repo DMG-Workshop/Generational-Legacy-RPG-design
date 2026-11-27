@@ -323,7 +323,7 @@ static func _plain(u: GameHeir) -> bool:
 
 static func _plain_blow(b: GameBattle, by: int, opts: Array) -> Dictionary:
 	var awake := b.living_enemies().filter(func(i): return not _asleep(b, i))
-	var t := b._valid_target(b.focus)
+	var t := b.press_target("auto")
 	if t not in awake and not awake.is_empty():
 		t = awake[0]
 	var plan := {"act": "attack", "target": t}
@@ -442,7 +442,7 @@ static func _context(b: GameBattle, by: int) -> Dictionary:
 	var pool: Array = awake if not awake.is_empty() else living
 	var blows: Array = pool
 	if by >= 0:
-		var f := b._valid_target(b.focus)
+		var f := b.press_target("auto")
 		blows = [f] if f in pool else [pool[0]]
 	# The party's damage per round, roughly: each member's main blow against the first foe's armour.
 	var armour := float(b.enemies[living[0]]["def"]) * 0.5

@@ -121,6 +121,7 @@ func _ready() -> void:
 		["reduced_motion", "Reduced motion", "No sliding or lunging in fights; numbers fade where they are."],
 		["plain_font", "Plain font", "Titles, buttons and bars in the usual font, not the pixel font."],
 		["sound_captions", "Captions for sounds", "A short line on screen for each sound that matters, even with sound off."],
+		["easy_fishing", "No timing when fishing", "Fishing has no timing bar: after the wait, the fish always comes in."],
 	]
 	for opt in options:
 		var key: String = opt[0]

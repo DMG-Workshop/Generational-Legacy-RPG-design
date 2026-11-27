@@ -341,7 +341,7 @@ func test_screens() -> void:
 	await _frames(3)
 	var brews: Array = []
 	_all(p3, "Brew", brews)
-	ok(brews.size() == 2, "an Alchemist's workshop has two brews: the potion and the elixir (%d)" % brews.size())
+	ok(brews.size() == 3, "an Alchemist's workshop has three brews: the potion, the sailor's stew and the elixir (%d)" % brews.size())
 	# the Chronicle's tab
 	var c := ChroniclePanel.new()
 	c.dynasty = d

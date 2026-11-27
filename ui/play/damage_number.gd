@@ -9,6 +9,7 @@ const Kit := preload("res://ui/play/ui_kit.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const CosmeticRng := preload("res://ui/play/cosmetic_rng.gd")
 const HitFx := preload("res://ui/play/hit_fx.gd")
+const BattleSpeed := preload("res://ui/play/battle_speed.gd")
 
 
 ## The colour a number kind is drawn in. `against_party` is a blow that lands on the heir or a companion.
@@ -43,7 +44,7 @@ static func spawn(parent: Control, pos: Vector2, text: String, color: Color, siz
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)
 	var life := HitFx.num("numbers", "life")
-	var t := parent.create_tween()
+	var t := BattleSpeed.tune(parent.create_tween())
 	t.set_parallel(true)
 	if not UiSettings.reduced_motion():   # with reduced motion the number stays put and fades
 		l.pivot_offset = l.get_combined_minimum_size() * 0.5
@@ -96,7 +97,7 @@ static func status_pop(parent: Control, pos: Vector2, status_name: String, color
 	row.add_child(name_l)
 	parent.add_child(row)
 	var life := maxf(0.2, HitFx.num("status_pop", "seconds"))
-	var t := parent.create_tween()
+	var t := BattleSpeed.tune(parent.create_tween())
 	t.set_parallel(true)
 	if not UiSettings.reduced_motion():
 		row.pivot_offset = Vector2(12, 10)

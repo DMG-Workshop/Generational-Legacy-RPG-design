@@ -4,12 +4,14 @@
 ## `nudge_px`) are pure and tested; the ones that move nodes only tween a node and put it back. Rendering only: they read
 ## the fight's typed events and never change them, and any chance in how a thing looks (which way a shake leans) comes
 ## from CosmeticRng keyed hashes, never the dynasty's dice. With reduced motion (UiSettings.motion_time is 0) every
-## motion here does nothing and only the numbers stay.
+## motion here does nothing and only the numbers stay. The battle screen's speed (BattleSpeed) shortens every motion and
+## shrinks the shake and the hit-stop (half at 2x, none at 4x, none with Skip).
 extends RefCounted
 
 const PATH := "res://data/ui/hit_fx.json"
 const UiSettings := preload("res://ui/play/ui_settings.gd")
 const CosmeticRng := preload("res://ui/play/cosmetic_rng.gd")
+const BattleSpeed := preload("res://ui/play/battle_speed.gd")
 
 static var _data: Dictionary = {}
 static var _loaded := false
@@ -88,7 +90,7 @@ static func shake_px(ev: Dictionary, target_max_hp: int, killed: bool) -> float:
 static func stop_seconds(crit: bool, auto: bool) -> float:
 	if auto and bool((data().get("hit_stop", {}) as Dictionary).get("not_in_auto", true)):
 		return 0.0
-	return UiSettings.motion_time(num("hit_stop", "crit_kill_seconds") if crit else num("hit_stop", "kill_seconds"))
+	return BattleSpeed.time(num("hit_stop", "crit_kill_seconds") if crit else num("hit_stop", "kill_seconds")) * BattleSpeed.fx_scale()
 
 
 ## The push a struck figure takes, in pixels (larger for a heavy blow); 0 for a blow that does no damage.
@@ -103,7 +105,8 @@ static func nudge_px(ev: Dictionary, target_max_hp: int) -> float:
 ## Shakes `node` (the arena) about its place for a moment and puts it back. A second shake in the middle of one carries
 ## on from the same place, never a drifted one.
 static func shake(node: Control, px: float, key: String) -> void:
-	var seconds := UiSettings.motion_time(num("shake", "seconds"))
+	px *= BattleSpeed.fx_scale()
+	var seconds := BattleSpeed.time(num("shake", "seconds"))
 	if px <= 0.0 or seconds <= 0.0 or node == null or not node.is_inside_tree():
 		return
 	var home: Vector2 = node.get_meta("fx_shake_home") if node.has_meta("fx_shake_home") else node.position
@@ -128,7 +131,7 @@ static func shake(node: Control, px: float, key: String) -> void:
 
 ## Pushes `node` `dx` pixels along x and lets it ease back (the knock-back of a struck figure).
 static func nudge(node: Control, dx: float) -> void:
-	var out_s := UiSettings.motion_time(num("nudge", "out_seconds"))
+	var out_s := BattleSpeed.time(num("nudge", "out_seconds"))
 	if dx == 0.0 or out_s <= 0.0 or node == null or not node.is_inside_tree():
 		return
 	var home: Vector2 = node.get_meta("fx_nudge_home") if node.has_meta("fx_nudge_home") else node.position
@@ -139,7 +142,7 @@ static func nudge(node: Control, dx: float) -> void:
 			old.kill()
 	var t := node.create_tween()
 	t.tween_property(node, "position:x", home.x + dx, out_s).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	t.tween_property(node, "position:x", home.x, UiSettings.motion_time(num("nudge", "back_seconds"))).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(node, "position:x", home.x, BattleSpeed.time(num("nudge", "back_seconds"))).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	t.tween_callback(func():
 		node.position.x = home.x
 		node.remove_meta("fx_nudge_home")
@@ -161,7 +164,7 @@ static func freeze(tree: SceneTree, arena: Node, seconds: float) -> void:
 
 ## A fallen figure sinks and tips over a little as it fades (used with the pose's own fall).
 static func collapse(root: Control, key: String) -> void:
-	var seconds := UiSettings.motion_time(num("collapse", "seconds"))
+	var seconds := BattleSpeed.time(num("collapse", "seconds"))
 	if seconds <= 0.0 or root == null or not root.is_inside_tree():
 		return
 	var lean := 1.0 if CosmeticRng.keyed("collapse:" + key).randf() < 0.5 else -1.0

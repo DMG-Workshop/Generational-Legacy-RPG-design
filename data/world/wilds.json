@@ -463,6 +463,22 @@
       },
       "outcomes": []
     },
+    "caravan": {
+      "name": "Caravan",
+      "verb": "see the caravan's wares",
+      "done": "The trader has shown you everything on the cart.",
+      "trade": true, "merchant": {"stock_count": [3, 5], "find": false, "buy_share": 0.65, "material_share": 0.65, "wants_slots": ["weapon", "armor", "trinket", "remedy"], "wants_tags": ["metal", "leather", "herb", "food", "wood"], "barter": [{"give": {"herb": 6}, "get": {"gold": 40}}, {"give": {"leather": 4}, "get": {"gold": 45}}]},
+      "layout": [["wagon"]],
+      "center": [0, 0],
+      "stock": {
+        "default": ["tent", "trail_rations", "willowbark_tonic", "hemp_rope", "tinderbox", "smoke_pot", "leather_armor"],
+        "hearthmere": ["tent", "trail_rations", "willowbark_tonic", "hunting_bow", "tinderbox"],
+        "ironford": ["tent", "iron_sword", "leather_armor", "hemp_rope", "smoke_pot"],
+        "kingshold": ["tent", "scout_leathers", "longbow", "physicians_draught", "tinderbox"],
+        "brinehaven": ["tent", "trail_rations", "hemp_rope", "smoke_pot", "willowbark_tonic"]
+      },
+      "outcomes": []
+    },
     "shrine": {
       "name": "Shrine",
       "verb": "pray at the shrine",

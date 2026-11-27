@@ -66,7 +66,7 @@ static func store(key: String, value: Variant) -> bool:
 ## The accessibility options (the menu's Accessibility row): colour-blind colours, high contrast and
 ## reduced motion and plain font. Each is a yes or no in settings.cfg; a file from before they existed, or a damaged
 ## value, reads as off.
-const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion", "plain_font", "sound_captions"]
+const ACCESS_KEYS := ["colour_blind", "high_contrast", "reduced_motion", "plain_font", "sound_captions", "easy_fishing"]
 
 
 static func access_on(key: String) -> bool:
@@ -94,6 +94,26 @@ static func plain_font() -> bool:
 ## A tween's time in seconds, or none when reduced motion is on: changes then show at once.
 static func motion_time(seconds: float) -> float:
 	return 0.0 if reduced_motion() else seconds
+
+
+## The battle screen's speed (1, 2 or 4; BattleSpeed keeps it to the data's steps) and whether it skips animations. Both are
+## the player's, in settings.cfg, never the save; a missing or damaged value reads as 1x and off.
+static func battle_speed() -> int:
+	var v: Variant = stored("battle_speed", 1)
+	return int(v) if typeof(v) == TYPE_INT else 1
+
+
+static func set_battle_speed(n: int) -> void:
+	store("battle_speed", n)
+
+
+static func battle_skip() -> bool:
+	var v: Variant = stored("battle_skip", false)
+	return typeof(v) == TYPE_BOOL and bool(v)
+
+
+static func set_battle_skip(on: bool) -> void:
+	store("battle_skip", on)
 
 
 static func set_access(key: String, on: bool) -> bool:

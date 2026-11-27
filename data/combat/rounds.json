@@ -8,6 +8,7 @@
     "brace_taken": 0.5,
     "cover_below": 0.3,
     "potion_for_companions": true,
+    "pin": {"auto": true, "attack": true},
     "chip_texts": {
       "short_chars": 10,
       "tiny_chars": 5,

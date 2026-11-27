@@ -10,6 +10,7 @@ extends RefCounted
 const PATH := "res://data/art/effects.json"
 const SpriteArt := preload("res://ui/play/sprite_art.gd")
 const UiSettings := preload("res://ui/play/ui_settings.gd")
+const BattleSpeed := preload("res://ui/play/battle_speed.gd")
 const SHAPES := ["arc", "ring", "rays", "puff", "plus", "shield", "ellipse", "diamond", "zap", "star"]
 const AT := ["target", "caster", "path"]
 const CLEAR := Color(0, 0, 0, 0)
@@ -154,7 +155,7 @@ static func play(parent: Control, action: String, element: String, at: Vector2, 
 	var step := float(data().get("frame_time", 0.05))
 	var travel := float(data().get("travel_seconds", 0.2)) if to != Vector2.INF else 0.0
 	var count := texs.size() if travel <= 0.0 else maxi(texs.size(), int(ceil(travel / step)))
-	var t := node.create_tween()
+	var t := BattleSpeed.tune(node.create_tween())
 	if delay > 0.0:
 		t.tween_interval(delay)
 		t.tween_callback(func(): node.visible = true)
@@ -164,7 +165,7 @@ static func play(parent: Control, action: String, element: String, at: Vector2, 
 		t.tween_interval(step)
 	t.tween_callback(node.queue_free)
 	if travel > 0.0:
-		var m := node.create_tween()
+		var m := BattleSpeed.tune(node.create_tween())
 		m.tween_property(node, "position", to - size * 0.5, travel).set_delay(delay)
 	return node
 

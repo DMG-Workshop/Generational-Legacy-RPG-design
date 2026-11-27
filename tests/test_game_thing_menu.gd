@@ -72,7 +72,7 @@ func test_actions() -> void:
 	var sb := _sandbox()
 	ok(sb.thing_actions({}).is_empty(), "bare ground offers nothing")
 	var heir := sb.thing_actions({"kind": "heir", "name": "Tess", "id": ""})
-	ok(_ids(heir) == ["character", "pack"], "the heir offers their character and pack: %s" % str(_ids(heir)))
+	ok(_ids(heir) == ["character", "pack", "camp"], "the heir offers their character, pack and a camp: %s" % str(_ids(heir)))
 	ok(str(heir[0]["label"]) != "" and str(heir[1]["label"]) != "", "each has a label")
 	ok(_ids(sb.thing_actions({"kind": "person", "name": "Smith", "id": ""})) == ["talk", "walk"], "a person offers talking and walking")
 	ok(_ids(sb.thing_actions({"kind": "creature", "name": "Wolf", "id": "1"})) == ["walk"], "a creature offers a walk to it")

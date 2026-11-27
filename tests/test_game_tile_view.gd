@@ -53,7 +53,7 @@ func test_data() -> void:
 	ok(TileView.validate().is_empty(), "the shipped data passes: %s" % str(TileView.validate()))
 	var colors: Dictionary = TileView.settings()["colors"]
 	for k in TileView.kinds():
-		if GameWilds.glyphs().has(k):
+		if GameWilds.glyphs().has(k) or GameRoads.glyphs().has(k):
 			continue   # a glyph of the wilds is clear but for its drawing: no flat colour
 		ok(colors.has(k), "'%s' has a colour" % k)
 	var keep: Array = colors["wall"]

@@ -24,12 +24,16 @@ var interior: Dictionary = {}      # the cells of the interior the heir is in (G
 var denizens: Array = []           # the creatures of the dungeon the heir is in (GameBehaviour agents with a key, room and boss flag), never saved
 var fight_foes: Array = []         # the dungeon creatures in the fight now on, for after_fight
 var fight_site: Dictionary = {}    # the landmark of the wilds whose guards are the fight now on ({} for none), for after_fight (GameWildsFights)
-var armed: Dictionary = {}         # landmarks whose approach has already set their guards on the heir this visit (id -> their range); runtime only
+var fight_spots: Array = []        # where the creatures of the open-world fight now on stood (points), for the loot to fall where they did (GameDrops)
+var drop_warned: Dictionary = {}   # drops already said to be too heavy (uid -> true); runtime only
+var drop_news: Array = []          # what the ground's loot just told ({text, kind, bad}) for the screen to toast, oldest first; the screen empties it
+var armed: Dictionary = {}       # landmarks whose approach has already set their guards on the heir this visit (id -> their range); runtime only
 var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
 var walk_goal := Vector2i(-1, -1)  # the tile a walk in legs is going to (GameTravel.walk), (-1, -1) for none; never saved
 var walk_place := ""               # the town that walk is for
 var walk_replans := 0              # how many times it has been planned again after being stopped
 var _occupied := {}                # "x,z" -> true, the tiles a creature stands on at spawn time
+var camp: Dictionary = {}          # the camp pitched on the open world (GameCamp): {x, z, since, rests, cooks}, {} for none; runtime only, never saved
 
 
 ## A sandbox for a dynasty, with the heir where the text game has them and the world kept round them.
@@ -134,6 +138,9 @@ func place_line() -> String:
 		line = _text("upstairs_at", {"n": storey()}) if line == "" else "%s %s" % [_text("upstairs_at", {"n": storey()}), line]
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
 	if u.is_empty() and storey() == 0:
+		var stall_hint := GameNightLife.stall_hint(d, heir.x, heir.y)
+		if stall_hint != "":
+			return stall_hint if line == "" else "%s %s" % [line, stall_hint]
 		var trial_site := GameTrials.site_hint(d, heir.x, heir.y)
 		if trial_site != "":
 			return trial_site if line == "" else "%s %s" % [line, trial_site]
@@ -174,6 +181,8 @@ func move(dx: int, dz: int) -> Dictionary:
 	var c := can_step(dx, dz)
 	if not c["ok"]:
 		return c
+	if space == "world":
+		_leave_print(heir)
 	heir += Vector2i(dx, dz)
 	_arrive()
 	GameTravel.after_step(self)   # a pin the heir has come to comes off
@@ -315,8 +324,8 @@ func refresh() -> void:
 			var r := keep_roll.randf()
 			if r >= share:
 				continue
-			if in_town(x, z) or GameSmoke.covers(d, float(x) + 0.5, float(z) + 0.5):
-				continue   # none within a town's walls or cleared ground, and none in a smoke pot's cloud
+			if in_town(x, z) or GameSmoke.covers(d, float(x) + 0.5, float(z) + 0.5) or GameCamp.covers(self, float(x) + 0.5, float(z) + 0.5):
+				continue   # none within a town's walls or cleared ground, none in a smoke pot's cloud and none in a camp fire's ring
 			found.append([r, x, z, id])
 	found.sort_custom(func(p, q): return p[0] < q[0])
 	for i in mini(mini(room, int(setting("spawn_burst"))), found.size()):
@@ -326,6 +335,28 @@ func refresh() -> void:
 		creatures.append(agent)
 		next_uid += 1
 		_occupied[_key(int(f[1]), int(f[2]))] = true
+
+
+## How the weather scales the seconds between the heir's steps on foot: 1 in clear weather, above 1 in snow (data/world/weather_effects.json).
+## The sandbox screen multiplies its walk and run pace by it; nothing else in the open world's rules does.
+func step_pace() -> float:
+	return GameWeatherFx.walk_mult(d) if space == "world" else 1.0
+
+
+## The tiles the heir has crossed in snow, newest last, as {x, z, at (world seconds)}: only the look (the screen draws them), never saved.
+var prints: Array = []
+
+
+## Notes a footprint on the tile the heir leaves, when the weather leaves them.
+func _leave_print(from: Vector2i) -> void:
+	if not GameWeatherFx.prints_now(d):
+		if not prints.is_empty():
+			prints.clear()
+		return
+	prints.append({"x": from.x, "z": from.y, "at": d.world_seconds})
+	var keep := int(GameWeatherFx.setting("max_prints"))
+	if prints.size() > keep:
+		prints = prints.slice(prints.size() - keep)
 
 
 ## The interior whose door is on the tile the heir stands on ("" when there is none): a dungeon's door on the open world, a
@@ -516,7 +547,16 @@ func use() -> Dictionary:
 			var t := GameTalk.talk(d, who, GameDay.hour(d))
 			log.append({"kind": "talk", "text": str(t["text"])})
 			return t
+		var stall := GameNightLife.stall_near(d, heir.x, heir.y)   # the day's market stall: its trader's panel
+		if not stall.is_empty():
+			var st := GameNightLife.stall_use(d, stall)
+			log.append({"kind": "site", "text": str(st["text"])})
+			return st
 	var u := GameBuild.room_use(d, heir.x, heir.y, heir_y)
+	if u.is_empty() and storey() == 0:
+		var roadside := GameRoadside.use(self)   # the camp fire, a caravan's wares, a signpost to read
+		if not roadside.is_empty():
+			return roadside
 	if u.is_empty():
 		var trial_site := GameTrials.site_near(d, heir.x, heir.y) if storey() == 0 else {}
 		if not trial_site.is_empty():   # a trial's master, at its site: the screen opens the Trials panel
@@ -540,6 +580,8 @@ func use() -> Dictionary:
 				route = []
 				refresh()
 			return r
+		if not GameFishing.spot(d, heir.x, heir.y).is_empty():   # the bank of a sea, lake or river: the screen opens the fishing panel
+			return fish()
 		return {"ok": false, "text": GameBuild.text("nothing_to_use")}
 	match str(u["kind"]):
 		"keep":
@@ -573,6 +615,9 @@ func name_at(fx: float, fz: float) -> Dictionary:
 				found["best"]["level"] = level   # a creature's own level and how it stands against the heir's
 				found["best"]["con"] = con(level)
 	consider.call("heir", d.heir.name, float(heir.x) + 0.5, float(heir.y) + 0.5)
+	if storey() == 0:
+		for s in GameNightLife.stalls_in(d, Rect2i(floori(fx) - 2, floori(fz) - 2, 5, 5)):
+			consider.call("person", GameNightLife.text("trader"), float(s["x"]) + 0.5, float(s["z"]) + 0.5)
 	for a in creatures:
 		var def := {}
 		for c in GameData.creatures:
@@ -591,10 +636,15 @@ func name_at(fx: float, fz: float) -> Dictionary:
 		if found["best"].is_empty():   # the ground itself, named only when no one stands on it
 			for lm in GameWildsSites.within(d, fx, fz, reach + 2.0):
 				consider.call("landmark", GameWildsSites.name_of(lm), float(lm["x"]) + 0.5, float(lm["z"]) + 0.5, 0.5)
+		GameRoadside.consider(self, fx, fz, reach, consider)   # a signpost, a caravan, the camp
 		if found["best"].is_empty():
 			var b := GameTown.at(int(floor(fx)), int(floor(fz)))
 			if not b.is_empty():
 				consider.call("building", _building_name(b), fx, fz)
+		if found["best"].is_empty():   # open water, named so the thing menu can offer to fish it
+			var body := GameWorldGen.body_at(d.seed_value, int(floor(fx)), int(floor(fz))) if GameWorldGen.in_bounds(int(floor(fx)), int(floor(fz))) else ""
+			if GameWorldGen.is_water(body):
+				found["best"] = {"kind": "water", "name": GameFishing.water_name(body).left(1).to_upper() + GameFishing.water_name(body).substr(1), "id": body}
 	return found["best"]
 
 
@@ -709,12 +759,14 @@ func step(ticks: int = 1) -> void:
 			_dungeon_tick()
 			continue   # the open world is outside: its creatures and companions wait
 		check_footing()
+		_take_drops()
+		GameCamp.tick(self)   # a camp burns out, or is struck when the heir has walked far from it
 		var night := GameDay.is_night(d)
 		var threats := _threats()
 		if GameSmoke.clear_if_out(d):
 			log.append({"kind": "smoke", "text": GameSmoke.text("thinned")})
 		var hidden := GameSmoke.covers(d, heir_point().x, heir_point().y)   # a heir inside the cloud is not seen from outside it
-		var cview := GameBehaviour.world_view(d, [] if hidden else [{"x": heir_point().x, "z": heir_point().y}], night)
+		var cview := GameWeatherFx.apply(d, GameBehaviour.world_view(d, [] if hidden else [{"x": heir_point().x, "z": heir_point().y}], night))   # with the weather's sight, speeds and shelter
 		creatures = GameBehaviour.step_all(creatures, cview, d.seed_value, tick)
 		creatures = _smoke_drives(creatures, cview)
 		if _contact():
@@ -940,9 +992,28 @@ func forage() -> Dictionary:
 		return {"ok": false, "text": GameForage.text("upstairs")}
 	var out := GameForage.forage(d, heir.x, heir.y)
 	if out["ok"]:
+		var worms := GameFishing.bait_find(d, int(out["x"]), int(out["z"]))   # bait for the rod, on dice keyed on the node (a line for the screen only)
+		if worms > 0:
+			out["text"] = "%s %s" % [out["text"], GameFishing.text("worms", {"heir": d.heir.name, "n": worms})]
 		log.append({"kind": "forage", "text": str(out["text"])})
 		dirty.append(Vector2i(int(out["x"]), int(out["z"])))
 	return out
+
+
+## Fishing from the bank (GameFishing): {ok, text, open: "fishing", spot} when the heir has a rod and water within reach, else why not.
+## Nothing is drawn or changed here; the screen opens the panel, which casts.
+func fish() -> Dictionary:
+	if space != "world":
+		return {"ok": false, "text": GameFishing.text("indoors")}
+	if storey() > 0:
+		return {"ok": false, "text": GameFishing.text("upstairs")}
+	if d.battle != null:
+		return {"ok": false, "text": GameFishing.text("fight")}
+	var why := GameFishing.why_not(d, heir.x, heir.y)
+	if why != "":
+		return {"ok": false, "text": why}
+	var sp := GameFishing.spot(d, heir.x, heir.y)
+	return {"ok": true, "text": GameFishing.text("bank", {"heir": d.heir.name, "water": GameFishing.water_name(str(sp["body"]))}), "open": "fishing", "spot": sp}
 
 
 ## Digs the cell `depth` below the surface straight under the heir (`GameMine.dig`): {ok, why, ...}.
@@ -1057,7 +1128,7 @@ func _contact() -> bool:
 	var first := -1
 	for i in creatures.size():
 		var a: Dictionary = creatures[i]
-		if str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_range"))):
+		if str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_range"))) and not GameCamp.shields(self, a):
 			first = i
 			break
 	if first < 0:
@@ -1069,7 +1140,7 @@ func _contact() -> bool:
 		var a: Dictionary = creatures[i]
 		if ids.size() >= int(setting("contact_max")):
 			break
-		if i == first or (str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_join")))):
+		if i == first or (str(a["mode"]) == "chase" and reaches_heir(a, float(setting("contact_join"))) and not GameCamp.shields(self, a)):
 			ids.append(str(a["id"]))
 			levels.append(level_of(a))
 			gone.append(a)
@@ -1077,7 +1148,11 @@ func _contact() -> bool:
 	if fight == null:
 		return false
 	var away := _escape_tile(Vector2(float(creatures[first]["x"]), float(creatures[first]["z"])))
+	var by_fire := GameCamp.escape_tile(self)   # a fight fled from ends beside the camp, when there is one
+	if by_fire.x >= 0:
+		away = by_fire
 	d.sandbox_escape = {"x": away.x, "z": away.y}
+	fight_spots = gone.map(func(a): return Vector2(float(a["x"]), float(a["z"])))
 	for a in gone:
 		creatures.erase(a)
 	var names: Array = fight.enemies.map(func(e): return str(e["name"]))
@@ -1107,6 +1182,8 @@ func after_fight() -> void:
 	if d.battle != null:
 		return
 	rest_until = d.world_seconds + float(setting("spawn_rest_seconds"))   # a breather: nothing new spawns for a while after any fight
+	if fight_foes.is_empty():
+		_leave_loot()   # the open ground's dead leave their spoils where they fell (a dungeon's keep the search choice)
 	if d.last_xp_line != "":
 		log.append({"kind": "fight", "text": d.last_xp_line})   # "+N XP" in the journal
 		d.last_xp_line = ""
@@ -1122,6 +1199,35 @@ func after_fight() -> void:
 	route = []
 	refresh()
 	log.append({"kind": "fight", "text": _text("escaped", {"heir": d.heir.name})})
+
+
+## A won fight on the open world's ground leaves what the dead carried where they fell (GameDrops) instead of the search choice.
+func _leave_loot() -> void:
+	var spots := fight_spots
+	fight_spots = []
+	if d.last_result != "victory" or d.loot.is_empty() or space != "world" or storey() > 0:
+		return
+	if spots.is_empty():
+		spots = [heir_point()]
+	var names: Array = (d.loot.get("foes", []) as Array).map(func(f): return str(f.get("name", "")))
+	if not GameDrops.scatter(d, spots, _drop_ok).is_empty():
+		log.append({"kind": "drop", "text": GameDrops.text("scattered", {"foes": GameMessages.text("life", "list_comma").join(names)})})
+
+
+## A tile a drop may land on: in the world and one a walker can stand on.
+func _drop_ok(t: Vector2i) -> bool:
+	if not GameWorldGen.in_bounds(t.x, t.y):
+		return false
+	return GamePath.passable(GamePath.world_ground(d), Vector3i(t.x, GameBuild.SURFACE, t.y), GamePath.data()["movers"]["walker"])
+
+
+## Each tick on the open world's ground: loot within the heir's reach is taken, loot past its time is gone (never upstairs or indoors).
+func _take_drops() -> void:
+	if d.drops.is_empty() or space != "world" or storey() > 0 or d.state != "life":
+		return
+	for n in GameDrops.collect(d, heir_point(), drop_warned):
+		log.append({"kind": "drop", "text": str(n["text"])})
+		drop_news.append(n)
 
 
 ## The creatures within THREAT_NEAR tiles of the heir, as {x, z} points (the companions' threats).
@@ -1192,6 +1298,7 @@ func begin_landmark_fight(lm: Dictionary, plan: Dictionary) -> bool:
 	if fight == null:
 		return false
 	GameWildsFights.mark_fought(d, lm)
+	fight_spots = [Vector2(float(lm["x"]) + 0.5, float(lm["z"]) + 0.5)]
 	fight_site = {"id": str(lm["id"]), "lm": lm, "foes": plan["foes"]}
 	var away := _escape_tile(Vector2(float(lm["x"]) + 0.5, float(lm["z"]) + 0.5))
 	d.sandbox_escape = {"x": away.x, "z": away.y}

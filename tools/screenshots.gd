@@ -78,6 +78,10 @@ const LOOK_SHOTS := [
 	["world_map", DESKTOP, false, "worldmap"],
 	["world_map_phone", PHONE, true, "worldmap"],
 	["world_pin", DESKTOP, false, "worldpin"],
+	["roadside", DESKTOP, false, "roadside"],
+	["roadside_night", DESKTOP, false, "roadside_night"],
+	["fishing_panel", DESKTOP, false, "fishing"],
+	["fishing_book", DESKTOP, false, "fishbook"],
 	["menu_pause", DESKTOP, false, "pause"],
 	["menu_pause_phone", PHONE, true, "pause"],
 	["menu_toasts", DESKTOP, false, "toasts"],
@@ -85,6 +89,9 @@ const LOOK_SHOTS := [
 	["menu_title_phone", PHONE, true, "title"],
 	["menu_options_access", DESKTOP, false, "options:access"],
 	["menu_options_phone", PHONE, true, "options:sound"],
+	["death_summary", DESKTOP, false, "death"],
+	["death_summary_phone", PHONE, true, "death"],
+	["drops", DESKTOP, false, "drops"],
 ]
 
 ## The pictures for a store page: the same screens, bigger. Nothing compares them; they are made on demand.
@@ -273,7 +280,7 @@ func _screen(what: String) -> void:
 		await _waygate(what)
 		return
 	match what:
-		"worldmap", "worldpin", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
+		"worldmap", "worldpin", "drops", "town", "river", "homestead", "dollhouse", "trial_site", "turned", "gate", "smoke", "fishing", "fishbook", "roadside", "roadside_night", "wilds_forest", "wilds_swamp", "wilds_fae", "wilds_tundra", "wilds_farm":
 			await _open_world(what)
 		"life":
 			pass
@@ -290,6 +297,15 @@ func _screen(what: String) -> void:
 		"report":
 			app.open_menu()
 			app.open_report()
+		"death":   # (look-only) the death summary shown before the succession: a slain heir with a house, an heirloom and a title
+			d.heirlooms.append({"name": "Crown of Ash", "boss": "Ash King", "gen": 1})
+			d.house = {"hall": 2, "yard": 1}
+			d.heir.kills = {"wolf": 14, "bandit": 6}
+			d.heir.battles_won = 17
+			d.killer_id = "wolf"
+			d.killer_info = {"id": "wolf", "name": "Elite Wolf", "level": 21, "con": "hard"}
+			d._die("slain in battle")
+			app.show_state()
 		"event":
 			GameEvents.begin(d, "elven_wardens")
 			app.show_state()
@@ -442,6 +458,18 @@ func _open_world(what: String) -> void:
 		d.trials["steps"] = {str(GameTrials.placed(d.seed_value, "material")[0]["id"]): 1}
 		var site: Dictionary = GameTrials.sites(d)[0]
 		spot = Vector2i(int(site["x"]) + 2, int(site["z"]) + 2)
+	if what == "fishing" or what == "fishbook":   # (look-only) the heir at the bank of a lake with a rod, a few worms and some fish in the book
+		d.heir.inventory.append_array(["fishing_rod", "worm_bait", "worm_bait"])
+		var size := GameWorldGen.size()
+		for z in range(2, size - 2, 2):
+			for x in range(2, size - 2, 2):
+				if GameWorldGen.body_at(d.seed_value, x, z) == "" and str(GameFishing.spot(d, x, z).get("body", "")) == "lake" and spot != Vector2i(x, z) and not GameFishing.spot(d, x, z).is_empty():
+					spot = Vector2i(x, z)
+					break
+			if GameFishing.spot(d, spot.x, spot.y).get("body", "") == "lake":
+				break
+		for r in [["fish_perch", 22.0, "fair"], ["fish_perch", 31.5, "fine"], ["fish_trout", 40.0, "fine"], ["fish_carp", 62.0, "fair"], ["fish_eel", 70.0, "fair"], ["fish_minnow", 6.0, "fair"]]:
+			GameFishing.land(d, {"item": r[0], "cm": r[1], "size": r[2]})
 	d.world.visit("hearthmere")
 	app.show_sandbox()
 	await _frames(3)
@@ -470,9 +498,48 @@ func _open_world(what: String) -> void:
 			scr.sb.creatures.append(ag)
 		scr.sb.use_smoke()
 		scr._refresh_panes()
+	if what == "drops":   # (look-only) loot of every kind and rarity lying on the ground by the heir, one with its time nearly out
+		var at2: Vector2 = scr.sb.heir_point()
+		scr.sb.creatures.clear()
+		var seen := {}
+		var rr := RandomNumberGenerator.new()
+		rr.seed = 3
+		for i in 4000:
+			var iid := GameLoot.roll_item(rr, 8, 60.0)
+			seen[GameLoot.rarity_name(iid)] = iid
+		var row: Array = [{"kind": "gold", "gold": 85}, {"kind": "potion", "n": 2}, {"kind": "material", "mats": {"iron": 3}}, {"kind": "essence", "ess": {"keen": 1}}, {"kind": "egg", "species": "wolf", "name": "Pip", "born": "egg"}]
+		for r in ["common", "fine", "rare", "epic", "legendary", "mythic"]:
+			if seen.has(r):
+				row.append({"kind": "item", "item": seen[r]})
+		for i in row.size():
+			var p: Dictionary = row[i]
+			p["uid"] = i + 1
+			p["gid"] = 1
+			p["x"] = at2.x - 4.5 + float(i % 6) * 1.9
+			p["z"] = at2.y + 1.0 + float(i / 6) * 1.8
+			p["until"] = 20.0 if i == 1 else 900.0
+			p["sick"] = []
+		d.drops = row
+		d.world_seconds = 5.0
+	if what in ["roadside", "roadside_night"]:   # (look only) a road with its signpost, a caravan passing and a camp at night
+		var found := false
+		for k in 2000:
+			d.world_seconds = float(k) * 3.0
+			for st in GameCaravans.out(d):
+				for p in GameRoads.posts(d):
+					if str(p["kind"]) != "gate" and Vector2(float(p["x"]) + 0.5, float(p["z"]) + 0.5).distance_to(Vector2(float(st["x"]), float(st["z"]))) < 5.0 and not found:
+						found = true
+						scr.sb.heir = Vector2i(int(p["x"]) + (2 if what == "roadside_night" else 7), int(p["z"]) + 3)
+			if found:
+				break
+		if what == "roadside_night":
+			d.world_seconds = 105.0
+			scr.sb.camp = {"x": scr.sb.heir.x - 1, "z": scr.sb.heir.y, "since": d.world_seconds, "rests": 2, "cooks": 2}
+		scr.sb.refresh()
+		scr.sb.creatures.clear()
 	if what == "turned":   # the heir faces left (the art faces right): a turned figure must stand on its shadow, as an unturned one does
 		scr.facing_dir = Vector2i(-1, 0)
-	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (1.0 if town or what == "smoke" else (1.5 if what == "gate" else 0.75))
+	scr.zoom = 2.0 if what == "wilds_farm" else 1.3 if WILDS_SPOTS.has(what) else 1.8 if what == "homestead" or what == "dollhouse" or what == "trial_site" or what == "turned" else (2.4 if what == "drops" else (1.0 if town or what == "smoke" else (1.5 if what == "gate" else 0.75)))
 	scr.cam = Vector2.ZERO
 	scr._process(0.0)
 	scr.queue_redraw()
@@ -484,6 +551,26 @@ func _open_world(what: String) -> void:
 		scr._refresh_panes()
 		scr._refresh_status()
 		await _frames(2)
+	if what == "fishing":
+		UiSettings.set_access("reduced_motion", false)   # (the timing bar only runs with motion on)
+		scr._fish()
+		await _frames(2)
+		for c in scr.get_children():
+			if c.has_method("cast") and c.has_method("tap"):
+				c.cast()
+				c.step(c.wait + 0.01)
+				c.t = 0.3
+		await _frames(3)
+	if what == "fishbook":
+		scr._open_popup(scr.Chronicle)
+		await _frames(3)
+		for c in scr.get_children():
+			var tabs := c.find_children("*", "TabContainer", true, false)
+			for t in tabs:
+				var f: Node = t.get_node_or_null("Fishing")
+				if f != null:
+					t.current_tab = f.get_index()
+		await _frames(3)
 	if what == "worldmap":   # (look-only) the world map with a town's card up
 		scr._open_world_map()
 		await _frames(3)

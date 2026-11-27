@@ -86,7 +86,7 @@ func test_items() -> void:
 		n += 1
 		var m := GameItems.material_of(str(id))
 		ok(GameMaterials.has(m) and GameItems.weight_of(str(id)) > 0.0, "%s has a listed material and a weight" % id)
-	ok(n == 108 + 203 + 4, "the 108 items (54, the 40 works of the callings and the 14 uniques of the wilds), the 203 trade goods of the shops and the 4 bags are all still there (%d)" % n)
+	ok(n == 108 + 203 + 4 + 14, "the 108 items (54, the 40 works of the callings and the 14 uniques of the wilds), the 203 trade goods of the shops, the 4 bags and the 14 of the tent, the worm bait and the 12 fish are all still there (%d)" % n)
 	ok(GameItems.material_of("iron_sword") == "iron" and GameItems.material_of("mithril_blade") == "mithril", "swords are made of their metal")
 	ok(GameItems.material_of("dragonscale_mail") == "dragonscale", "the dragonscale mail is dragonscale")
 	ok(GameItems.weight_of("plate_armor") > GameItems.weight_of("leather_armor") and GameItems.weight_of("leather_armor") > GameItems.weight_of("copper_ring"), "plate is heavier than leather, which is heavier than a ring")

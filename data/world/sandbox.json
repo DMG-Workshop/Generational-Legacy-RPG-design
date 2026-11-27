@@ -170,12 +170,16 @@
     }
   },
   "thing_menu": {
-    "heir": ["character", "pack"],
+    "heir": ["character", "pack", "camp"],
     "creature": ["walk"],
     "companion": ["walk"],
     "person": ["talk", "walk"],
     "landmark": ["use", "walk"],
-    "building": ["use", "walk"]
+    "building": ["use", "walk"],
+    "sign": ["use", "walk"],
+    "caravan": ["use", "walk"],
+    "camp": ["rest", "cook", "strike"],
+    "water": ["fish"]
   },
   "text": {
     "selected": "{name} is selected: right click to send them, T Y U O P to give an order.",
@@ -183,9 +187,14 @@
     "nobody": "There is no one to give that order.",
     "act_character": "Open the character",
     "act_pack": "Open the pack",
+    "act_camp": "Pitch or strike the camp",
+    "act_rest": "Rest at the camp",
+    "act_cook": "Cook a meal",
+    "act_strike": "Strike the camp",
     "act_walk": "Walk there",
     "act_talk": "Go and talk",
     "act_use": "Go there and use it",
+    "act_fish": "Fish from the bank",
     "act_order": "Order: {order}",
     "not_a_step": "The heir can only step to a tile beside them.",
     "edge": "The edge of the world is there.",

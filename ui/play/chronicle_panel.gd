@@ -61,6 +61,8 @@ func _ready() -> void:
 	tabs.add_child(_factions_tab())
 	tabs.add_child(_creatures_tab())
 	tabs.add_child(_subclass_tab())
+	if not GameFishing.caught(dynasty).is_empty() or GameFishing.rod_count(dynasty.heir) > 0:   # the angler's book, once there is a rod or a catch
+		tabs.add_child(_fishing_tab())
 	if PanelSkin.on(self):   # drawn: parchment cards with ribbon headings, inset figure rows and segmented bars
 		tabs.add_child(_page("Statistics", _stats_page))
 		tabs.add_child(_page("Ages", _ages_page))
@@ -588,6 +590,23 @@ func _fill_creatures() -> void:
 		else:
 			box.add_child(row)
 	_fill_market(box, alive)
+
+
+## The Fishing tab: the Angler level and every species in the book with how many were caught and the biggest of each (GameFishing.book).
+func _fishing_tab() -> Control:
+	if PanelSkin.on(self):
+		return _page("Fishing", func(page: VBoxContainer):
+			page.add_child(PanelSkin.note(GameFishing.book_head(dynasty)))
+			var b := PanelSkin.section(self, page, "Species")
+			for r in GameFishing.book(dynasty):
+				b.add_child(PanelSkin.figure(self, GameFishing.book_line(r), "", -1.0, Kit.TEXT if r["caught"] else Kit.dim())))
+	var rich := Kit.rich()
+	rich.name = "Fishing"
+	var lines: Array = [GameFishing.book_head(dynasty), ""]
+	for r in GameFishing.book(dynasty):
+		lines.append(GameFishing.book_line(r))
+	rich.text = "\n".join(lines)
+	return rich
 
 
 ## The Subclass tab: the heir's calling, what its perks do, and the others they could take (for gold).

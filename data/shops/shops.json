@@ -345,6 +345,20 @@
       2
      ],
      "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "fishing_rod",
+      "worm_bait"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
     }
    ],
    "services": []
@@ -1293,6 +1307,19 @@
     {
      "type": "items",
      "kinds": [],
+     "tags": [],
+     "ids": [
+      "tent"
+     ],
+     "count": [
+      1,
+      1
+     ],
+     "tier_max": 9
+    },
+    {
+     "type": "items",
+     "kinds": [],
      "tags": [
       "hunt",
       "pelt",
@@ -1318,6 +1345,20 @@
      ],
      "rarity_max": "fine",
      "rarity_min": "common"
+    },
+    {
+     "type": "items",
+     "kinds": [],
+     "tags": [],
+     "ids": [
+      "fishing_rod",
+      "worm_bait"
+     ],
+     "count": [
+      2,
+      2
+     ],
+     "tier_max": 9
     }
    ],
    "services": []

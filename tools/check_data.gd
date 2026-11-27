@@ -20,6 +20,8 @@ const UiSkin := preload("res://ui/play/ui_skin.gd")
 const ItemIcon := preload("res://ui/play/item_icon.gd")
 const RadialMenu := preload("res://ui/play/radial_menu.gd")
 const ActionSlot := preload("res://ui/play/action_slot.gd")
+const BattleSpeed := preload("res://ui/play/battle_speed.gd")
+const AllyOrders := preload("res://ui/play/ally_orders.gd")
 const CODE := ["res://core/game/"]
 
 
@@ -39,7 +41,7 @@ static func problems() -> Array:
 	for pair in [["rounds", GameRound.validate()], ["ages", GameAges.validate()], ["feats", GameFeats.validate()],
 			["events", GameEvents.validate()], ["skills", GameSkills.validate()], ["diseases", GameDisease.validate()],
 			["combat", GameCombat.validate()], ["skill trees", GameSkillTree.validate()], ["sprites", SpriteArt.validate()], ["titles", GameTitles.validate()], ["achievements", GameAchievements.validate()], ["factions", GameFactions.validate()], ["heirlooms", GameHeirlooms.validate()], ["world events", GameWorldEvents.validate()], ["hard mode", GameHardMode.validate()],
-			["scenery", SceneryArt.validate()], ["shops", GameShops.validate()], ["trials", GameTrials.validate()], ["enchanting", GameEnchant.validate()], ["casting", GameCasting.validate()], ["battle events", _event_list()], ["birth", GameBirth.validate()], ["finding", GameFinding.validate()], ["ranch", GameRanch.validate()], ["breeding rules", GameBreeding.validate()], ["realms", GameRealms.validate()], ["subclasses", GameSubclass.validate()], ["farm", GameFarm.validate()], ["raids", GameRaids.validate()], ["materials", GameMaterials.validate()], ["loot", GameLoot.validate()], ["carry", GameCarry.validate()], ["craft", GameCraft.validate()], ["mining", GameMine.validate()], ["worldgen", GameWorldGen.validate()], ["relief", GameRelief.validate()], ["towns", GameTown.validate()], ["buildings", BuildingArt.validate()], ["spawn", GameSpawn.validate()], ["wilds", GameWilds.validate()], ["wilds trade", GameWildsTrade.validate()], ["wilds loot", GameWildsLoot.validate()], ["behaviour", GameBehaviour.validate()], ["pathing", GamePath.validate()], ["graphics", GraphicsSettings.validate()], ["world input", WorldInput.validate()], ["camera", GameCamera.validate()], ["locales", GameLocale.validate()], ["spaces", GameSpaces.validate()], ["people", GamePeople.validate()], ["forage", GameForage.validate()], ["world map", GameWorldMap.validate()], ["gates", GameGates.validate()], ["error reports", GameReport.validate()], ["companions in the world", GameCompanions.validate()], ["building", GameBuild.validate()], ["tile view", TileView.validate()], ["open world crowd", GameSandbox.validate()], ["animation", SpriteMotion.validate()], ["battle effects", BattleFx.validate()], ["ground and light", GroundArt.validate()], ["reveal", GameReveal.validate()], ["villagers", GameVillagers.validate()], ["day cycle", GameDay.validate()], ["sound", Sound.validate()], ["panes", PaneKit.validate()], ["skin", UiSkin.validate()], ["item icons", ItemIcon.validate()], ["panel ring", RadialMenu.validate()], ["action bar", ActionSlot.validate()], ["text", _text()], ["walking feel", Glide.validate()], ["hit effects", HitFx.validate()], ["menus", MenuKit.validate()], ["goals", GameGoal.validate()]]:
+			["scenery", SceneryArt.validate()], ["shops", GameShops.validate()], ["trials", GameTrials.validate()], ["enchanting", GameEnchant.validate()], ["casting", GameCasting.validate()], ["battle events", _event_list()], ["birth", GameBirth.validate()], ["finding", GameFinding.validate()], ["ranch", GameRanch.validate()], ["breeding rules", GameBreeding.validate()], ["realms", GameRealms.validate()], ["subclasses", GameSubclass.validate()], ["farm", GameFarm.validate()], ["raids", GameRaids.validate()], ["materials", GameMaterials.validate()], ["loot", GameLoot.validate()], ["carry", GameCarry.validate()], ["craft", GameCraft.validate()], ["mining", GameMine.validate()], ["worldgen", GameWorldGen.validate()], ["relief", GameRelief.validate()], ["towns", GameTown.validate()], ["buildings", BuildingArt.validate()], ["spawn", GameSpawn.validate()], ["wilds", GameWilds.validate()], ["wilds trade", GameWildsTrade.validate()], ["wilds loot", GameWildsLoot.validate()], ["behaviour", GameBehaviour.validate()], ["pathing", GamePath.validate()], ["graphics", GraphicsSettings.validate()], ["world input", WorldInput.validate()], ["camera", GameCamera.validate()], ["locales", GameLocale.validate()], ["spaces", GameSpaces.validate()], ["people", GamePeople.validate()], ["forage", GameForage.validate()], ["world map", GameWorldMap.validate()], ["gates", GameGates.validate()], ["error reports", GameReport.validate()], ["companions in the world", GameCompanions.validate()], ["building", GameBuild.validate()], ["tile view", TileView.validate()], ["open world crowd", GameSandbox.validate()], ["animation", SpriteMotion.validate()], ["battle effects", BattleFx.validate()], ["ground and light", GroundArt.validate()], ["reveal", GameReveal.validate()], ["villagers", GameVillagers.validate()], ["day cycle", GameDay.validate()], ["night life", GameNightLife.validate()], ["weather effects", GameWeatherFx.validate()], ["sound", Sound.validate()], ["panes", PaneKit.validate()], ["skin", UiSkin.validate()], ["item icons", ItemIcon.validate()], ["panel ring", RadialMenu.validate()], ["action bar", ActionSlot.validate()], ["text", _text()], ["walking feel", Glide.validate()], ["hit effects", HitFx.validate()], ["menus", MenuKit.validate()], ["goals", GameGoal.validate()], ["roads", GameRoads.validate()], ["camp", GameCamp.validate()], ["fishing", GameFishing.validate()]]:
 		for p in pair[1]:
 			out.append("%s: %s" % [pair[0], p])
 	for pair in [["walls", GameWalls.validate()], ["reach", GameReach.validate()], ["talk", GameTalk.validate()], ["wall art", WallArt.validate()]]:
@@ -50,6 +52,13 @@ static func problems() -> Array:
 			out.append("%s: %s" % [pair[0], p])
 	for p in GameShops.validate():
 		out.append("shops: %s" % p)
+	for p in AllyOrders.validate():
+		out.append(p)
+	for p in BattleSpeed.validate():
+		out.append(p)
+	for pair in [["drops", GameDrops.validate()], ["death summary", GameDeath.validate()]]:
+		for p in pair[1]:
+			out.append("%s: %s" % [pair[0], p])
 	return out
 
 
