@@ -1,14 +1,11 @@
-## Giving companions orders the way a strategy game does (GameCompanions.place, GameSandbox.send_order and order_party, ui/play/
-## sandbox_screen.gd, data/ui/input.json): a click on a companion chooses them (and again lets them go), a quick right click then sends
-## them (bare ground: hold that place, a creature: guard it, the heir: follow), the keys T Y U O P give the chosen companion or, with none
-## chosen, everyone an order, the chosen one is drawn in a ring, and a thing that is none of these still opens the popup.
+## The party's one-tap orders and focus (GameOrders, GameRound.set_pin, GameBattle.press_target): the commands the
+## Attack / Defend / Skill / Auto buttons give, the All Auto switch, the focus companions on Auto or Attack prefer
+## until it falls, its save and old saves, and above all that a fight nobody gave a focus to plays exactly as before.
 ## Run: godot --headless --path . -s res://tests/test_game_orders.gd
 extends SceneTree
 
-const GameApp := preload("res://ui/play/game_app.gd")
-const UiSettings := preload("res://ui/play/ui_settings.gd")
-const WorldInput := preload("res://ui/play/world_input.gd")
-const SandboxScreen := preload("res://ui/play/sandbox_screen.gd")
+const Scen := preload("res://tests/round_scenarios.gd")
+const TRIO := ["sister_oriel", "bren_cask", "tarsk_ember_eye"]
 
 var fails := 0
 var checks := 0
@@ -22,194 +19,218 @@ func ok(cond: bool, what: String) -> void:
 
 
 func _init() -> void:
-	_run.call_deferred()
-
-
-func _frames(n: int) -> void:
-	for i in n:
-		await process_frame
-
-
-func _run() -> void:
 	GameData.load_all()
-	UiSettings.path = "user://test_orders.cfg"
-	DirAccess.remove_absolute(UiSettings.path)
-	GameDynasty.save_path = "user://test_orders_save.json"
-	WorldInput.forget_overrides()
-	test_core()
-	await test_screen()
-	DirAccess.remove_absolute(UiSettings.path)
+	test_data()
+	test_commands()
+	test_give_and_auto()
+	test_pin_rules()
+	test_no_pin_plays_as_before()
+	test_pin_steers_auto_and_attack()
+	test_pin_saves()
 	print("orders tests: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
 
-## The party with these companions on the payroll (as test_game_companions makes them), in place of what it had.
-func _hire(d: GameDynasty, ids: Array) -> void:
-	d.party.members = []
-	for id in ids:
-		d.party.members.append({"id": id, "name": GameParty.def(id)["name"], "hp": 1, "mp": 0, "level": 10, "gen": 1,
+func _dynasty(cls: String, level: int = 30, seed_val: int = 77) -> GameDynasty:
+	var d := GameDynasty.new_game(seed_val, "Tess", cls, "faetouched", "human")
+	d.pending_event = {}
+	d.heir.level = level
+	d.heir.gold = 5000
+	d.heir.potions = 3
+	d.heir.learn_spells()
+	d.world.visit("kingshold")
+	for id in TRIO:
+		d.party.members.append({"id": id, "name": GameParty.def(id)["name"], "hp": 1, "mp": 0, "level": level, "gen": 1,
 			"due": 0.0, "battles": 0, "hired_gen": 1, "diseases": []})
 		d.party.history[id] = {"name": GameParty.def(id)["name"], "status": "serving", "gen": 1, "first_gen": 1, "battles": 0,
 			"fallen": [], "line": 0, "past": [], "born": d.world.year - 30.0, "rolled": d.world.year}
+	d.party.rest(d)
+	d.heir.full_heal()
+	return d
 
 
-func _sandbox() -> GameSandbox:
-	var d := GameDynasty.new_game(7, "Tess", "warrior", "faetouched", "human")
+## A battle of three sturdy wolves with a weak bite, and its command round.
+func _round(seed_val: int = 77) -> Array:
+	var d := _dynasty("warrior", 30, seed_val)
+	var foes: Array = []
+	for i in 3:
+		foes.append(d._make_enemy(GameCombat.creature_def("wolf"), 1.0, 1.0, d.heir.level))
+	d._begin_battle(foes, "hunt")
+	for e in d.battle.enemies:
+		e["hp"] = 10000000
+		e["max_hp"] = 10000000
+		e["atk"] = 4.0
+	return [d, d.battle, d.battle_round()]
+
+
+func test_data() -> void:
+	ok(GameRound.validate().is_empty(), "the rounds data (pin included) is sound: %s" % str(GameRound.validate()))
+	ok(bool(GameRound.setting("pin")["auto"]) and bool(GameRound.setting("pin")["attack"]), "Auto and Attack members follow the focus")
+
+
+func test_commands() -> void:
+	var s := _round()
+	var r: GameRound = s[2]
+	ok(GameOrders.command(r, 1, "attack") == {"act": "attack", "target": ""}, "Attack with no foe aimed leaves the target to the heir's focus")
+	ok(GameOrders.command(r, 1, "attack", "enemy:2") == {"act": "attack", "target": "enemy:2"}, "Attack goes at the foe asked")
+	ok(GameOrders.command(r, 1, "attack", "enemy:9") == {"act": "attack", "target": ""}, "a foe that is not there is left to the heir's focus")
+	ok(GameOrders.command(r, 1, "defend") == {"act": "defend"}, "Defend")
+	ok(GameOrders.command(r, 1, "auto").is_empty(), "Auto is no command")
+	var row := GameOrders.skill_row(r, 1)
+	ok(not row.is_empty() and str(row["group"]) == "skill" and bool(row["enabled"]), "the skill button takes the first class skill the member can use")
+	var sk := GameOrders.command(r, 1, "skill", "enemy:1")
+	ok(str(sk.get("act")) == "ability" and str(sk.get("kind")) == "skill" and str(sk["id"]) == str(row["cmd"]["id"]), "Skill is that skill's command")
+	if str(row["aim"]) in ["foe", "area"]:
+		ok(str(sk["target"]) == "enemy:1", "aimed at the foe asked")
+	ok(r.check(1, sk) == "", "and it can be queued")
+	r.set_pin("enemy:2")
+	ok(GameOrders.command(r, 1, "attack", "enemy:0")["target"] == "enemy:2", "with a focus set, Attack goes to it")
+	ok(r.check(-1, GameOrders.command(r, -1, "skill", "enemy:0")) == "" or GameOrders.command(r, -1, "skill", "enemy:0").is_empty(), "the heir's skill is a legal command too")
+
+
+func test_give_and_auto() -> void:
+	var s := _round()
+	var r: GameRound = s[2]
+	ok(GameOrders.give(r, 0, "attack", "enemy:1") == "", "giving Attack queues it")
+	ok(r.entries[0]["cmd"]["target"] == "enemy:1" and r.entries[0]["src"] == "manual", "as a manual choice at the foe")
+	ok(GameOrders.give(r, 1, "defend") == "", "giving Defend queues it")
+	ok(r.entries[1]["cmd"]["act"] == "defend", "as Defend")
+	ok(GameOrders.give(r, 2, "skill", "enemy:0") == "", "giving Skill queues it")
+	ok(r.entries[2]["cmd"]["act"] == "ability", "as a skill")
+	ok(GameOrders.give(r, 0, "auto") == "" and bool(r.auto[0]) and not r.entries.has(0), "giving Auto switches the member and drops their choice")
+	ok(GameOrders.give(r, 5, "attack") != "" and GameOrders.give(r, 5, "auto") != "", "someone who is not in the fight is refused")
+	ok(not GameOrders.all_auto(r), "not everyone is on Auto yet")
+	GameOrders.set_all_auto(r, true)
+	ok(GameOrders.all_auto(r) and bool(r.auto[0]) and bool(r.auto[1]) and bool(r.auto[2]), "All Auto puts every companion on Auto")
+	ok(not bool(r.auto[-1]), "and leaves the heir's own switch")
+	ok(r.entries.is_empty() or not r.entries.has(1), "their queued choices are dropped")
+	GameOrders.set_all_auto(r, false)
+	ok(not GameOrders.all_auto(r) and not bool(r.auto[0]) and not bool(r.auto[2]), "and All Auto off hands them back")
+	# A solo hunt has no companions: nothing to switch.
+	var d := GameDynasty.new_game(5, "Solo", "warrior", "faetouched", "human")
 	d.pending_event = {}
-	_hire(d, ["bren_cask", "maddy_thorn"])
-	var sb := GameSandbox.start(d)
-	sb.creatures = []
-	sb.companions = [GameCompanions.new_agent(0, "bren_cask", 10.5, 10.5), GameCompanions.new_agent(1, "maddy_thorn", 12.5, 10.5)]
-	return sb
+	d._begin_battle([d._make_enemy(GameCombat.creature_def("wolf"), 1.0, 1.0, d.heir.level)], "hunt")
+	ok(not GameOrders.all_auto(d.battle_round()), "a lone heir has no companions to be on Auto")
 
 
-func test_core() -> void:
-	var agents := [GameCompanions.new_agent(0, "bren_cask", 10.5, 10.5), GameCompanions.new_agent(1, "maddy_thorn", 12.5, 10.5)]
-	var placed := GameCompanions.place(agents, "bren_cask", "stay", 30.5, 40.5)
-	ok(placed[0]["order"] == "stay" and placed[0]["post_x"] == 30.5 and placed[0]["post_z"] == 40.5, "place gives the order and the post")
-	ok(placed[0]["x"] == 10.5 and placed[0]["plan"] == [] and placed[0]["target"] == {}, "they stay where they are and forget their work")
-	ok(placed[1]["order"] == "follow" and placed[1]["post_x"] == 12.5, "the others are untouched")
-	ok(agents[0]["order"] == "follow" and agents[0]["post_x"] == 10.5, "and the old agents are not changed")
-	ok(GameCompanions.place(agents, "bren_cask", "dance", 1.0, 1.0)[0]["order"] == "follow", "an unknown order changes nothing")
-	ok(GameCompanions.place(agents, "nobody", "stay", 1.0, 1.0)[1]["post_x"] == 12.5, "an id with no agent changes nothing")
-	var sb := _sandbox()
-	var r := sb.send_order("bren_cask", "stay", 30.5, 40.5)
-	ok(r["ok"] and GameCompanions.order_of(sb.d, "bren_cask") == "stay" and sb.companions[0]["post_x"] == 30.5, "send_order sets the party's order and the agent's post")
-	ok(GameCompanions.order_of(sb.d, "maddy_thorn") == "follow", "and no one else's")
-	r = sb.send_order("bren_cask", "follow", 0.0, 0.0)
-	ok(r["ok"] and GameCompanions.order_of(sb.d, "bren_cask") == "follow", "follow brings them back (no post to send them to)")
-	ok(not sb.send_order("nobody", "stay", 1.0, 1.0)["ok"], "someone not in the party is refused")
-	var lines := sb.order_party("guard")
-	ok(lines.size() == 2 and GameCompanions.order_of(sb.d, "bren_cask") == "guard" and GameCompanions.order_of(sb.d, "maddy_thorn") == "guard", "order_party orders everyone")
-	lines = sb.order_party("gather", "maddy_thorn")
-	ok(lines.size() == 1 and GameCompanions.order_of(sb.d, "maddy_thorn") == "gather" and GameCompanions.order_of(sb.d, "bren_cask") == "guard", "or just one")
-	ok(sb.order_party("stay", "nobody").is_empty(), "and no one at all for an id not in the party")
-	ok(WorldInput.validate().is_empty(), "the input data checks: %s" % str(WorldInput.validate()))
-	for o in GameCompanions.ORDERS:
-		ok(WorldInput.keys_of("world_order_" + str(o)).size() == 1, "%s has a key" % str(o))
+func test_pin_rules() -> void:
+	var s := _round()
+	var b: GameBattle = s[1]
+	var r: GameRound = s[2]
+	ok(b.pin == -1 and r.pin_ref() == "", "no focus at first")
+	ok(r.set_pin("enemy:1") == "" and b.pin == 1 and r.pin_ref() == "enemy:1", "a standing foe can be the focus")
+	ok(r.view()["pin"] == "enemy:1", "the view says so")
+	ok(r.set_pin("enemy:7") != "" and b.pin == 1, "a foe that is not there is refused and the focus stays")
+	ok(r.set_pin("heir") != "" and b.pin == 1, "so is a member of the party")
+	b.enemies[1]["hp"] = 0
+	ok(r.pin_ref() == "" and b.press_target("auto") != 1 and b.press_target("attack") != 1, "when it dies nobody follows it any more")
+	ok(r.set_pin("enemy:1") != "", "a fallen foe cannot be picked")
+	ok(r.set_pin("enemy:2") == "" and b.pin == 2, "another can")
+	ok(r.set_pin("") == "" and b.pin == -1, "and the focus can be cleared")
 
 
-func _key(code: int) -> InputEventKey:
-	var e := InputEventKey.new()
-	e.keycode = code
-	e.physical_keycode = code
-	e.pressed = true
-	return e
+## A battle played through to the end with every companion on Auto, as the dynasty's autopilot would.
+func _play(use_pin_api: bool) -> Dictionary:
+	var s := _round(31)
+	var d: GameDynasty = s[0]
+	var b: GameBattle = s[1]
+	var r: GameRound = s[2]
+	for by in [-1, 0, 1, 2]:
+		r.set_auto(by, true)
+	if use_pin_api:
+		r.set_pin("")
+	var events: Array = []
+	for i in 6:
+		if b.is_over():
+			break
+		r.resolve()
+		events.append_array(b.events.duplicate(true))
+	return {"log": b.log.duplicate(), "events": JSON.stringify(events), "state": JSON.stringify(Scen.state_of(b)), "save": JSON.stringify(b.to_dict())}
 
 
-func _click(map: Node, pos: Vector2, button: int) -> void:
-	var e := InputEventMouseButton.new()
-	e.button_index = button
-	e.pressed = true
-	e.position = pos
-	map._gui_input(e)
-	var u := InputEventMouseButton.new()
-	u.button_index = button
-	u.pressed = false
-	u.position = pos
-	map._gui_input(u)
+func test_no_pin_plays_as_before() -> void:
+	var a := _play(false)
+	var c := _play(true)
+	ok(a["log"] == c["log"] and a["events"] == c["events"] and a["state"] == c["state"], "asking for no focus changes nothing in the fight")
+	ok(not (JSON.parse_string(a["save"]) as Dictionary).has("pin"), "a fight nobody focused saves with no pin key, as it always did")
 
 
-## A tile with no building within a few tiles and open walking round it, so what stands on it is only what the test puts there.
-func _open_ground(sb: GameSandbox) -> void:
-	var home := sb.heir
-	for dx in range(0, 600, 7):
-		var x := home.x + dx + 40
-		var z := home.y + 40
-		var clear := GameWorldGen.in_bounds(x, z - 12)
-		for ox in range(-9, 10):
-			for oz in range(-9, 10):
-				if not GameTown.at(x + ox, z + oz).is_empty():
-					clear = false
-		if clear:
-			sb.heir = Vector2i(x, z)
-			var walkable := true
-			for dz in range(1, 8):
-				if not sb.set_route(Vector2i(x, z - dz))["ok"]:
-					walkable = false
-			sb.route = []
-			if walkable:
-				return
-	sb.heir = home
+## Damage the allies (not the heir) dealt to each foe in a run of rounds.
+func _ally_blows(pin_at: int, rounds: int, all_auto: bool) -> Dictionary:
+	var s := _round(31)
+	var b: GameBattle = s[1]
+	var r: GameRound = s[2]
+	r.set_auto(-1, false)
+	for by in [0, 1, 2]:
+		r.set_auto(by, all_auto)
+	if pin_at >= 0:
+		r.set_pin("enemy:%d" % pin_at)
+	var hits := {0: 0, 1: 0, 2: 0}
+	for i in rounds:
+		if b.is_over():
+			break
+		for by in r.members():
+			if by == -1:
+				r.queue(-1, {"act": "attack", "target": "enemy:0"})
+			elif not all_auto:
+				r.queue(by, {"act": "attack", "target": ""})
+		r.resolve()
+		var who := -2
+		for ev in b.events:
+			if str(ev["type"]) == "act":
+				who = int(ev["by"])
+			elif str(ev["type"]) == "damage" and str(ev.get("side", "")) == "enemy" and who >= 0:
+				hits[int(ev["index"])] = int(hits[int(ev["index"])]) + 1
+	return hits
 
 
-func test_screen() -> void:
-	root.size = Vector2i(1280, 720)
-	var app: Node = GameApp.new()
-	root.add_child(app)
-	await _frames(3)
-	app.closed_badly = false
-	app.new_game("Tess", "warrior", "faetouched", 7)
-	await _frames(2)
-	app.show_sandbox()
-	await _frames(3)
-	var map: Node = app.current
-	var sb: GameSandbox = map.sb
-	_open_ground(sb)
-	_hire(sb.d, ["bren_cask", "maddy_thorn"])
-	var area := Vector2(map.size.x, map.size.y - map.BAR)
-	var cell: float = map._cell()
-	var centre := Vector2(0, map.BAR) + area * 0.5
-	var hx := float(sb.heir.x)
-	var hz := float(sb.heir.y)
-	sb.creatures = []
-	sb.companions = [GameCompanions.new_agent(0, "bren_cask", hx + 5.5, hz + 0.5), GameCompanions.new_agent(1, "maddy_thorn", hx - 4.5, hz + 0.5)]
-	# a click on a companion chooses them, again lets them go
-	_click(map, centre + Vector2(5.0 * cell, 0.0), MOUSE_BUTTON_LEFT)
-	ok(map.selected_companion == "bren_cask" and map.last_line.contains("Bren"), "a click on a companion chooses them: %s / %s" % [map.selected_companion, map.last_line])
-	_click(map, centre + Vector2(5.0 * cell, 0.0), MOUSE_BUTTON_LEFT)
-	ok(map.selected_companion == "", "and a second click lets them go: %s" % map.last_line)
-	_click(map, centre + Vector2(-5.0 * cell, 0.0), MOUSE_BUTTON_LEFT)
-	ok(map.selected_companion == "maddy_thorn", "a click on the other chooses that one instead")
-	_click(map, centre + Vector2(5.0 * cell, 0.0), MOUSE_BUTTON_LEFT)
-	ok(map.selected_companion == "bren_cask", "and back")
-	# a quick right click on bare ground sends them to hold it
-	var spot := centre + Vector2(0.0, -6.0 * cell)
-	_click(map, spot, MOUSE_BUTTON_RIGHT)
-	ok(GameCompanions.order_of(sb.d, "bren_cask") == "stay", "a right click on bare ground sends the chosen companion to stay: %s" % map.last_line)
-	var agent: Dictionary = sb.companions[0]
-	ok(is_equal_approx(float(agent["post_x"]), hx + 0.5) and is_equal_approx(float(agent["post_z"]), hz - 6.0 + 0.5), "their post is the tile clicked: %s,%s" % [agent["post_x"], agent["post_z"]])
-	ok(GameCompanions.order_of(sb.d, "maddy_thorn") == "follow", "and no one else is sent")
-	var popups := map.get_children().filter(func(c): return c is PopupMenu and not c.is_queued_for_deletion())
-	ok(popups.is_empty(), "with no popup")
-	# a creature: guard it
-	sb.creatures = [GameBehaviour.new_agent(1, "wolf", hx + 0.5, hz - 4.5, 1.0)]
-	_click(map, centre + Vector2(0.0, -5.0 * cell), MOUSE_BUTTON_RIGHT)
-	ok(GameCompanions.order_of(sb.d, "bren_cask") == "guard", "a right click on a creature sends them to guard it: %s" % map.last_line)
-	sb.creatures = []
-	# the heir: follow
-	_click(map, centre, MOUSE_BUTTON_RIGHT)
-	ok(GameCompanions.order_of(sb.d, "bren_cask") == "follow", "a right click on the heir brings them back to follow")
-	# the order keys: the chosen one, else everyone
-	map._unhandled_input(_key(KEY_Y))
-	ok(GameCompanions.order_of(sb.d, "bren_cask") == "stay" and GameCompanions.order_of(sb.d, "maddy_thorn") == "follow", "Y gives the chosen companion stay, and only them")
-	map.selected_companion = ""
-	map._unhandled_input(_key(KEY_O))
-	ok(GameCompanions.order_of(sb.d, "bren_cask") == "guard" and GameCompanions.order_of(sb.d, "maddy_thorn") == "guard", "with none chosen O orders everyone to guard")
-	map._unhandled_input(_key(KEY_T))
-	ok(GameCompanions.order_of(sb.d, "bren_cask") == "follow" and GameCompanions.order_of(sb.d, "maddy_thorn") == "follow", "and T brings them all back")
-	# with a companion chosen, a click on something else still opens the popup
-	map.selected_companion = "bren_cask"
-	_click(map, centre + Vector2(-5.0 * cell, 0.0), MOUSE_BUTTON_RIGHT)   # the other companion
-	popups = map.get_children().filter(func(c): return c is PopupMenu and not c.is_queued_for_deletion())
-	ok(popups.size() == 1, "a right click on another companion still opens their popup")
-	for p in popups:
-		p.queue_free()
-	await _frames(2)
-	# a companion who leaves the party is no longer chosen
-	_hire(sb.d, ["maddy_thorn"])
-	_click(map, centre + Vector2(0.0, -6.0 * cell), MOUSE_BUTTON_RIGHT)
-	ok(map.selected_companion == "", "a chosen companion who has left the party is let go")
-	map.selected_companion = ""
-	_hire(sb.d, [])
-	map.last_line = ""
-	map._unhandled_input(_key(KEY_Y))
-	ok(map.last_line == str(GameSandbox.data()["text"]["nobody"]), "an order key with no one in the party says so: %s" % map.last_line)
-	# the chosen companion is drawn with their ring (the screen draws without error)
-	_hire(sb.d, ["bren_cask"])
-	map.selected_companion = "bren_cask"
-	map.overlay.queue_redraw()
-	await _frames(3)
-	ok(true, "the ring draws")
-	app.queue_free()
-	await _frames(2)
+func test_pin_steers_auto_and_attack() -> void:
+	for all_auto in [true, false]:
+		var label := "Auto" if all_auto else "Attack"
+		var plain := _ally_blows(-1, 3, all_auto)
+		var pinned := _ally_blows(2, 3, all_auto)
+		ok(int(pinned[2]) > int(plain[2]), "%s companions land more on the focused foe: %s against %s" % [label, str(pinned), str(plain)])
+		if not all_auto:   # a class's area skill on Auto still catches the others it reaches
+			ok(int(pinned[1]) == 0, "%s companions leave the other foes alone while the focus stands: %s" % [label, str(pinned)])
+	# Until it dies: then they carry on with the heir's focus.
+	var s := _round(31)
+	var b: GameBattle = s[1]
+	var r: GameRound = s[2]
+	for by in [-1, 0, 1, 2]:
+		r.set_auto(by, true)
+	r.set_pin("enemy:2")
+	b.enemies[2]["hp"] = 1
+	r.resolve()
+	ok(b.turn > 0, "the round plays")
+	ok(r.pin_ref() == "" or b.enemies[2]["hp"] > 0, "a fallen focus is no focus")
+
+
+func test_pin_saves() -> void:
+	var s := _round()
+	var d: GameDynasty = s[0]
+	var b: GameBattle = s[1]
+	var r: GameRound = s[2]
+	r.set_pin("enemy:1")
+	var parsed = JSON.parse_string(JSON.stringify(d.to_save()))
+	ok(typeof(parsed) == TYPE_DICTIONARY and GameSaveVersion.upgrade(parsed) == "", "a fight with a focus saves")
+	var g := GameDynasty.from_dict(parsed)
+	ok(g.battle != null and g.battle.pin == 1, "and loads with the focus kept")
+	ok(g.battle_round().pin_ref() == "enemy:1", "the round sees it")
+	# An old save has no key; a junk one is ignored.
+	var old: Dictionary = JSON.parse_string(JSON.stringify(d.to_save()))
+	var h := GameDynasty.from_dict(_edited(old, func(bd: Dictionary): bd.erase("pin")))
+	ok(h.battle != null and h.battle.pin == -1, "a save from before the focus loads with none")
+	var k := GameDynasty.from_dict(_edited(old, func(bd: Dictionary): bd["pin"] = "two"))
+	ok(k.battle != null and k.battle.pin == -1, "a damaged focus is ignored")
+	var m := GameDynasty.from_dict(_edited(old, func(bd: Dictionary): bd["pin"] = 99))
+	ok(m.battle != null and m.battle.pin == -1, "and so is one past the foes")
+	ok(b.pin == 1, "(the live fight is untouched)")
+
+
+## A save whose fight has been changed by `edit` (the fight is kept as Godot's own encoding).
+func _edited(save: Dictionary, edit: Callable) -> Dictionary:
+	var out := save.duplicate(true)
+	var fight: Dictionary = Marshalls.base64_to_variant(str(out["battle"]))
+	edit.call(fight["battle"])
+	out["battle"] = Marshalls.variant_to_base64(fight)
+	return out
