@@ -24,7 +24,10 @@ var interior: Dictionary = {}      # the cells of the interior the heir is in (G
 var denizens: Array = []           # the creatures of the dungeon the heir is in (GameBehaviour agents with a key, room and boss flag), never saved
 var fight_foes: Array = []         # the dungeon creatures in the fight now on, for after_fight
 var fight_site: Dictionary = {}    # the landmark of the wilds whose guards are the fight now on ({} for none), for after_fight (GameWildsFights)
-var armed: Dictionary = {}         # landmarks whose approach has already set their guards on the heir this visit (id -> their range); runtime only
+var fight_spots: Array = []        # where the creatures of the open-world fight now on stood (points), for the loot to fall where they did (GameDrops)
+var drop_warned: Dictionary = {}   # drops already said to be too heavy (uid -> true); runtime only
+var drop_news: Array = []          # what the ground's loot just told ({text, kind, bad}) for the screen to toast, oldest first; the screen empties it
+var armed: Dictionary = {}       # landmarks whose approach has already set their guards on the heir this visit (id -> their range); runtime only
 var heir_y := GameBuild.SURFACE    # the heir's layer: the surface, or a storey above it (-2 and up); never saved, a visit starts on the ground
 var walk_goal := Vector2i(-1, -1)  # the tile a walk in legs is going to (GameTravel.walk), (-1, -1) for none; never saved
 var walk_place := ""               # the town that walk is for
@@ -709,6 +712,7 @@ func step(ticks: int = 1) -> void:
 			_dungeon_tick()
 			continue   # the open world is outside: its creatures and companions wait
 		check_footing()
+		_take_drops()
 		var night := GameDay.is_night(d)
 		var threats := _threats()
 		if GameSmoke.clear_if_out(d):
@@ -1078,6 +1082,7 @@ func _contact() -> bool:
 		return false
 	var away := _escape_tile(Vector2(float(creatures[first]["x"]), float(creatures[first]["z"])))
 	d.sandbox_escape = {"x": away.x, "z": away.y}
+	fight_spots = gone.map(func(a): return Vector2(float(a["x"]), float(a["z"])))
 	for a in gone:
 		creatures.erase(a)
 	var names: Array = fight.enemies.map(func(e): return str(e["name"]))
@@ -1113,6 +1118,7 @@ func after_fight() -> void:
 	if not fight_foes.is_empty():
 		_after_dungeon_fight()
 		return
+	_leave_loot()
 	if not fight_site.is_empty():
 		_after_landmark_fight()
 	if d.sandbox_escape.is_empty():
@@ -1122,6 +1128,35 @@ func after_fight() -> void:
 	route = []
 	refresh()
 	log.append({"kind": "fight", "text": _text("escaped", {"heir": d.heir.name})})
+
+
+## A won fight on the open world's ground leaves what the dead carried where they fell (GameDrops) instead of the search choice.
+func _leave_loot() -> void:
+	var spots := fight_spots
+	fight_spots = []
+	if d.last_result != "victory" or d.loot.is_empty() or space != "world" or storey() > 0:
+		return
+	if spots.is_empty():
+		spots = [heir_point()]
+	var names: Array = (d.loot.get("foes", []) as Array).map(func(f): return str(f.get("name", "")))
+	if not GameDrops.scatter(d, spots, _drop_ok).is_empty():
+		log.append({"kind": "drop", "text": GameDrops.text("scattered", {"foes": GameMessages.text("life", "list_comma").join(names)})})
+
+
+## A tile a drop may land on: in the world and one a walker can stand on.
+func _drop_ok(t: Vector2i) -> bool:
+	if not GameWorldGen.in_bounds(t.x, t.y):
+		return false
+	return GamePath.passable(GamePath.world_ground(d), Vector3i(t.x, GameBuild.SURFACE, t.y), GamePath.data()["movers"]["walker"])
+
+
+## Each tick on the open world's ground: loot within the heir's reach is taken, loot past its time is gone (never upstairs or indoors).
+func _take_drops() -> void:
+	if d.drops.is_empty() or space != "world" or storey() > 0 or d.state != "life":
+		return
+	for n in GameDrops.collect(d, heir_point(), drop_warned):
+		log.append({"kind": "drop", "text": str(n["text"])})
+		drop_news.append(n)
 
 
 ## The creatures within THREAT_NEAR tiles of the heir, as {x, z} points (the companions' threats).
@@ -1192,6 +1227,7 @@ func begin_landmark_fight(lm: Dictionary, plan: Dictionary) -> bool:
 	if fight == null:
 		return false
 	GameWildsFights.mark_fought(d, lm)
+	fight_spots = [Vector2(float(lm["x"]) + 0.5, float(lm["z"]) + 0.5)]
 	fight_site = {"id": str(lm["id"]), "lm": lm, "foes": plan["foes"]}
 	var away := _escape_tile(Vector2(float(lm["x"]) + 0.5, float(lm["z"]) + 0.5))
 	d.sandbox_escape = {"x": away.x, "z": away.y}

@@ -50,6 +50,9 @@ static func problems() -> Array:
 			out.append("%s: %s" % [pair[0], p])
 	for p in GameShops.validate():
 		out.append("shops: %s" % p)
+	for pair in [["drops", GameDrops.validate()], ["death summary", GameDeath.validate()]]:
+		for p in pair[1]:
+			out.append("%s: %s" % [pair[0], p])
 	return out
 
 

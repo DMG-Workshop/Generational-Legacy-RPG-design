@@ -2449,6 +2449,11 @@ func _show_result() -> void:
 	_loot_pack = d.heir.inventory.duplicate()
 	if d.loot.is_empty():
 		_end_foot(foot)
+	elif "ground_loot" in app and app.ground_loot:   # a fight on the open world: the spoils are left on the ground, not searched here
+		var note := Kit.label(GameDrops.text("ground_note"), 15, Kit.dim())
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		foot.add_child(note)
+		_end_foot(foot)
 	elif auto:   # auto-battle settles the bodies as the autopilot would
 		_loot_done(v, foot, null, GamePlague.bot_loot(d), "Auto-battle: ")
 	else:
